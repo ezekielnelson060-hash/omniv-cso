@@ -1,12 +1,45 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { getArtistBrain } from "@/lib/db/profile";
+import type { ArtistBrain } from "@/types";
 import { mockArtistBrain } from "@/data/mock";
-import { Brain } from "lucide-react";
+import { Brain, Loader2 } from "lucide-react";
 
 export function BrainView() {
-  const b = mockArtistBrain;
+  const [brain, setBrain] = useState<ArtistBrain | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const b = await getArtistBrain();
+        if (!cancelled) setBrain(b);
+      } catch {
+        if (!cancelled) setBrain(mockArtistBrain);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading || !brain) {
+    return (
+      <div className="flex items-center gap-2 py-16 text-sm text-omniv-text-muted">
+        <Loader2 className="h-4 w-4 animate-spin text-omniv-gold" />
+        Loading Artist Brain…
+      </div>
+    );
+  }
+
+  const b = brain;
+
   return (
     <div className="space-y-6">
       <div className="glass-gold glow-gold rounded-[var(--radius-xl)] p-6">
