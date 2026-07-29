@@ -42,16 +42,33 @@ export function ChatPanel() {
     ]);
     setInput("");
     setBusy(true);
-    await new Promise((r) => setTimeout(r, 600));
-    setMessages((m) => [
-      ...m,
-      {
-        id: uid(),
-        role: "assistant",
-        content: simulateZikiReply(trimmed),
-        createdAt: Date.now(),
-      },
-    ]);
+    try {
+      const res = await fetch("/api/ziki", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: trimmed }),
+      });
+      const data = (await res.json()) as { text?: string };
+      setMessages((m) => [
+        ...m,
+        {
+          id: uid(),
+          role: "assistant",
+          content: data.text || "Ziki is offline for a moment. Try again.",
+          createdAt: Date.now(),
+        },
+      ]);
+    } catch {
+      setMessages((m) => [
+        ...m,
+        {
+          id: uid(),
+          role: "assistant",
+          content: simulateZikiReply(trimmed),
+          createdAt: Date.now(),
+        },
+      ]);
+    }
     setBusy(false);
   }
 
