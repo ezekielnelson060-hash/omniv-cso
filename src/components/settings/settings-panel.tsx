@@ -93,7 +93,7 @@ export function SettingsPanel() {
                 <p className="text-sm text-omniv-text">{i.name}</p>
                 <p className="text-[11px] text-omniv-text-muted">{i.description}</p>
               </div>
-              <Badge variant={i.connected ? "success" : "outline">
+              <Badge variant={i.connected ? "success" : "outline"}>
                 {i.connected ? "On" : "Off"}
               </Badge>
             </div>
