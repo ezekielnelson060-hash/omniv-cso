@@ -1,24 +1,97 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { integrations, mockTeam, paymentProvider, plans } from "@/data/phase6";
 import { usePlan } from "@/components/billing/plan-provider";
-import { CreditCard, Users, Key, Bell, Plug } from "lucide-react";
+import { getProfile, upsertProfile } from "@/lib/db/profile";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { CreditCard, Users, Key, Bell, Plug, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 export function SettingsPanel() {
   const { plan, setPlan } = usePlan();
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (!isSupabaseConfigured()) return;
+      const p = await getProfile();
+      if (p) {
+        setName(p.full_name || "");
+        setEmail(p.email || "");
+      } else {
+        try {
+          const supabase = createClient();
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
+          if (user) {
+            setEmail(user.email || "");
+            setName((user.user_metadata?.full_name as string) || "");
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    })();
+  }, []);
+
+  async function saveProfile() {
+    setSaving(true);
+    setStatus(null);
+    const res = await upsertProfile({ full_name: name });
+    setSaving(false);
+    setStatus(res.ok ? "Profile saved" : res.error || "Save failed");
+  }
+
+  async function signOut() {
+    if (!isSupabaseConfigured()) {
+      router.push("/login");
+      return;
+    }
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <div className="space-y-6">
       <Card className="p-5">
         <h3 className="text-sm font-medium">Profile</h3>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Input label="Display name" defaultValue="You" />
-          <Input label="Email" type="email" defaultValue="you@omniv.app" />
+          <Input
+            label="Display name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <Input label="Email" type="email" value={email} readOnly />
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Button size="sm" onClick={() => void saveProfile()} disabled={saving}>
+            {saving ? "Saving…" : "Save profile"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            onClick={() => void signOut()}
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sign out
+          </Button>
+          {status && (
+            <span className="text-xs text-omniv-text-muted">{status}</span>
+          )}
         </div>
       </Card>
 
@@ -93,7 +166,7 @@ export function SettingsPanel() {
                 <p className="text-sm text-omniv-text">{i.name}</p>
                 <p className="text-[11px] text-omniv-text-muted">{i.description}</p>
               </div>
-              <Badge variant={i.connected ? "success" : "outline"}>
+              <Badge variant={i.connected ? "success" : "outline">
                 {i.connected ? "On" : "Off"}
               </Badge>
             </div>
