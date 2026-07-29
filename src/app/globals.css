@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  /* Omniv core palette — cinematic black & gold */
   --omniv-black: #050505;
   --omniv-black-elevated: #0c0c0c;
   --omniv-black-card: #111111;
@@ -72,6 +73,7 @@ body {
   min-height: 100dvh;
 }
 
+/* Premium glassmorphism */
 .glass {
   background: rgba(17, 17, 17, 0.72);
   backdrop-filter: blur(20px) saturate(140%);
@@ -91,6 +93,7 @@ body {
   border: 1px solid rgba(212, 175, 55, 0.18);
 }
 
+/* Subtle gold glow ring */
 .glow-gold {
   box-shadow:
     0 0 0 1px rgba(212, 175, 55, 0.12),
@@ -105,6 +108,7 @@ body {
     0 0 64px -8px rgba(212, 175, 55, 0.15);
 }
 
+/* Soft elevated card */
 .card-elevated {
   background: var(--omniv-black-card);
   border: 1px solid var(--omniv-border);
@@ -117,16 +121,19 @@ body {
   box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.5);
 }
 
+/* Focus ring — gold */
 .focus-gold:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--omniv-black), 0 0 0 4px var(--omniv-gold);
 }
 
+/* Selection */
 ::selection {
   background: rgba(212, 175, 55, 0.3);
   color: #fff;
 }
 
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -142,6 +149,7 @@ body {
   background: #444;
 }
 
+/* Skeleton shimmer */
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -163,6 +171,7 @@ body {
   border-radius: var(--radius-sm);
 }
 
+/* Fade in up */
 @keyframes fade-in-up {
   from {
     opacity: 0;
@@ -178,6 +187,7 @@ body {
   animation: fade-in-up 0.4s ease-out forwards;
 }
 
+/* Subtle pulse for live indicators */
 @keyframes soft-pulse {
   0%,
   100% {
