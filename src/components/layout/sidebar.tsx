@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -48,7 +49,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <>
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
-        <p className="mb-2 px-2 text-[10px] font-medium uppercase tracking-widest text-omniv-text-muted">
+        <p className="mb-2 px-2 font-data text-[10px] font-medium uppercase tracking-widest text-omniv-text-muted">
           Core
         </p>
         {nav.map((item) => {
@@ -61,7 +62,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "group flex items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-sm transition-all duration-150",
+                "group flex items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-[13px] transition-all duration-150",
                 active
                   ? "bg-omniv-gold/10 text-omniv-gold"
                   : "text-omniv-text-secondary hover:bg-white/[0.03] hover:text-omniv-text"
@@ -93,7 +94,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-sm transition-all",
+                "flex items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-[13px] transition-all",
                 active
                   ? "bg-omniv-gold/10 text-omniv-gold"
                   : "text-omniv-text-secondary hover:bg-white/[0.03] hover:text-omniv-text"
@@ -138,9 +139,7 @@ export function Sidebar() {
           {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </button>
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-omniv-gold/15">
-            <span className="text-xs font-bold text-omniv-gold">O</span>
-          </div>
+          <Image src="/logo.svg" alt="Omniv" width={28} height={28} className="rounded-md" />
           <span className="text-sm font-semibold tracking-tight">Omniv</span>
         </div>
       </div>
@@ -161,13 +160,15 @@ export function Sidebar() {
           open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >
-        <div className="hidden h-16 items-center gap-2.5 px-5 md:flex">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-omniv-gold/15 glow-gold">
-            <span className="text-sm font-bold tracking-tight text-omniv-gold">O</span>
-          </div>
+        <div className="hidden h-14 items-center gap-2.5 border-b border-omniv-border px-4 md:flex">
+          <Image src="/logo.svg" alt="Omniv" width={28} height={28} className="rounded-md" />
           <div>
-            <p className="text-sm font-semibold tracking-tight text-omniv-text">Omniv</p>
-            <p className="text-[10px] uppercase tracking-widest text-omniv-text-muted">Strategy OS</p>
+            <p className="text-[13px] font-semibold tracking-tight text-omniv-text">
+              Omniv
+            </p>
+            <p className="font-data text-[9px] uppercase tracking-[0.14em] text-omniv-text-muted">
+              Intelligence
+            </p>
           </div>
         </div>
         <div className="h-14 md:hidden" />
