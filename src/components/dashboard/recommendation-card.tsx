@@ -1,9 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { AIRecommendation } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { stashAct } from "@/lib/ziki-memory";
 import { ArrowRight, Clock, Target, Lightbulb } from "lucide-react";
 
 interface Props {
@@ -17,6 +19,19 @@ export function RecommendationCard({
   index = 0,
   expanded = true,
 }: Props) {
+  const router = useRouter();
+
+  function actOnThis() {
+    stashAct({
+      title: r.title,
+      summary: r.summary,
+      why: r.why,
+      expectedOutcome: r.expectedOutcome,
+      category: String(r.category),
+    });
+    router.push("/ziki");
+  }
+
   return (
     <article
       className={cn(
@@ -110,7 +125,12 @@ export function RecommendationCard({
           )}
           {r.detectedAt && <span>Detected {r.detectedAt}</span>}
         </div>
-        <Button variant="ghost" size="sm" className="gap-1.5 text-omniv-gold">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-1.5 text-omniv-gold"
+          onClick={actOnThis}
+        >
           Act on this
           <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
         </Button>
