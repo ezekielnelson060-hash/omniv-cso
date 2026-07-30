@@ -93,18 +93,14 @@ function UserChip({ onNavigate }: { onNavigate?: () => void }) {
     <Link
       href="/settings"
       onClick={onNavigate}
-      className="mx-3 mb-1 mt-2 flex items-center gap-2.5 rounded-[var(--radius)] border border-omniv-border/80 bg-omniv-card/80 px-2.5 py-2 transition-colors hover:border-omniv-gold/30 hover:bg-omniv-gold/5"
+      className="flex items-center gap-2.5 rounded-[var(--radius)] px-1 py-1.5 transition-colors hover:bg-omniv-gold/5"
     >
-      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/15 ring-1 ring-omniv-gold/25">
+      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/15 ring-1 ring-omniv-gold/30">
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatarUrl}
-            alt=""
-            className="h-full w-full object-cover"
-          />
+          <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          <span className="font-data text-[11px] font-semibold text-omniv-gold">
+          <span className="font-data text-xs font-semibold text-omniv-gold">
             {initials(name)}
           </span>
         )}
@@ -127,7 +123,6 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <>
-      <UserChip onNavigate={onNavigate} />
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
         <p className="mb-2 px-2 font-data text-[10px] font-medium uppercase tracking-widest text-omniv-text-muted">
           Core
@@ -246,24 +241,24 @@ export function Sidebar() {
           open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >
-        <div className="hidden h-14 items-center gap-2.5 border-b border-omniv-border px-4 md:flex">
-          <Image
-            src="/logo.svg"
-            alt="Omniv"
-            width={28}
-            height={28}
-            className="rounded-md"
-          />
-          <div>
-            <p className="text-[13px] font-semibold tracking-tight text-omniv-text">
+        {/* Profile at the very top — X-style */}
+        <div className="border-b border-omniv-border px-3 pb-3 pt-3 md:pt-4">
+          <div className="mb-3 hidden items-center gap-2 px-1 md:flex">
+            <Image
+              src="/logo.svg"
+              alt="Omniv"
+              width={22}
+              height={22}
+              className="rounded-md"
+            />
+            <span className="font-data text-[9px] uppercase tracking-[0.16em] text-omniv-text-muted">
               Omniv
-            </p>
-            <p className="font-data text-[9px] uppercase tracking-[0.14em] text-omniv-text-muted">
-              Intelligence
-            </p>
+            </span>
           </div>
+          <div className="h-14 md:hidden" />
+          <UserChip onNavigate={() => setOpen(false)} />
         </div>
-        <div className="h-14 md:hidden" />
+
         <NavLinks onNavigate={() => setOpen(false)} />
       </aside>
     </>
