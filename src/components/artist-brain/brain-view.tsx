@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getArtistBrain } from "@/lib/db/profile";
 import type { ArtistBrain } from "@/types";
-import { mockArtistBrain } from "@/data/mock";
 import { Brain, Loader2 } from "lucide-react";
 
 export function BrainView() {
@@ -18,8 +19,6 @@ export function BrainView() {
       try {
         const b = await getArtistBrain();
         if (!cancelled) setBrain(b);
-      } catch {
-        if (!cancelled) setBrain(mockArtistBrain);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -29,12 +28,26 @@ export function BrainView() {
     };
   }, []);
 
-  if (loading || !brain) {
+  if (loading) {
     return (
       <div className="flex items-center gap-2 py-16 text-sm text-omniv-text-muted">
         <Loader2 className="h-4 w-4 animate-spin text-omniv-gold" />
         Loading Artist Brain…
       </div>
+    );
+  }
+
+  if (!brain) {
+    return (
+      <Card className="p-8 text-center">
+        <p className="text-sm text-omniv-text-secondary">
+          No Artist Brain yet. Complete onboarding so Ziki, scores, and
+          opportunities personalise to you.
+        </p>
+        <Link href="/onboarding" className="mt-4 inline-block">
+          <Button size="sm">Start onboarding</Button>
+        </Link>
+      </Card>
     );
   }
 
@@ -53,7 +66,8 @@ export function BrainView() {
               {b.stageName ?? b.name}
             </h2>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              {b.genre.join(" · ")} · {b.careerStage} · updated {b.lastUpdated}
+              {(b.genre || []).join(" · ") || "Genre TBD"} · {b.careerStage} ·
+              updated {b.lastUpdated}
             </p>
           </div>
         </div>
@@ -73,7 +87,7 @@ export function BrainView() {
               {title}
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-omniv-text-secondary">
-              {body}
+              {body || "—"}
             </p>
           </Card>
         ))}
@@ -85,7 +99,7 @@ export function BrainView() {
             Strengths
           </h3>
           <ul className="space-y-1 text-sm text-omniv-text-secondary">
-            {b.strengths.map((s) => (
+            {(b.strengths || []).map((s) => (
               <li key={s}>· {s}</li>
             ))}
           </ul>
@@ -95,7 +109,7 @@ export function BrainView() {
             Gaps
           </h3>
           <ul className="space-y-1 text-sm text-omniv-text-secondary">
-            {b.weaknesses.map((s) => (
+            {(b.weaknesses || []).map((s) => (
               <li key={s}>· {s}</li>
             ))}
           </ul>
@@ -105,7 +119,7 @@ export function BrainView() {
             Goals
           </h3>
           <ul className="space-y-1 text-sm text-omniv-text-secondary">
-            {b.goals.map((s) => (
+            {(b.goals || []).map((s) => (
               <li key={s}>· {s}</li>
             ))}
           </ul>
