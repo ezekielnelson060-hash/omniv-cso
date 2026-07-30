@@ -1,8 +1,3 @@
-/**
- * Plan matrix, feature gates, and Flutterwave-aware billing helpers.
- * Payment provider remains Flutterwave (do not swap for Stripe).
- */
-
 export type PlanId = "free" | "starter" | "pro" | "label";
 
 export type FeatureId =
@@ -45,11 +40,11 @@ export const PLANS: PlanDef[] = [
     priceMonthly: 0,
     priceAnnual: 0,
     currency: "USD",
-    blurb: "See the product. One scorecard, limited Ziki.",
+    blurb: "Command Center + Artist Brain + limited Ziki",
     cta: "Start free",
     features: [
-      "Command Center (basic scores)",
-      "Artist Brain (view/edit)",
+      "Command Center",
+      "Artist Brain",
       "5 Ziki messages / day",
       "1 artist workspace",
     ],
@@ -61,14 +56,14 @@ export const PLANS: PlanDef[] = [
     priceMonthly: 29,
     priceAnnual: 23,
     currency: "USD",
-    blurb: "Solo artists running a weekly strategy cadence",
+    blurb: "Solo artists — full feed + analytics",
     cta: "Upgrade to Starter",
     features: [
       "Everything in Free",
       "Full Opportunity Feed",
       "Historical Analytics",
       "50 Ziki messages / day",
-      "1 artist",
+      "Surface scan",
     ],
     limits: { zikiMessagesPerDay: 50, artists: 1, teamSeats: 1 },
   },
@@ -78,15 +73,15 @@ export const PLANS: PlanDef[] = [
     priceMonthly: 59,
     priceAnnual: 47,
     currency: "USD",
-    blurb: "Artists & managers shipping releases with AI",
+    blurb: "Artists & managers — simulator, CRM, unlimited Ziki",
     cta: "Upgrade to Pro",
     highlighted: true,
     features: [
       "Everything in Starter",
-      "Release Simulator",
+      "Release Simulator (uploads)",
       "Content Intelligence",
-      "PDF reports (artist + campaign)",
-      "Manager CRM (up to 5 artists)",
+      "Manager CRM",
+      "PDF reports",
       "Unlimited Ziki",
     ],
     limits: { zikiMessagesPerDay: "unlimited", artists: 5, teamSeats: 3 },
@@ -97,17 +92,20 @@ export const PLANS: PlanDef[] = [
     priceMonthly: 179,
     priceAnnual: 143,
     currency: "USD",
-    blurb: "Labels & multi-manager teams",
+    blurb: "Labels — roster OS + API",
     cta: "Upgrade to Label",
     features: [
       "Everything in Pro",
       "Label Dashboard",
       "Unlimited roster",
-      "Full report suite + investor",
+      "Full reports + investor",
       "API keys",
-      "Priority support",
     ],
-    limits: { zikiMessagesPerDay: "unlimited", artists: "unlimited", teamSeats: 25 },
+    limits: {
+      zikiMessagesPerDay: "unlimited",
+      artists: "unlimited",
+      teamSeats: 25,
+    },
   },
 ];
 
@@ -175,4 +173,5 @@ export const ROUTE_GATES: Record<string, FeatureId> = {
   "/label": "label_dashboard",
 };
 
-export const DEFAULT_PLAN: PlanId = "starter";
+/** Paid access only after Flutterwave webhook confirms payment */
+export const DEFAULT_PLAN: PlanId = "free";
