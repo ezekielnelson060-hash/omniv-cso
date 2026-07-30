@@ -5,11 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { mockTeam, paymentProvider, plans } from "@/data/phase6";
+import { paymentProvider, plans } from "@/data/phase6";
 import { usePlan } from "@/components/billing/plan-provider";
 import { getProfile, upsertProfile } from "@/lib/db/profile";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { startFlutterwaveCheckout, type CheckoutPlan } from "@/lib/checkout";
+import {
+  addMember,
+  loadTeam,
+  removeMember,
+  type TeamMember,
+} from "@/lib/team-store";
 import {
   CreditCard,
   Users,
@@ -20,6 +26,7 @@ import {
   Radar,
   Loader2,
   ExternalLink,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -48,7 +55,7 @@ const SURFACE_HINTS = [
 ];
 
 export function SettingsPanel() {
-  const { plan, setPlan } = usePlan();
+  const { plan, setPlan, can } = usePlan();
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -67,6 +74,9 @@ export function SettingsPanel() {
   const [checkoutBusy, setCheckoutBusy] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [oauthMsg, setOauthMsg] = useState<string | null>(null);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [tmName, setTmName] = useState("");
+  const [tmEmail, setTmEmail] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -79,31 +89,37 @@ export function SettingsPanel() {
       setOauthMsg("OAuth failed — check client IDs in Vercel env.");
     }
     if (b === "success") {
-      setStatus("Payment received — plan will unlock shortly.");
+      setStatus("Payment received — plan unlocks after confirmation.");
     }
   }, []);
 
   useEffect(() => {
     (async () => {
-      if (!isSupabaseConfigured()) return;
-      const p = await getProfile();
-      if (p) {
-        setName(p.full_name || "");
-        setEmail(p.email || "");
-      } else {
-        try {
-          const supabase = createClient();
-          const {
-            data: { user },
-          } = await supabase.auth.getUser();
-          if (user) {
-            setEmail(user.email || "");
-            setName((user.user_metadata?.full_name as string) || "");
+      let n = "";
+      let e = "";
+      if (isSupabaseConfigured()) {
+        const p = await getProfile();
+        if (p) {
+          n = p.full_name || "";
+          e = p.email || "";
+        } else {
+          try {
+            const supabase = createClient();
+            const {
+              data: { user },
+            } = await supabase.auth.getUser();
+            if (user) {
+              e = user.email || "";
+              n = (user.user_metadata?.full_name as string) || "";
+            }
+          } catch {
+            /* ignore */
           }
-        } catch {
-          /* ignore */
         }
       }
+      setName(n);
+      setEmail(e);
+      setTeam(loadTeam(e, n || "You"));
     })();
   }, []);
 
@@ -147,11 +163,8 @@ export function SettingsPanel() {
         briefing?: string;
         error?: string;
       };
-      if (!res.ok) {
-        setScanError(data.error || "Scan failed");
-      } else {
-        setBriefing(data.briefing || "No briefing returned");
-      }
+      if (!res.ok) setScanError(data.error || "Scan failed");
+      else setBriefing(data.briefing || "No briefing returned");
     } catch {
       setScanError("Network error");
     } finally {
@@ -211,11 +224,11 @@ export function SettingsPanel() {
         <div className="mb-3 flex items-center gap-2">
           <Radar className="h-4 w-4 text-omniv-gold" />
           <h3 className="text-sm font-medium">Surface scan</h3>
-          <Badge variant="gold">Gemini</Badge>
         </div>
         <p className="mb-4 text-xs leading-relaxed text-omniv-text-secondary">
-          Paste public profile URLs. Ziki scans positioning and returns an
-          executive briefing — no platform developer apps required.
+          Paste public profile URLs. Omniv returns an executive briefing on
+          positioning, gaps, and next moves — grounded in your display name and
+          Artist Brain.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           {SURFACE_HINTS.map((s) => (
@@ -239,10 +252,10 @@ export function SettingsPanel() {
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
             placeholder="Paste bio, monthly listeners, or campaign context…"
-            className="w-full rounded-[var(--radius)] border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm text-omniv-text placeholder:text-omniv-text-muted focus-gold"
+            className="w-full rounded-[var(--radius)] border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm focus-gold"
           />
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-3">
           <Button
             size="sm"
             className="gap-1.5"
@@ -307,8 +320,7 @@ export function SettingsPanel() {
           <Badge variant="gold">{paymentProvider.name}</Badge>
         </div>
         <p className="mb-4 text-xs text-omniv-text-secondary">
-          {paymentProvider.note} Amounts are sent live from the app — no separate
-          Flutterwave payment links needed per plan.
+          {paymentProvider.note}
         </p>
         <div className="grid gap-2 sm:grid-cols-3">
           {plans.map((p) => {
@@ -355,21 +367,72 @@ export function SettingsPanel() {
         <div className="mb-3 flex items-center gap-2">
           <Users className="h-4 w-4 text-omniv-gold" />
           <h3 className="text-sm font-medium">Team</h3>
+          {!can("team_seats") && (
+            <Badge variant="outline">Pro+</Badge>
+          )}
         </div>
         <ul className="space-y-2">
-          {mockTeam.map((m) => (
+          {team.map((m) => (
             <li
               key={m.id}
-              className="flex items-center justify-between rounded-[var(--radius)] border border-omniv-border px-3 py-2 text-sm"
+              className="flex items-center justify-between gap-2 rounded-[var(--radius)] border border-omniv-border px-3 py-2 text-sm"
             >
-              <span>
+              <span className="min-w-0 truncate">
                 {m.name}{" "}
                 <span className="text-omniv-text-muted">· {m.email}</span>
               </span>
-              <Badge variant="outline">{m.role}</Badge>
+              <div className="flex shrink-0 items-center gap-2">
+                <Badge variant="outline">{m.role}</Badge>
+                {m.role !== "Owner" && can("team_seats") && (
+                  <button
+                    type="button"
+                    className="text-[11px] text-omniv-danger"
+                    onClick={() => setTeam(removeMember(team, m.id))}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
             </li>
           ))}
         </ul>
+        {can("team_seats") ? (
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <Input
+              placeholder="Name"
+              value={tmName}
+              onChange={(e) => setTmName(e.target.value)}
+            />
+            <Input
+              placeholder="Email"
+              value={tmEmail}
+              onChange={(e) => setTmEmail(e.target.value)}
+            />
+            <Button
+              size="sm"
+              className="gap-1"
+              onClick={() => {
+                if (!tmName.trim() || !tmEmail.trim()) return;
+                setTeam(
+                  addMember(team, {
+                    name: tmName.trim(),
+                    email: tmEmail.trim(),
+                    role: "Manager",
+                  })
+                );
+                setTmName("");
+                setTmEmail("");
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add member
+            </Button>
+          </div>
+        ) : (
+          <p className="mt-3 text-xs text-omniv-text-muted">
+            Upgrade to Pro to invite managers and analysts.
+          </p>
+        )}
       </Card>
 
       <Card className="p-5">
@@ -390,7 +453,7 @@ export function SettingsPanel() {
         <p className="mb-3 text-xs text-omniv-text-secondary">
           Available on Label plan. Keys are never shown in full after creation.
         </p>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" disabled={!can("api_keys")}>
           Generate key
         </Button>
       </Card>
