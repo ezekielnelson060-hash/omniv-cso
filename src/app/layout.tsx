@@ -1,22 +1,26 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const instrument = Instrument_Sans({
+  variable: "--font-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Omniv — AI Chief Strategy Officer for Artists",
+  title: "Omniv — Intelligence Platform for Artists & Labels",
   description:
-    "The AI Chief Strategy Officer for independent artists, managers and record labels. Strategy, not just content.",
+    "AI Chief Strategy Officer for independent artists, managers and record labels. Career intelligence, not content spam.",
+  icons: { icon: "/logo.svg" },
 };
 
 export default function RootLayout({
@@ -27,9 +31,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${instrument.variable} ${plexMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-omniv-black text-omniv-text">
+      <body className="min-h-full flex flex-col bg-omniv-black text-omniv-text font-sans">
         <Providers>{children}</Providers>
       </body>
     </html>

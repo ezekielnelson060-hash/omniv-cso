@@ -1,21 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  /* Omniv core palette — cinematic black & gold */
   --omniv-black: #050505;
-  --omniv-black-elevated: #0c0c0c;
-  --omniv-black-card: #111111;
-  --omniv-black-hover: #171717;
-  --omniv-border: #1f1f1f;
+  --omniv-black-elevated: #0a0a0a;
+  --omniv-black-card: #0e0e0e;
+  --omniv-black-hover: #141414;
+  --omniv-border: #1c1c1c;
   --omniv-border-subtle: #2a2a2a;
   --omniv-gold: #d4af37;
   --omniv-gold-soft: #c9a227;
   --omniv-gold-muted: #a68b1f;
   --omniv-gold-glow: rgba(212, 175, 55, 0.15);
   --omniv-gold-glow-strong: rgba(212, 175, 55, 0.28);
-  --omniv-text-primary: #f5f5f5;
-  --omniv-text-secondary: #a3a3a3;
-  --omniv-text-muted: #737373;
+  --omniv-text-primary: #f2f2f0;
+  --omniv-text-secondary: #9a9a96;
+  --omniv-text-muted: #6b6b68;
   --omniv-success: #22c55e;
   --omniv-warning: #f59e0b;
   --omniv-danger: #ef4444;
@@ -23,16 +22,17 @@
 
   --background: var(--omniv-black);
   --foreground: var(--omniv-text-primary);
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-omniv-black: var(--omniv-black);
+  --color-omniv-bg: var(--omniv-black);
   --color-omniv-elevated: var(--omniv-black-elevated);
   --color-omniv-card: var(--omniv-black-card);
   --color-omniv-hover: var(--omniv-black-hover);
@@ -47,8 +47,8 @@
   --color-omniv-success: var(--omniv-success);
   --color-omniv-warning: var(--omniv-warning);
   --color-omniv-danger: var(--omniv-danger);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
   --radius-sm: var(--radius-sm);
   --radius: var(--radius);
   --radius-lg: var(--radius-lg);
@@ -68,134 +68,108 @@ body {
   background: var(--omniv-black);
   color: var(--omniv-text-primary);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-feature-settings: "ss01" on, "cv11" on;
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100dvh;
 }
 
-/* Premium glassmorphism */
+h1, h2, h3, h4 {
+  letter-spacing: -0.03em;
+  font-weight: 600;
+}
+
+.font-data {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
 .glass {
-  background: rgba(17, 17, 17, 0.72);
+  background: rgba(14, 14, 14, 0.75);
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .glass-gold {
   background: linear-gradient(
     135deg,
-    rgba(212, 175, 55, 0.08) 0%,
-    rgba(17, 17, 17, 0.85) 50%,
-    rgba(17, 17, 17, 0.9) 100%
+    rgba(212, 175, 55, 0.07) 0%,
+    rgba(14, 14, 14, 0.9) 45%,
+    rgba(10, 10, 10, 0.95) 100%
   );
   backdrop-filter: blur(24px) saturate(150%);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid rgba(212, 175, 55, 0.18);
+  border: 1px solid rgba(212, 175, 55, 0.16);
 }
 
-/* Subtle gold glow ring */
 .glow-gold {
   box-shadow:
-    0 0 0 1px rgba(212, 175, 55, 0.12),
-    0 4px 24px -4px rgba(212, 175, 55, 0.12),
-    0 0 48px -12px rgba(212, 175, 55, 0.08);
+    0 0 0 1px rgba(212, 175, 55, 0.1),
+    0 4px 24px -4px rgba(212, 175, 55, 0.1),
+    0 0 40px -12px rgba(212, 175, 55, 0.06);
 }
 
-.glow-gold-strong {
-  box-shadow:
-    0 0 0 1px rgba(212, 175, 55, 0.25),
-    0 8px 32px -4px rgba(212, 175, 55, 0.2),
-    0 0 64px -8px rgba(212, 175, 55, 0.15);
-}
-
-/* Soft elevated card */
 .card-elevated {
   background: var(--omniv-black-card);
   border: 1px solid var(--omniv-border);
   border-radius: var(--radius-lg);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card-elevated:hover {
   border-color: var(--omniv-border-subtle);
-  box-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 28px -10px rgba(0, 0, 0, 0.55);
 }
 
-/* Focus ring — gold */
 .focus-gold:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--omniv-black), 0 0 0 4px var(--omniv-gold);
 }
 
-/* Selection */
 ::selection {
-  background: rgba(212, 175, 55, 0.3);
+  background: rgba(212, 175, 55, 0.28);
   color: #fff;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: #2a2a2a;
   border-radius: 3px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #444;
-}
 
-/* Skeleton shimmer */
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    #141414 0%,
-    #1f1f1f 50%,
-    #141414 100%
-  );
+  background: linear-gradient(90deg, #121212 0%, #1a1a1a 50%, #121212 100%);
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
   border-radius: var(--radius-sm);
 }
 
-/* Fade in up */
 @keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in-up {
-  animation: fade-in-up 0.4s ease-out forwards;
+  animation: fade-in-up 0.35s ease-out forwards;
 }
 
-/* Subtle pulse for live indicators */
 @keyframes soft-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 
 .animate-soft-pulse {

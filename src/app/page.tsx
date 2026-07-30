@@ -1,271 +1,325 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
-  Sparkles,
   Brain,
   Target,
   BarChart3,
+  Sparkles,
   Radio,
   Users,
-  TrendingUp,
   Shield,
 } from "lucide-react";
 
-const PROBLEMS = [
-  {
-    title: "Strategy is scattered",
-    body: "Playlists, TikTok trends, release timing, and brand decisions live in different tabs — none of them talk to each other.",
-  },
-  {
-    title: "AI tools stop at content",
-    body: "Most music AI writes captions or stems. Almost none act like a chief strategy officer who knows your catalogue and career stage.",
-  },
-  {
-    title: "Independents compete blind",
-    body: "Labels still have A&R rooms. Independents need the same clarity: what to do next, why, when, and expected outcome.",
-  },
-];
-
-const FEATURES = [
-  {
-    icon: Brain,
-    title: "Artist Brain",
-    desc: "Permanent memory of style, audience, goals, and gaps. Every recommendation is grounded in you — not a generic prompt.",
-  },
-  {
-    icon: Target,
-    title: "Opportunity Feed",
-    desc: "Trends, collabs, release windows, and content plays ranked by impact, difficulty, and confidence.",
-  },
-  {
-    icon: BarChart3,
-    title: "Command Center scores",
-    desc: "Growth, momentum, audience health, release readiness — executive KPIs, not vanity charts.",
-  },
-  {
-    icon: Sparkles,
-    title: "Ziki — AI CSO",
-    desc: "Ask anything. Ziki answers as a briefing: what, why, when, how, priority, expected outcome.",
-  },
-  {
-    icon: Radio,
-    title: "Release Simulator",
-    desc: "Stress-test timing, competition, and marketing before you spend the budget.",
-  },
-  {
-    icon: Users,
-    title: "Manager & Label views",
-    desc: "Multi-artist CRM and roster intelligence when you outgrow solo mode.",
-  },
-];
-
 export default function LandingPage() {
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-omniv-bg">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-omniv-gold/6 blur-[140px]" />
-        <div className="absolute bottom-20 right-0 h-[360px] w-[480px] rounded-full bg-omniv-gold/4 blur-[120px]" />
-        <div className="absolute left-0 top-1/3 h-[200px] w-[200px] rounded-full bg-omniv-gold/3 blur-[80px]" />
+    <div className="relative min-h-dvh bg-omniv-bg">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-24 left-1/2 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-omniv-gold/[0.04] blur-[100px]" />
       </div>
 
-      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-5 md:px-8">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-omniv-gold/15 glow-gold">
-            <span className="text-base font-bold text-omniv-gold">O</span>
-          </div>
-          <div>
-            <span className="text-lg font-semibold tracking-tight">Omniv</span>
-            <span className="ml-2 hidden text-[10px] uppercase tracking-widest text-omniv-text-muted sm:inline">
-              Artist OS
+      {/* Header — tight */}
+      <header className="relative z-10 border-b border-omniv-border/80">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5 md:px-8">
+          <Link href="/" className="flex items-center gap-2.5">
+            <Image
+              src="/logo.svg"
+              alt="Omniv"
+              width={28}
+              height={28}
+              className="rounded-md"
+              priority
+            />
+            <span className="text-[15px] font-semibold tracking-tight">Omniv</span>
+            <span className="hidden font-data text-[10px] uppercase tracking-[0.14em] text-omniv-text-muted sm:inline">
+              Intelligence
             </span>
+          </Link>
+          <nav className="hidden items-center gap-7 text-[13px] text-omniv-text-secondary md:flex">
+            <a href="#platform" className="hover:text-omniv-text">
+              Platform
+            </a>
+            <a href="#who" className="hover:text-omniv-text">
+              Who it&apos;s for
+            </a>
+            <a href="#system" className="hover:text-omniv-text">
+              System
+            </a>
+          </nav>
+          <div className="flex items-center gap-2">
+            <Link href="/login">
+              <Button variant="ghost" size="sm" className="h-8 text-[13px]">
+                Sign in
+              </Button>
+            </Link>
+            <Link href="/signup">
+              <Button size="sm" className="h-8 text-[13px]">
+                Get started
+              </Button>
+            </Link>
           </div>
-        </div>
-        <nav className="hidden items-center gap-6 text-sm text-omniv-text-secondary md:flex">
-          <a href="#problem" className="hover:text-omniv-text">
-            Why Omniv
-          </a>
-          <a href="#product" className="hover:text-omniv-text">
-            Product
-          </a>
-          <a href="#who" className="hover:text-omniv-text">
-            Who it&apos;s for
-          </a>
-        </nav>
-        <div className="flex items-center gap-2">
-          <Link href="/login">
-            <Button variant="ghost" size="sm">
-              Sign in
-            </Button>
-          </Link>
-          <Link href="/signup">
-            <Button size="sm">Get started</Button>
-          </Link>
         </div>
       </header>
 
-      <section className="relative z-10 mx-auto max-w-4xl px-6 pb-20 pt-16 text-center md:pt-24">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-omniv-gold/25 bg-omniv-gold/8 px-3.5 py-1.5 text-xs font-medium text-omniv-gold">
-          <Sparkles className="h-3.5 w-3.5" />
-          AI Chief Strategy Officer for independent music
-        </div>
-
-        <h1 className="text-balance text-4xl font-semibold tracking-tight text-omniv-text md:text-6xl md:leading-[1.08]">
-          Know the highest-impact move
-          <br />
-          <span className="text-omniv-gold">for your career.</span>
-          <br />
-          Every single day.
-        </h1>
-
-        <p className="mx-auto mt-6 max-w-2xl text-balance text-base leading-relaxed text-omniv-text-secondary md:text-lg">
-          Omniv is not another caption generator. It is a continuous strategy
-          engine for artists, managers, and labels — built for an industry where
-          attention is fragmented, releases are weekly, and independent careers
-          win on clarity, not luck.
+      {/* Hero — minimal vertical space */}
+      <section className="relative z-10 mx-auto max-w-4xl px-5 pb-10 pt-12 text-center md:px-8 md:pt-16">
+        <p className="mb-4 font-data text-[11px] uppercase tracking-[0.18em] text-omniv-gold">
+          Career intelligence for independent music
         </p>
-
-        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <h1 className="text-balance text-[2.15rem] font-semibold leading-[1.08] tracking-tight text-omniv-text md:text-5xl lg:text-[3.25rem]">
+          The highest-impact move
+          <span className="text-omniv-gold"> for your career</span>
+          <span className="text-omniv-text-muted"> — every day.</span>
+        </h1>
+        <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-omniv-text-secondary">
+          Omniv is an AI Chief Strategy Officer for artists, managers, and labels.
+          Not captions. Not stems. Continuous strategy: what to do, why, when, and
+          the expected outcome.
+        </p>
+        <div className="mt-7 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
           <Link href="/signup">
-            <Button size="lg" className="min-w-[200px] gap-2">
+            <Button size="lg" className="h-11 min-w-[160px] gap-2 text-[13px]">
               Start free
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </Link>
-          <a href="#product">
-            <Button variant="outline" size="lg" className="min-w-[200px]">
-              See the product
+          <a href="#platform">
+            <Button variant="outline" size="lg" className="h-11 min-w-[160px] text-[13px]">
+              View platform
             </Button>
           </a>
         </div>
-
-        <p className="mt-6 text-xs text-omniv-text-muted">
-          Built for Afrobeats, amapiano, alté, hip-hop, and the global independent
-          circuit · Powered by Artist Brain + Ziki
-        </p>
       </section>
 
-      <section
-        id="problem"
-        className="relative z-10 mx-auto max-w-5xl px-6 pb-24"
-      >
-        <div className="mb-10 text-center">
-          <p className="text-xs font-medium uppercase tracking-widest text-omniv-gold">
-            The industry problem
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
-            Music moved online. Strategy didn&apos;t.
-          </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-omniv-text-secondary">
-            Streaming, short-form video, playlists, and direct-to-fan channels
-            created more surface area than any artist can manually optimize.
-            Omniv turns that noise into a single question: what should we do
-            next?
-          </p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {PROBLEMS.map((p) => (
-            <div
-              key={p.title}
-              className="rounded-[var(--radius-lg)] border border-omniv-border bg-omniv-elevated/60 p-5"
-            >
-              <h3 className="text-sm font-semibold text-omniv-text">{p.title}</h3>
-              <p className="mt-2 text-xs leading-relaxed text-omniv-text-secondary">
-                {p.body}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="product" className="relative z-10 mx-auto max-w-5xl px-6 pb-24">
-        <div className="mb-10 text-center">
-          <p className="text-xs font-medium uppercase tracking-widest text-omniv-gold">
-            The product
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
-            A Chief Strategy Officer that never clocks out
-          </h2>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((item) => (
-            <div
-              key={item.title}
-              className="card-elevated flex flex-col gap-3 p-5 transition-colors hover:border-omniv-gold/25"
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-omniv-gold/10">
-                <item.icon className="h-4 w-4 text-omniv-gold" />
-              </div>
-              <h3 className="text-sm font-semibold text-omniv-text">{item.title}</h3>
-              <p className="text-xs leading-relaxed text-omniv-text-secondary">
-                {item.desc}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section id="who" className="relative z-10 mx-auto max-w-5xl px-6 pb-24">
-        <div className="grid gap-4 md:grid-cols-3">
+      {/* Problem strip — dense */}
+      <section className="relative z-10 border-y border-omniv-border bg-omniv-elevated/40">
+        <div className="mx-auto grid max-w-6xl divide-y divide-omniv-border md:grid-cols-3 md:divide-x md:divide-y-0">
           {[
             {
-              icon: TrendingUp,
-              title: "Artists",
-              body: "Solo strategy OS — scores, opportunities, and Ziki briefings tuned to your stage.",
+              k: "01",
+              t: "Strategy is scattered",
+              d: "Playlists, short-form, release timing, and brand live in different tabs.",
+            },
+            {
+              k: "02",
+              t: "AI stopped at content",
+              d: "Most music AI writes captions. Almost none run a career operating system.",
+            },
+            {
+              k: "03",
+              t: "Independents compete blind",
+              d: "Labels still have rooms of people. You need the same clarity without the headcount.",
+            },
+          ].map((x) => (
+            <div key={x.k} className="px-5 py-6 md:px-8 md:py-7">
+              <p className="font-data text-[10px] text-omniv-gold">{x.k}</p>
+              <h3 className="mt-1.5 text-sm font-semibold tracking-tight">{x.t}</h3>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-omniv-text-secondary">
+                {x.d}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Platform */}
+      <section id="platform" className="relative z-10 mx-auto max-w-6xl px-5 py-12 md:px-8 md:py-14">
+        <div className="mb-7 flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="font-data text-[11px] uppercase tracking-[0.16em] text-omniv-gold">
+              Platform
+            </p>
+            <h2 className="mt-1 text-xl font-semibold tracking-tight md:text-2xl">
+              One system. One next move.
+            </h2>
+          </div>
+          <p className="max-w-md text-[13px] text-omniv-text-secondary">
+            Built as intelligence infrastructure — scores, memory, and briefings
+            in one operating surface.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              icon: Brain,
+              t: "Artist Brain",
+              d: "Permanent memory of style, audience, goals, and gaps. Grounds every recommendation.",
+            },
+            {
+              icon: BarChart3,
+              t: "Command Center",
+              d: "Executive KPIs: growth, momentum, audience health, release readiness.",
+            },
+            {
+              icon: Target,
+              t: "Opportunity Feed",
+              d: "Ranked moves by impact, difficulty, confidence, and expected outcome.",
+            },
+            {
+              icon: Sparkles,
+              t: "Ziki",
+              d: "AI CSO. Answers as briefings — not chat. Knows your Artist Brain.",
+            },
+            {
+              icon: Radio,
+              t: "Release Simulator",
+              d: "Stress-test timing and positioning before you spend the cycle.",
             },
             {
               icon: Users,
-              title: "Managers",
-              body: "Multi-artist CRM and prioritisation so the right career gets the next hour.",
+              t: "Manager & Label",
+              d: "Multi-artist prioritisation and roster intelligence when you scale.",
             },
+          ].map((f) => (
+            <div
+              key={f.t}
+              className="flex gap-3 rounded-[var(--radius-lg)] border border-omniv-border bg-omniv-card p-4"
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-omniv-gold/10">
+                <f.icon className="h-3.5 w-3.5 text-omniv-gold" />
+              </div>
+              <div>
+                <h3 className="text-[13px] font-semibold tracking-tight">{f.t}</h3>
+                <p className="mt-1 text-[12px] leading-relaxed text-omniv-text-secondary">
+                  {f.d}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Who */}
+      <section id="who" className="relative z-10 border-y border-omniv-border bg-omniv-elevated/30">
+        <div className="mx-auto grid max-w-6xl md:grid-cols-3">
+          {[
             {
               icon: Shield,
-              title: "Labels",
-              body: "Roster health, release readiness, and portfolio-level moves in one place.",
+              t: "Artists",
+              d: "Solo career OS — scores, opportunities, Ziki briefings tuned to your stage.",
             },
-          ].map((r) => (
+            {
+              icon: Users,
+              t: "Managers",
+              d: "Prioritise the right artist this hour. CRM with strategy, not just contacts.",
+            },
+            {
+              icon: BarChart3,
+              t: "Labels",
+              d: "Roster health and release readiness across the catalogue.",
+            },
+          ].map((r, i) => (
             <div
-              key={r.title}
-              className="glass-gold rounded-[var(--radius-xl)] p-6"
+              key={r.t}
+              className={`px-5 py-8 md:px-8 ${i < 2 ? "border-b border-omniv-border md:border-b-0 md:border-r" : ""}`}
             >
-              <r.icon className="h-5 w-5 text-omniv-gold" />
-              <h3 className="mt-3 text-base font-semibold">{r.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-omniv-text-secondary">
-                {r.body}
+              <r.icon className="h-4 w-4 text-omniv-gold" />
+              <h3 className="mt-3 text-sm font-semibold">{r.t}</h3>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-omniv-text-secondary">
+                {r.d}
               </p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-3xl px-6 pb-28 text-center">
-        <div className="rounded-[var(--radius-xl)] border border-omniv-gold/30 bg-omniv-gold/8 px-8 py-12">
-          <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            Stop guessing. Start executing.
-          </h2>
-          <p className="mx-auto mt-3 max-w-lg text-sm text-omniv-text-secondary">
-            Create an account, complete Artist Brain onboarding, and get your
-            first executive briefing in minutes.
-          </p>
-          <Link href="/signup" className="mt-8 inline-block">
-            <Button size="lg" className="min-w-[200px] gap-2">
-              Get started free
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
+      {/* System principle */}
+      <section id="system" className="relative z-10 mx-auto max-w-3xl px-5 py-12 text-center md:py-14">
+        <p className="font-data text-[11px] uppercase tracking-[0.16em] text-omniv-gold">
+          Core principle
+        </p>
+        <p className="mt-3 text-xl font-semibold tracking-tight md:text-2xl">
+          Every screen answers one question:
+        </p>
+        <p className="mt-2 text-lg text-omniv-gold md:text-xl">
+          What is the highest-impact move right now?
+        </p>
+        <Link href="/signup" className="mt-8 inline-block">
+          <Button size="lg" className="h-11 gap-2 text-[13px]">
+            Open Command Center
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Button>
+        </Link>
       </section>
 
-      <footer className="relative z-10 border-t border-omniv-border py-10">
-        <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 text-xs text-omniv-text-muted sm:flex-row">
-          <span>© {new Date().getFullYear()} Omniv. Strategy for the independent era.</span>
-          <div className="flex gap-4">
-            <Link href="/login" className="hover:text-omniv-text">
-              Sign in
-            </Link>
-            <Link href="/signup" className="hover:text-omniv-text">
-              Sign up
-            </Link>
+      {/* Enterprise footer */}
+      <footer className="relative z-10 border-t border-omniv-border bg-omniv-elevated">
+        <div className="mx-auto max-w-6xl px-5 py-10 md:px-8">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-2 lg:col-span-1">
+              <div className="flex items-center gap-2">
+                <Image src="/logo.svg" alt="" width={24} height={24} className="rounded" />
+                <span className="text-sm font-semibold">Omniv</span>
+              </div>
+              <p className="mt-3 max-w-xs text-[12px] leading-relaxed text-omniv-text-secondary">
+                Intelligence platform for independent artists, managers, and
+                labels. Strategy infrastructure for the streaming era.
+              </p>
+            </div>
+            <div>
+              <p className="font-data text-[10px] uppercase tracking-[0.14em] text-omniv-text-muted">
+                Product
+              </p>
+              <ul className="mt-3 space-y-2 text-[13px] text-omniv-text-secondary">
+                <li>
+                  <a href="#platform" className="hover:text-omniv-text">
+                    Command Center
+                  </a>
+                </li>
+                <li>
+                  <a href="#platform" className="hover:text-omniv-text">
+                    Artist Brain
+                  </a>
+                </li>
+                <li>
+                  <a href="#platform" className="hover:text-omniv-text">
+                    Ziki AI
+                  </a>
+                </li>
+                <li>
+                  <Link href="/signup" className="hover:text-omniv-text">
+                    Get started
+                  </Link>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-data text-[10px] uppercase tracking-[0.14em] text-omniv-text-muted">
+                For
+              </p>
+              <ul className="mt-3 space-y-2 text-[13px] text-omniv-text-secondary">
+                <li>Independent artists</li>
+                <li>Managers</li>
+                <li>Labels & collectives</li>
+                <li>A&R teams</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-data text-[10px] uppercase tracking-[0.14em] text-omniv-text-muted">
+                Account
+              </p>
+              <ul className="mt-3 space-y-2 text-[13px] text-omniv-text-secondary">
+                <li>
+                  <Link href="/login" className="hover:text-omniv-text">
+                    Sign in
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/signup" className="hover:text-omniv-text">
+                    Create account
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-10 flex flex-col gap-3 border-t border-omniv-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <p className="font-data text-[11px] text-omniv-text-muted">
+              © {new Date().getFullYear()} Omniv Systems · All rights reserved
+            </p>
+            <p className="text-[11px] text-omniv-text-muted">
+              Built for the independent era · Black · Gold · Intelligence
+            </p>
           </div>
         </div>
       </footer>
