@@ -22,19 +22,34 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 const SURFACE_HINTS = [
-  { id: "spotify", label: "Spotify", placeholder: "https://open.spotify.com/artist/..." },
-  { id: "youtube", label: "YouTube", placeholder: "https://youtube.com/@..." },
-  { id: "instagram", label: "Instagram", placeholder: "https://instagram.com/..." },
-  { id: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@..." },
+  {
+    id: "spotify",
+    label: "Spotify",
+    placeholder: "https://open.spotify.com/artist/...",
+  },
+  {
+    id: "youtube",
+    label: "YouTube",
+    placeholder: "https://youtube.com/@...",
+  },
+  {
+    id: "instagram",
+    label: "Instagram",
+    placeholder: "https://instagram.com/...",
+  },
+  {
+    id: "tiktok",
+    label: "TikTok",
+    placeholder: "https://tiktok.com/@...",
+  },
 ];
 
 export function SettingsPanel() {
   const { plan, setPlan } = usePlan();
   const router = useRouter();
-  const search = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
@@ -54,14 +69,19 @@ export function SettingsPanel() {
   const [oauthMsg, setOauthMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    const o = search.get("oauth");
-    const b = search.get("billing");
+    if (typeof window === "undefined") return;
+    const q = new URLSearchParams(window.location.search);
+    const o = q.get("oauth");
+    const b = q.get("billing");
     if (o === "spotify_ok") setOauthMsg("Spotify connected.");
     if (o === "youtube_ok") setOauthMsg("YouTube connected.");
-    if (o?.includes("error") || o?.includes("config"))
+    if (o && (o.includes("error") || o.includes("config"))) {
       setOauthMsg("OAuth failed — check client IDs in Vercel env.");
-    if (b === "success") setStatus("Payment received — plan will unlock shortly.");
-  }, [search]);
+    }
+    if (b === "success") {
+      setStatus("Payment received — plan will unlock shortly.");
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -110,7 +130,9 @@ export function SettingsPanel() {
     setScanning(true);
     setScanError(null);
     setBriefing(null);
-    const list = Object.values(urls).map((u) => u.trim()).filter(Boolean);
+    const list = Object.values(urls)
+      .map((u) => u.trim())
+      .filter(Boolean);
     try {
       const res = await fetch("/api/scan/social", {
         method: "POST",
@@ -124,7 +146,6 @@ export function SettingsPanel() {
       const data = (await res.json()) as {
         briefing?: string;
         error?: string;
-        source?: string;
       };
       if (!res.ok) {
         setScanError(data.error || "Scan failed");
@@ -257,7 +278,7 @@ export function SettingsPanel() {
           <h3 className="text-sm font-medium">Live OAuth</h3>
         </div>
         <p className="mb-3 text-xs text-omniv-text-secondary">
-          Deep metrics need platform apps. Spotify & YouTube routes are ready
+          Deep metrics need platform apps. Spotify &amp; YouTube routes are ready
           when client IDs are in Vercel.
         </p>
         {oauthMsg && (
