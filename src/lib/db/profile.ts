@@ -1,4 +1,4 @@
-import type { ArtistBrain, UserRole } from "@/types";
+import type { ArtistBrain, CareerStage, UserRole } from "@/types";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 export type Profile = {
@@ -8,33 +8,11 @@ export type Profile = {
   role: UserRole | null;
   platforms: string[] | null;
   social_links?: Record<string, string> | null;
+  interests?: string[] | null;
   onboarding_complete: boolean | null;
   last_scan_at?: string | null;
   last_scan_briefing?: string | null;
 };
-
-function emptyBrain(name = "Artist"): ArtistBrain {
-  const today = new Date().toISOString().slice(0, 10);
-  return {
-    name,
-    stageName: name,
-    genre: [],
-    subGenre: [],
-    musicStyle: "",
-    brandVoice: "",
-    visualIdentity: "",
-    targetAudience: "",
-    careerStage: "emerging",
-    strengths: [],
-    weaknesses: [],
-    goals: [],
-    pastReleases: [],
-    contentStyle: "",
-    competitors: [],
-    notes: "",
-    lastUpdated: today,
-  };
-}
 
 function rowToBrain(row: Record<string, unknown>): ArtistBrain {
   return {
@@ -46,7 +24,7 @@ function rowToBrain(row: Record<string, unknown>): ArtistBrain {
     brandVoice: (row.brand_voice as string) || "",
     visualIdentity: (row.visual_identity as string) || "",
     targetAudience: (row.target_audience as string) || "",
-    careerStage: (row.career_stage as ArtistBrain["careerStage"]) || "emerging",
+    careerStage: (row.career_stage as CareerStage) || "emerging",
     strengths: (row.strengths as string[]) || [],
     weaknesses: (row.weaknesses as string[]) || [],
     goals: (row.goals as string[]) || [],
@@ -88,38 +66,49 @@ export function seedBrainFromOnboarding(opts: {
   role: UserRole;
   platforms: string[];
   social_links?: Record<string, string>;
+  genre?: string[];
+  musicStyle?: string;
+  brandVoice?: string;
+  careerStage?: CareerStage;
+  goals?: string[];
+  interests?: string[];
 }): ArtistBrain {
   const today = new Date().toISOString().slice(0, 10);
   const name = opts.fullName.trim() || "Artist";
   const linkList = Object.entries(opts.social_links || {})
     .map(([k, v]) => `${k}: ${v}`)
     .join(" · ");
+  const interests = opts.interests || [];
+
   return {
     name,
     stageName: name,
-    genre: ["TBD"],
+    genre: opts.genre?.length ? opts.genre : ["TBD"],
     subGenre: [],
     musicStyle:
-      "To be refined by Ziki after first content + catalogue signals are connected.",
-    brandVoice: "Authentic, intentional, growth-focused.",
+      opts.musicStyle ||
+      "To be refined after first content + catalogue signals.",
+    brandVoice: opts.brandVoice || "Authentic, intentional, growth-focused.",
     visualIdentity:
       "Define with cover art and content system during first 14 days.",
-    targetAudience: "To be inferred from platform signals after connect.",
-    careerStage: "emerging",
-    strengths: ["Early strategy OS adoption", "Clear intent to systematise"],
+    targetAudience: "To be refined from platform analytics after connect.",
+    careerStage: opts.careerStage || "emerging",
+    strengths: [
+      "Clear self-definition from onboarding",
+      "Intent to run strategy as a system",
+    ],
     weaknesses: [
-      "Catalogue signals incomplete until platforms sync",
-      "Release readiness unknown",
+      "Live platform metrics not yet connected",
+      "Release readiness still being validated",
     ],
-    goals: [
-      "Complete platform connections",
-      "Ship one high-leverage content experiment this week",
-      "Clarify next release window",
-    ],
+    goals:
+      opts.goals && opts.goals.length > 0
+        ? opts.goals
+        : ["Clarify next release window", "Grow engaged audience"],
     pastReleases: [],
-    contentStyle: `Primary surfaces: ${opts.platforms.join(", ") || "not set"}.`,
+    contentStyle: `Surfaces: ${opts.platforms.join(", ") || "not set"}. Focus: ${interests.join(", ") || "general"}.`,
     competitors: [],
-    notes: `Role: ${opts.role}. Social links: ${linkList || "none yet"}. Seeded at onboarding.`,
+    notes: `Role: ${opts.role}. Interests: ${interests.join(", ") || "none"}. Links: ${linkList || "none"}.`,
     lastUpdated: today,
   };
 }
@@ -148,6 +137,7 @@ export async function upsertProfile(patch: {
   role?: UserRole;
   platforms?: string[];
   social_links?: Record<string, string>;
+  interests?: string[];
   onboarding_complete?: boolean;
   last_scan_at?: string;
   last_scan_briefing?: string;
@@ -218,12 +208,19 @@ export async function completeOnboarding(opts: {
   role: UserRole;
   platforms: string[];
   social_links?: Record<string, string>;
+  genre?: string[];
+  musicStyle?: string;
+  brandVoice?: string;
+  careerStage?: CareerStage;
+  goals?: string[];
+  interests?: string[];
 }): Promise<{ ok: boolean; error?: string }> {
   const profile = await upsertProfile({
     full_name: opts.fullName,
     role: opts.role,
     platforms: opts.platforms,
     social_links: opts.social_links || {},
+    interests: opts.interests || [],
     onboarding_complete: true,
   });
   if (!profile.ok) return profile;
@@ -231,5 +228,3 @@ export async function completeOnboarding(opts: {
   const brain = seedBrainFromOnboarding(opts);
   return saveArtistBrain(brain);
 }
-
-export { emptyBrain };
