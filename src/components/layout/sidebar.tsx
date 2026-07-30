@@ -23,6 +23,8 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { getProfile } from "@/lib/db/profile";
 
 const nav = [
   { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
@@ -43,11 +45,89 @@ const bottom = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "O";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return (parts[0]![0]! + parts[1]![0]!).toUpperCase();
+}
+
+function UserChip({ onNavigate }: { onNavigate?: () => void }) {
+  const [name, setName] = useState("Artist");
+  const [email, setEmail] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (!isSupabaseConfigured()) return;
+      try {
+        const p = await getProfile();
+        if (p?.full_name) setName(p.full_name);
+        if (p?.email) setEmail(p.email);
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          if (!p?.full_name) {
+            setName(
+              (user.user_metadata?.full_name as string) ||
+                user.email?.split("@")[0] ||
+                "Artist"
+            );
+          }
+          if (!p?.email && user.email) setEmail(user.email);
+          const metaAvatar =
+            (user.user_metadata?.avatar_url as string) ||
+            (user.user_metadata?.picture as string) ||
+            null;
+          if (metaAvatar) setAvatarUrl(metaAvatar);
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, []);
+
+  return (
+    <Link
+      href="/settings"
+      onClick={onNavigate}
+      className="mx-3 mb-1 mt-2 flex items-center gap-2.5 rounded-[var(--radius)] border border-omniv-border/80 bg-omniv-card/80 px-2.5 py-2 transition-colors hover:border-omniv-gold/30 hover:bg-omniv-gold/5"
+    >
+      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/15 ring-1 ring-omniv-gold/25">
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span className="font-data text-[11px] font-semibold text-omniv-gold">
+            {initials(name)}
+          </span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] font-semibold tracking-tight text-omniv-text">
+          {name}
+        </p>
+        <p className="truncate font-data text-[10px] text-omniv-text-muted">
+          {email || "View profile"}
+        </p>
+      </div>
+      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-omniv-text-muted" />
+    </Link>
+  );
+}
+
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
 
   return (
     <>
+      <UserChip onNavigate={onNavigate} />
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
         <p className="mb-2 px-2 font-data text-[10px] font-medium uppercase tracking-widest text-omniv-text-muted">
           Core
@@ -139,7 +219,13 @@ export function Sidebar() {
           {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </button>
         <div className="flex items-center gap-2">
-          <Image src="/logo.svg" alt="Omniv" width={28} height={28} className="rounded-md" />
+          <Image
+            src="/logo.svg"
+            alt="Omniv"
+            width={28}
+            height={28}
+            className="rounded-md"
+          />
           <span className="text-sm font-semibold tracking-tight">Omniv</span>
         </div>
       </div>
@@ -161,7 +247,13 @@ export function Sidebar() {
         )}
       >
         <div className="hidden h-14 items-center gap-2.5 border-b border-omniv-border px-4 md:flex">
-          <Image src="/logo.svg" alt="Omniv" width={28} height={28} className="rounded-md" />
+          <Image
+            src="/logo.svg"
+            alt="Omniv"
+            width={28}
+            height={28}
+            className="rounded-md"
+          />
           <div>
             <p className="text-[13px] font-semibold tracking-tight text-omniv-text">
               Omniv
