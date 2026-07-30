@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
   <rect width="256" height="256" fill="#050505"/>
-  <circle cx="128" cy="128" r="36" fill="#d4af37"/>
-  <ellipse cx="128" cy="128" rx="70" ry="70" stroke="#d4af37" stroke-width="3.5" fill="none" opacity="0.95"/>
-  <ellipse cx="128" cy="128" rx="100" ry="52" stroke="#d4af37" stroke-width="2.5" fill="none" transform="rotate(-28 128 128)" opacity="0.9"/>
-  <ellipse cx="128" cy="128" rx="100" ry="52" stroke="#d4af37" stroke-width="2" fill="none" transform="rotate(42 128 128)" opacity="0.75"/>
-  <circle cx="198" cy="88" r="5" fill="#d4af37"/>
-  <circle cx="72" cy="178" r="4.5" fill="#d4af37"/>
+  <circle cx="128" cy="128" r="34" fill="#d4af37"/>
+  <circle cx="128" cy="128" r="62" stroke="#d4af37" stroke-width="3.2" fill="none"/>
+  <ellipse cx="128" cy="128" rx="96" ry="48" stroke="#d4af37" stroke-width="2.4" fill="none" transform="rotate(-32 128 128)" opacity="0.92"/>
+  <ellipse cx="128" cy="128" rx="96" ry="48" stroke="#d4af37" stroke-width="1.8" fill="none" transform="rotate(48 128 128)" opacity="0.72"/>
+  <circle cx="196" cy="86" r="4.5" fill="#d4af37"/>
+  <circle cx="70" cy="176" r="4" fill="#d4af37"/>
 </svg>

@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,8 +10,9 @@ import {
   type FeatureId,
   type PlanId,
 } from "@/lib/billing";
+import { startFlutterwaveCheckout, type CheckoutPlan } from "@/lib/checkout";
 import { cn } from "@/lib/utils";
-import { X, Sparkles, Check, CreditCard } from "lucide-react";
+import { X, Sparkles, Check, CreditCard, Loader2 } from "lucide-react";
 
 interface UpgradeModalProps {
   open: boolean;
@@ -31,6 +31,8 @@ export function UpgradeModal({
 }: UpgradeModalProps) {
   const target = minPlanFor(feature);
   const featureLabel = FEATURE_LABELS[feature];
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -46,6 +48,22 @@ export function UpgradeModal({
   const upgradeOptions = PLANS.filter(
     (p) => p.id !== "free" && p.priceMonthly >= target.priceMonthly
   );
+
+  async function pay(planId: PlanId) {
+    if (planId === "free") return;
+    setBusy(planId);
+    setError(null);
+    onSelectPlan?.(planId);
+    const res = await startFlutterwaveCheckout({
+      plan: planId as CheckoutPlan,
+    });
+    setBusy(null);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    window.location.href = res.link;
+  }
 
   return (
     <div
@@ -84,11 +102,11 @@ export function UpgradeModal({
           Unlock {featureLabel}
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-omniv-text-secondary">
-          You&apos;re on <span className="text-omniv-gold">{planName(currentPlan)}</span>.
-          {" "}
-          <strong className="font-medium text-omniv-text">{featureLabel}</strong> is
-          included from <span className="text-omniv-gold">{target.name}</span> upward —
-          built for teams that treat strategy as a weekly system, not a one-off tool.
+          You&apos;re on{" "}
+          <span className="text-omniv-gold">{planName(currentPlan)}</span>.{" "}
+          <strong className="font-medium text-omniv-text">{featureLabel}</strong>{" "}
+          starts at <span className="text-omniv-gold">{target.name}</span>. Checkout
+          runs on Flutterwave.
         </p>
 
         <div className="mt-5 space-y-2">
@@ -96,7 +114,8 @@ export function UpgradeModal({
             <button
               key={p.id}
               type="button"
-              onClick={() => onSelectPlan?.(p.id)}
+              disabled={busy !== null}
+              onClick={() => void pay(p.id)}
               className={cn(
                 "flex w-full items-center justify-between rounded-[var(--radius-lg)] border px-4 py-3 text-left transition-all",
                 p.highlighted
@@ -109,34 +128,42 @@ export function UpgradeModal({
                   <span className="text-sm font-semibold text-omniv-text">
                     {p.name}
                   </span>
-                  {p.highlighted && (
-                    <Badge variant="gold">Recommended</Badge>
-                  )}
+                  {p.highlighted && <Badge variant="gold">Recommended</Badge>}
                 </div>
                 <p className="text-[11px] text-omniv-text-muted">{p.blurb}</p>
               </div>
               <div className="text-right">
-                <p className="text-lg font-semibold text-omniv-text">
-                  ${p.priceMonthly}
-                  <span className="text-xs font-normal text-omniv-text-muted">
-                    /mo
-                  </span>
-                </p>
-                <p className="text-[10px] text-omniv-text-muted">
-                  or ${p.priceAnnual}/mo yearly
-                </p>
+                {busy === p.id ? (
+                  <Loader2 className="ml-auto h-4 w-4 animate-spin text-omniv-gold" />
+                ) : (
+                  <>
+                    <p className="font-data text-lg font-semibold text-omniv-text">
+                      ${p.priceMonthly}
+                      <span className="text-xs font-normal text-omniv-text-muted">
+                        /mo
+                      </span>
+                    </p>
+                    <p className="text-[10px] text-omniv-text-muted">Pay now</p>
+                  </>
+                )}
               </div>
             </button>
           ))}
         </div>
 
+        {error && (
+          <p className="mt-3 text-xs text-omniv-danger">{error}</p>
+        )}
+
         <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-          <Link href="/settings" className="flex-1" onClick={onClose}>
-            <Button className="w-full gap-1.5">
-              <CreditCard className="h-3.5 w-3.5" />
-              Continue with Flutterwave
-            </Button>
-          </Link>
+          <Button
+            className="flex-1 gap-1.5"
+            disabled={busy !== null}
+            onClick={() => void pay(target.id === "free" ? "starter" : (target.id as PlanId))}
+          >
+            <CreditCard className="h-3.5 w-3.5" />
+            Pay with Flutterwave
+          </Button>
           <Button variant="outline" className="flex-1" onClick={onClose}>
             Not now
           </Button>

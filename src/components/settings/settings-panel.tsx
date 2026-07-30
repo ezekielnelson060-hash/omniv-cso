@@ -5,21 +5,63 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { integrations, mockTeam, paymentProvider, plans } from "@/data/phase6";
+import { mockTeam, paymentProvider, plans } from "@/data/phase6";
 import { usePlan } from "@/components/billing/plan-provider";
 import { getProfile, upsertProfile } from "@/lib/db/profile";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import { CreditCard, Users, Key, Bell, Plug, LogOut } from "lucide-react";
+import { startFlutterwaveCheckout, type CheckoutPlan } from "@/lib/checkout";
+import {
+  CreditCard,
+  Users,
+  Key,
+  Bell,
+  Plug,
+  LogOut,
+  Radar,
+  Loader2,
+  ExternalLink,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+
+const SURFACE_HINTS = [
+  { id: "spotify", label: "Spotify", placeholder: "https://open.spotify.com/artist/..." },
+  { id: "youtube", label: "YouTube", placeholder: "https://youtube.com/@..." },
+  { id: "instagram", label: "Instagram", placeholder: "https://instagram.com/..." },
+  { id: "tiktok", label: "TikTok", placeholder: "https://tiktok.com/@..." },
+];
 
 export function SettingsPanel() {
   const { plan, setPlan } = usePlan();
   const router = useRouter();
+  const search = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [urls, setUrls] = useState<Record<string, string>>({
+    spotify: "",
+    youtube: "",
+    instagram: "",
+    tiktok: "",
+  });
+  const [notes, setNotes] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [briefing, setBriefing] = useState<string | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [checkoutBusy, setCheckoutBusy] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [oauthMsg, setOauthMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const o = search.get("oauth");
+    const b = search.get("billing");
+    if (o === "spotify_ok") setOauthMsg("Spotify connected.");
+    if (o === "youtube_ok") setOauthMsg("YouTube connected.");
+    if (o?.includes("error") || o?.includes("config"))
+      setOauthMsg("OAuth failed — check client IDs in Vercel env.");
+    if (b === "success") setStatus("Payment received — plan will unlock shortly.");
+  }, [search]);
 
   useEffect(() => {
     (async () => {
@@ -64,8 +106,57 @@ export function SettingsPanel() {
     router.refresh();
   }
 
+  async function runScan() {
+    setScanning(true);
+    setScanError(null);
+    setBriefing(null);
+    const list = Object.values(urls).map((u) => u.trim()).filter(Boolean);
+    try {
+      const res = await fetch("/api/scan/social", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          urls: list,
+          notes,
+          artistName: name || undefined,
+        }),
+      });
+      const data = (await res.json()) as {
+        briefing?: string;
+        error?: string;
+        source?: string;
+      };
+      if (!res.ok) {
+        setScanError(data.error || "Scan failed");
+      } else {
+        setBriefing(data.briefing || "No briefing returned");
+      }
+    } catch {
+      setScanError("Network error");
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  async function checkout(planId: CheckoutPlan) {
+    setCheckoutBusy(planId);
+    setCheckoutError(null);
+    setPlan(planId);
+    const res = await startFlutterwaveCheckout({
+      plan: planId,
+      email: email || undefined,
+      name: name || undefined,
+    });
+    setCheckoutBusy(null);
+    if (!res.ok) {
+      setCheckoutError(res.error);
+      return;
+    }
+    window.location.href = res.link;
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <Card className="p-5">
         <h3 className="text-sm font-medium">Profile</h3>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -97,37 +188,146 @@ export function SettingsPanel() {
 
       <Card className="p-5">
         <div className="mb-3 flex items-center gap-2">
-          <CreditCard className="h-4 w-4 text-omniv-gold" />
-          <h3 className="text-sm font-medium">Billing</h3>
-          <Badge variant="gold">{paymentProvider.name} connected</Badge>
+          <Radar className="h-4 w-4 text-omniv-gold" />
+          <h3 className="text-sm font-medium">Surface scan</h3>
+          <Badge variant="gold">Gemini</Badge>
         </div>
-        <p className="mb-4 text-xs text-omniv-text-secondary">{paymentProvider.note}</p>
-        <div className="grid gap-2 sm:grid-cols-3">
-          {plans.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() =>
-                setPlan(
-                  p.id === "starter" ? "starter" : p.id === "pro" ? "pro" : "label"
-                )
+        <p className="mb-4 text-xs leading-relaxed text-omniv-text-secondary">
+          Paste public profile URLs. Ziki scans positioning and returns an
+          executive briefing — no platform developer apps required.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {SURFACE_HINTS.map((s) => (
+            <Input
+              key={s.id}
+              label={s.label}
+              placeholder={s.placeholder}
+              value={urls[s.id] || ""}
+              onChange={(e) =>
+                setUrls((u) => ({ ...u, [s.id]: e.target.value }))
               }
-              className={cn(
-                "rounded-[var(--radius-lg)] border p-4 text-left transition-all",
-                p.highlighted || plan === p.id
-                  ? "border-omniv-gold/40 bg-omniv-gold/10"
-                  : "border-omniv-border"
-              )}
-            >
-              <p className="text-sm font-semibold">{p.name}</p>
-              <p className="text-lg font-semibold text-omniv-gold">
-                ${p.priceMonthly}
-                <span className="text-xs font-normal text-omniv-text-muted">/mo</span>
-              </p>
-              <p className="mt-1 text-[11px] text-omniv-text-muted">{p.blurb}</p>
-            </button>
+            />
           ))}
         </div>
+        <div className="mt-3">
+          <label className="mb-1.5 block text-sm font-medium text-omniv-text-secondary">
+            Notes / bio / stats (optional)
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            placeholder="Paste bio, monthly listeners, or campaign context…"
+            className="w-full rounded-[var(--radius)] border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm text-omniv-text placeholder:text-omniv-text-muted focus-gold"
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            className="gap-1.5"
+            disabled={scanning}
+            onClick={() => void runScan()}
+          >
+            {scanning ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Radar className="h-3.5 w-3.5" />
+            )}
+            {scanning ? "Scanning…" : "Run intelligence scan"}
+          </Button>
+        </div>
+        {scanError && (
+          <p className="mt-3 text-xs text-omniv-danger">{scanError}</p>
+        )}
+        {briefing && (
+          <div className="mt-4 rounded-[var(--radius-lg)] border border-omniv-gold/25 bg-omniv-gold/5 p-4">
+            <p className="mb-2 font-data text-[10px] uppercase tracking-wider text-omniv-gold">
+              Executive briefing
+            </p>
+            <pre className="whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-omniv-text-secondary">
+              {briefing}
+            </pre>
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <Plug className="h-4 w-4 text-omniv-gold" />
+          <h3 className="text-sm font-medium">Live OAuth</h3>
+        </div>
+        <p className="mb-3 text-xs text-omniv-text-secondary">
+          Deep metrics need platform apps. Spotify & YouTube routes are ready
+          when client IDs are in Vercel.
+        </p>
+        {oauthMsg && (
+          <p className="mb-3 text-xs text-omniv-gold">{oauthMsg}</p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <a href="/api/oauth/spotify">
+            <Button size="sm" variant="outline" className="gap-1.5">
+              Connect Spotify
+              <ExternalLink className="h-3 w-3" />
+            </Button>
+          </a>
+          <a href="/api/oauth/youtube">
+            <Button size="sm" variant="outline" className="gap-1.5">
+              Connect YouTube
+              <ExternalLink className="h-3 w-3" />
+            </Button>
+          </a>
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <CreditCard className="h-4 w-4 text-omniv-gold" />
+          <h3 className="text-sm font-medium">Billing</h3>
+          <Badge variant="gold">{paymentProvider.name}</Badge>
+        </div>
+        <p className="mb-4 text-xs text-omniv-text-secondary">
+          {paymentProvider.note} Amounts are sent live from the app — no separate
+          Flutterwave payment links needed per plan.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {plans.map((p) => {
+            const id = p.id as CheckoutPlan;
+            return (
+              <div
+                key={p.id}
+                className={cn(
+                  "rounded-[var(--radius-lg)] border p-4 text-left",
+                  p.highlighted || plan === p.id
+                    ? "border-omniv-gold/40 bg-omniv-gold/10"
+                    : "border-omniv-border"
+                )}
+              >
+                <p className="text-sm font-semibold">{p.name}</p>
+                <p className="font-data text-lg font-semibold text-omniv-gold">
+                  ${p.priceMonthly}
+                  <span className="text-xs font-normal text-omniv-text-muted">
+                    /mo
+                  </span>
+                </p>
+                <p className="mt-1 text-[11px] text-omniv-text-muted">{p.blurb}</p>
+                <Button
+                  size="sm"
+                  className="mt-3 w-full gap-1"
+                  disabled={checkoutBusy !== null}
+                  onClick={() => void checkout(id)}
+                >
+                  {checkoutBusy === id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : null}
+                  {checkoutBusy === id ? "Redirecting…" : "Pay with Flutterwave"}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+        {checkoutError && (
+          <p className="mt-3 text-xs text-omniv-danger">{checkoutError}</p>
+        )}
       </Card>
 
       <Card className="p-5">
@@ -149,29 +349,6 @@ export function SettingsPanel() {
             </li>
           ))}
         </ul>
-      </Card>
-
-      <Card className="p-5">
-        <div className="mb-3 flex items-center gap-2">
-          <Plug className="h-4 w-4 text-omniv-gold" />
-          <h3 className="text-sm font-medium">Integrations</h3>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {integrations.map((i) => (
-            <div
-              key={i.id}
-              className="flex items-center justify-between rounded-[var(--radius)] border border-omniv-border px-3 py-2"
-            >
-              <div>
-                <p className="text-sm text-omniv-text">{i.name}</p>
-                <p className="text-[11px] text-omniv-text-muted">{i.description}</p>
-              </div>
-              <Badge variant={i.connected ? "success" : "outline"}>
-                {i.connected ? "On" : "Off"}
-              </Badge>
-            </div>
-          ))}
-        </div>
       </Card>
 
       <Card className="p-5">
