@@ -93,7 +93,7 @@ function UserChip({ onNavigate }: { onNavigate?: () => void }) {
     <Link
       href="/settings"
       onClick={onNavigate}
-      className="flex items-center gap-2.5 rounded-[var(--radius)] px-1 py-1.5 transition-colors hover:bg-omniv-gold/5"
+      className="flex items-center gap-2.5 rounded-[var(--radius)] px-1 py-1 transition-colors hover:bg-omniv-gold/5"
     >
       <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/15 ring-1 ring-omniv-gold/30">
         {avatarUrl ? (
@@ -241,9 +241,9 @@ export function Sidebar() {
           open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >
-        {/* Profile at the very top — X-style */}
-        <div className="border-b border-omniv-border px-3 pb-3 pt-3 md:pt-4">
-          <div className="mb-3 hidden items-center gap-2 px-1 md:flex">
+        {/* Profile flush at top — no empty band */}
+        <div className="border-b border-omniv-border px-3 pb-2 pt-3 md:pt-4">
+          <div className="mb-2 hidden items-center gap-2 px-1 md:flex">
             <Image
               src="/logo.svg"
               alt="Omniv"
@@ -255,8 +255,10 @@ export function Sidebar() {
               Omniv
             </span>
           </div>
-          <div className="h-14 md:hidden" />
-          <UserChip onNavigate={() => setOpen(false)} />
+          {/* Offset only for fixed mobile top bar when drawer is open */}
+          <div className="pt-12 md:pt-0">
+            <UserChip onNavigate={() => setOpen(false)} />
+          </div>
         </div>
 
         <NavLinks onNavigate={() => setOpen(false)} />
