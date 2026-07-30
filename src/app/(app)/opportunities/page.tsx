@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 export default function OpportunitiesPage() {
   const [recs, setRecs] = useState<AIRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [subtitle, setSubtitle] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -18,7 +19,17 @@ export default function OpportunitiesPage() {
       try {
         const [b, p] = await Promise.all([getArtistBrain(), getProfile()]);
         if (!cancelled) {
-          setRecs(buildRecommendationsFromBrain(b, p?.platforms || []));
+          const interests = p?.interests || [];
+          setRecs(
+            buildRecommendationsFromBrain(b, p?.platforms || [], interests)
+          );
+          const name = b?.stageName || b?.name || p?.full_name || "you";
+          const genre = b?.genre?.filter((g) => g !== "TBD").join(" / ");
+          setSubtitle(
+            genre
+              ? `Ranked for ${name} · ${genre}${interests.length ? ` · focus: ${interests.join(", ")}` : ""}`
+              : `Ranked from your Artist Brain and onboarding interests`
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -35,10 +46,7 @@ export default function OpportunitiesPage() {
         <h1 className="text-2xl font-semibold tracking-tight">
           Opportunity Feed
         </h1>
-        <p className="mt-1 text-sm text-omniv-text-secondary">
-          Ranked moves from your Artist Brain. Platform OAuth will add live
-          market signals on top of this base layer.
-        </p>
+        <p className="mt-1 text-sm text-omniv-text-secondary">{subtitle}</p>
       </div>
 
       {loading ? (
@@ -46,6 +54,10 @@ export default function OpportunitiesPage() {
           <Loader2 className="h-4 w-4 animate-spin text-omniv-gold" />
           Building briefings…
         </div>
+      ) : recs.length === 0 ? (
+        <p className="text-sm text-omniv-text-muted">
+          Complete onboarding so opportunities can match your interests.
+        </p>
       ) : (
         <div className="space-y-4">
           {recs.map((r, i) => (
