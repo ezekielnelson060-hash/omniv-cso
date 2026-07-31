@@ -41,12 +41,12 @@ export async function zikiComplete(
 
   if (!key) {
     return {
-      text: `**Model offline**\n\nAdd **GEMINI_API_KEY** in Vercel and redeploy so Ziki can brief you live.\n\n**What to do:** Settings still lets you save profile links while the key is offline.`,
+      text: `**Model offline**\n\nAdd **GEMINI_API_KEY** in Vercel → Project → Settings → Environment Variables, then **Redeploy**.\n\nGet a free key at [Google AI Studio](https://aistudio.google.com/apikey) (not App Hub).`,
       source: "local",
     };
   }
 
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
@@ -64,9 +64,19 @@ export async function zikiComplete(
     });
 
     if (!res.ok) {
-      console.error("Gemini error", res.status, await res.text());
+      const errBody = await res.text();
+      console.error("Gemini error", res.status, errBody);
+      let hint = "Check the key is valid and the model name is correct.";
+      if (res.status === 400)
+        hint =
+          "Bad request — try GEMINI_MODEL=gemini-2.0-flash or gemini-2.5-flash.";
+      if (res.status === 403 || res.status === 401)
+        hint =
+          "Invalid or restricted key. Create a new key at aistudio.google.com/apikey.";
+      if (res.status === 429)
+        hint = "Rate limit hit — wait a minute and retry (free tier).";
       return {
-        text: `**Briefing unavailable**\n\nVerify **GEMINI_API_KEY** and **GEMINI_MODEL**, then retry.`,
+        text: `**Briefing unavailable** (${res.status})\n\n${hint}\n\nVercel env: **GEMINI_API_KEY** + optional **GEMINI_MODEL**. Redeploy after changing env.`,
         source: "local",
       };
     }
@@ -89,7 +99,7 @@ export async function zikiComplete(
   } catch (e) {
     console.error("Gemini fetch failed", e);
     return {
-      text: `**Network error**\n\nCould not reach the model. Try again in a moment.`,
+      text: `**Network error**\n\nCould not reach Gemini. Try again in a moment.`,
       source: "local",
     };
   }

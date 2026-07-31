@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { FanDirectory } from "@/components/crm/fan-directory";
 import {
   addArtist,
   addEvent,
@@ -71,8 +72,8 @@ export function CrmPanel() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-omniv-text-secondary">
-          Your roster — add artists, tasks, notes, and calendar. Data is personal
-          to this account.
+          Roster ops + owned fan directory. Gate links capture emails into the
+          isolated fan list for each artist.
         </p>
         <Link href="/ziki">
           <Button size="sm" variant="outline" className="gap-1.5">
@@ -82,10 +83,12 @@ export function CrmPanel() {
         </Link>
       </div>
 
+      <FanDirectory />
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Card className="p-4">
           <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
-            Roster
+            Strategy roster
           </p>
           <p className="mt-1 font-data text-2xl font-semibold">{artists.length}</p>
         </Card>
@@ -116,7 +119,7 @@ export function CrmPanel() {
       <Card className="p-5">
         <div className="mb-4 flex items-center gap-2">
           <Users className="h-4 w-4 text-omniv-gold" />
-          <h3 className="text-sm font-medium">Add artist</h3>
+          <h3 className="text-sm font-medium">Strategy roster (local)</h3>
         </div>
         <div className="grid gap-2 sm:grid-cols-4">
           <Input
@@ -143,7 +146,7 @@ export function CrmPanel() {
         <div className="mt-4 space-y-2">
           {artists.length === 0 && (
             <p className="text-xs text-omniv-text-muted">
-              No artists yet — add your first roster member.
+              Local strategy list — fan capture uses roster_artists in Supabase.
             </p>
           )}
           {artists.map((a) => (
@@ -154,10 +157,16 @@ export function CrmPanel() {
               <div>
                 <p className="text-sm font-medium">{a.name}</p>
                 <p className="text-[11px] text-omniv-text-muted">
-                  {a.genre} · {a.stage} · {a.monthlyListeners.toLocaleString()} listeners
+                  {a.genre} · {a.stage} ·{" "}
+                  {a.monthlyListeners.toLocaleString()} listeners
                 </p>
               </div>
-              <span className={cn("font-data text-sm font-semibold", scoreColor(a.score))}>
+              <span
+                className={cn(
+                  "font-data text-sm font-semibold",
+                  scoreColor(a.score)
+                )}
+              >
                 {a.score}
               </span>
             </div>
