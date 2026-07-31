@@ -40,23 +40,53 @@ export async function POST(req: Request) {
     const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !service) {
       return NextResponse.json(
-        { error: "Server not configured for fan capture" },
+        {
+          error:
+            "Server missing SUPABASE_SERVICE_ROLE_KEY — add it in Vercel env and redeploy",
+        },
         { status: 503 }
       );
     }
 
     const admin = createClient(url, service, {
-      auth: { persistSession: false },
+      auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    const { data: artist, error: aErr } = await admin
+    let artist: { id: string; stage_name: string } | null = null;
+    let lookupErr: string | null = null;
+
+    const exact = await admin
       .from("roster_artists")
-      .select("id, stage_name")
+      .select("id, stage_name, slug")
       .eq("slug", slug)
+      .limit(1)
       .maybeSingle();
 
-    if (aErr || !artist) {
-      return NextResponse.json({ error: "Artist not found" }, { status: 404 });
+    if (exact.error) {
+      lookupErr = exact.error.message;
+    } else if (exact.data) {
+      artist = exact.data;
+    } else {
+      const fuzzy = await admin
+        .from("roster_artists")
+        .select("id, stage_name, slug")
+        .ilike("slug", slug)
+        .limit(1)
+        .maybeSingle();
+      if (fuzzy.error) lookupErr = fuzzy.error.message;
+      else if (fuzzy.data) artist = fuzzy.data;
+    }
+
+    if (!artist) {
+      return NextResponse.json(
+        {
+          error: lookupErr
+            ? `Database error: ${lookupErr}`
+            : `No roster artist with slug "${slug}". Check SELECT slug FROM roster_artists; or add SUPABASE_SERVICE_ROLE_KEY for the same project as your SQL.`,
+          slug,
+        },
+        { status: 404 }
+      );
     }
 
     const score = scoreAfterAction(0, "form_submit");
