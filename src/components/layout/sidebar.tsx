@@ -93,23 +93,23 @@ function UserChip({ onNavigate }: { onNavigate?: () => void }) {
     <Link
       href="/settings"
       onClick={onNavigate}
-      className="flex items-center gap-2.5 rounded-[var(--radius)] px-1 py-1 transition-colors hover:bg-omniv-gold/5"
+      className="flex items-center gap-2.5 rounded-lg px-1 py-1 transition-colors hover:bg-omniv-gold/5"
     >
-      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/15 ring-1 ring-omniv-gold/30">
+      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/15 ring-1 ring-omniv-gold/30">
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          <span className="font-data text-xs font-semibold text-omniv-gold">
+          <span className="font-data text-[11px] font-semibold text-omniv-gold">
             {initials(name)}
           </span>
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-semibold tracking-tight text-omniv-text">
+        <p className="truncate text-[13px] font-semibold leading-tight tracking-tight text-omniv-text">
           {name}
         </p>
-        <p className="truncate font-data text-[10px] text-omniv-text-muted">
+        <p className="truncate font-data text-[10px] leading-tight text-omniv-text-muted">
           {email || "View profile"}
         </p>
       </div>
@@ -123,8 +123,8 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <>
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
-        <p className="mb-2 px-2 font-data text-[10px] font-medium uppercase tracking-widest text-omniv-text-muted">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-2.5 py-1.5">
+        <p className="mb-1.5 px-2 font-data text-[10px] font-medium uppercase tracking-widest text-omniv-text-muted">
           Core
         </p>
         {nav.map((item) => {
@@ -137,7 +137,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "group flex items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-[13px] transition-all duration-150",
+                "group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-all duration-150",
                 active
                   ? "bg-omniv-gold/10 text-omniv-gold"
                   : "text-omniv-text-secondary hover:bg-white/[0.03] hover:text-omniv-text"
@@ -159,7 +159,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           );
         })}
       </nav>
-      <div className="space-y-0.5 border-t border-omniv-border px-3 py-3">
+      <div className="space-y-0.5 border-t border-omniv-border px-2.5 py-2.5">
         {bottom.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href;
@@ -169,7 +169,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               href={item.href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-[13px] transition-all",
+                "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-all",
                 active
                   ? "bg-omniv-gold/10 text-omniv-gold"
                   : "text-omniv-text-secondary hover:bg-white/[0.03] hover:text-omniv-text"
@@ -204,12 +204,13 @@ export function Sidebar() {
 
   return (
     <>
-      <div className="fixed left-0 right-0 top-0 z-50 flex h-14 items-center gap-3 border-b border-omniv-border bg-omniv-elevated/95 px-4 backdrop-blur-md md:hidden">
+      {/* Mobile top bar — logo only; profile lives in drawer at flush top */}
+      <div className="fixed left-0 right-0 top-0 z-50 flex h-12 items-center gap-3 border-b border-omniv-border bg-omniv-elevated/95 px-3 backdrop-blur-md md:hidden">
         <button
           type="button"
           aria-label={open ? "Close menu" : "Open menu"}
           onClick={() => setOpen((v) => !v)}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-omniv-border text-omniv-text-secondary hover:bg-white/5 hover:text-omniv-text"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-omniv-border text-omniv-text-secondary hover:bg-white/5 hover:text-omniv-text"
         >
           {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
         </button>
@@ -217,8 +218,8 @@ export function Sidebar() {
           <Image
             src="/logo.svg"
             alt="Omniv"
-            width={28}
-            height={28}
+            width={24}
+            height={24}
             className="rounded-md"
           />
           <span className="text-sm font-semibold tracking-tight">Omniv</span>
@@ -241,24 +242,34 @@ export function Sidebar() {
           open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >
-        {/* Profile flush at top — no empty band */}
-        <div className="border-b border-omniv-border px-3 pb-2 pt-3 md:pt-4">
-          <div className="mb-2 hidden items-center gap-2 px-1 md:flex">
-            <Image
-              src="/logo.svg"
-              alt="Omniv"
-              width={22}
-              height={22}
-              className="rounded-md"
-            />
-            <span className="font-data text-[9px] uppercase tracking-[0.16em] text-omniv-text-muted">
-              Omniv
-            </span>
+        {/*
+          Console-style: profile flush to the top edge of the drawer.
+          No large spacer — matches Google Cloud account strip.
+        */}
+        <div className="shrink-0 border-b border-omniv-border px-2.5 pb-2 pt-2 md:pt-3">
+          <div className="mb-2 flex items-center justify-between gap-2 px-1">
+            <div className="flex items-center gap-2">
+              <Image
+                src="/logo.svg"
+                alt="Omniv"
+                width={20}
+                height={20}
+                className="rounded-md"
+              />
+              <span className="font-data text-[9px] uppercase tracking-[0.16em] text-omniv-text-muted">
+                Omniv
+              </span>
+            </div>
+            <button
+              type="button"
+              className="flex h-7 w-7 items-center justify-center rounded-md text-omniv-text-muted hover:bg-white/5 hover:text-omniv-text md:hidden"
+              aria-label="Close"
+              onClick={() => setOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          {/* Offset only for fixed mobile top bar when drawer is open */}
-          <div className="pt-12 md:pt-0">
-            <UserChip onNavigate={() => setOpen(false)} />
-          </div>
+          <UserChip onNavigate={() => setOpen(false)} />
         </div>
 
         <NavLinks onNavigate={() => setOpen(false)} />

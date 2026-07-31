@@ -4,86 +4,187 @@ function clamp(n: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, Math.round(n)));
 }
 
+/** Brain completeness 0–1 — drives score sensitivity */
+function brainCompleteness(brain: ArtistBrain): number {
+  let filled = 0;
+  const checks = [
+    brain.genre.length > 0 && brain.genre[0] !== "TBD",
+    Boolean(brain.musicStyle && brain.musicStyle.length > 20),
+    Boolean(brain.brandVoice && brain.brandVoice.length > 8),
+    Boolean(brain.targetAudience && brain.targetAudience.length > 12),
+    brain.goals.length > 0,
+    brain.strengths.length > 0,
+    brain.competitors.length > 0,
+    (brain.pastReleases?.length ?? 0) > 0,
+    Boolean(brain.contentStyle),
+    Boolean(brain.careerStage),
+  ];
+  for (const c of checks) if (c) filled += 1;
+  return filled / checks.length;
+}
+
+export type ScoreInputs = {
+  platforms?: string[];
+  socialLinkCount?: number;
+  interests?: string[];
+  /** Days since last profile/scan activity */
+  daysSinceActivity?: number | null;
+};
+
+/**
+ * Dynamic multi-factor scoring.
+ * Recomputes from live profile + brain; no static demo numbers.
+ * OAuth metrics (streams, followers) plug in later as optional overlays.
+ */
 export function computeScoresFromBrain(
   brain: ArtistBrain | null,
-  platforms: string[] = []
+  platformsOrInputs: string[] | ScoreInputs = []
 ): ArtistScore {
+  const inputs: ScoreInputs = Array.isArray(platformsOrInputs)
+    ? { platforms: platformsOrInputs }
+    : platformsOrInputs;
+
+  const platforms = inputs.platforms || [];
+  const socialLinks = inputs.socialLinkCount ?? 0;
+  const interests = inputs.interests || [];
+  const idleDays = inputs.daysSinceActivity ?? null;
+
   if (!brain) {
     return {
-      overall: 28,
-      growth: 30,
-      momentum: 25,
-      audienceHealth: 22,
-      releaseReadiness: 18,
-      contentHealth: 24,
-      fanGrowth: 20,
-      streamingTrend: 22,
-      socialGrowth: 26,
-      opportunity: 35,
+      overall: 22,
+      growth: 24,
+      momentum: 20,
+      audienceHealth: 18,
+      releaseReadiness: 15,
+      contentHealth: 20,
+      fanGrowth: 16,
+      streamingTrend: 18,
+      socialGrowth: 20,
+      opportunity: 28,
     };
   }
 
-  const platformBoost = Math.min(platforms.length * 6, 30);
+  const complete = brainCompleteness(brain);
+  const platformBoost = Math.min(platforms.length * 5 + socialLinks * 4, 36);
   const hasGenre = brain.genre.length > 0 && brain.genre[0] !== "TBD";
   const goalCount = brain.goals.length;
   const strengthCount = brain.strengths.length;
-  const gapCount = brain.weaknesses.length;
+  const gapCount = Math.max(brain.weaknesses.length, 1);
   const hasStyle = Boolean(brain.musicStyle && brain.musicStyle.length > 30);
   const hasAudience = Boolean(
-    brain.targetAudience && !brain.targetAudience.includes("refined from")
+    brain.targetAudience &&
+      !brain.targetAudience.toLowerCase().includes("refined from") &&
+      !brain.targetAudience.toLowerCase().includes("to be")
   );
   const releaseCount = brain.pastReleases?.length ?? 0;
+  const interestBoost = Math.min(interests.length * 3, 15);
+
   const stageBoost =
-    brain.careerStage === "emerging"
-      ? 0
-      : brain.careerStage === "developing"
-        ? 6
-        : brain.careerStage === "breakthrough"
-          ? 12
-          : 16;
+    {
+      emerging: 0,
+      developing: 7,
+      breakthrough: 14,
+      established: 18,
+      legacy: 20,
+    }[brain.careerStage] ?? 0;
+
+  // Activity decay: idle profiles lose a few points on momentum / growth
+  const idlePenalty =
+    idleDays == null ? 0 : idleDays > 21 ? 10 : idleDays > 10 ? 5 : 0;
 
   const contentHealth = clamp(
-    35 + platformBoost + (hasStyle ? 12 : 0) + goalCount * 3
-  );
-  const audienceHealth = clamp(
-    28 + platformBoost * 0.8 + (hasAudience ? 18 : 4) + strengthCount * 2
-  );
-  const releaseReadiness = clamp(
-    22 +
-      releaseCount * 12 +
-      (hasGenre ? 10 : 0) +
-      (goalCount > 1 ? 8 : 0) +
-      stageBoost * 0.5
-  );
-  const momentum = clamp(
-    32 + platformBoost + strengthCount * 4 - gapCount * 2 + stageBoost
-  );
-  const growth = clamp(30 + platformBoost * 0.9 + goalCount * 5 + stageBoost);
-  const fanGrowth = clamp(25 + platformBoost + (hasAudience ? 10 : 0));
-  const streamingTrend = clamp(
-    24 + (platforms.includes("spotify") ? 18 : 4) + releaseCount * 6
-  );
-  const socialGrowth = clamp(
     28 +
-      (platforms.includes("tiktok") || platforms.includes("instagram")
-        ? 16
-        : 4) +
-      (hasStyle ? 8 : 0)
+      platformBoost * 0.6 +
+      (hasStyle ? 14 : 0) +
+      goalCount * 3 +
+      complete * 18 +
+      (interests.includes("content") ? 6 : 0)
   );
+
+  const audienceHealth = clamp(
+    24 +
+      platformBoost * 0.7 +
+      (hasAudience ? 16 : 2) +
+      strengthCount * 3 +
+      complete * 12 +
+      (interests.includes("audience") ? 5 : 0)
+  );
+
+  const releaseReadiness = clamp(
+    18 +
+      releaseCount * 14 +
+      (hasGenre ? 12 : 0) +
+      (goalCount > 1 ? 8 : 0) +
+      stageBoost * 0.6 +
+      (interests.includes("release") || interests.includes("playlist") ? 8 : 0) +
+      complete * 10
+  );
+
+  const momentum = clamp(
+    26 +
+      platformBoost +
+      strengthCount * 4 -
+      gapCount * 2 +
+      stageBoost -
+      idlePenalty +
+      complete * 14
+  );
+
+  const growth = clamp(
+    24 +
+      platformBoost * 0.85 +
+      goalCount * 5 +
+      stageBoost +
+      interestBoost -
+      idlePenalty * 0.5 +
+      complete * 12
+  );
+
+  const fanGrowth = clamp(
+    22 +
+      platformBoost * 0.5 +
+      (hasAudience ? 12 : 0) +
+      (platforms.includes("tiktok") || platforms.includes("instagram") ? 8 : 0)
+  );
+
+  const streamingTrend = clamp(
+    20 +
+      (platforms.includes("spotify") ? 20 : 3) +
+      (platforms.includes("apple") ? 8 : 0) +
+      releaseCount * 7 +
+      socialLinks * 2
+  );
+
+  const socialGrowth = clamp(
+    24 +
+      (platforms.includes("tiktok") ? 12 : 0) +
+      (platforms.includes("instagram") ? 10 : 0) +
+      (platforms.includes("youtube") ? 8 : 0) +
+      (hasStyle ? 8 : 0) +
+      socialLinks * 3
+  );
+
+  // Opportunity rises when gaps exist but profile is defined enough to act
   const opportunity = clamp(
-    40 + gapCount * 4 + (platforms.length < 3 ? 12 : 4) + (hasGenre ? 8 : 0)
+    32 +
+      gapCount * 5 +
+      (platforms.length < 3 ? 10 : 2) +
+      (hasGenre ? 10 : 0) +
+      interestBoost +
+      complete * 15 -
+      (complete < 0.3 ? 8 : 0)
   );
 
   const overall = clamp(
-    growth * 0.15 +
-      momentum * 0.18 +
-      audienceHealth * 0.15 +
-      releaseReadiness * 0.15 +
+    growth * 0.14 +
+      momentum * 0.16 +
+      audienceHealth * 0.14 +
+      releaseReadiness * 0.16 +
       contentHealth * 0.12 +
       opportunity * 0.1 +
-      fanGrowth * 0.05 +
-      streamingTrend * 0.05 +
-      socialGrowth * 0.05
+      fanGrowth * 0.06 +
+      streamingTrend * 0.06 +
+      socialGrowth * 0.06
   );
 
   return {
@@ -120,6 +221,7 @@ export function buildRecommendationsFromBrain(
   const genre =
     brain?.genre?.filter((g) => g && g !== "TBD").join(" / ") || "your genre";
   const recs: AIRecommendation[] = [];
+  const scores = computeScoresFromBrain(brain, { platforms, interests });
 
   if (interests.includes("content") || interests.length === 0) {
     recs.push({
@@ -129,12 +231,12 @@ export function buildRecommendationsFromBrain(
       why: "Content focus was selected in onboarding; cadence compounds faster than one-off posts.",
       impact: "High",
       difficulty: "Moderate",
-      confidence: 88,
+      confidence: clamp(70 + scores.contentHealth * 0.25),
       expectedOutcome: "Measurable reach test within 14 days",
       priority: 1,
       category: "Content",
       timeWindow: "This week",
-      supportingData: `Style: ${brain?.musicStyle?.slice(0, 120) || "n/a"}`,
+      supportingData: `Style: ${brain?.musicStyle?.slice(0, 120) || "n/a"} · Content score ${scores.contentHealth}`,
     });
   }
 
@@ -144,10 +246,10 @@ export function buildRecommendationsFromBrain(
       title: `Lock next ${genre} release window`,
       summary:
         "A dated target forces assets, content, and pitch list into one critical path.",
-      why: `Career stage: ${brain?.careerStage || "emerging"}. Release readiness is the largest upside for acts at this level.`,
+      why: `Career stage: ${brain?.careerStage || "emerging"}. Release readiness is currently ${scores.releaseReadiness}/100.`,
       impact: "High",
       difficulty: "Moderate",
-      confidence: 86,
+      confidence: clamp(68 + scores.releaseReadiness * 0.2),
       expectedOutcome: "Clear 6–8 week path",
       priority: 2,
       category: "Release",
@@ -179,11 +281,11 @@ export function buildRecommendationsFromBrain(
       title: "Re-engage quiet listeners",
       summary:
         "Target the 30–45 day dormant cohort with Stories + one exclusive snippet.",
-      why: "Audience growth is a stated focus; recovery is cheaper than cold acquisition.",
+      why: `Audience health ${scores.audienceHealth}/100 — recovery is cheaper than cold acquisition.`,
       impact: "Medium",
       difficulty: "Easy",
-      confidence: 80,
-      expectedOutcome: "+ recovery of engaged listeners",
+      confidence: clamp(72 + scores.audienceHealth * 0.15),
+      expectedOutcome: "Recovery of engaged listeners",
       priority: 4,
       category: "Audience",
       timeWindow: "This week",
@@ -307,10 +409,7 @@ export function buildRecommendationsFromBrain(
     });
   }
 
-  // Rank preferred interest categories higher
-  const preferred = new Set<
-    string
-  >();
+  const preferred = new Set<string>();
   for (const i of interests) {
     for (const c of INTEREST_CATEGORY[i] || []) preferred.add(c);
   }
@@ -333,11 +432,14 @@ export function overallNarrative(
 ): string {
   const name = brain?.stageName || brain?.name || "Your project";
   const genre = brain?.genre?.filter((g) => g !== "TBD").join(" / ");
-  if (scores.releaseReadiness < scores.momentum) {
-    return `${name}${genre ? ` (${genre})` : ""}: momentum is ahead of release readiness. Close the readiness gap and overall moves into a stronger band.`;
+  if (scores.releaseReadiness < scores.momentum - 8) {
+    return `${name}${genre ? ` (${genre})` : ""}: momentum is ahead of release readiness (${scores.releaseReadiness}). Closing that gap lifts overall fastest.`;
   }
   if (scores.opportunity > 60) {
-    return `${name}: opportunity surface is rich — prioritise the top briefing before adding experiments.`;
+    return `${name}: opportunity surface is strong (${scores.opportunity}). Execute the top briefing before adding experiments.`;
   }
-  return `${name}: scores reflect your onboarding profile. Deepen platform data to sharpen precision.`;
+  if (scores.contentHealth < 45) {
+    return `${name}: content health is the softest lever right now — a 14-day cadence will move scores more than new tools.`;
+  }
+  return `${name}: scores update from your profile, goals, and platforms. Sharper data → sharper next moves.`;
 }
