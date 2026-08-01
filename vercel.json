@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/weekly-scan",
       "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/fan-tiers",
+      "schedule": "0 3 * * *"
     }
   ]
 }
