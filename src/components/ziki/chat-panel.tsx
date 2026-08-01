@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -88,6 +89,7 @@ function welcomeMsg(name: string): ChatMessage {
 }
 
 export function ChatPanel() {
+  const searchParams = useSearchParams();
   const [threads, setThreads] = useState<ZikiThread[]>([]);
   const [activeId, setActiveIdState] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -165,16 +167,28 @@ Top opportunities: ${recs
     })();
   }, [persist]);
 
-  // Consume Act on this once ready
+  // Consume Act on this OR ?q= from CRM Next Steps once ready
   useEffect(() => {
     if (!ready || bootstrapped.current || !activeId) return;
     const act = consumeAct();
-    if (!act) return;
-    bootstrapped.current = true;
-    const prompt = `Help me execute this opportunity:\n\n**${act.title}**\n${act.summary || ""}\n\nWhy: ${act.why || "n/a"}\nExpected: ${act.expectedOutcome || "n/a"}\nCategory: ${act.category || "Strategy"}\n\nGive a concrete 7-day execution plan with exact actions.`;
-    void send(prompt, true);
+    if (act) {
+      bootstrapped.current = true;
+      const prompt = `Help me execute this opportunity:\n\n**${act.title}**\n${act.summary || ""}\n\nWhy: ${act.why || "n/a"}\nExpected: ${act.expectedOutcome || "n/a"}\nCategory: ${act.category || "Strategy"}\n\nGive a concrete 7-day execution plan with exact actions.`;
+      void send(prompt, true);
+      return;
+    }
+    const q = searchParams.get("q")?.trim();
+    if (q) {
+      bootstrapped.current = true;
+      void send(q, true);
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("q");
+        window.history.replaceState({}, "", url.pathname + url.search);
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, activeId]);
+  }, [ready, activeId, searchParams]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -213,8 +227,6 @@ Top opportunities: ${recs
       content: trimmed,
       createdAt: Date.now(),
     };
-    const nextMsgs = [...messages.filter((m) => m.id !== "welcome" || messages.length > 1), userMsg];
-    // Keep welcome if only welcome existed
     const withUser =
       messages.length === 1 && messages[0]?.id === "welcome"
         ? [...messages, userMsg]
@@ -282,7 +294,6 @@ Use only this profile:\n${context}\n\nRecent conversation:\n${history}\n\nAnswer
 
   return (
     <div className="relative flex h-full flex-col bg-omniv-black">
-      {/* History drawer */}
       {historyOpen && (
         <>
           <button
