@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FanDirectory } from "@/components/crm/fan-directory";
+import { CrmNextSteps } from "@/components/crm/crm-next-steps";
 import {
   addArtist,
   addEvent,
@@ -23,6 +24,7 @@ import {
   type ManagerNote,
   type ManagerTask,
 } from "@/lib/workspace-store";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { cn, scoreColor } from "@/lib/utils";
 import {
   Users,
@@ -39,6 +41,13 @@ export function CrmPanel() {
   const [notes, setNotes] = useState<ManagerNote[]>([]);
   const [events, setEvents] = useState<ManagerEvent[]>([]);
 
+  const [rosterCount, setRosterCount] = useState(0);
+  const [fanCount, setFanCount] = useState(0);
+  const [gateSlug, setGateSlug] = useState<string | null>(null);
+  const [primaryArtistName, setPrimaryArtistName] = useState<string | null>(
+    null
+  );
+
   const [name, setName] = useState("");
   const [genre, setGenre] = useState("");
   const [listeners, setListeners] = useState("");
@@ -52,6 +61,28 @@ export function CrmPanel() {
     setTasks(loadTasks());
     setNotes(loadNotes());
     setEvents(loadEvents());
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    const supabase = createClient();
+    void (async () => {
+      const { data: roster } = await supabase
+        .from("roster_artists")
+        .select("id, stage_name, slug")
+        .order("stage_name");
+      const list = roster || [];
+      setRosterCount(list.length);
+      if (list[0]) {
+        setGateSlug(list[0].slug);
+        setPrimaryArtistName(list[0].stage_name);
+        const { count } = await supabase
+          .from("fans")
+          .select("id", { count: "exact", head: true })
+          .eq("artist_id", list[0].id);
+        setFanCount(count ?? 0);
+      }
+    })();
   }, []);
 
   function onAddArtist() {
@@ -68,6 +99,9 @@ export function CrmPanel() {
     setListeners("");
   }
 
+  const openTasks = tasks.filter((t) => !t.done).length;
+  const openEvents = events.filter((e) => !e.done).length;
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -83,6 +117,15 @@ export function CrmPanel() {
         </Link>
       </div>
 
+      <CrmNextSteps
+        rosterCount={rosterCount || artists.length}
+        fanCount={fanCount}
+        openTasks={openTasks}
+        openEvents={openEvents}
+        gateSlug={gateSlug}
+        primaryArtistName={primaryArtistName || artists[0]?.name}
+      />
+
       <FanDirectory />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -96,9 +139,7 @@ export function CrmPanel() {
           <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
             Open tasks
           </p>
-          <p className="mt-1 font-data text-2xl font-semibold">
-            {tasks.filter((t) => !t.done).length}
-          </p>
+          <p className="mt-1 font-data text-2xl font-semibold">{openTasks}</p>
         </Card>
         <Card className="p-4">
           <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
@@ -110,13 +151,11 @@ export function CrmPanel() {
           <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
             Calendar
           </p>
-          <p className="mt-1 font-data text-2xl font-semibold">
-            {events.filter((e) => !e.done).length}
-          </p>
+          <p className="mt-1 font-data text-2xl font-semibold">{openEvents}</p>
         </Card>
       </div>
 
-      <Card className="p-5">
+      <Card id="strategy-roster" className="scroll-mt-20 p-5">
         <div className="mb-4 flex items-center gap-2">
           <Users className="h-4 w-4 text-omniv-gold" />
           <h3 className="text-sm font-medium">Strategy roster (local)</h3>
@@ -175,7 +214,7 @@ export function CrmPanel() {
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="p-5">
+        <Card id="crm-tasks" className="scroll-mt-20 p-5">
           <div className="mb-3 flex items-center gap-2">
             <CheckSquare className="h-4 w-4 text-omniv-gold" />
             <h3 className="text-sm font-medium">Tasks</h3>
@@ -266,7 +305,7 @@ export function CrmPanel() {
         </Card>
       </div>
 
-      <Card className="p-5">
+      <Card id="crm-calendar" className="scroll-mt-20 p-5">
         <div className="mb-3 flex items-center gap-2">
           <Calendar className="h-4 w-4 text-omniv-gold" />
           <h3 className="text-sm font-medium">Calendar</h3>
