@@ -7,7 +7,12 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { paymentProvider, plans } from "@/data/phase6";
 import { usePlan } from "@/components/billing/plan-provider";
-import { getProfile, upsertProfile } from "@/lib/db/profile";
+import {
+  getArtistBrain,
+  getProfile,
+  saveArtistBrain,
+  upsertProfile,
+} from "@/lib/db/profile";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { startFlutterwaveCheckout, type CheckoutPlan } from "@/lib/checkout";
 import {
@@ -16,6 +21,7 @@ import {
   removeMember,
   type TeamMember,
 } from "@/lib/team-store";
+import type { ArtistBrain } from "@/types";
 import {
   CreditCard,
   Users,
@@ -27,6 +33,9 @@ import {
   Loader2,
   ExternalLink,
   Plus,
+  Target,
+  Sparkles,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -54,6 +63,17 @@ const SURFACE_HINTS = [
   },
 ];
 
+const INTEREST_SUGGESTIONS = [
+  "Content systems",
+  "Playlist pitching",
+  "Tour routing",
+  "Brand deals",
+  "Release strategy",
+  "Fan growth",
+  "Sync / licensing",
+  "Community",
+];
+
 export function SettingsPanel() {
   const { plan, setPlan, can } = usePlan();
   const router = useRouter();
@@ -77,6 +97,14 @@ export function SettingsPanel() {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [tmName, setTmName] = useState("");
   const [tmEmail, setTmEmail] = useState("");
+
+  const [goals, setGoals] = useState<string[]>([]);
+  const [interests, setInterests] = useState<string[]>([]);
+  const [goalDraft, setGoalDraft] = useState("");
+  const [interestDraft, setInterestDraft] = useState("");
+  const [brain, setBrain] = useState<ArtistBrain | null>(null);
+  const [strategySaving, setStrategySaving] = useState(false);
+  const [strategyStatus, setStrategyStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -102,6 +130,10 @@ export function SettingsPanel() {
         if (p) {
           n = p.full_name || "";
           e = p.email || "";
+          setInterests(p.interests || []);
+          if (p.social_links) {
+            setUrls((u) => ({ ...u, ...p.social_links }));
+          }
         } else {
           try {
             const supabase = createClient();
@@ -116,6 +148,11 @@ export function SettingsPanel() {
             /* ignore */
           }
         }
+        const b = await getArtistBrain();
+        if (b) {
+          setBrain(b);
+          setGoals(b.goals || []);
+        }
       }
       setName(n);
       setEmail(e);
@@ -126,9 +163,73 @@ export function SettingsPanel() {
   async function saveProfile() {
     setSaving(true);
     setStatus(null);
-    const res = await upsertProfile({ full_name: name });
+    const res = await upsertProfile({
+      full_name: name,
+      social_links: urls,
+    });
     setSaving(false);
     setStatus(res.ok ? "Profile saved" : res.error || "Save failed");
+  }
+
+  async function saveStrategy() {
+    setStrategySaving(true);
+    setStrategyStatus(null);
+    const cleanedGoals = goals.map((g) => g.trim()).filter(Boolean);
+    const cleanedInterests = interests.map((i) => i.trim()).filter(Boolean);
+
+    const profileRes = await upsertProfile({
+      interests: cleanedInterests,
+      social_links: urls,
+    });
+    if (!profileRes.ok) {
+      setStrategySaving(false);
+      setStrategyStatus(profileRes.error || "Could not save interests");
+      return;
+    }
+
+    if (brain) {
+      const next: ArtistBrain = {
+        ...brain,
+        goals: cleanedGoals,
+        lastUpdated: new Date().toISOString().slice(0, 10),
+      };
+      const brainRes = await saveArtistBrain(next);
+      setBrain(next);
+      setStrategySaving(false);
+      setStrategyStatus(
+        brainRes.ok
+          ? "Goals & interests saved — Ziki and feeds will use them"
+          : brainRes.error || "Brain save failed"
+      );
+      return;
+    }
+
+    // Seed minimal brain if missing
+    const seeded: ArtistBrain = {
+      name: name || "Artist",
+      stageName: name || "Artist",
+      genre: ["TBD"],
+      subGenre: [],
+      musicStyle: "",
+      brandVoice: "",
+      visualIdentity: "",
+      targetAudience: "",
+      careerStage: "emerging",
+      strengths: [],
+      weaknesses: [],
+      goals: cleanedGoals,
+      pastReleases: [],
+      contentStyle: "",
+      competitors: [],
+      notes: "",
+      lastUpdated: new Date().toISOString().slice(0, 10),
+    };
+    const brainRes = await saveArtistBrain(seeded);
+    setBrain(seeded);
+    setStrategySaving(false);
+    setStrategyStatus(
+      brainRes.ok ? "Goals & interests saved" : brainRes.error || "Save failed"
+    );
   }
 
   async function signOut() {
@@ -189,6 +290,20 @@ export function SettingsPanel() {
     window.location.href = res.link;
   }
 
+  function addGoal() {
+    const g = goalDraft.trim();
+    if (!g || goals.includes(g)) return;
+    setGoals((prev) => [...prev, g]);
+    setGoalDraft("");
+  }
+
+  function addInterest(raw?: string) {
+    const i = (raw ?? interestDraft).trim();
+    if (!i || interests.includes(i)) return;
+    setInterests((prev) => [...prev, i]);
+    setInterestDraft("");
+  }
+
   return (
     <div className="space-y-5">
       <Card className="p-5">
@@ -216,6 +331,123 @@ export function SettingsPanel() {
           </Button>
           {status && (
             <span className="text-xs text-omniv-text-muted">{status}</span>
+          )}
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <div className="mb-1 flex items-center gap-2">
+          <Target className="h-4 w-4 text-omniv-gold" />
+          <h3 className="text-sm font-medium">Goals</h3>
+        </div>
+        <p className="mb-3 text-xs text-omniv-text-secondary">
+          Same as onboarding — update anytime. Ziki, Opportunity Feed, and scores
+          use these.
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {goals.map((g) => (
+            <span
+              key={g}
+              className="inline-flex items-center gap-1 rounded-full border border-omniv-gold/30 bg-omniv-gold/10 px-2.5 py-1 text-xs text-omniv-gold"
+            >
+              {g}
+              <button
+                type="button"
+                aria-label={`Remove ${g}`}
+                onClick={() => setGoals((prev) => prev.filter((x) => x !== g))}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          {goals.length === 0 && (
+            <span className="text-xs text-omniv-text-muted">No goals yet</span>
+          )}
+        </div>
+        <div className="mt-3 flex gap-2">
+          <Input
+            placeholder="Add a goal…"
+            value={goalDraft}
+            onChange={(e) => setGoalDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addGoal();
+              }
+            }}
+          />
+          <Button size="sm" variant="outline" onClick={addGoal}>
+            Add
+          </Button>
+        </div>
+
+        <div className="mb-1 mt-6 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-omniv-gold" />
+          <h3 className="text-sm font-medium">Interests</h3>
+        </div>
+        <p className="mb-3 text-xs text-omniv-text-secondary">
+          Shapes opportunity ranking and Ziki recommendations.
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {interests.map((i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1 rounded-full border border-omniv-border bg-omniv-elevated px-2.5 py-1 text-xs text-omniv-text-secondary"
+            >
+              {i}
+              <button
+                type="button"
+                aria-label={`Remove ${i}`}
+                onClick={() =>
+                  setInterests((prev) => prev.filter((x) => x !== i))
+                }
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {INTEREST_SUGGESTIONS.filter((s) => !interests.includes(s)).map(
+            (s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => addInterest(s)}
+                className="rounded-full border border-dashed border-omniv-border px-2.5 py-1 text-[11px] text-omniv-text-muted hover:border-omniv-gold/40 hover:text-omniv-gold"
+              >
+                + {s}
+              </button>
+            )
+          )}
+        </div>
+        <div className="mt-3 flex gap-2">
+          <Input
+            placeholder="Custom interest…"
+            value={interestDraft}
+            onChange={(e) => setInterestDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addInterest();
+              }
+            }}
+          />
+          <Button size="sm" variant="outline" onClick={() => addInterest()}>
+            Add
+          </Button>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            disabled={strategySaving}
+            onClick={() => void saveStrategy()}
+          >
+            {strategySaving ? "Saving…" : "Save goals & interests"}
+          </Button>
+          {strategyStatus && (
+            <span className="text-xs text-omniv-text-muted">{strategyStatus}</span>
           )}
         </div>
       </Card>
@@ -291,8 +523,19 @@ export function SettingsPanel() {
           <h3 className="text-sm font-medium">Live OAuth</h3>
         </div>
         <p className="mb-3 text-xs text-omniv-text-secondary">
-          Deep metrics need platform apps. Spotify &amp; YouTube routes are ready
-          when client IDs are in Vercel.
+          Deep metrics need platform apps. Use public pages for OAuth review:{" "}
+          <a href="/privacy" className="text-omniv-gold hover:underline">
+            Privacy
+          </a>
+          ,{" "}
+          <a href="/terms" className="text-omniv-gold hover:underline">
+            Terms
+          </a>
+          ,{" "}
+          <a href="/contact" className="text-omniv-gold hover:underline">
+            Contact
+          </a>
+          .
         </p>
         {oauthMsg && (
           <p className="mb-3 text-xs text-omniv-gold">{oauthMsg}</p>
@@ -367,9 +610,7 @@ export function SettingsPanel() {
         <div className="mb-3 flex items-center gap-2">
           <Users className="h-4 w-4 text-omniv-gold" />
           <h3 className="text-sm font-medium">Team</h3>
-          {!can("team_seats") && (
-            <Badge variant="outline">Pro+</Badge>
-          )}
+          {!can("team_seats") && <Badge variant="outline">Pro+</Badge>}
         </div>
         <ul className="space-y-2">
           {team.map((m) => (
