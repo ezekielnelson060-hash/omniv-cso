@@ -1,13 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { zikiHref, zikiPrompts } from "@/lib/ziki-prompts";
 import { cn } from "@/lib/utils";
-import { Users, Search, RefreshCw, Link2 } from "lucide-react";
+import {
+  Users,
+  Search,
+  RefreshCw,
+  Link2,
+  Download,
+  MessageSquare,
+} from "lucide-react";
 
 type RosterArtist = {
   id: string;
@@ -135,6 +144,31 @@ export function FanDirectory() {
         ? `/f/${active.slug}`
         : "";
 
+  const exportHref = artistId
+    ? `/api/fans/export?artistId=${artistId}${tier !== "all" ? `&tier=${encodeURIComponent(tier)}` : ""}`
+    : null;
+
+  const emailZiki = zikiHref(
+    zikiPrompts.segmentTiers({
+      artistName: active?.stage_name || "this artist",
+      fanCount: fans.length,
+      superfanPct: fans.length
+        ? Math.round(
+            (fans.filter((f) => f.fan_tier === "Superfan").length /
+              fans.length) *
+              100
+          )
+        : 0,
+      coldPct: fans.length
+        ? Math.round(
+            (fans.filter((f) => f.fan_tier === "Cold").length / fans.length) *
+              100
+          )
+        : 0,
+      gateSlug: active?.slug,
+    })
+  );
+
   return (
     <Card className="overflow-hidden p-0">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-omniv-border px-4 py-3">
@@ -158,6 +192,20 @@ export function FanDirectory() {
               </option>
             ))}
           </select>
+          {exportHref && (
+            <a href={exportHref}>
+              <Button size="sm" variant="outline" className="gap-1">
+                <Download className="h-3.5 w-3.5" />
+                CSV
+              </Button>
+            </a>
+          )}
+          <Link href={emailZiki}>
+            <Button size="sm" variant="outline" className="gap-1">
+              <MessageSquare className="h-3.5 w-3.5" />
+              Email copy
+            </Button>
+          </Link>
           <Button
             size="sm"
             variant="outline"
@@ -192,7 +240,7 @@ export function FanDirectory() {
             /f/{active.slug}
           </a>
           <span className="text-omniv-text-muted">
-            · share in Instagram / TikTok bio
+            · CSV imports to Mailchimp / Brevo / Klaviyo
           </span>
         </div>
       )}
