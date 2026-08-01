@@ -2,6 +2,7 @@
 
 import { AppShell } from "@/components/layout/app-shell";
 import { IntelligencePanel } from "@/components/content/intelligence-panel";
+import { ContentGenerator } from "@/components/content/content-generator";
 import { FeatureGate } from "@/components/billing/feature-gate";
 import { usePlan } from "@/components/billing/plan-provider";
 
@@ -18,6 +19,9 @@ export default function ContentPage() {
           Analyse hooks and retention, predict viral performance, generate
           brand-matched studio copy
         </p>
+      </div>
+      <div className="mb-6">
+        <ContentGenerator />
       </div>
       <FeatureGate
         feature="content_intelligence"
