@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FanDirectory } from "@/components/crm/fan-directory";
 import { CrmNextSteps } from "@/components/crm/crm-next-steps";
+import { FanGateMetrics } from "@/components/crm/fan-gate-metrics";
+import { isPlaceholderStageName } from "@/lib/crm-priority";
 import {
   addArtist,
   addEvent,
@@ -43,6 +45,13 @@ export function CrmPanel() {
 
   const [rosterCount, setRosterCount] = useState(0);
   const [fanCount, setFanCount] = useState(0);
+  const [fans7d, setFans7d] = useState(0);
+  const [superfanCount, setSuperfanCount] = useState(0);
+  const [coldCount, setColdCount] = useState(0);
+  const [topSource, setTopSource] = useState<string | null>(null);
+  const [sources, setSources] = useState<{ source: string; count: number }[]>(
+    []
+  );
   const [gateSlug, setGateSlug] = useState<string | null>(null);
   const [primaryArtistName, setPrimaryArtistName] = useState<string | null>(
     null
@@ -73,15 +82,56 @@ export function CrmPanel() {
         .order("stage_name");
       const list = roster || [];
       setRosterCount(list.length);
-      if (list[0]) {
-        setGateSlug(list[0].slug);
-        setPrimaryArtistName(list[0].stage_name);
-        const { count } = await supabase
+      if (!list[0]) return;
+
+      setGateSlug(list[0].slug);
+      setPrimaryArtistName(list[0].stage_name);
+      const artistId = list[0].id;
+
+      const since = new Date();
+      since.setDate(since.getDate() - 7);
+
+      const [allFans, recent, superfans, cold] = await Promise.all([
+        supabase
+          .from("fans")
+          .select(
+            "id, acquisition_source, fan_tier, created_at",
+            { count: "exact" }
+          )
+          .eq("artist_id", artistId)
+          .limit(500),
+        supabase
           .from("fans")
           .select("id", { count: "exact", head: true })
-          .eq("artist_id", list[0].id);
-        setFanCount(count ?? 0);
+          .eq("artist_id", artistId)
+          .gte("created_at", since.toISOString()),
+        supabase
+          .from("fans")
+          .select("id", { count: "exact", head: true })
+          .eq("artist_id", artistId)
+          .eq("fan_tier", "Superfan"),
+        supabase
+          .from("fans")
+          .select("id", { count: "exact", head: true })
+          .eq("artist_id", artistId)
+          .eq("fan_tier", "Cold"),
+      ]);
+
+      setFanCount(allFans.count ?? allFans.data?.length ?? 0);
+      setFans7d(recent.count ?? 0);
+      setSuperfanCount(superfans.count ?? 0);
+      setColdCount(cold.count ?? 0);
+
+      const srcMap = new Map<string, number>();
+      for (const f of allFans.data || []) {
+        const s = (f as { acquisition_source?: string }).acquisition_source || "unknown";
+        srcMap.set(s, (srcMap.get(s) || 0) + 1);
       }
+      const srcList = [...srcMap.entries()]
+        .map(([source, count]) => ({ source, count }))
+        .sort((a, b) => b.count - a.count);
+      setSources(srcList);
+      setTopSource(srcList[0]?.source ?? null);
     })();
   }, []);
 
@@ -120,10 +170,28 @@ export function CrmPanel() {
       <CrmNextSteps
         rosterCount={rosterCount || artists.length}
         fanCount={fanCount}
+        fans7d={fans7d}
+        superfanCount={superfanCount}
+        coldCount={coldCount}
+        topSource={topSource}
         openTasks={openTasks}
         openEvents={openEvents}
         gateSlug={gateSlug}
         primaryArtistName={primaryArtistName || artists[0]?.name}
+        placeholderName={isPlaceholderStageName(
+          primaryArtistName || artists[0]?.name
+        )}
+      />
+
+      <FanGateMetrics
+        fanCount={fanCount}
+        fans7d={fans7d}
+        superfanCount={superfanCount}
+        coldCount={coldCount}
+        topSource={topSource}
+        sources={sources}
+        gateSlug={gateSlug}
+        artistName={primaryArtistName}
       />
 
       <FanDirectory />
