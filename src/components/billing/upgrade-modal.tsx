@@ -27,7 +27,6 @@ export function UpgradeModal({
   feature,
   currentPlan,
   onClose,
-  onSelectPlan,
 }: UpgradeModalProps) {
   const target = minPlanFor(feature);
   const featureLabel = FEATURE_LABELS[feature];
@@ -53,7 +52,6 @@ export function UpgradeModal({
     if (planId === "free") return;
     setBusy(planId);
     setError(null);
-    onSelectPlan?.(planId);
     const res = await startFlutterwaveCheckout({
       plan: planId as CheckoutPlan,
     });
@@ -62,6 +60,7 @@ export function UpgradeModal({
       setError(res.error);
       return;
     }
+    // Do NOT unlock plan here — webhook must confirm
     window.location.href = res.link;
   }
 
@@ -105,8 +104,8 @@ export function UpgradeModal({
           You&apos;re on{" "}
           <span className="text-omniv-gold">{planName(currentPlan)}</span>.{" "}
           <strong className="font-medium text-omniv-text">{featureLabel}</strong>{" "}
-          starts at <span className="text-omniv-gold">{target.name}</span>. Checkout
-          runs on Flutterwave.
+          starts at <span className="text-omniv-gold">{target.name}</span>. Access
+          unlocks after Flutterwave confirms payment.
         </p>
 
         <div className="mt-5 space-y-2">
@@ -151,15 +150,15 @@ export function UpgradeModal({
           ))}
         </div>
 
-        {error && (
-          <p className="mt-3 text-xs text-omniv-danger">{error}</p>
-        )}
+        {error && <p className="mt-3 text-xs text-omniv-danger">{error}</p>}
 
         <div className="mt-5 flex flex-col gap-2 sm:flex-row">
           <Button
             className="flex-1 gap-1.5"
             disabled={busy !== null}
-            onClick={() => void pay(target.id === "free" ? "starter" : (target.id as PlanId))}
+            onClick={() =>
+              void pay(target.id === "free" ? "starter" : (target.id as PlanId))
+            }
           >
             <CreditCard className="h-3.5 w-3.5" />
             Pay with Flutterwave

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * Flutterwave standard checkout initiation.
- * Requires FLW_SECRET_KEY in Vercel env.
- * Docs: https://developer.flutterwave.com/docs/collecting-payments/standard
+ * tx_ref encodes plan + user id so the webhook can unlock without trusting email alone.
+ * Requires FLW_SECRET_KEY. Optional: FLW_CURRENCY (default USD).
  */
 export async function POST(req: Request) {
   const secret = process.env.FLW_SECRET_KEY;
@@ -31,25 +32,62 @@ export async function POST(req: Request) {
     };
     const plan = body.plan || "starter";
     const amount = prices[plan] ?? 29;
+
+    let userId: string | null = null;
+    let email = body.email || "";
+    let name = body.name || "Omniv Artist";
+
+    try {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        userId = user.id;
+        email = email || user.email || "";
+        name =
+          name ||
+          (user.user_metadata?.full_name as string | undefined) ||
+          "Omniv Artist";
+      }
+    } catch {
+      /* unauthenticated checkout still allowed with email */
+    }
+
+    if (!email) {
+      return NextResponse.json(
+        { error: "Sign in or provide an email to checkout." },
+        { status: 400 }
+      );
+    }
+
     const origin =
       process.env.NEXT_PUBLIC_APP_URL ||
       req.headers.get("origin") ||
-      "https://omniv-cso.vercel.app";
+      "https://www.omniv.media";
+
+    // omniv_pro_<uuid>_<ts> — webhook parses plan + user
+    const tx_ref = userId
+      ? `omniv_${plan}_${userId}_${Date.now()}`
+      : `omniv_${plan}_anon_${Date.now()}`;
 
     const payload = {
-      tx_ref: `omniv-${plan}-${Date.now()}`,
+      tx_ref,
       amount,
       currency: process.env.FLW_CURRENCY || "USD",
-      redirect_url: `${origin}/settings?billing=success`,
+      redirect_url: `${origin}/settings?billing=success&plan=${plan}`,
       customer: {
-        email: body.email || "artist@omniv.app",
-        name: body.name || "Omniv Artist",
+        email,
+        name,
       },
       customizations: {
         title: "Omniv",
         description: `Omniv ${plan} plan`,
       },
-      meta: { plan },
+      meta: {
+        plan,
+        user_id: userId || "",
+      },
     };
 
     const res = await fetch("https://api.flutterwave.com/v3/payments", {
@@ -72,7 +110,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       link: data?.data?.link as string | undefined,
-      raw: data,
+      tx_ref,
     });
   } catch (e) {
     console.error(e);
