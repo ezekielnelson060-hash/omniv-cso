@@ -1,6 +1,6 @@
 /**
- * Algorithmic playlist placement + TikTok viral mechanics
- * Heuristic models for indie release strategy (not platform APIs).
+ * Distribution signals: algorithmic lists, Spotify editorial, Apple Music radio, TikTok.
+ * Heuristic strategy models — not live platform APIs.
  */
 
 import type { ArtistBrain } from "@/types";
@@ -18,6 +18,21 @@ export type PlaylistSignal = {
   path: string[];
 };
 
+export type EditorialSignal = {
+  score: number;
+  likelihood: "low" | "medium" | "stretch";
+  whatEditorsWeigh: string[];
+  submitPath: string[];
+  realism: string;
+};
+
+export type AppleRadioSignal = {
+  score: number;
+  levers: string[];
+  path: string[];
+  note: string;
+};
+
 export type TikTokSignal = {
   score: number;
   viralReadiness: number;
@@ -26,14 +41,6 @@ export type TikTokSignal = {
   killCriteria: string[];
 };
 
-/**
- * Algorithmic playlists (e.g. Discover Weekly / Radio / auto mixes) respond to:
- * - Early save rate and completion more than raw plays
- * - Consistency of listener cohort (not one viral spike only)
- * - Skip rate in first 30s
- * - Playlist-to-catalogue follow-through
- * Independents rarely "pitch" algo lists directly — they engineer signals.
- */
 export function algorithmicPlaylistPlacement(
   input: ReleaseWindowInput,
   window: WindowScore,
@@ -92,9 +99,7 @@ export function algorithmicPlaylistPlacement(
   path.push(
     "Optimise for completion and saves in the first 30s — skip-heavy intros kill algo candidates."
   );
-  path.push(
-    "Do not buy fake streams; algos detect inorganic patterns and suppress."
-  );
+  path.push("Do not buy fake streams; algos detect inorganic patterns and suppress.");
   levers.push(
     "Algo path: early save rate → radio/auto-mix candidacy → broader Discover-style surfaces."
   );
@@ -112,14 +117,167 @@ export function algorithmicPlaylistPlacement(
 }
 
 /**
- * TikTok viral mechanics (simplified product model):
- * - Hook in <1.5s (pattern interrupt)
- * - Loopability (natural rewatch)
- * - Native sound usage / original sound ownership
- * - Series / duet / stitch affordances
- * - Posting velocity during test window
- * - Not the same as "post the chorus once"
+ * Spotify editorial curation (human + data-assisted):
+ * - Pitch via Spotify for Artists (typically ~7 days before release)
+ * - Editors weigh: story, timing, prior performance, market fit, audio quality, uniqueness
+ * - Not a lottery ticket for cold artists — signals + narrative matter
+ * - Regional editorial and genre desks differ; global flagship lists are rare first hits
  */
+export function spotifyEditorialCuration(
+  input: ReleaseWindowInput,
+  window: WindowScore,
+  brain: ArtistBrain | null
+): EditorialSignal {
+  let score = 22;
+  const whatEditorsWeigh: string[] = [
+    "Clear story / why this release matters now",
+    "Fit to playlist mood & lane (not just genre tag)",
+    "Recent performance (saves, skip rate, prior list history)",
+    "Release hygiene: cover, metadata, canvas, timing",
+    "Market focus (city/country desks often move first)",
+  ];
+  const submitPath: string[] = [];
+
+  if (!input.platforms.includes("spotify")) {
+    return {
+      score: 10,
+      likelihood: "low",
+      whatEditorsWeigh,
+      submitPath: ["Add Spotify as a surface before treating editorial as a lever."],
+      realism:
+        "Editorial is not available as a path until the track lives on Spotify with a complete profile.",
+    };
+  }
+
+  score += 8;
+
+  if (input.playlistPitchReady) {
+    score += 12;
+    submitPath.push("Submit in Spotify for Artists ≥7 days before release with a tight pitch paragraph.");
+  } else {
+    submitPath.push("Prepare S4A pitch: 1–2 sentences on sound + 1 sentence on why now.");
+  }
+
+  if (window.positioning >= 55) {
+    score += 12;
+    submitPath.push("Reuse your positioning line in the pitch — editors skim.");
+  } else {
+    score -= 8;
+    submitPath.push("Sharpen positioning before any editorial submit.");
+  }
+
+  if (window.priming >= 50 && input.ownedListReady) {
+    score += 10;
+  }
+
+  const stage = brain?.careerStage || "emerging";
+  if (stage === "emerging") {
+    score -= 5;
+    submitPath.push(
+      "Emerging: prioritise regional/genre micro-lists and independents before flagship editorial."
+    );
+  } else if (stage === "breakthrough" || stage === "established") {
+    score += 12;
+    submitPath.push("Use prior list history and press in the pitch; ask for the specific list mood.");
+  }
+
+  if (window.competition < 40) {
+    score -= 6;
+    submitPath.push("Crowded week: editors have more same-lane options — differentiation is mandatory.");
+  }
+
+  submitPath.push(
+    "Do not pitch every list; 3–5 realistic targets beat 30 spray-and-pray submissions."
+  );
+  submitPath.push(
+    "After release: let first-week save data work — follow-up only if you have a real update (remix, video, tour)."
+  );
+
+  const likelihood: EditorialSignal["likelihood"] =
+    score >= 55 ? "medium" : score >= 35 ? "stretch" : "low";
+
+  const realism =
+    likelihood === "low"
+      ? "Treat major editorial as a stretch goal. Win independents + algo signals first."
+      : likelihood === "stretch"
+        ? "Possible for niche/regional desks if the story is sharp; flagship lists remain unlikely."
+        : "Credible path for targeted editorial if pitch + first-week signals align.";
+
+  return {
+    score: clamp(score),
+    likelihood,
+    whatEditorsWeigh,
+    submitPath: submitPath.slice(0, 6),
+    realism,
+  };
+}
+
+/**
+ * Apple Music algorithmic radio / auto stations:
+ * - Driven by listens, likes (favorite), adds to library, completion, skips
+ * - Station seed from a song/artist expands via taste graph
+ * - Editorial (Apple Music playlists) is separate from radio — still human-led for many flagships
+ * - Strong library-add rate helps more than raw play spam
+ */
+export function appleMusicAlgorithmicRadio(
+  input: ReleaseWindowInput,
+  window: WindowScore
+): AppleRadioSignal {
+  let score = 28;
+  const levers: string[] = [];
+  const path: string[] = [];
+
+  if (!input.platforms.includes("apple") && !input.platforms.includes("spotify")) {
+    return {
+      score: 12,
+      levers: ["No Apple/streaming surface — radio systems cannot train on your catalogue."],
+      path: ["Distribute to Apple Music and complete artist metadata before optimising for radio."],
+      note: "Apple Music radio/stations personalise from library and listening behaviour, not cold outreach.",
+    };
+  }
+
+  if (input.platforms.includes("apple")) {
+    score += 16;
+    levers.push("Apple Music surface on — stations can seed from your tracks.");
+  } else {
+    score += 4;
+    levers.push("Spotify selected but not Apple — dual-DSP still recommended for radio reach.");
+    path.push("Add Apple Music distribution for station and library-add loops.");
+  }
+
+  if (input.ownedListReady) {
+    score += 14;
+    levers.push("Owned fans can drive library adds — a key radio/station signal.");
+    path.push("CTA: ‘Add to library’ / love track, not only ‘stream once’.");
+  } else {
+    score -= 8;
+    path.push("Stand up fan gate so early listeners can be asked to library-add.");
+  }
+
+  if (window.priming >= 50) {
+    score += 10;
+    levers.push("Priming concentrates early behaviour that stations amplify.");
+  }
+
+  if (window.readiness >= 55) {
+    score += 8;
+  }
+
+  levers.push("Completion + low skip in the first 30s improves station continuation.");
+  levers.push("Favorites/library adds outweigh anonymous background plays.");
+
+  path.push("Week 1: ask existing fans for library add + complete listens on the lead track.");
+  path.push("Avoid playlist-milking bots; Apple taste graphs punish inorganic clusters.");
+  path.push("Use song radio only after you have a clean seed track with solid early engagement.");
+
+  return {
+    score: clamp(score),
+    levers: levers.slice(0, 5),
+    path: path.slice(0, 5),
+    note: "Apple Music algorithmic radio ≠ Apple editorial playlists. Optimise library adds for radio; pitch separately for human lists.",
+  };
+}
+
 export function tiktokViralMechanics(
   input: ReleaseWindowInput,
   window: WindowScore
@@ -130,8 +288,7 @@ export function tiktokViralMechanics(
   const killCriteria: string[] = [];
 
   const hasTT =
-    input.platforms.includes("tiktok") ||
-    input.platforms.includes("instagram"); // Reels shares similar dynamics
+    input.platforms.includes("tiktok") || input.platforms.includes("instagram");
 
   if (input.platforms.includes("tiktok")) {
     score += 18;
@@ -152,17 +309,13 @@ export function tiktokViralMechanics(
     mechanics.push("Without a pack, you cannot run the test → kill → double-down loop.");
   }
 
-  if (window.priming >= 50) {
-    score += 12;
-  }
-
+  if (window.priming >= 50) score += 12;
   if (window.positioning >= 55) {
     score += 8;
     mechanics.push("Clear positioning helps hooks feel intentional, not random clips.");
   }
 
-  // Core mechanics education
-  mechanics.push("Hook &lt;1.5s: face, text, or pattern interrupt before the title card.");
+  mechanics.push("Hook <1.5s: face, text, or pattern interrupt before the title card.");
   mechanics.push("Loop: end frame should reconnect to start — rewatches train the algo.");
   mechanics.push("Original sound: post from the sound page once a cut works; invite stitches.");
 
@@ -175,7 +328,7 @@ export function tiktokViralMechanics(
     testPlan.push("Unlock TikTok/Reels + content pack before running viral tests.");
   }
 
-  killCriteria.push("Kill a cut if completion &lt; peer average after 200–400 views.");
+  killCriteria.push("Kill a cut if completion < peer average after 200–400 views.");
   killCriteria.push("Stop boosting if hold-rate collapses in first 1s after a paid spike.");
   killCriteria.push("Do not chase unrelated trends that break positioning.");
 
@@ -193,10 +346,10 @@ export type DecisionNode = {
   label: string;
   status: "pass" | "fail" | "warn" | "info";
   detail?: string;
+  emoji?: string;
   children?: DecisionNode[];
 };
 
-/** Visual decision tree for Go / Caution / Hold */
 export function buildVerdictTree(window: WindowScore): DecisionNode {
   const lethal = window.proximityHits.some(
     (h) =>
@@ -209,17 +362,23 @@ export function buildVerdictTree(window: WindowScore): DecisionNode {
     ok: boolean,
     warn: boolean,
     label: string,
-    detail: string
+    detail: string,
+    emoji: string
   ): DecisionNode => ({
     id: label,
     label,
+    emoji,
     status: ok ? "pass" : warn ? "warn" : "fail",
     detail,
   });
 
+  const verdictEmoji =
+    window.verdict === "Go" ? "🟢" : window.verdict === "Hold" ? "🔴" : "🟡";
+
   return {
     id: "root",
     label: `Verdict path → ${window.verdict}`,
+    emoji: verdictEmoji,
     status:
       window.verdict === "Go"
         ? "pass"
@@ -231,7 +390,11 @@ export function buildVerdictTree(window: WindowScore): DecisionNode {
       {
         id: "hard",
         label: "Hard gates",
-        status: lethal || window.blockers.length >= 3 || window.readiness < 40 ? "fail" : "pass",
+        emoji: "🚧",
+        status:
+          lethal || window.blockers.length >= 3 || window.readiness < 40
+            ? "fail"
+            : "pass",
         children: [
           gate(
             !lethal,
@@ -239,31 +402,36 @@ export function buildVerdictTree(window: WindowScore): DecisionNode {
             "No lethal competitor conflict",
             lethal
               ? "Same-day same-lane peer/larger act"
-              : "No same-day same-lane peer/larger hit"
+              : "No same-day same-lane peer/larger hit",
+            "⚔️"
           ),
           gate(
             window.blockers.length < 3,
             window.blockers.length === 2,
             `Blockers (${window.blockers.length})`,
-            window.blockers[0] || "None"
+            window.blockers[0] || "None",
+            "🧱"
           ),
           gate(
             window.readiness >= 40,
             window.readiness >= 35,
             `Readiness ${window.readiness}`,
-            "Must be ≥ 40 to avoid Hold"
+            "Must be ≥ 40 to avoid Hold",
+            "📦"
           ),
           gate(
             window.competition >= 35,
             window.competition >= 30,
             `Competition ${window.competition}`,
-            "Must be ≥ 35 to avoid Hold"
+            "Must be ≥ 35 to avoid Hold",
+            "📅"
           ),
         ],
       },
       {
         id: "soft",
         label: "Go gates (all required)",
+        emoji: "🎯",
         status:
           window.verdict === "Go"
             ? "pass"
@@ -271,21 +439,58 @@ export function buildVerdictTree(window: WindowScore): DecisionNode {
               ? "warn"
               : "fail",
         children: [
-          gate(window.overall >= 76, window.overall >= 65, `Overall ≥ 76 (${window.overall})`, ""),
-          gate(window.readiness >= 58, window.readiness >= 50, `Readiness ≥ 58 (${window.readiness})`, ""),
-          gate(window.timing >= 55, window.timing >= 45, `Timing ≥ 55 (${window.timing})`, ""),
+          gate(
+            window.overall >= 76,
+            window.overall >= 65,
+            `Overall ≥ 76 (${window.overall})`,
+            "",
+            "📊"
+          ),
+          gate(
+            window.readiness >= 58,
+            window.readiness >= 50,
+            `Readiness ≥ 58 (${window.readiness})`,
+            "",
+            "✅"
+          ),
+          gate(
+            window.timing >= 55,
+            window.timing >= 45,
+            `Timing ≥ 55 (${window.timing})`,
+            "",
+            "⏱️"
+          ),
           gate(
             window.competition >= 50,
             window.competition >= 40,
             `Competition ≥ 50 (${window.competition})`,
-            ""
+            "",
+            "🏁"
           ),
-          gate(window.priming >= 50, window.priming >= 40, `Priming ≥ 50 (${window.priming})`, ""),
-          gate(window.blockers.length <= 1, window.blockers.length <= 2, "≤ 1 blocker", ""),
+          gate(
+            window.priming >= 50,
+            window.priming >= 40,
+            `Priming ≥ 50 (${window.priming})`,
+            "",
+            "🔥"
+          ),
+          gate(
+            window.blockers.length <= 1,
+            window.blockers.length <= 2,
+            "≤ 1 blocker",
+            "",
+            "🧹"
+          ),
         ],
       },
       {
         id: "action",
+        emoji:
+          window.verdict === "Go"
+            ? "🚀"
+            : window.verdict === "Hold"
+              ? "🛑"
+              : "⚠️",
         label:
           window.verdict === "Go"
             ? "Action: execute priming + light optional paid"

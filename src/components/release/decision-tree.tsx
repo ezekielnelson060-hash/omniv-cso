@@ -2,15 +2,13 @@
 
 import type { DecisionNode } from "@/lib/strategy/distribution-signals";
 import { cn } from "@/lib/utils";
-import { Check, X, AlertTriangle, GitBranch } from "lucide-react";
 
-function StatusIcon({ status }: { status: DecisionNode["status"] }) {
-  if (status === "pass")
-    return <Check className="h-3.5 w-3.5 text-emerald-400" />;
-  if (status === "fail") return <X className="h-3.5 w-3.5 text-red-400" />;
-  if (status === "warn")
-    return <AlertTriangle className="h-3.5 w-3.5 text-omniv-gold" />;
-  return <GitBranch className="h-3.5 w-3.5 text-omniv-text-muted" />;
+function statusEmoji(status: DecisionNode["status"], override?: string) {
+  if (override) return override;
+  if (status === "pass") return "✅";
+  if (status === "fail") return "❌";
+  if (status === "warn") return "⚠️";
+  return "📌";
 }
 
 function Node({ node, depth = 0 }: { node: DecisionNode; depth?: number }) {
@@ -26,7 +24,9 @@ function Node({ node, depth = 0 }: { node: DecisionNode; depth?: number }) {
         )}
       >
         <div className="flex items-start gap-2">
-          <StatusIcon status={node.status} />
+          <span className="text-sm leading-none" aria-hidden>
+            {statusEmoji(node.status, node.emoji)}
+          </span>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-omniv-text">{node.label}</p>
             {node.detail ? (
@@ -46,7 +46,9 @@ export function DecisionTree({ tree }: { tree: DecisionNode }) {
   return (
     <div>
       <div className="mb-3 flex items-center gap-2">
-        <GitBranch className="h-4 w-4 text-omniv-gold" />
+        <span className="text-base" aria-hidden>
+          🌳
+        </span>
         <p className="text-sm font-medium">Decision tree</p>
       </div>
       <Node node={tree} />
