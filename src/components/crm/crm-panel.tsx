@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -35,7 +33,6 @@ import {
   CheckSquare,
   StickyNote,
   Calendar,
-  MessageSquare,
   Plus,
 } from "lucide-react";
 
@@ -88,12 +85,15 @@ export function CrmPanel() {
         setPrimaryArtistName(primary.stage_name);
         setGateSlug(primary.slug);
       }
-      const { data: fans } = await supabase.from("fans").select("id, created_at, tier, source");
+      const { data: fans } = await supabase
+        .from("fans")
+        .select("id, created_at, tier, source");
       const fanList = fans || [];
       setFanCount(fanList.length);
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
       setFans7d(
-        fanList.filter((f) => new Date(f.created_at).getTime() > weekAgo).length
+        fanList.filter((f) => new Date(f.created_at).getTime() > weekAgo)
+          .length
       );
       setSuperfanCount(fanList.filter((f) => f.tier === "superfan").length);
       setColdCount(fanList.filter((f) => f.tier === "cold").length);
@@ -109,6 +109,9 @@ export function CrmPanel() {
       setTopSource(sorted[0]?.source || null);
     })();
   }, []);
+
+  const openTasks = tasks.filter((t) => !t.done).length;
+  const openEvents = events.filter((e) => !e.done).length;
 
   function handleAddArtist() {
     if (!name.trim()) return;
@@ -149,12 +152,16 @@ export function CrmPanel() {
       <ContractsPanel />
 
       <CrmNextSteps
+        rosterCount={rosterCount}
         fanCount={fanCount}
         fans7d={fans7d}
         superfanCount={superfanCount}
         coldCount={coldCount}
         topSource={topSource}
+        openTasks={openTasks}
+        openEvents={openEvents}
         gateSlug={gateSlug}
+        primaryArtistName={primaryArtistName}
       />
 
       <FanGateMetrics
