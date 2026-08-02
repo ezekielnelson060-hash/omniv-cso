@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { zikiComplete } from "@/lib/gemini";
+import { trackServer } from "@/lib/analytics";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
@@ -12,6 +14,24 @@ export async function POST(req: Request) {
     if (!message) {
       return NextResponse.json({ error: "message required" }, { status: 400 });
     }
+
+    let userId: string | null = null;
+    try {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      userId = user?.id ?? null;
+    } catch {
+      /* */
+    }
+
+    void trackServer({
+      name: "ziki_message",
+      userId,
+      path: "/ziki",
+      meta: { length: message.length, has_history: Boolean(body.history) },
+    });
 
     const system =
       body.context ||
