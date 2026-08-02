@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { scoreAfterAction, tierFromScore } from "@/lib/fan-engagement";
+import { trackServer } from "@/lib/analytics";
 
 /**
  * Public fan capture endpoint.
  * POST { artistSlug, email, phone?, consent, source?, campaignId? }
- * Uses service role to write under isolated artist_id.
  */
 export async function POST(req: Request) {
   try {
@@ -78,11 +78,16 @@ export async function POST(req: Request) {
     }
 
     if (!artist) {
+      void trackServer({
+        name: "fan_capture_miss",
+        path: `/f/${slug}`,
+        meta: { slug },
+      });
       return NextResponse.json(
         {
           error: lookupErr
             ? `Database error: ${lookupErr}`
-            : `No roster artist with slug "${slug}". Check SELECT slug FROM roster_artists; or add SUPABASE_SERVICE_ROLE_KEY for the same project as your SQL.`,
+            : `No roster artist with slug "${slug}". Check SELECT slug FROM roster_artists;`,
           slug,
         },
         { status: 404 }
@@ -127,6 +132,16 @@ export async function POST(req: Request) {
       campaign_id: body.campaignId || null,
       action_type: "form_submit",
       metadata: { source: body.source || "landing" },
+    });
+
+    void trackServer({
+      name: "fan_captured",
+      path: `/f/${slug}`,
+      meta: {
+        slug,
+        source: body.source || "landing",
+        artist: artist.stage_name,
+      },
     });
 
     let reward: string | null = null;
