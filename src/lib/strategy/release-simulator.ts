@@ -1,6 +1,5 @@
 /**
- * Release Simulator — stress-test timing before burning a cycle.
- * Deterministic scoring from Artist Brain + user inputs; Ziki narrative optional on top.
+ * Release Simulator — timing algorithms, competitor density, refined Go/Caution/Hold.
  */
 
 import type { ArtistBrain } from "@/types";
@@ -9,17 +8,19 @@ import { computeScoresFromBrain } from "@/lib/strategy/scores";
 export type ReleaseWindowInput = {
   title: string;
   genre?: string;
-  primaryMarket: string; // e.g. Lagos, London, Accra, Global EN
-  releaseDate: string; // ISO date
+  primaryMarket: string;
+  releaseDate: string;
   alternateDate?: string;
-  positioning: string; // one-line positioning
+  positioning: string;
   contentReady: boolean;
   ownedListReady: boolean;
   playlistPitchReady: boolean;
   budgetBand: "none" | "low" | "medium" | "high";
-  competingNoise: "quiet" | "normal" | "crowded"; // user estimate of calendar density
+  competingNoise: "quiet" | "normal" | "crowded";
   platforms: string[];
   notes?: string;
+  /** Known competitor drops near the window (user-entered) */
+  competitorDrops?: { name: string; date: string; lane?: string }[];
 };
 
 export type WindowScore = {
@@ -28,11 +29,13 @@ export type WindowScore = {
   readiness: number;
   timing: number;
   positioning: number;
+  competition: number;
   risk: number;
   overall: number;
   verdict: "Go" | "Caution" | "Hold";
   reasons: string[];
   blockers: string[];
+  strategyNotes: string[];
 };
 
 export type SimulationResult = {
@@ -43,23 +46,43 @@ export type SimulationResult = {
   checklist: string[];
   spendWarning: string;
   confidence: number;
+  competitorInsights: string[];
 };
 
 function clamp(n: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, Math.round(n)));
 }
 
+function parseDate(iso: string): Date {
+  return new Date(iso + "T12:00:00");
+}
+
 function dayOfWeek(iso: string): number {
-  const d = new Date(iso + "T12:00:00");
-  return Number.isNaN(d.getTime()) ? 5 : d.getDay(); // 0 Sun … 5 Fri
+  const d = parseDate(iso);
+  return Number.isNaN(d.getTime()) ? 5 : d.getDay();
 }
 
 function daysFromNow(iso: string): number {
-  const d = new Date(iso + "T12:00:00");
+  const d = parseDate(iso);
   if (Number.isNaN(d.getTime())) return 14;
   return Math.ceil((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
+function daysBetween(a: string, b: string): number {
+  const da = parseDate(a).getTime();
+  const db = parseDate(b).getTime();
+  if (Number.isNaN(da) || Number.isNaN(db)) return 999;
+  return Math.abs(Math.round((da - db) / (1000 * 60 * 60 * 24)));
+}
+
+/**
+ * Timing model:
+ * - Lead time curve (sweet spot ~14–45 days)
+ * - Day-of-week bias (Thu/Fri preferred for streaming culture)
+ * - Month-edge penalty (1st / month-end noise)
+ * - User calendar density
+ * - Brain release readiness
+ */
 function timingScore(
   iso: string,
   noise: ReleaseWindowInput["competingNoise"],
@@ -67,50 +90,119 @@ function timingScore(
 ): { score: number; reasons: string[]; blockers: string[] } {
   const reasons: string[] = [];
   const blockers: string[] = [];
-  let score = 55;
+  let score = 52;
 
   const lead = daysFromNow(iso);
-  if (lead < 7) {
-    score -= 25;
-    blockers.push("Less than 7 days lead — assets and pitching rarely catch up.");
+  if (lead < 0) {
+    score -= 40;
+    blockers.push("Date is in the past.");
+  } else if (lead < 7) {
+    score -= 28;
+    blockers.push("Under 7 days lead — pitching and content almost never catch up.");
   } else if (lead < 14) {
-    score -= 12;
-    reasons.push("Tight 1–2 week lead; only works if content is already shot.");
+    score -= 14;
+    reasons.push("Tight 1–2 week lead: only if content + pitches are already done.");
+  } else if (lead <= 28) {
+    score += 18;
+    reasons.push("Optimal ~2–4 week runway for independent releases.");
   } else if (lead <= 45) {
-    score += 15;
-    reasons.push("Healthy 2–6 week runway for content + soft pitching.");
+    score += 14;
+    reasons.push("Solid 4–6 week runway — protect focus so the campaign doesn’t go cold.");
   } else if (lead <= 90) {
-    score += 8;
-    reasons.push("Long runway — protect focus so the campaign doesn’t go cold.");
+    score += 4;
+    reasons.push("Long runway — schedule soft content so momentum doesn’t lag.");
   } else {
-    score -= 8;
-    reasons.push("Very far out — risk of context changing before drop.");
+    score -= 10;
+    reasons.push("90+ days out — market context may shift before drop.");
   }
 
   const dow = dayOfWeek(iso);
-  // Fri (5) and Thu (4) often better for streaming culture; Mon weaker
-  if (dow === 5 || dow === 4) {
-    score += 8;
-    reasons.push("Thu/Fri drop aligns with weekend listening patterns.");
-  } else if (dow === 1) {
-    score -= 6;
-    reasons.push("Monday drops fight attention recovery after the weekend.");
+  if (dow === 4 || dow === 5) {
+    score += 9;
+    reasons.push("Thu/Fri aligns with weekend listening and playlist refresh cycles.");
+  } else if (dow === 0 || dow === 1) {
+    score -= 7;
+    reasons.push("Sun/Mon drops fight post-weekend attention recovery.");
+  } else if (dow === 2 || dow === 3) {
+    score += 2;
+    reasons.push("Mid-week can work for focused niche audiences.");
+  }
+
+  const day = parseDate(iso).getDate();
+  if (day <= 2 || day >= 28) {
+    score -= 5;
+    reasons.push("Month edge — more catalogue noise and weaker editorial attention.");
   }
 
   if (noise === "crowded") {
-    score -= 18;
-    blockers.push("You marked the calendar crowded — differentiation must be sharp.");
+    score -= 16;
+    blockers.push("Crowded calendar — you need a sharper story or a quieter week.");
   } else if (noise === "quiet") {
-    score += 10;
-    reasons.push("Quieter calendar raises odds of attention capture.");
+    score += 11;
+    reasons.push("Quieter week raises odds of attention capture.");
   }
 
-  if (releaseReadiness < 40) {
-    score -= 10;
-    blockers.push("Release readiness score is low — timing can’t fix incomplete prep.");
+  if (releaseReadiness < 35) {
+    score -= 12;
+    blockers.push("Release readiness is too low for aggressive timing.");
+  } else if (releaseReadiness > 70) {
+    score += 6;
   }
 
   return { score: clamp(score), reasons, blockers };
+}
+
+function competitionScore(
+  iso: string,
+  input: ReleaseWindowInput
+): { score: number; reasons: string[]; blockers: string[]; insights: string[] } {
+  const reasons: string[] = [];
+  const blockers: string[] = [];
+  const insights: string[] = [];
+  let score = 70; // higher = less competitive pressure
+
+  const drops = input.competitorDrops || [];
+  for (const c of drops) {
+    const gap = daysBetween(iso, c.date);
+    const sameLane =
+      c.lane &&
+      input.genre &&
+      c.lane.toLowerCase().includes(input.genre.split(/[\/]/)[0]?.trim().toLowerCase() || "__");
+
+    if (gap <= 3) {
+      score -= sameLane ? 28 : 18;
+      blockers.push(
+        `${c.name} drops within ${gap} day(s)${sameLane ? " in a similar lane" : ""}.`
+      );
+      insights.push(
+        `Avoid head-to-head with ${c.name} (${c.date}). Shift ±7–14 days or change positioning angle.`
+      );
+    } else if (gap <= 10) {
+      score -= sameLane ? 14 : 8;
+      reasons.push(`${c.name} is ${gap} days away — expect shared attention.`)
+      insights.push(
+        `Near ${c.name}: lean into differentiated angle, not the same hook pattern.`
+      );
+    } else if (gap <= 21) {
+      score -= 4;
+      insights.push(`${c.name} (${c.date}) is in the wider window — monitor, don’t panic.`)
+    }
+  }
+
+  if (drops.length === 0) {
+    reasons.push("No competitor drops logged — add known releases to raise confidence.");
+    score -= 5; // slight uncertainty penalty
+  }
+
+  // Classic indie strategy heuristics
+  insights.push(
+    "Peer strategy: many independents win on Thu/Fri with 3+ weeks of short-form priming, not surprise dumps."
+  );
+  insights.push(
+    "Avoid stacking your biggest content day on the same day a larger same-lane act posts a premiere."
+  );
+
+  return { score: clamp(score), reasons, blockers, insights };
 }
 
 function readinessScore(
@@ -119,42 +211,36 @@ function readinessScore(
 ): { score: number; reasons: string[]; blockers: string[] } {
   const reasons: string[] = [];
   const blockers: string[] = [];
-  let score = 30 + brainScores.releaseReadiness * 0.35;
+  let score = 28 + brainScores.releaseReadiness * 0.35;
 
   if (input.contentReady) {
     score += 18;
     reasons.push("Content pack marked ready.");
   } else {
-    score -= 12;
-    blockers.push("Content not ready — do not burn paid or favours yet.");
+    score -= 14;
+    blockers.push("Content not ready — do not burn paid or favours.");
   }
 
   if (input.ownedListReady) {
     score += 14;
-    reasons.push("Owned list / fan gate ready to catch demand.");
+    reasons.push("Owned list / fan gate ready.");
   } else {
-    score -= 8;
-    blockers.push("No owned list — algorithm gains won’t convert to durable fans.");
+    score -= 10;
+    blockers.push("No owned list — algorithmic spikes won’t stick.");
   }
 
   if (input.playlistPitchReady) {
     score += 10;
     reasons.push("Pitch list prepared.");
-  } else {
-    reasons.push("Playlist pitch list still open — optional but valuable.");
   }
 
-  if (input.platforms.length >= 2) {
-    score += 8;
-  } else {
-    blockers.push("Fewer than 2 surfaces selected — distribution is thin.");
-  }
+  if (input.platforms.length >= 2) score += 8;
+  else blockers.push("Under 2 surfaces — distribution is thin.");
 
-  const budgetBoost = { none: 0, low: 4, medium: 8, high: 10 }[input.budgetBand];
-  score += budgetBoost;
+  score += { none: 0, low: 4, medium: 8, high: 10 }[input.budgetBand];
 
-  if (brainScores.contentHealth < 40 && !input.contentReady) {
-    blockers.push("Content health is soft and pack isn’t ready.");
+  if (brainScores.audienceHealth < 35 && !input.ownedListReady) {
+    blockers.push("Weak audience health without an owned list is high risk.");
   }
 
   return { score: clamp(score), reasons, blockers };
@@ -166,17 +252,17 @@ function positioningScore(
 ): { score: number; reasons: string[]; blockers: string[] } {
   const reasons: string[] = [];
   const blockers: string[] = [];
-  let score = 40;
+  let score = 38;
 
   const pos = input.positioning.trim();
-  if (pos.length > 40) {
-    score += 20;
+  if (pos.length > 48) {
+    score += 22;
     reasons.push("Positioning is specific enough to guide creative.");
-  } else if (pos.length > 12) {
-    score += 8;
-    reasons.push("Positioning exists but could be sharper.");
+  } else if (pos.length > 16) {
+    score += 10;
+    reasons.push("Positioning present but could be sharper.");
   } else {
-    score -= 15;
+    score -= 18;
     blockers.push("Vague positioning — easy to burn the week on the wrong story.");
   }
 
@@ -188,7 +274,7 @@ function positioningScore(
     score += 12;
     reasons.push(`Genre frame: ${genre}.`);
   } else {
-    blockers.push("Genre unclear — playlists and content systems need a lane.");
+    blockers.push("Genre unclear.");
   }
 
   if (input.primaryMarket && input.primaryMarket.length > 2) {
@@ -196,11 +282,40 @@ function positioningScore(
     reasons.push(`Primary market: ${input.primaryMarket}.`);
   }
 
-  if (brain?.brandVoice && brain.brandVoice.length > 10) {
-    score += 8;
-  }
+  if (brain?.brandVoice && brain.brandVoice.length > 10) score += 8;
 
   return { score: clamp(score), reasons, blockers };
+}
+
+/**
+ * Verdict rules (refined):
+ * Go     — overall ≥ 74, blockers ≤ 1, competition ≥ 45, readiness ≥ 55
+ * Hold   — overall < 50 OR blockers ≥ 3 OR readiness < 35 OR competition < 30
+ * Caution — everything else
+ */
+function verdictFrom(parts: {
+  overall: number;
+  blockers: string[];
+  readiness: number;
+  competition: number;
+}): WindowScore["verdict"] {
+  if (
+    parts.overall < 50 ||
+    parts.blockers.length >= 3 ||
+    parts.readiness < 35 ||
+    parts.competition < 30
+  ) {
+    return "Hold";
+  }
+  if (
+    parts.overall >= 74 &&
+    parts.blockers.length <= 1 &&
+    parts.competition >= 45 &&
+    parts.readiness >= 55
+  ) {
+    return "Go";
+  }
+  return "Caution";
 }
 
 function buildWindow(
@@ -215,28 +330,35 @@ function buildWindow(
   const timing = timingScore(iso, input.competingNoise, brainScores.releaseReadiness);
   const readiness = readinessScore(input, brainScores);
   const positioning = positioningScore(input, brain);
+  const competition = competitionScore(iso, input);
 
   const overall = clamp(
-    readiness.score * 0.4 +
-      timing.score * 0.35 +
-      positioning.score * 0.25
+    readiness.score * 0.34 +
+      timing.score * 0.28 +
+      positioning.score * 0.2 +
+      competition.score * 0.18
   );
   const risk = clamp(100 - overall);
 
   const reasons = [
     ...readiness.reasons.slice(0, 2),
     ...timing.reasons.slice(0, 2),
-    ...positioning.reasons.slice(0, 2),
+    ...positioning.reasons.slice(0, 1),
+    ...competition.reasons.slice(0, 1),
   ];
   const blockers = [
     ...readiness.blockers,
     ...timing.blockers,
     ...positioning.blockers,
+    ...competition.blockers,
   ];
 
-  let verdict: WindowScore["verdict"] = "Caution";
-  if (overall >= 72 && blockers.length <= 1) verdict = "Go";
-  else if (overall < 48 || blockers.length >= 3) verdict = "Hold";
+  const verdict = verdictFrom({
+    overall,
+    blockers,
+    readiness: readiness.score,
+    competition: competition.score,
+  });
 
   return {
     date: iso,
@@ -244,11 +366,13 @@ function buildWindow(
     readiness: readiness.score,
     timing: timing.score,
     positioning: positioning.score,
+    competition: competition.score,
     risk,
     overall,
     verdict,
     reasons,
     blockers,
+    strategyNotes: competition.insights.slice(0, 3),
   };
 }
 
@@ -264,24 +388,27 @@ export function simulateRelease(
 
   let recommendation: string;
   if (alternate && alternate.overall > primary.overall + 6) {
-    recommendation = `Prefer the alternate window (${alternate.date}). Primary is weaker mainly on timing/readiness — burning ${primary.date} risks a half-ready drop.`;
+    recommendation = `Prefer the alternate window (${alternate.date}, ${alternate.verdict}). Primary is weaker — burning ${primary.date} risks a half-ready or crowded drop.`;
   } else if (primary.verdict === "Go") {
-    recommendation = `Primary window (${primary.date}) is viable if blockers stay closed. Protect the story: “${input.positioning.slice(0, 80)}”.`;
+    recommendation = `Primary window (${primary.date}) is a Go if blockers stay closed. Protect the story: “${input.positioning.slice(0, 90)}”.`;
   } else if (primary.verdict === "Hold") {
-    recommendation = `Do not spend this cycle on ${primary.date}. Fix blockers first — a quiet delay beats a loud miss.`;
+    recommendation = `Hold ${primary.date}. Fix blockers before spend — a quiet delay beats a loud miss.`;
   } else {
-    recommendation = `Proceed only with constraints: close the top blockers, keep spend light until first 72h signal.`;
+    recommendation = `Caution on ${primary.date}: close top blockers, keep spend light until first 72h signal.`;
   }
 
   const checklist = [
     !input.contentReady ? "Finish 5–7 content assets before any paid push" : null,
-    !input.ownedListReady ? "Ship fan gate link in bio / link-in-bio" : null,
+    !input.ownedListReady ? "Ship fan gate link in bio" : null,
     !input.playlistPitchReady ? "Build 8–12 curator pitch list" : null,
     input.positioning.trim().length < 20
       ? "Rewrite positioning in one sharp sentence"
       : null,
+    (input.competitorDrops?.length || 0) === 0
+      ? "Log 2–3 competitor drop dates in your lane"
+      : null,
     "Define week-1 and week-2 content, not only drop day",
-    "Decide kill criteria (when to stop boosting)",
+    "Set kill criteria for paid (when to stop boosting)",
   ].filter(Boolean) as string[];
 
   const spendWarning =
@@ -292,12 +419,18 @@ export function simulateRelease(
         : "Paid is optional support — not a substitute for readiness.";
 
   const confidence = clamp(
-    55 +
-      (brain ? 15 : 0) +
+    50 +
+      (brain ? 12 : 0) +
       (input.contentReady ? 8 : 0) +
       (input.ownedListReady ? 6 : 0) +
-      (input.positioning.length > 20 ? 6 : 0)
+      (input.positioning.length > 20 ? 6 : 0) +
+      ((input.competitorDrops?.length || 0) > 0 ? 8 : 0)
   );
+
+  const competitorInsights = [
+    ...primary.strategyNotes,
+    ...(alternate?.strategyNotes || []),
+  ].filter((v, i, a) => a.indexOf(v) === i);
 
   return {
     artistName,
@@ -307,26 +440,31 @@ export function simulateRelease(
     checklist,
     spendWarning,
     confidence,
+    competitorInsights,
   };
 }
 
-export function simulationToPrompt(result: SimulationResult, input: ReleaseWindowInput): string {
+export function simulationToPrompt(
+  result: SimulationResult,
+  input: ReleaseWindowInput
+): string {
   return `You are Ziki, Omniv CSO. Turn this Release Simulator scorecard into a short executive briefing.
 
 Artist: ${result.artistName}
 Title: ${input.title}
 Positioning: ${input.positioning}
 Market: ${input.primaryMarket}
-Primary date: ${result.primary.date} → overall ${result.primary.overall}/100, verdict ${result.primary.verdict}
-${result.alternate ? `Alternate: ${result.alternate.date} → ${result.alternate.overall}/100` : "No alternate"}
+Primary: ${result.primary.date} → ${result.primary.overall}/100 (${result.primary.verdict})
+Competition score: ${result.primary.competition}/100
+${result.alternate ? `Alternate: ${result.alternate.date} → ${result.alternate.overall}/100` : ""}
 Recommendation: ${result.recommendation}
 Blockers: ${result.primary.blockers.join(" | ") || "none"}
-Checklist: ${result.checklist.join(" | ")}
+Competitor notes: ${result.competitorInsights.join(" | ")}
 
 Write:
 **Verdict**
-**Why this window wins or loses**
+**Timing vs competition**
 **What to do in the next 7 days**
 **What not to spend money on**
-Keep it tight. No fake stream counts.`;
+No fake stream counts.`;
 }
