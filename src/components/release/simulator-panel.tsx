@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import {
   simulateRelease,
   simulationToPrompt,
+  type CompetitorDrop,
   type ReleaseWindowInput,
   type SimulationResult,
 } from "@/lib/strategy/release-simulator";
@@ -23,6 +24,8 @@ import {
   CheckCircle2,
   ListTodo,
   MessageSquare,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -50,6 +53,12 @@ export function SimulatorPanel() {
   const [competingNoise, setCompetingNoise] =
     useState<ReleaseWindowInput["competingNoise"]>("normal");
   const [notes, setNotes] = useState("");
+  const [competitors, setCompetitors] = useState<CompetitorDrop[]>([]);
+  const [cName, setCName] = useState("");
+  const [cDate, setCDate] = useState("");
+  const [cLane, setCLane] = useState("");
+  const [cScale, setCScale] =
+    useState<CompetitorDrop["scale"]>("peer");
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [briefing, setBriefing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -65,9 +74,25 @@ export function SimulatorPanel() {
         setPositioning(
           `${b.genre.filter((g) => g !== "TBD").join(" / ")} for listeners who want ${b.musicStyle?.slice(0, 40) || "the real thing"}`
         );
+        setCLane(b.genre.filter((g) => g !== "TBD")[0] || "");
       }
     })();
   }, []);
+
+  function addCompetitor() {
+    if (!cName.trim() || !cDate) return;
+    setCompetitors([
+      ...competitors,
+      {
+        name: cName.trim(),
+        date: cDate,
+        lane: cLane.trim() || undefined,
+        scale: cScale,
+      },
+    ]);
+    setCName("");
+    setCDate("");
+  }
 
   async function run() {
     setBusy(true);
@@ -90,6 +115,7 @@ export function SimulatorPanel() {
         competingNoise,
         platforms,
         notes,
+        competitorDrops: competitors,
       };
 
       const sim = simulateRelease(input, brain);
@@ -97,10 +123,10 @@ export function SimulatorPanel() {
       track("release_simulate", {
         verdict: sim.primary.verdict,
         overall: sim.primary.overall,
+        competitors: competitors.length,
         has_alternate: Boolean(sim.alternate),
       });
 
-      // Optional Ziki narrative on top of deterministic scores
       try {
         const res = await fetch("/api/analyze", {
           method: "POST",
@@ -115,7 +141,7 @@ export function SimulatorPanel() {
         const data = (await res.json()) as { text?: string };
         if (res.ok && data.text) setBriefing(data.text);
       } catch {
-        /* scores still useful without narrative */
+        /* scores still useful */
       }
     } catch {
       setError("Simulation failed");
@@ -126,7 +152,10 @@ export function SimulatorPanel() {
 
   function saveChecklist() {
     if (!result) return;
-    addTasksFromChecklist(result.checklist, "release");
+    addTasksFromChecklist(
+      [...result.checklist, ...result.primingPlan.slice(0, 3)],
+      "release"
+    );
     track("release_checklist_saved", { n: result.checklist.length });
   }
 
@@ -135,7 +164,9 @@ export function SimulatorPanel() {
     stashAct({
       title: `Release plan: ${title || result.artistName}`,
       summary: result.recommendation,
-      why: result.primary.blockers.join(" · ") || result.primary.reasons.join(" · "),
+      why:
+        result.primary.blockers.join(" · ") ||
+        result.primary.reasons.join(" · "),
       expectedOutcome: `Verdict ${result.primary.verdict} · score ${result.primary.overall}`,
       category: "Release",
     });
@@ -155,8 +186,8 @@ export function SimulatorPanel() {
               Stress-test the window
             </h2>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              Compare two dates before you spend the cycle. Scores use your
-              Artist Brain + readiness flags — not vibes.
+              Timing · competitor proximity · indie priming — before you burn the
+              cycle.
             </p>
           </div>
         </div>
@@ -244,11 +275,77 @@ export function SimulatorPanel() {
           />
         </div>
 
+        {/* Competitor proximity */}
+        <div className="mt-5 rounded-xl border border-omniv-border bg-omniv-elevated/30 p-4">
+          <p className="text-xs font-medium text-omniv-text">
+            Competitor drops (proximity analysis)
+          </p>
+          <p className="mt-0.5 text-[11px] text-omniv-text-muted">
+            Same-day / ±3d same-lane larger acts are treated as hard conflicts.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-5">
+            <Input
+              placeholder="Act name"
+              value={cName}
+              onChange={(e) => setCName(e.target.value)}
+            />
+            <Input
+              type="date"
+              value={cDate}
+              onChange={(e) => setCDate(e.target.value)}
+            />
+            <Input
+              placeholder="Lane / genre"
+              value={cLane}
+              onChange={(e) => setCLane(e.target.value)}
+            />
+            <select
+              value={cScale}
+              onChange={(e) =>
+                setCScale(e.target.value as CompetitorDrop["scale"])
+              }
+              className="rounded-[var(--radius)] border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm focus-gold"
+            >
+              <option value="smaller">Smaller</option>
+              <option value="peer">Peer</option>
+              <option value="larger">Larger</option>
+            </select>
+            <Button type="button" variant="outline" onClick={addCompetitor} className="gap-1">
+              <Plus className="h-3.5 w-3.5" />
+              Add
+            </Button>
+          </div>
+          {competitors.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {competitors.map((c, i) => (
+                <li
+                  key={`${c.name}-${c.date}-${i}`}
+                  className="flex items-center justify-between text-xs text-omniv-text-secondary"
+                >
+                  <span>
+                    {c.name} · {c.date}
+                    {c.lane ? ` · ${c.lane}` : ""} · {c.scale || "peer"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCompetitors(competitors.filter((_, j) => j !== i))
+                    }
+                    className="text-omniv-text-muted hover:text-omniv-danger"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
-          placeholder="Constraints, features, features embargo, tour tie-in…"
+          placeholder="Constraints, features, embargo, tour tie-in…"
           className="mt-3 w-full rounded-[var(--radius)] border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm focus-gold"
         />
 
@@ -286,6 +383,47 @@ export function SimulatorPanel() {
             </p>
           </Card>
 
+          {result.primary.proximityHits.length > 0 && (
+            <Card className="p-5">
+              <p className="text-sm font-medium">Competitor proximity</p>
+              <ul className="mt-3 space-y-2">
+                {result.primary.proximityHits.map((h) => (
+                  <li
+                    key={`${h.name}-${h.date}`}
+                    className="flex flex-wrap items-center justify-between gap-2 text-xs text-omniv-text-secondary"
+                  >
+                    <span>
+                      <strong className="text-omniv-text">{h.name}</strong> ·{" "}
+                      {h.gapDays === 0
+                        ? "same day"
+                        : `${h.gapDays}d ${h.direction}`}{" "}
+                      · {h.band}
+                      {h.sameLane ? " · same lane" : ""}
+                    </span>
+                    <Badge variant={h.pressure >= 16 ? "outline" : "gold"}>
+                      pressure {h.pressure}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          <Card className="p-5">
+            <p className="text-sm font-medium">Indie priming plan</p>
+            <ul className="mt-3 space-y-2">
+              {result.primingPlan.map((c) => (
+                <li
+                  key={c}
+                  className="flex gap-2 text-sm text-omniv-text-secondary"
+                >
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-omniv-gold" />
+                  {c}
+                </li>
+              ))}
+            </ul>
+          </Card>
+
           <Card className="p-5">
             <p className="text-sm font-medium">Pre-flight checklist</p>
             <ul className="mt-3 space-y-2">
@@ -300,7 +438,12 @@ export function SimulatorPanel() {
               ))}
             </ul>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={saveChecklist}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={saveChecklist}
+              >
                 <ListTodo className="h-3.5 w-3.5" />
                 Save as tasks
               </Button>
@@ -358,10 +501,12 @@ function WindowCard({
           </Badge>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-        <Metric label="Readiness" value={score.readiness} />
+      <div className="mt-4 grid grid-cols-3 gap-2 text-center sm:grid-cols-5">
+        <Metric label="Ready" value={score.readiness} />
         <Metric label="Timing" value={score.timing} />
         <Metric label="Position" value={score.positioning} />
+        <Metric label="Compete" value={score.competition} />
+        <Metric label="Priming" value={score.priming} />
       </div>
       {score.blockers[0] && (
         <p className="mt-3 text-xs text-omniv-text-secondary">
