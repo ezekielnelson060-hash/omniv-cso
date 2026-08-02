@@ -2,6 +2,7 @@
 
 import { AppShell } from "@/components/layout/app-shell";
 import { CrmPanel } from "@/components/crm/crm-panel";
+import { RosterSwitcher } from "@/components/crm/roster-switcher";
 import { FeatureGate } from "@/components/billing/feature-gate";
 import { usePlan } from "@/components/billing/plan-provider";
 import Link from "next/link";
@@ -17,8 +18,7 @@ export default function CrmPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Manager CRM</h1>
           <p className="text-sm text-omniv-text-secondary">
-            Roster, tasks, notes, meetings — and AI summaries for multi-artist
-            managers
+            Switch artists, own the fan list, tasks and notes — multi-artist ops
           </p>
         </div>
         <Link href="/label">
@@ -34,6 +34,9 @@ export default function CrmPage() {
         mode="hard"
         onPlanChange={setPlan}
       >
+        <div className="mb-5">
+          <RosterSwitcher />
+        </div>
         <CrmPanel />
       </FeatureGate>
     </AppShell>
