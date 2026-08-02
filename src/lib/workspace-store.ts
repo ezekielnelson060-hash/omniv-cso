@@ -71,15 +71,30 @@ export function loadArtists(): ManagedArtist[] {
 export function saveArtists(a: ManagedArtist[]) {
   write(K.artists, a);
 }
-export function addArtist(input: Omit<ManagedArtist, "id" | "score"> & { score?: number }) {
+
+export type AddArtistInput = {
+  name: string;
+  genre?: string;
+  stage?: string;
+  monthlyListeners?: number;
+  score?: number;
+};
+
+export function addArtist(input: AddArtistInput) {
   const list = loadArtists();
+  const monthlyListeners = input.monthlyListeners ?? 0;
   const row: ManagedArtist = {
     id: uid(),
     name: input.name,
-    genre: input.genre,
-    stage: input.stage,
-    monthlyListeners: input.monthlyListeners,
-    score: input.score ?? Math.min(95, 35 + Math.round(Math.log10(Math.max(10, input.monthlyListeners)) * 12)),
+    genre: input.genre?.trim() || "",
+    stage: input.stage?.trim() || "",
+    monthlyListeners,
+    score:
+      input.score ??
+      Math.min(
+        95,
+        35 + Math.round(Math.log10(Math.max(10, monthlyListeners || 10)) * 12)
+      ),
   };
   const next = [row, ...list];
   saveArtists(next);
