@@ -1,128 +1,192 @@
 "use client";
 
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { reportTemplates, type ReportType } from "@/data/phase6";
-import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { getArtistBrain, getProfile } from "@/lib/db/profile";
 import {
-  FileText,
-  Download,
-  Loader2,
-  CheckCircle2,
-  Sparkles,
-} from "lucide-react";
+  computeScoresFromBrain,
+  buildRecommendationsFromBrain,
+} from "@/lib/strategy/scores";
+import { track } from "@/lib/analytics";
+import { FileText, Download, Loader2 } from "lucide-react";
+
+type ReportType = "artist" | "manager" | "monthly" | "investor";
+
+const TYPES: { id: ReportType; label: string; blurb: string }[] = [
+  {
+    id: "artist",
+    label: "Artist strategy",
+    blurb: "Scores, top priority, 7-day plan",
+  },
+  {
+    id: "manager",
+    label: "Manager roster",
+    blurb: "Multi-artist snapshot for your roster",
+  },
+  {
+    id: "monthly",
+    label: "Monthly growth",
+    blurb: "Momentum narrative + focus areas",
+  },
+  {
+    id: "investor",
+    label: "Investor brief",
+    blurb: "Executive one-pager for partners",
+  },
+];
+
+function escapeHtml(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 export function ReportsPanel() {
-  const [selected, setSelected] = useState<ReportType>("artist");
-  const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState<ReportType | null>(null);
 
-  async function generate() {
-    setBusy(true);
-    setDone(false);
-    await new Promise((r) => setTimeout(r, 1600));
-    setBusy(false);
-    setDone(true);
+  async function generate(type: ReportType) {
+    setBusy(type);
+    try {
+      const [brain, profile] = await Promise.all([
+        getArtistBrain(),
+        getProfile(),
+      ]);
+      const platforms = profile?.platforms || [];
+      const interests = profile?.interests || [];
+      const scores = computeScoresFromBrain(brain, { platforms, interests });
+      const recs = buildRecommendationsFromBrain(brain, platforms, interests);
+      const name =
+        brain?.stageName || brain?.name || profile?.full_name || "Artist";
+      const top = recs[0];
+      const date = new Date().toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      const titleMap: Record<ReportType, string> = {
+        artist: "Artist Strategy Report",
+        manager: "Manager Roster Brief",
+        monthly: "Monthly Growth Report",
+        investor: "Investor Brief",
+      };
+
+      const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"/>
+<title>${escapeHtml(titleMap[type])} — ${escapeHtml(name)}</title>
+<style>
+  @page { margin: 18mm; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #111; line-height: 1.45; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: #888; margin: 28px 0 8px; }
+  .gold { color: #a67c00; }
+  .meta { color: #666; font-size: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  .card { border: 1px solid #e5e5e5; border-radius: 10px; padding: 12px; }
+  .card b { font-size: 22px; display: block; }
+  .card span { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #888; }
+  .box { border: 1px solid #e8d48b; background: #fffdf5; border-radius: 12px; padding: 14px; margin-top: 8px; }
+  ul { padding-left: 18px; }
+  li { margin-bottom: 6px; font-size: 13px; }
+  footer { margin-top: 40px; font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
+</style></head><body>
+  <p class="meta gold">OMNIV · ${escapeHtml(titleMap[type])}</p>
+  <h1>${escapeHtml(name)}</h1>
+  <p class="meta">${escapeHtml(date)} · Confidential</p>
+
+  <h2>Score snapshot</h2>
+  <div class="grid">
+    <div class="card"><span>Overall</span><b class="gold">${scores.overall}</b></div>
+    <div class="card"><span>Momentum</span><b>${scores.momentum}</b></div>
+    <div class="card"><span>Release readiness</span><b>${scores.releaseReadiness}</b></div>
+    <div class="card"><span>Opportunity</span><b>${scores.opportunity}</b></div>
+  </div>
+
+  <h2>Highest-impact move</h2>
+  <div class="box">
+    <strong>${escapeHtml(top?.title || "Complete onboarding for prioritised moves")}</strong>
+    <p style="margin:8px 0 0;font-size:13px;color:#444">${escapeHtml(top?.summary || "")}</p>
+    ${top?.why ? `<p style="margin:8px 0 0;font-size:12px;color:#666"><em>Why:</em> ${escapeHtml(top.why)}</p>` : ""}
+  </div>
+
+  <h2>Focus list</h2>
+  <ul>
+    ${recs
+      .slice(0, type === "investor" ? 3 : 5)
+      .map(
+        (r) =>
+          `<li><strong>${escapeHtml(r.title)}</strong> — ${escapeHtml(r.summary)} <span class="meta">(${r.confidence}% confidence)</span></li>`
+      )
+      .join("")}
+  </ul>
+
+  ${
+    type === "investor"
+      ? `<h2>Operating note</h2><p style="font-size:13px;color:#444">Omniv ranks weekly priorities from artist profile, goals, and surfaces. Scores update as the Artist Brain is refined — not vanity dashboards.</p>`
+      : ""
   }
 
-  const tpl = reportTemplates.find((t) => t.id === selected)!;
+  <footer>Generated by Omniv · omniv.media · Not financial advice</footer>
+</body></html>`;
+
+      const w = window.open("", "_blank");
+      if (!w) {
+        alert("Allow pop-ups to download / print the report.");
+        return;
+      }
+      w.document.open();
+      w.document.write(html);
+      w.document.close();
+      // Give layout a tick then print → Save as PDF
+      setTimeout(() => {
+        w.focus();
+        w.print();
+      }, 300);
+
+      track("report_generated", { type });
+    } finally {
+      setBusy(null);
+    }
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {reportTemplates.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => {
-              setSelected(t.id);
-              setDone(false);
-            }}
-            className={cn(
-              "card-elevated p-4 text-left transition-all",
-              selected === t.id && "border-omniv-gold/40 glow-gold"
-            )}
-          >
+    <div className="space-y-4">
+      <p className="text-sm text-omniv-text-secondary">
+        Print-ready reports — use your browser&apos;s <strong>Save as PDF</strong>{
+        " "}
+        in the print dialog.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {TYPES.map((t) => (
+          <Card key={t.id} className="flex flex-col p-5">
             <div className="mb-2 flex items-center gap-2">
               <FileText className="h-4 w-4 text-omniv-gold" />
-              <p className="text-sm font-medium text-omniv-text">{t.name}</p>
+              <h3 className="text-sm font-medium">{t.label}</h3>
             </div>
-            <p className="text-xs leading-relaxed text-omniv-text-secondary">
-              {t.description}
+            <p className="mb-4 flex-1 text-xs text-omniv-text-secondary">
+              {t.blurb}
             </p>
-            <p className="mt-2 text-[11px] text-omniv-text-muted">{t.pages}</p>
-          </button>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              disabled={busy !== null}
+              onClick={() => void generate(t.id)}
+            >
+              {busy === t.id ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Download className="h-3.5 w-3.5" />
+              )}
+              Generate PDF
+            </Button>
+          </Card>
         ))}
       </div>
-
-      <Card className="p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <Badge variant="gold">PDF export</Badge>
-            <h2 className="mt-2 text-lg font-semibold tracking-tight">
-              {tpl.name}
-            </h2>
-            <p className="mt-1 text-sm text-omniv-text-secondary">
-              {tpl.description}. Executive-ready layout with scores, charts, and
-              Ziki recommendations.
-            </p>
-          </div>
-          <Button
-            onClick={() => void generate()}
-            disabled={busy}
-            className="gap-2 shrink-0"
-          >
-            {busy ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-            {busy ? "Generating…" : "Generate PDF"}
-          </Button>
-        </div>
-
-        {busy && (
-          <p className="mt-4 text-xs text-omniv-text-muted">
-            Composing briefing pages · embedding sparklines · applying brand
-            system…
-          </p>
-        )}
-
-        {done && !busy && (
-          <div className="animate-fade-in-up mt-6 rounded-[var(--radius-lg)] border border-omniv-gold/25 bg-omniv-gold/5 p-5">
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="h-5 w-5 shrink-0 text-omniv-success" />
-              <div>
-                <p className="text-sm font-medium text-omniv-text">
-                  Report ready (preview)
-                </p>
-                <p className="mt-1 text-xs text-omniv-text-secondary">
-                  omniv-{selected}-report-{new Date().toISOString().slice(0, 10)}.pdf
-                </p>
-                <ul className="mt-3 space-y-1 text-xs text-omniv-text-muted">
-                  <li>· Cover + executive summary</li>
-                  <li>· Score cards & period compare</li>
-                  <li>· Opportunity ranking</li>
-                  <li>· Ziki recommendations with confidence</li>
-                  <li>· Next 14-day action plan</li>
-                </ul>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button size="sm" className="gap-1.5">
-                    <Download className="h-3.5 w-3.5" />
-                    Download PDF
-                  </Button>
-                  <Button size="sm" variant="outline" className="gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Regenerate with Ziki
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </Card>
+      <Badge variant="outline">Uses your Artist Brain — not demo data</Badge>
     </div>
   );
 }
