@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { FanDirectory } from "@/components/crm/fan-directory";
 import { CrmNextSteps } from "@/components/crm/crm-next-steps";
 import { FanGateMetrics } from "@/components/crm/fan-gate-metrics";
+import { RosterSwitcher } from "@/components/crm/roster-switcher";
+import { ContractsPanel } from "@/components/crm/contracts-panel";
 import { isPlaceholderStageName } from "@/lib/crm-priority";
 import {
   addArtist,
@@ -78,117 +80,86 @@ export function CrmPanel() {
     void (async () => {
       const { data: roster } = await supabase
         .from("roster_artists")
-        .select("id, stage_name, slug")
-        .order("stage_name");
+        .select("id, stage_name, slug");
       const list = roster || [];
       setRosterCount(list.length);
-      if (!list[0]) return;
-
-      setGateSlug(list[0].slug);
-      setPrimaryArtistName(list[0].stage_name);
-      const artistId = list[0].id;
-
-      const since = new Date();
-      since.setDate(since.getDate() - 7);
-
-      const [allFans, recent, superfans, cold] = await Promise.all([
-        supabase
-          .from("fans")
-          .select(
-            "id, acquisition_source, fan_tier, created_at",
-            { count: "exact" }
-          )
-          .eq("artist_id", artistId)
-          .limit(500),
-        supabase
-          .from("fans")
-          .select("id", { count: "exact", head: true })
-          .eq("artist_id", artistId)
-          .gte("created_at", since.toISOString()),
-        supabase
-          .from("fans")
-          .select("id", { count: "exact", head: true })
-          .eq("artist_id", artistId)
-          .eq("fan_tier", "Superfan"),
-        supabase
-          .from("fans")
-          .select("id", { count: "exact", head: true })
-          .eq("artist_id", artistId)
-          .eq("fan_tier", "Cold"),
-      ]);
-
-      setFanCount(allFans.count ?? allFans.data?.length ?? 0);
-      setFans7d(recent.count ?? 0);
-      setSuperfanCount(superfans.count ?? 0);
-      setColdCount(cold.count ?? 0);
-
-      const srcMap = new Map<string, number>();
-      for (const f of allFans.data || []) {
-        const s = (f as { acquisition_source?: string }).acquisition_source || "unknown";
-        srcMap.set(s, (srcMap.get(s) || 0) + 1);
+      const primary = list[0];
+      if (primary && !isPlaceholderStageName(primary.stage_name)) {
+        setPrimaryArtistName(primary.stage_name);
+        setGateSlug(primary.slug);
       }
-      const srcList = [...srcMap.entries()]
+      const { data: fans } = await supabase.from("fans").select("id, created_at, tier, source");
+      const fanList = fans || [];
+      setFanCount(fanList.length);
+      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      setFans7d(
+        fanList.filter((f) => new Date(f.created_at).getTime() > weekAgo).length
+      );
+      setSuperfanCount(fanList.filter((f) => f.tier === "superfan").length);
+      setColdCount(fanList.filter((f) => f.tier === "cold").length);
+      const bySource: Record<string, number> = {};
+      for (const f of fanList) {
+        const s = f.source || "unknown";
+        bySource[s] = (bySource[s] || 0) + 1;
+      }
+      const sorted = Object.entries(bySource)
         .map(([source, count]) => ({ source, count }))
         .sort((a, b) => b.count - a.count);
-      setSources(srcList);
-      setTopSource(srcList[0]?.source ?? null);
+      setSources(sorted);
+      setTopSource(sorted[0]?.source || null);
     })();
   }, []);
 
-  function onAddArtist() {
+  function handleAddArtist() {
     if (!name.trim()) return;
-    const next = addArtist({
-      name: name.trim(),
-      genre: genre.trim() || "TBD",
-      stage: "emerging",
-      monthlyListeners: Number(listeners) || 0,
-    });
-    setArtists(next);
+    setArtists(
+      addArtist({
+        name: name.trim(),
+        genre: genre.trim() || undefined,
+        monthlyListeners: listeners ? Number(listeners) : undefined,
+      })
+    );
     setName("");
     setGenre("");
     setListeners("");
   }
 
-  const openTasks = tasks.filter((t) => !t.done).length;
-  const openEvents = events.filter((e) => !e.done).length;
+  function handleAddTask() {
+    if (!taskTitle.trim()) return;
+    setTasks(addTask(taskTitle.trim()));
+    setTaskTitle("");
+  }
+
+  function handleAddNote() {
+    if (!noteBody.trim()) return;
+    setNotes(addNote(noteBody.trim()));
+    setNoteBody("");
+  }
+
+  function handleAddEvent() {
+    if (!eventTitle.trim() || !eventDate) return;
+    setEvents(addEvent(eventTitle.trim(), eventDate));
+    setEventTitle("");
+    setEventDate("");
+  }
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-omniv-text-secondary">
-          Roster ops + owned fan directory. Gate links capture emails into the
-          isolated fan list for each artist.
-        </p>
-        <Link href="/ziki">
-          <Button size="sm" variant="outline" className="gap-1.5">
-            <MessageSquare className="h-3.5 w-3.5" />
-            Ask Ziki about roster
-          </Button>
-        </Link>
-      </div>
+      <RosterSwitcher />
+      <ContractsPanel />
 
       <CrmNextSteps
-        rosterCount={rosterCount || artists.length}
         fanCount={fanCount}
         fans7d={fans7d}
         superfanCount={superfanCount}
         coldCount={coldCount}
         topSource={topSource}
-        openTasks={openTasks}
-        openEvents={openEvents}
         gateSlug={gateSlug}
-        primaryArtistName={primaryArtistName || artists[0]?.name}
-        placeholderName={isPlaceholderStageName(
-          primaryArtistName || artists[0]?.name
-        )}
       />
 
       <FanGateMetrics
         fanCount={fanCount}
         fans7d={fans7d}
-        superfanCount={superfanCount}
-        coldCount={coldCount}
-        topSource={topSource}
         sources={sources}
         gateSlug={gateSlug}
         artistName={primaryArtistName}
@@ -196,39 +167,12 @@ export function CrmPanel() {
 
       <FanDirectory />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Card className="p-4">
-          <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
-            Strategy roster
-          </p>
-          <p className="mt-1 font-data text-2xl font-semibold">{artists.length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
-            Open tasks
-          </p>
-          <p className="mt-1 font-data text-2xl font-semibold">{openTasks}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
-            Notes
-          </p>
-          <p className="mt-1 font-data text-2xl font-semibold">{notes.length}</p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
-            Calendar
-          </p>
-          <p className="mt-1 font-data text-2xl font-semibold">{openEvents}</p>
-        </Card>
-      </div>
-
-      <Card id="strategy-roster" className="scroll-mt-20 p-5">
-        <div className="mb-4 flex items-center gap-2">
+      <Card className="p-5">
+        <div className="mb-3 flex items-center gap-2">
           <Users className="h-4 w-4 text-omniv-gold" />
-          <h3 className="text-sm font-medium">Strategy roster (local)</h3>
+          <p className="text-sm font-medium">Local roster notes</p>
         </div>
-        <div className="grid gap-2 sm:grid-cols-4">
+        <div className="mb-3 grid gap-2 sm:grid-cols-3">
           <Input
             placeholder="Artist name"
             value={name}
@@ -241,146 +185,115 @@ export function CrmPanel() {
           />
           <Input
             placeholder="Monthly listeners"
-            type="number"
             value={listeners}
             onChange={(e) => setListeners(e.target.value)}
           />
-          <Button onClick={onAddArtist} className="gap-1">
-            <Plus className="h-3.5 w-3.5" />
+        </div>
+        <Button size="sm" className="gap-1.5" onClick={handleAddArtist}>
+          <Plus className="h-3.5 w-3.5" />
+          Add local note
+        </Button>
+        <ul className="mt-3 space-y-2">
+          {artists.map((a) => (
+            <li
+              key={a.id}
+              className="flex justify-between text-sm text-omniv-text-secondary"
+            >
+              <span>
+                {a.name}
+                {a.genre ? ` · ${a.genre}` : ""}
+              </span>
+              {a.monthlyListeners != null && (
+                <span className={cn("font-data text-xs", scoreColor(50))}>
+                  {a.monthlyListeners.toLocaleString()}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+        {rosterCount > 0 && (
+          <p className="mt-2 text-[11px] text-omniv-text-muted">
+            Cloud roster: {rosterCount} artist(s)
+          </p>
+        )}
+      </Card>
+
+      <Card className="p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <CheckSquare className="h-4 w-4 text-omniv-gold" />
+          <p className="text-sm font-medium">Tasks</p>
+        </div>
+        <div className="mb-3 flex gap-2">
+          <Input
+            placeholder="New task"
+            value={taskTitle}
+            onChange={(e) => setTaskTitle(e.target.value)}
+          />
+          <Button size="sm" onClick={handleAddTask}>
             Add
           </Button>
         </div>
-        <div className="mt-4 space-y-2">
-          {artists.length === 0 && (
-            <p className="text-xs text-omniv-text-muted">
-              Local strategy list — fan capture uses roster_artists in Supabase.
-            </p>
-          )}
-          {artists.map((a) => (
-            <div
-              key={a.id}
-              className="flex items-center justify-between rounded-[var(--radius)] border border-omniv-border bg-omniv-elevated/50 px-3 py-2.5"
-            >
-              <div>
-                <p className="text-sm font-medium">{a.name}</p>
-                <p className="text-[11px] text-omniv-text-muted">
-                  {a.genre} · {a.stage} ·{" "}
-                  {a.monthlyListeners.toLocaleString()} listeners
-                </p>
-              </div>
-              <span
+        <ul className="space-y-2">
+          {tasks.map((t) => (
+            <li key={t.id} className="flex items-center gap-2 text-sm">
+              <button
+                type="button"
+                onClick={() => setTasks(toggleTask(t.id))}
                 className={cn(
-                  "font-data text-sm font-semibold",
-                  scoreColor(a.score)
+                  "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                  t.done
+                    ? "border-omniv-gold bg-omniv-gold text-black"
+                    : "border-omniv-border"
                 )}
               >
-                {a.score}
+                {t.done ? "✓" : ""}
+              </button>
+              <span
+                className={cn(
+                  t.done
+                    ? "text-omniv-text-muted line-through"
+                    : "text-omniv-text-secondary"
+                )}
+              >
+                {t.title}
               </span>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card id="crm-tasks" className="scroll-mt-20 p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <CheckSquare className="h-4 w-4 text-omniv-gold" />
-            <h3 className="text-sm font-medium">Tasks</h3>
-          </div>
-          <div className="mb-3 flex gap-2">
-            <Input
-              placeholder="New task"
-              value={taskTitle}
-              onChange={(e) => setTaskTitle(e.target.value)}
-            />
-            <Button
-              size="sm"
-              onClick={() => {
-                if (!taskTitle.trim()) return;
-                setTasks(addTask(taskTitle.trim(), "high"));
-                setTaskTitle("");
-              }}
-            >
-              Add
-            </Button>
-          </div>
-          <ul className="space-y-2">
-            {tasks.map((t) => (
-              <li key={t.id} className="flex items-center gap-2 text-sm">
-                <button
-                  type="button"
-                  onClick={() => setTasks(toggleTask(t.id))}
-                  className={cn(
-                    "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-                    t.done
-                      ? "border-omniv-gold bg-omniv-gold text-black"
-                      : "border-omniv-border"
-                  )}
-                >
-                  {t.done ? "✓" : ""}
-                </button>
-                <span
-                  className={cn(
-                    "flex-1",
-                    t.done
-                      ? "text-omniv-text-muted line-through"
-                      : "text-omniv-text-secondary"
-                  )}
-                >
-                  {t.title}
-                </span>
-                <Badge variant={t.priority === "high" ? "gold" : "outline"}>
-                  {t.priority}
-                </Badge>
-              </li>
-            ))}
-          </ul>
-        </Card>
-
-        <Card className="p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <StickyNote className="h-4 w-4 text-omniv-gold" />
-            <h3 className="text-sm font-medium">Notes</h3>
-          </div>
-          <textarea
+      <Card className="p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <StickyNote className="h-4 w-4 text-omniv-gold" />
+          <p className="text-sm font-medium">Notes</p>
+        </div>
+        <div className="mb-3 flex gap-2">
+          <Input
+            placeholder="Write a note"
             value={noteBody}
             onChange={(e) => setNoteBody(e.target.value)}
-            rows={2}
-            placeholder="Strategy note…"
-            className="mb-2 w-full rounded-[var(--radius)] border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm focus-gold"
           />
-          <Button
-            size="sm"
-            className="mb-3"
-            onClick={() => {
-              if (!noteBody.trim()) return;
-              setNotes(addNote(noteBody.trim()));
-              setNoteBody("");
-            }}
-          >
-            Save note
+          <Button size="sm" onClick={handleAddNote}>
+            Save
           </Button>
-          <ul className="space-y-3">
-            {notes.map((n) => (
-              <li
-                key={n.id}
-                className="text-xs leading-relaxed text-omniv-text-secondary"
-              >
-                {n.body}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      </div>
+        </div>
+        <ul className="space-y-2">
+          {notes.map((n) => (
+            <li key={n.id} className="text-sm text-omniv-text-secondary">
+              {n.body}
+            </li>
+          ))}
+        </ul>
+      </Card>
 
-      <Card id="crm-calendar" className="scroll-mt-20 p-5">
+      <Card className="p-5">
         <div className="mb-3 flex items-center gap-2">
           <Calendar className="h-4 w-4 text-omniv-gold" />
-          <h3 className="text-sm font-medium">Calendar</h3>
+          <p className="text-sm font-medium">Calendar</p>
         </div>
-        <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+        <div className="mb-3 grid gap-2 sm:grid-cols-3">
           <Input
-            placeholder="Event title"
+            placeholder="Event"
             value={eventTitle}
             onChange={(e) => setEventTitle(e.target.value)}
           />
@@ -389,15 +302,7 @@ export function CrmPanel() {
             value={eventDate}
             onChange={(e) => setEventDate(e.target.value)}
           />
-          <Button
-            size="sm"
-            onClick={() => {
-              if (!eventTitle.trim() || !eventDate) return;
-              setEvents(addEvent(eventTitle.trim(), eventDate));
-              setEventTitle("");
-              setEventDate("");
-            }}
-          >
+          <Button size="sm" onClick={handleAddEvent}>
             Add
           </Button>
         </div>
