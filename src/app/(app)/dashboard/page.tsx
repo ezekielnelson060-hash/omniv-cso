@@ -15,6 +15,7 @@ import {
   buildRecommendationsFromBrain,
   overallNarrative,
 } from "@/lib/strategy/scores";
+import { track } from "@/lib/analytics";
 import type { ArtistBrain, ArtistScore, AIRecommendation } from "@/types";
 
 export default function DashboardPage() {
@@ -35,6 +36,10 @@ export default function DashboardPage() {
         setPlatforms(plats);
         setScores(computeScoresFromBrain(b, plats));
         setRecs(buildRecommendationsFromBrain(b, plats));
+        track("command_center_view", {
+          has_brain: Boolean(b?.name),
+          platforms: plats.length,
+        });
       } finally {
         if (!cancelled) setLoading(false);
       }
