@@ -9,14 +9,16 @@ import {
   addTask,
   toggleTask,
   removeTask,
+  syncTasksFromCloud,
   type ExecTask,
 } from "@/lib/execution-tasks";
-import { Check, Plus, Trash2, ListTodo } from "lucide-react";
+import { Check, Plus, Trash2, ListTodo, Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function ExecutionTasks() {
   const [tasks, setTasks] = useState<ExecTask[]>([]);
   const [title, setTitle] = useState("");
+  const [syncing, setSyncing] = useState(false);
 
   function refresh() {
     setTasks(loadTasks());
@@ -24,6 +26,12 @@ export function ExecutionTasks() {
 
   useEffect(() => {
     refresh();
+    void (async () => {
+      setSyncing(true);
+      const cloud = await syncTasksFromCloud();
+      setTasks(cloud);
+      setSyncing(false);
+    })();
     const onFocus = () => refresh();
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
@@ -31,12 +39,18 @@ export function ExecutionTasks() {
 
   return (
     <Card className="p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <ListTodo className="h-4 w-4 text-omniv-gold" />
-        <h3 className="text-sm font-medium">Execution tasks</h3>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <ListTodo className="h-4 w-4 text-omniv-gold" />
+          <h3 className="text-sm font-medium">Execution tasks</h3>
+        </div>
+        <span className="flex items-center gap-1 text-[10px] text-omniv-text-muted">
+          <Cloud className="h-3 w-3" />
+          {syncing ? "Syncing…" : "Cloud"}
+        </span>
       </div>
       <p className="mb-3 text-[11px] text-omniv-text-muted">
-        Close the loop from simulator checklists and Ziki plans.
+        Synced when signed in — simulator checklists and Ziki plans.
       </p>
       <div className="flex gap-2">
         <Input
@@ -47,7 +61,7 @@ export function ExecutionTasks() {
             if (e.key === "Enter" && title.trim()) {
               addTask(title.trim(), "manual");
               setTitle("");
-              refresh();
+              setTimeout(refresh, 200);
             }
           }}
         />
@@ -58,7 +72,7 @@ export function ExecutionTasks() {
             if (!title.trim()) return;
             addTask(title.trim(), "manual");
             setTitle("");
-            refresh();
+            setTimeout(refresh, 200);
           }}
         >
           <Plus className="h-4 w-4" />
