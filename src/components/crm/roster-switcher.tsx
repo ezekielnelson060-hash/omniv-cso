@@ -1,24 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRoster } from "@/lib/roster-context";
+import { usePlan } from "@/components/billing/plan-provider";
+import { rosterLimitForPlan } from "@/lib/roster-limits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Users, Plus, Loader2 } from "lucide-react";
-
-const MAX_ROSTER = 20;
+import Link from "next/link";
 
 export function RosterSwitcher() {
   const { artists, active, setActiveId, loading, refresh } = useRoster();
+  const { plan } = usePlan();
+  const max = rosterLimitForPlan(plan);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [genre, setGenre] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
   async function addArtist() {
     if (!name.trim()) return;
+    if (artists.length >= max) {
+      setErr(`Limit is ${max} on ${plan}. Upgrade to expand roster.`);
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {
@@ -47,13 +58,15 @@ export function RosterSwitcher() {
     return <p className="text-xs text-omniv-text-muted">Loading roster…</p>;
   }
 
+  const atLimit = artists.length >= max;
+
   return (
     <div className="rounded-xl border border-omniv-border bg-omniv-elevated/40 p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Users className="h-3.5 w-3.5 text-omniv-gold" />
           <p className="text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
-            Roster · {artists.length}/{MAX_ROSTER}
+            Roster · {artists.length}/{max}
           </p>
         </div>
         <Button
@@ -61,7 +74,7 @@ export function RosterSwitcher() {
           size="sm"
           variant="outline"
           className="h-7 gap-1 text-[11px]"
-          disabled={artists.length >= MAX_ROSTER}
+          disabled={atLimit}
           onClick={() => setOpen((v) => !v)}
         >
           <Plus className="h-3 w-3" />
@@ -69,13 +82,22 @@ export function RosterSwitcher() {
         </Button>
       </div>
 
+      {atLimit && (
+        <p className="mb-2 text-[11px] text-omniv-text-muted">
+          Roster full on {plan}.{" "}
+          <Link href="/settings" className="text-omniv-gold underline-offset-2 hover:underline">
+            Upgrade for more slots
+          </Link>
+        </p>
+      )}
+
       {artists.length === 0 ? (
         <p className="text-xs text-omniv-text-muted">
-          No artists yet — add up to {MAX_ROSTER} for manager ops. Each gets a fan
-          gate at /f/[slug].
+          No artists yet — add up to {max} on your plan. Each gets a fan gate at
+          /f/[slug].
         </p>
       ) : (
-        <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto">
+        <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto">
           {artists.map((a) => (
             <button
               key={a.id}
@@ -103,7 +125,7 @@ export function RosterSwitcher() {
         </p>
       )}
 
-      {open && (
+      {open && !atLimit && (
         <div className="mt-3 space-y-2 border-t border-omniv-border pt-3">
           <Input
             placeholder="Stage name"

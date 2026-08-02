@@ -1,15 +1,33 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-
-const MAX_ROSTER = 20;
+import { rosterLimitForPlan } from "@/lib/roster-limits";
 
 function slugify(name: string) {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 48) || `artist-${Date.now().toString(36)}`;
+  return (
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 48) || `artist-${Date.now().toString(36)}`
+  );
+}
+
+async function getPlan(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("plan, plan_status, billing_status")
+    .eq("id", userId)
+    .maybeSingle();
+  const paid =
+    data?.plan_status === "active" ||
+    data?.billing_status === "active" ||
+    data?.billing_status === "paid";
+  if (!paid && data?.plan && data.plan !== "free") {
+    // unpaid claimed plan → treat as free for limits
+    return "free";
+  }
+  return data?.plan || "free";
 }
 
 export async function GET() {
@@ -18,37 +36,38 @@ export async function GET() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ artists: [], max: MAX_ROSTER });
+    if (!user)
+      return NextResponse.json({ artists: [], max: 1, count: 0 });
 
-    const { data, error } = await supabase
+    const plan = await getPlan(supabase, user.id);
+    const max = rosterLimitForPlan(plan);
+
+    let { data, error } = await supabase
       .from("roster_artists")
       .select("id, stage_name, slug, genre, org_id")
       .eq("owner_user_id", user.id)
       .order("stage_name")
-      .limit(MAX_ROSTER);
+      .limit(max);
 
     if (error) {
-      // Fallback: some schemas may not filter by owner if RLS already scopes
-      const { data: all } = await supabase
+      const fallback = await supabase
         .from("roster_artists")
         .select("id, stage_name, slug, genre, org_id")
         .order("stage_name")
-        .limit(MAX_ROSTER);
-      return NextResponse.json({
-        artists: all || [],
-        max: MAX_ROSTER,
-        count: (all || []).length,
-      });
+        .limit(max);
+      data = fallback.data;
     }
 
+    const artists = data || [];
     return NextResponse.json({
-      artists: data || [],
-      max: MAX_ROSTER,
-      count: (data || []).length,
+      artists,
+      max,
+      count: artists.length,
+      plan,
     });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ artists: [], max: MAX_ROSTER });
+    return NextResponse.json({ artists: [], max: 1, count: 0 });
   }
 }
 
@@ -70,24 +89,26 @@ export async function POST(req: Request) {
     if (!stageName)
       return NextResponse.json({ error: "stageName required" }, { status: 400 });
 
-    // Count existing
+    const plan = await getPlan(supabase, user.id);
+    const max = rosterLimitForPlan(plan);
+
     const { count } = await supabase
       .from("roster_artists")
       .select("id", { count: "exact", head: true })
       .eq("owner_user_id", user.id);
 
-    if ((count ?? 0) >= MAX_ROSTER) {
+    if ((count ?? 0) >= max) {
       return NextResponse.json(
         {
-          error: `Roster limit is ${MAX_ROSTER} artists on this plan tier.`,
-          max: MAX_ROSTER,
+          error: `Roster limit reached (${max} artists on ${plan}). Upgrade to add more.`,
+          max,
+          plan,
         },
         { status: 403 }
       );
     }
 
     let slug = body.slug?.trim() || slugify(stageName);
-    // Ensure unique-ish slug
     const { data: existing } = await supabase
       .from("roster_artists")
       .select("id")
@@ -95,7 +116,6 @@ export async function POST(req: Request) {
       .maybeSingle();
     if (existing) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
 
-    // Ensure org exists
     let orgId: string | null = null;
     const { data: org } = await supabase
       .from("orgs")
@@ -138,7 +158,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ artist, max: MAX_ROSTER });
+    return NextResponse.json({ artist, max, plan });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
