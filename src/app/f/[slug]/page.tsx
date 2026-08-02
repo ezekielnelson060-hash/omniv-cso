@@ -1,10 +1,11 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import { useMemo, useState, Suspense } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { track } from "@/lib/analytics";
 import { CheckCircle2, Loader2, Unlock } from "lucide-react";
 
 function GateInner() {
@@ -22,6 +23,10 @@ function GateInner() {
   const [artistName, setArtistName] = useState(
     slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
   );
+
+  useEffect(() => {
+    if (slug) track("fan_gate_view", { slug, source }, `/f/${slug}`);
+  }, [slug, source]);
 
   const headline = useMemo(
     () => `Unlock exclusive updates from ${artistName}`,
@@ -141,7 +146,7 @@ function GateInner() {
         ) : (
           <div className="rounded-2xl border border-omniv-gold/30 bg-omniv-card p-6 text-center">
             <CheckCircle2 className="mx-auto h-10 w-10 text-omniv-gold" />
-            <h2 className="mt-3 text-lg font-semibold">You&apos;re in</h2>
+            <h2 className="mt-3 text-lg font-semibold">You're in</h2>
             <p className="mt-1 text-sm text-omniv-text-secondary">
               Thanks — {artistName} has your email for exclusive drops.
             </p>
