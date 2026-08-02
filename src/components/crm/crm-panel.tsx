@@ -167,6 +167,9 @@ export function CrmPanel() {
       <FanGateMetrics
         fanCount={fanCount}
         fans7d={fans7d}
+        superfanCount={superfanCount}
+        coldCount={coldCount}
+        topSource={topSource}
         sources={sources}
         gateSlug={gateSlug}
         artistName={primaryArtistName}
