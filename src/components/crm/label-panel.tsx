@@ -12,17 +12,70 @@ import {
   type LabelWorkspace,
   type ManagedArtist,
 } from "@/lib/workspace-store";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { RosterSwitcher } from "@/components/crm/roster-switcher";
 import { cn, scoreColor } from "@/lib/utils";
-import { Building2, Plus, MessageSquare, TrendingUp } from "lucide-react";
+import { Building2, Plus, MessageSquare, TrendingUp, Users } from "lucide-react";
+
+type CrossRow = {
+  id: string;
+  stage_name: string;
+  slug: string;
+  genre: string | null;
+  fans: number;
+  superfans: number;
+};
 
 export function LabelPanel() {
   const [ws, setWs] = useState<LabelWorkspace>({ name: "", artists: [] });
   const [artistName, setArtistName] = useState("");
   const [listeners, setListeners] = useState("");
   const [genre, setGenre] = useState("");
+  const [cross, setCross] = useState<CrossRow[]>([]);
+  const [totalFans, setTotalFans] = useState(0);
 
   useEffect(() => {
     setWs(loadLabel());
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+    const supabase = createClient();
+    void (async () => {
+      const { data: roster } = await supabase
+        .from("roster_artists")
+        .select("id, stage_name, slug, genre")
+        .order("stage_name");
+      const list = roster || [];
+      const rows: CrossRow[] = [];
+      let fansSum = 0;
+      for (const a of list) {
+        const [all, sf] = await Promise.all([
+          supabase
+            .from("fans")
+            .select("id", { count: "exact", head: true })
+            .eq("artist_id", a.id),
+          supabase
+            .from("fans")
+            .select("id", { count: "exact", head: true })
+            .eq("artist_id", a.id)
+            .eq("fan_tier", "Superfan"),
+        ]);
+        const fans = all.count ?? 0;
+        fansSum += fans;
+        rows.push({
+          id: a.id,
+          stage_name: a.stage_name,
+          slug: a.slug,
+          genre: a.genre,
+          fans,
+          superfans: sf.count ?? 0,
+        });
+      }
+      rows.sort((a, b) => b.fans - a.fans);
+      setCross(rows);
+      setTotalFans(fansSum);
+    })();
   }, []);
 
   function persist(next: LabelWorkspace) {
@@ -80,7 +133,7 @@ export function LabelPanel() {
                 onChange={(e) => saveName(e.target.value)}
               />
               <p className="mt-1 text-sm text-omniv-text-secondary">
-                Personal roster — no demo acts. Add your catalogue.
+                Cross-roster owned fans + strategy comparison — no demo acts.
               </p>
             </div>
           </div>
@@ -93,10 +146,26 @@ export function LabelPanel() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <RosterSwitcher />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Card className="p-4">
           <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
-            Artists
+            Roster (live)
+          </p>
+          <p className="mt-1 font-data text-2xl font-semibold">{cross.length}</p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
+            Owned fans (all)
+          </p>
+          <p className="mt-1 font-data text-2xl font-semibold text-omniv-gold">
+            {totalFans.toLocaleString()}
+          </p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
+            Strategy artists
           </p>
           <p className="mt-1 font-data text-2xl font-semibold">
             {ws.artists.length}
@@ -104,15 +173,7 @@ export function LabelPanel() {
         </Card>
         <Card className="p-4">
           <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
-            Combined listeners
-          </p>
-          <p className="mt-1 font-data text-2xl font-semibold text-omniv-gold">
-            {totalListeners.toLocaleString()}
-          </p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
-            Avg score
+            Avg strategy score
           </p>
           <p className={cn("mt-1 font-data text-2xl font-semibold", scoreColor(avgScore))}>
             {avgScore || "—"}
@@ -121,7 +182,48 @@ export function LabelPanel() {
       </div>
 
       <Card className="p-5">
-        <h3 className="mb-3 text-sm font-medium">Add roster artist</h3>
+        <div className="mb-4 flex items-center gap-2">
+          <Users className="h-4 w-4 text-omniv-gold" />
+          <h3 className="text-sm font-medium">Cross-roster owned audience</h3>
+        </div>
+        {cross.length === 0 ? (
+          <p className="text-xs text-omniv-text-muted">
+            No live roster_artists rows yet — add artists with slugs for fan gates.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {cross.map((a) => (
+              <div key={a.id}>
+                <div className="mb-1 flex justify-between text-xs">
+                  <span className="text-omniv-text-secondary">
+                    {a.stage_name}
+                    {a.genre ? (
+                      <span className="text-omniv-text-muted"> · {a.genre}</span>
+                    ) : null}
+                  </span>
+                  <span className="font-data text-omniv-gold">
+                    {a.fans} fans · {a.superfans} SF
+                  </span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-white/5">
+                  <div
+                    className="h-full rounded-full bg-omniv-gold"
+                    style={{
+                      width: `${Math.min(100, totalFans ? (a.fans / totalFans) * 100 : 0)}%`,
+                    }}
+                  />
+                </div>
+                <p className="mt-0.5 font-data text-[10px] text-omniv-text-muted">
+                  /f/{a.slug}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-5">
+        <h3 className="mb-3 text-sm font-medium">Add strategy artist (local)</h3>
         <div className="grid gap-2 sm:grid-cols-4">
           <Input
             placeholder="Artist name"
@@ -149,11 +251,11 @@ export function LabelPanel() {
       <Card className="p-5">
         <div className="mb-4 flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-omniv-gold" />
-          <h3 className="text-sm font-medium">Artist comparison</h3>
+          <h3 className="text-sm font-medium">Strategy score comparison</h3>
         </div>
         {sorted.length === 0 ? (
           <p className="text-xs text-omniv-text-muted">
-            Empty roster — add artists above.
+            Empty strategy list — add artists above.
           </p>
         ) : (
           <div className="space-y-3">
