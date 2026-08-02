@@ -16,9 +16,12 @@ export async function POST(req: Request) {
     const fileName = body.fileName || "untitled";
     const artist = body.artistName || "this artist";
 
+    // Release mode: notes may already contain scorecard prompt from client
     const prompt =
       mode === "release"
-        ? `You are Ziki, Omniv CSO. Simulate a release strategy for an unreleased track/video.
+        ? body.notes && body.notes.includes("Release Simulator scorecard")
+          ? body.notes
+          : `You are Ziki, Omniv CSO. Simulate a release strategy for an unreleased track/video.
 
 File: ${fileName} (${body.fileType || "unknown"})
 Artist context: ${artist}
@@ -34,7 +37,7 @@ Return a structured executive briefing with:
 7. 5-step marketing plan
 8. What extra data would raise confidence
 
-Be specific to the filename/notes. No generic demo artist names.`
+Be specific to the filename/notes. No generic demo artist names. Never invent stream counts.`
         : `You are Ziki, Omniv CSO. Analyse content for ${artist}.
 
 File: ${fileName} (${body.fileType || "unknown"})
