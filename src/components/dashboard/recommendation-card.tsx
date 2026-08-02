@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { stashAct } from "@/lib/ziki-memory";
+import { track } from "@/lib/analytics";
 import { ArrowRight, Clock, Target, Lightbulb } from "lucide-react";
 
 interface Props {
@@ -22,6 +23,12 @@ export function RecommendationCard({
   const router = useRouter();
 
   function actOnThis() {
+    track("act_on_this", {
+      title: r.title.slice(0, 80),
+      category: String(r.category),
+      priority: r.priority,
+      confidence: r.confidence,
+    });
     stashAct({
       title: r.title,
       summary: r.summary,
