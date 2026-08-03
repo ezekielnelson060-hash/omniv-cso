@@ -43,12 +43,12 @@ export function TikTokConnect({ connectedName }: { connectedName?: string | null
           </p>
         )}
       </div>
-      <Button asChild size="sm" variant="outline" className="gap-1.5">
-        <a href="/api/auth/tiktok">
+      <a href="/api/auth/tiktok">
+        <Button size="sm" variant="outline" className="gap-1.5">
           {label ? "Reconnect" : "Connect TikTok"}
           <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-      </Button>
+        </Button>
+      </a>
     </div>
   );
 }
