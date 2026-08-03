@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -34,11 +34,10 @@ import {
   ExternalLink,
   Plus,
   Target,
-  Sparkles,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 const SURFACE_HINTS = [
   { id: "spotify", label: "Spotify", placeholder: "https://open.spotify.com/artist/..." },
@@ -58,93 +57,113 @@ const INTEREST_SUGGESTIONS = [
   "Community",
 ];
 
-function TikTokOAuthStatus() {
-  const params = useSearchParams();
-  const status = params.get("tiktok");
-  const name = params.get("name");
-  if (!status) return null;
-  if (status === "connected") {
-    return (
-      <p className="mb-3 text-xs text-emerald-400">
-        TikTok connected{name ? `: ${name}` : ""}
-      </p>
-    );
-  }
-  return (
-    <p className="mb-3 text-xs text-omniv-danger">
-      TikTok connect: {status}
-      {params.get("reason") ? ` — ${params.get("reason")}` : ""}
-    </p>
-  );
-}
-
 export function SettingsPanel() {
-  const { plan, setPlan, can } = usePlan();
+  const { plan, can } = usePlan();
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("artist");
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [links, setLinks] = useState<Record<string, string>>({
+  const [status, setStatus] = useState<string | null>(null);
+  const [urls, setUrls] = useState<Record<string, string>>({
     spotify: "",
     youtube: "",
     instagram: "",
     tiktok: "",
   });
   const [interests, setInterests] = useState<string[]>([]);
-  const [goals, setGoals] = useState("");
+  const [goals, setGoals] = useState<string[]>([]);
+  const [goalInput, setGoalInput] = useState("");
   const [brain, setBrain] = useState<ArtistBrain | null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [memberEmail, setMemberEmail] = useState("");
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [briefing, setBriefing] = useState<string | null>(null);
-  const [oauthMsg, setOauthMsg] = useState<string | null>(null);
+  const [strategySaving, setStrategySaving] = useState(false);
+  const [strategyStatus, setStrategyStatus] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
-      const [p, b] = await Promise.all([getProfile(), getArtistBrain()]);
-      if (p) {
-        setName(p.name || "");
-        setEmail(p.email || "");
-        setRole(p.role || "artist");
-        if (p.social_links && typeof p.social_links === "object") {
-          const s = p.social_links as Record<string, string>;
-          setLinks((prev) => ({ ...prev, ...s }));
+      let n = "";
+      let e = "";
+      if (isSupabaseConfigured()) {
+        const p = await getProfile();
+        if (p) {
+          n = p.full_name || "";
+          e = p.email || "";
+          setInterests(p.interests || []);
+          if (p.social_links) {
+            setUrls((u) => ({ ...u, ...p.social_links }));
+          }
+        } else {
+          try {
+            const supabase = createClient();
+            const {
+              data: { user },
+            } = await supabase.auth.getUser();
+            if (user) {
+              e = user.email || "";
+              n = (user.user_metadata?.full_name as string) || "";
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+        const b = await getArtistBrain();
+        if (b) {
+          setBrain(b);
+          setGoals(b.goals || []);
         }
       }
-      if (b) {
-        setBrain(b);
-        setInterests(b.interests || []);
-        setGoals(b.goals || "");
-      }
-      setTeam(loadTeam());
+      setName(n);
+      setEmail(e);
+      setTeam(loadTeam(e, n || "You"));
     })();
   }, []);
 
   async function saveProfile() {
     setSaving(true);
-    setMsg(null);
-    try {
-      await upsertProfile({
-        name,
-        email,
-        role,
-        social_links: links,
-      } as Parameters<typeof upsertProfile>[0]);
-      if (brain) {
-        await saveArtistBrain({
-          ...brain,
-          interests,
-          goals,
-        });
-      }
-      setMsg("Saved");
-    } catch {
-      setMsg("Could not save");
-    }
+    setStatus(null);
+    const res = await upsertProfile({
+      full_name: name,
+      social_links: urls,
+    });
     setSaving(false);
+    setStatus(res.ok ? "Profile saved" : res.error || "Save failed");
+  }
+
+  async function saveStrategy() {
+    setStrategySaving(true);
+    setStrategyStatus(null);
+    const cleanedGoals = goals.map((g) => g.trim()).filter(Boolean);
+    const cleanedInterests = interests.map((i) => i.trim()).filter(Boolean);
+
+    const profileRes = await upsertProfile({
+      interests: cleanedInterests,
+      social_links: urls,
+    });
+    if (!profileRes.ok) {
+      setStrategySaving(false);
+      setStrategyStatus(profileRes.error || "Could not save interests");
+      return;
+    }
+
+    if (brain) {
+      const next: ArtistBrain = {
+        ...brain,
+        goals: cleanedGoals,
+        lastUpdated: new Date().toISOString().slice(0, 10),
+      };
+      const brainRes = await saveArtistBrain(next);
+      setBrain(next);
+      setStrategySaving(false);
+      setStrategyStatus(
+        brainRes.ok ? "Goals & interests saved" : brainRes.error || "Save failed"
+      );
+    } else {
+      setStrategySaving(false);
+      setStrategyStatus("Interests saved");
+    }
   }
 
   async function logout() {
@@ -164,7 +183,7 @@ export function SettingsPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "profile_scan",
-          notes: `Links: ${JSON.stringify(links)} Goals: ${goals} Interests: ${interests.join(", ")}`,
+          notes: `Links: ${JSON.stringify(urls)} Goals: ${goals.join(", ")} Interests: ${interests.join(", ")}`,
           artistName: name || brain?.stageName || "Artist",
         }),
       });
@@ -177,10 +196,14 @@ export function SettingsPanel() {
     setScanning(false);
   }
 
-  function toggleInterest(i: string) {
-    setInterests((prev) =>
-      prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]
-    );
+  async function checkout(planId: CheckoutPlan) {
+    const res = await startFlutterwaveCheckout({
+      plan: planId,
+      email: email || undefined,
+      name: name || undefined,
+    });
+    if (res.ok) window.location.href = res.link;
+    else setStatus(res.error || "Checkout failed");
   }
 
   return (
@@ -189,18 +212,23 @@ export function SettingsPanel() {
         <h3 className="mb-3 text-sm font-medium">Profile</h3>
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input label="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <Input label="Email" value={email} onChange={(e) => setEmail(e.target.value)} disabled />
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button size="sm" onClick={() => void saveProfile()} disabled={saving}>
             {saving ? "Saving…" : "Save profile"}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => void logout()} className="gap-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void logout()}
+            className="gap-1.5"
+          >
             <LogOut className="h-3.5 w-3.5" />
             Log out
           </Button>
         </div>
-        {msg && <p className="mt-2 text-xs text-omniv-gold">{msg}</p>}
+        {status && <p className="mt-2 text-xs text-omniv-gold">{status}</p>}
       </Card>
 
       <Card className="p-5">
@@ -208,19 +236,58 @@ export function SettingsPanel() {
           <Target className="h-4 w-4 text-omniv-gold" />
           <h3 className="text-sm font-medium">Goals & interests</h3>
         </div>
-        <textarea
-          value={goals}
-          onChange={(e) => setGoals(e.target.value)}
-          rows={3}
-          placeholder="What you want to achieve this quarter…"
-          className="w-full rounded-[var(--radius)] border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm focus-gold"
-        />
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mb-3 flex gap-2">
+          <Input
+            placeholder="Add a goal"
+            value={goalInput}
+            onChange={(e) => setGoalInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const g = goalInput.trim();
+                if (g && !goals.includes(g)) setGoals([...goals, g]);
+                setGoalInput("");
+              }
+            }}
+          />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              const g = goalInput.trim();
+              if (g && !goals.includes(g)) setGoals([...goals, g]);
+              setGoalInput("");
+            }}
+          >
+            Add
+          </Button>
+        </div>
+        <div className="mb-3 flex flex-wrap gap-2">
+          {goals.map((g) => (
+            <span
+              key={g}
+              className="inline-flex items-center gap-1 rounded-full border border-omniv-gold/30 bg-omniv-gold/10 px-2.5 py-1 text-xs text-omniv-gold"
+            >
+              {g}
+              <button type="button" onClick={() => setGoals(goals.filter((x) => x !== g))}>
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          {goals.length === 0 && (
+            <span className="text-xs text-omniv-text-muted">No goals yet</span>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
           {INTEREST_SUGGESTIONS.map((i) => (
             <button
               key={i}
               type="button"
-              onClick={() => toggleInterest(i)}
+              onClick={() =>
+                setInterests((prev) =>
+                  prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]
+                )
+              }
               className={cn(
                 "rounded-full border px-3 py-1 text-xs",
                 interests.includes(i)
@@ -232,6 +299,17 @@ export function SettingsPanel() {
             </button>
           ))}
         </div>
+        <Button
+          size="sm"
+          className="mt-4"
+          disabled={strategySaving}
+          onClick={() => void saveStrategy()}
+        >
+          {strategySaving ? "Saving…" : "Save goals & interests"}
+        </Button>
+        {strategyStatus && (
+          <p className="mt-2 text-xs text-omniv-gold">{strategyStatus}</p>
+        )}
       </Card>
 
       <Card className="p-5">
@@ -242,8 +320,8 @@ export function SettingsPanel() {
               key={s.id}
               label={s.label}
               placeholder={s.placeholder}
-              value={links[s.id] || ""}
-              onChange={(e) => setLinks({ ...links, [s.id]: e.target.value })}
+              value={urls[s.id] || ""}
+              onChange={(e) => setUrls({ ...urls, [s.id]: e.target.value })}
             />
           ))}
         </div>
@@ -254,8 +332,17 @@ export function SettingsPanel() {
           <Radar className="h-4 w-4 text-omniv-gold" />
           <h3 className="text-sm font-medium">Intelligence scan</h3>
         </div>
-        <Button size="sm" className="gap-1.5" disabled={scanning} onClick={() => void runScan()}>
-          {scanning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Radar className="h-3.5 w-3.5" />}
+        <Button
+          size="sm"
+          className="gap-1.5"
+          disabled={scanning}
+          onClick={() => void runScan()}
+        >
+          {scanning ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Radar className="h-3.5 w-3.5" />
+          )}
           {scanning ? "Scanning…" : "Run intelligence scan"}
         </Button>
         {scanError && <p className="mt-3 text-xs text-omniv-danger">{scanError}</p>}
@@ -277,14 +364,16 @@ export function SettingsPanel() {
           <h3 className="text-sm font-medium">Live OAuth</h3>
         </div>
         <p className="mb-3 text-xs text-omniv-text-secondary">
-          Deep metrics need platform apps. Review pages:{" "}
-          <a href="/privacy" className="text-omniv-gold hover:underline">Privacy</a>,{" "}
-          <a href="/terms" className="text-omniv-gold hover:underline">Terms</a>.
+          Connect platforms for richer context.{" "}
+          <a href="/privacy" className="text-omniv-gold hover:underline">
+            Privacy
+          </a>
+          ,{" "}
+          <a href="/terms" className="text-omniv-gold hover:underline">
+            Terms
+          </a>
+          .
         </p>
-        <Suspense fallback={null}>
-          <TikTokOAuthStatus />
-        </Suspense>
-        {oauthMsg && <p className="mb-3 text-xs text-omniv-gold">{oauthMsg}</p>}
         <div className="flex flex-wrap gap-2">
           <a href="/api/oauth/spotify">
             <Button size="sm" variant="outline" className="gap-1.5">
@@ -313,15 +402,16 @@ export function SettingsPanel() {
           <h3 className="text-sm font-medium">Billing</h3>
         </div>
         <p className="mb-3 text-xs text-omniv-text-secondary">
-          Current plan: <span className="text-omniv-gold">{plan}</span> · {paymentProvider}
+          Current plan: <span className="text-omniv-gold">{plan}</span> ·{" "}
+          {paymentProvider.name}
         </p>
         <div className="flex flex-wrap gap-2">
-          {plans.filter((p) => p.id !== "free").map((p) => (
+          {plans.map((p) => (
             <Button
               key={p.id}
               size="sm"
-              variant={plan === p.id ? "default" : "outline"}
-              onClick={() => void startFlutterwaveCheckout(p.id as CheckoutPlan)}
+              variant={plan === p.id ? "primary" : "outline"}
+              onClick={() => void checkout(p.id as CheckoutPlan)}
             >
               {p.name}
             </Button>
@@ -329,41 +419,59 @@ export function SettingsPanel() {
         </div>
       </Card>
 
-      {can("team") && (
-        <Card className="p-5">
-          <div className="mb-3 flex items-center gap-2">
-            <Users className="h-4 w-4 text-omniv-gold" />
-            <h3 className="text-sm font-medium">Team</h3>
-          </div>
-          <div className="mb-3 flex gap-2">
-            <Input
-              placeholder="member@email.com"
-              value={memberEmail}
-              onChange={(e) => setMemberEmail(e.target.value)}
-            />
-            <Button
-              size="sm"
-              onClick={() => {
-                if (!memberEmail.trim()) return;
-                setTeam(addMember(memberEmail.trim()));
-                setMemberEmail("");
-              }}
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-          <ul className="space-y-1">
-            {team.map((m) => (
-              <li key={m.id} className="flex justify-between text-xs text-omniv-text-secondary">
-                <span>{m.email}</span>
-                <button type="button" onClick={() => setTeam(removeMember(m.id))}>
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
+      <Card className="p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <Users className="h-4 w-4 text-omniv-gold" />
+          <h3 className="text-sm font-medium">Team</h3>
+          {!can("team_seats") && <Badge variant="outline">Pro+</Badge>}
+        </div>
+        {can("team_seats") ? (
+          <>
+            <div className="mb-3 flex gap-2">
+              <Input
+                placeholder="member@email.com"
+                value={memberEmail}
+                onChange={(e) => setMemberEmail(e.target.value)}
+              />
+              <Button
+                size="sm"
+                onClick={() => {
+                  if (!memberEmail.trim()) return;
+                  setTeam(
+                    addMember(team, {
+                      email: memberEmail.trim(),
+                      name: memberEmail.trim().split("@")[0] || "Member",
+                      role: "Manager",
+                    })
+                  );
+                  setMemberEmail("");
+                }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+            <ul className="space-y-1">
+              {team.map((m) => (
+                <li
+                  key={m.id}
+                  className="flex justify-between text-xs text-omniv-text-secondary"
+                >
+                  <span>
+                    {m.email} · {m.role}
+                  </span>
+                  {m.role !== "Owner" && (
+                    <button type="button" onClick={() => setTeam(removeMember(team, m.id))}>
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className="text-xs text-omniv-text-muted">Upgrade to Pro for team seats.</p>
+        )}
+      </Card>
 
       <Card className="p-5">
         <div className="mb-2 flex items-center gap-2">
@@ -378,7 +486,9 @@ export function SettingsPanel() {
           <Key className="h-4 w-4 text-omniv-gold" />
           <h3 className="text-sm font-medium">API keys</h3>
         </div>
-        <p className="text-xs text-omniv-text-muted">Public API keys for partners — roadmap.</p>
+        <Button variant="outline" size="sm" disabled={!can("api_keys")}>
+          Generate key
+        </Button>
       </Card>
     </div>
   );
