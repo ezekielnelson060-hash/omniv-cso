@@ -42,6 +42,8 @@ export async function POST(req: Request) {
       used: number;
       limit: number | "unlimited";
       day: string;
+      period?: string;
+      label?: string;
     } | null = null;
 
     try {
@@ -57,7 +59,7 @@ export async function POST(req: Request) {
           return NextResponse.json(
             {
               error: "quota_exceeded",
-              text: `**Daily Ziki limit reached**\n\nYour **${plan}** plan allows **${usageMeta.limit}** briefings per day. You have used ${usageMeta.used}.\n\nUpgrade for more depth, or come back tomorrow. Pro and Label include unlimited Ziki.`,
+              text: `**Ziki limit reached**\n\nYour **${plan}** plan allows **${usageMeta.label || usageMeta.limit}**. You have used ${usageMeta.used}.\n\nUpgrade for more depth. Pro and Label include unlimited Ziki.`,
               source: "local",
               usage: usageMeta,
               plan,

@@ -45,7 +45,7 @@ export const PLANS: PlanDef[] = [
     features: [
       "Command Center",
       "Artist Brain",
-      "5 Ziki messages / day",
+      "5 Ziki messages / month",
       "1 artist workspace",
     ],
     limits: { zikiMessagesPerDay: 5, artists: 1, teamSeats: 1 },
@@ -62,10 +62,10 @@ export const PLANS: PlanDef[] = [
       "Everything in Free",
       "Full Opportunity Feed",
       "Historical Analytics",
-      "50 Ziki messages / day",
+      "20 Ziki messages / day",
       "Surface scan",
     ],
-    limits: { zikiMessagesPerDay: 50, artists: 1, teamSeats: 1 },
+    limits: { zikiMessagesPerDay: 20, artists: 1, teamSeats: 1 },
   },
   {
     id: "pro",
