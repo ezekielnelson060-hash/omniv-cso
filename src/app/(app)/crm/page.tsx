@@ -18,7 +18,7 @@ export default function CrmPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Manager CRM</h1>
           <p className="text-sm text-omniv-text-secondary">
-            Switch artists, own the fan list, tasks and notes — multi-artist ops
+            Switch artists, own the fan list, tasks and notes. Multi-artist ops.
           </p>
         </div>
         <Link href="/label">

@@ -16,8 +16,7 @@ export default function ReleaseSimulatorPage() {
           Release Simulator
         </h1>
         <p className="text-sm text-omniv-text-secondary">
-          Stress-test timing and positioning before you burn a release window —
-          not after the ads are gone
+          Stress-test timing and positioning before you burn a release window, not after the ads are gone.
         </p>
       </div>
       <FeatureGate
