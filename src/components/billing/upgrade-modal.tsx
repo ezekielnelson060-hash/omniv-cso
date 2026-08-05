@@ -60,7 +60,7 @@ export function UpgradeModal({
       setError(res.error);
       return;
     }
-    // Do NOT unlock plan here — webhook must confirm
+    // Do NOT unlock plan here. webhook must confirm
     window.location.href = res.link;
   }
 
@@ -101,12 +101,12 @@ export function UpgradeModal({
           {featureLabel} is not on your tier
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-omniv-text-secondary">
-          You're on{" "}
+          You&apos;re on{" "}
           <span className="text-omniv-gold">{planName(currentPlan)}</span>.{" "}
           <strong className="font-medium text-omniv-text">{featureLabel}</strong>{" "}
           is part of the intelligence stack from{" "}
           <span className="text-omniv-gold">{target.name}</span>. Payment confirms
-          via Flutterwave before access opens — no soft unlocks.
+          via Flutterwave before access opens. No soft unlocks.
         </p>
 
         <div className="mt-5 space-y-2">

@@ -71,7 +71,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
           setPlanState(dbPlan);
           setPlanStatus("active");
         } else {
-          // Payment pending / failed — stay free for gating
+          // Payment pending / failed. stay free for gating
           setPlanState(DEFAULT_PLAN);
           setPlanStatus(status);
         }
@@ -98,7 +98,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("billing") === "success") {
-      // Webhook may lag a few seconds — poll briefly
+      // Webhook may lag a few seconds. poll briefly
       let n = 0;
       const id = window.setInterval(() => {
         void refreshPlan();
@@ -110,7 +110,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   }, [refreshPlan]);
 
   const setPlan = useCallback((p: PlanId) => {
-    // Optimistic free only — paid plans come from webhook/DB
+    // Optimistic free only. paid plans come from webhook/DB
     if (p === "free") setPlanState("free");
   }, []);
 
