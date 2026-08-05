@@ -15,9 +15,9 @@ import { cn } from "@/lib/utils";
 const TOTAL_STEPS = 6;
 
 const ROLES: { id: UserRole; label: string; desc: string }[] = [
-  { id: "artist", label: "Artist", desc: "Solo career strategy" },
-  { id: "manager", label: "Manager", desc: "Multi-artist CRM" },
-  { id: "label", label: "Label", desc: "Roster & portfolio" },
+  { id: "artist", label: "Artist", desc: "Your career — one ranked move at a time" },
+  { id: "manager", label: "Manager", desc: "Roster clarity for developing acts" },
+  { id: "label", label: "Label", desc: "Attention allocation across the roster" },
 ];
 
 const STAGES: { id: CareerStage; label: string; desc: string }[] = [
@@ -116,7 +116,7 @@ export default function OnboardingPage() {
       await new Promise((r) => setTimeout(r, 320));
     }
     if (isSupabaseConfigured()) {
-      setMsg("Saving Artist Brain + wiring Command Center…");
+      setMsg("Sealing Artist Brain · activating Command Center…");
       const social_links: Record<string, string> = {};
       for (const id of selected) {
         const u = (links[id] || "").trim();
@@ -169,13 +169,12 @@ export default function OnboardingPage() {
           <Progress value={((step + 1) / TOTAL_STEPS) * 100} className="mt-2" />
         </div>
 
-        {/* 0 — Identity */}
         {step === 0 && (
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Who are you?</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Claim your seat</h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              Name and role shape the whole product — Command Center, Ziki, and
-              permissions.
+              This is not a generic account. Role and name lock how Omniv ranks
+              priorities for the rest of the system.
             </p>
             <div className="mt-6 space-y-3">
               <Input
@@ -214,12 +213,11 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* 1 — Music */}
         {step === 1 && (
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Your music</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Lock your sound</h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              Genre, sound, and career level position every score and briefing.
+              Genre, style, and stage become private context — the advantage most artists never lock in.
             </p>
             <p className="mt-5 text-xs font-medium uppercase tracking-wider text-omniv-text-muted">
               Genre (up to 4)
@@ -318,14 +316,14 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* 2 — Goals & interests */}
         {step === 2 && (
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
-              What do you want?
+              What would make this year count?
             </h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              Goals and interests rank Opportunity Feed and Ziki priorities.
+              Goals and interests become the ranking engine — Opportunity Feed and
+              Ziki optimise for these, not generic advice.
             </p>
             <div className="mt-5">
               <label className="mb-1.5 block text-sm font-medium text-omniv-text-secondary">
@@ -379,14 +377,14 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* 3 — Platforms */}
         {step === 3 && (
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
-              Where do you publish?
+              Where the career actually lives
             </h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              Surfaces feed analytics bias and opportunity ranking.
+              Platforms bias scores and opportunities. Only select what you will
+              actually run — noise dilutes intelligence.
             </p>
             <div className="mt-6 grid grid-cols-2 gap-2">
               {platforms.map((p) => {
@@ -427,7 +425,6 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* 4 — Links */}
         {step === 4 && (
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
@@ -460,7 +457,6 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* 5 — Activate */}
         {step === 5 && (
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
@@ -469,7 +465,7 @@ export default function OnboardingPage() {
             <p className="mt-1 text-sm text-omniv-text-secondary">
               {scanning
                 ? msg
-                : "We wire Command Center, Artist Brain, Ziki, Opportunity Feed, and Analytics to this profile."}
+                : "Command Center, Artist Brain, Ziki, and Opportunity Feed activate on this profile only."}
             </p>
             {!scanning && (
               <ul className="mt-4 space-y-1.5 text-xs text-omniv-text-muted">
@@ -494,7 +490,7 @@ export default function OnboardingPage() {
                   Back
                 </Button>
                 <Button className="flex-1 gap-2" onClick={() => void finish()}>
-                  Activate <ArrowRight className="h-4 w-4" />
+                  Enter Command Center <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
             )}
