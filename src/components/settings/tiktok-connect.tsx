@@ -22,7 +22,7 @@ export function TikTokConnect({ connectedName }: { connectedName?: string | null
       <div>
         <p className="text-sm font-medium text-omniv-text">TikTok</p>
         <p className="text-[11px] text-omniv-text-muted">
-          Login Kit — basic profile for strategy context
+          Login Kit: basic profile for strategy context
         </p>
         {label && (
           <Badge variant="success" className="mt-1.5">
@@ -34,7 +34,7 @@ export function TikTokConnect({ connectedName }: { connectedName?: string | null
         )}
         {status === "token_failed" && (
           <p className="mt-1 text-xs text-omniv-danger">
-            Token exchange failed — check redirect URI & env keys
+            Token exchange failed. Check redirect URI & env keys
           </p>
         )}
         {status === "not_configured" && (
