@@ -89,7 +89,7 @@ export default function DashboardPage() {
             <Badge variant="gold">{displayName}</Badge>
           </div>
           <p className="text-sm text-omniv-text-secondary">
-            Private scores from your Artist Brain — the state of the career in one view
+            Private scores from your Artist Brain. The state of the career in one view.
             {platforms.length
               ? ` · ${platforms.length} surface${platforms.length > 1 ? "s" : ""} in play`
               : " · add platforms to tighten precision"}
@@ -196,7 +196,7 @@ export default function DashboardPage() {
             Ranked intelligence
           </h2>
           <p className="text-sm text-omniv-text-secondary">
-            From your Artist Brain only — not generic industry tips
+            From your Artist Brain only, not generic industry tips
           </p>
         </div>
         <Link href="/opportunities">
