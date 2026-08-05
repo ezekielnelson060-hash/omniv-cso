@@ -49,8 +49,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero — clear headline from the stronger original */}
-      <section className="relative z-10 mx-auto max-w-4xl px-5 pb-8 pt-14 text-center md:px-8 md:pt-20">
+      <section className="relative z-10 mx-auto max-w-4xl px-5 pb-16 pt-14 text-center md:px-8 md:pt-20 md:pb-20">
         <p className="mb-5 font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">
           Stop guessing. Start executing.
         </p>
@@ -59,9 +58,9 @@ export default function LandingPage() {
           <span className="text-omniv-gold">for your music career</span>
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-omniv-text-secondary md:text-base">
-          Omniv is an AI strategist for independent artists, managers, and
-          labels. It learns your genre, goals, and platforms — then gives you
-          one clear priority each week.
+          Career intelligence for independent artists and lean managers. Omniv
+          learns your genre, goals, and stage — then gives you one clear
+          priority each week. Not another dashboard. Not a dealmaker.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link href="/signup">
@@ -80,44 +79,22 @@ export default function LandingPage() {
             </Button>
           </a>
         </div>
-
-        {/* Simple, labeled product snapshot — not a fake full dashboard */}
-        <div className="mx-auto mt-14 max-w-lg text-left">
-          <p className="mb-3 text-center text-[11px] text-omniv-text-muted">
-            Example of what you see after onboarding
-          </p>
-          <div className="rounded-2xl border border-omniv-border bg-omniv-card p-5 shadow-[0_24px_48px_-24px_rgba(0,0,0,0.8)]">
-            <p className="text-[11px] uppercase tracking-wider text-omniv-text-muted">
-              This week's priority
-            </p>
-            <p className="mt-1.5 text-lg font-semibold tracking-tight">
-              Focus content on one track before the release window
-            </p>
-            <p className="mt-2 text-[13px] leading-relaxed text-omniv-text-secondary">
-              Based on your goals and stage. Open Ziki for a day-by-day plan.
-            </p>
-            <div className="mt-4 flex items-center justify-between border-t border-omniv-border pt-4">
-              <span className="text-[12px] text-omniv-text-muted">
-                Career scores update with your activity
-              </span>
-              <span className="font-data text-sm text-omniv-gold">72 overall</span>
-            </div>
-          </div>
-        </div>
       </section>
 
       <section className="relative z-10 border-y border-omniv-border bg-omniv-elevated/40">
         <div className="mx-auto max-w-3xl px-5 py-14 text-center md:px-8 md:py-16">
           <p className="font-data text-[11px] uppercase tracking-[0.18em] text-omniv-gold">
-            The cost of guessing
+            Why this matters
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-tight md:text-3xl">
-            Wrong week. Wrong story. Wrong spend.
+            Talent isn't the bottleneck. Focus is.
           </h2>
           <p className="mt-4 text-[15px] leading-relaxed text-omniv-text-secondary">
-            Independent teams rarely fail from a lack of talent. They lose
-            months to half-finished campaigns and advice that could apply to
-            anyone. Omniv exists so your next cycle is deliberate.
+            Independent artists and small-roster managers lose months to the
+            wrong release week, scattered content, and advice that could apply
+            to anyone. When every act feels urgent, you default to whoever
+            messaged last. Omniv exists so the next cycle is deliberate — one
+            ranked priority, tied to your stage and goals.
           </p>
         </div>
       </section>
@@ -135,8 +112,9 @@ export default function LandingPage() {
           </h2>
           <p className="mt-3 text-[15px] leading-relaxed text-omniv-text-secondary">
             What is the highest-impact move for this artist right now? Every
-            screen is designed to answer that — not to dump another dashboard
-            of metrics.
+            screen answers that — not a wall of metrics, and not a promise to
+            land publishing deals or brand partners. Those still need humans.
+            We make the career legible enough to act.
           </p>
         </div>
 
@@ -144,7 +122,7 @@ export default function LandingPage() {
           {[
             {
               t: "Command Center",
-              d: "See momentum, audience, content, and release readiness in one place — and the week's priority on top.",
+              d: "Momentum, audience, content, and release readiness in one place — with this week\'s priority on top.",
             },
             {
               t: "Opportunity Feed",
@@ -161,7 +139,7 @@ export default function LandingPage() {
             >
               <h3 className="text-base font-semibold tracking-tight">{card.t}</h3>
               <p className="mt-2 text-[14px] leading-relaxed text-omniv-text-secondary">
-                {card.d.replace(/'/g, "'")}
+                {card.d}
               </p>
             </div>
           ))}
@@ -190,7 +168,7 @@ export default function LandingPage() {
               },
               {
                 n: "02",
-                t: "Read this week's priority",
+                t: "Read this week\'s priority",
                 d: "One high-impact move on Command Center and the opportunity feed — not a wall of tips.",
               },
               {
@@ -201,9 +179,7 @@ export default function LandingPage() {
             ].map((s) => (
               <div key={s.n}>
                 <p className="font-data text-sm text-omniv-gold">{s.n}</p>
-                <h3 className="mt-3 text-base font-semibold tracking-tight">
-                  {s.t.replace(/'/g, "'")}
-                </h3>
+                <h3 className="mt-3 text-base font-semibold tracking-tight">{s.t}</h3>
                 <p className="mt-2 text-[14px] leading-relaxed text-omniv-text-secondary">
                   {s.d}
                 </p>
@@ -222,22 +198,27 @@ export default function LandingPage() {
             Who it's for
           </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
-            Artists, managers, and labels
+            Early-stage artists and lean managers
           </h2>
+          <p className="mt-3 text-[15px] leading-relaxed text-omniv-text-secondary">
+            Built for independents who are serious about the career but
+            don't have a full management machine yet. Not a replacement for
+            agents, lawyers, or A-list dealmaking.
+          </p>
         </div>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {[
             {
               t: "Artists",
-              d: "Leave each session with one non-negotiable for the week — tied to your goals.",
+              d: "Leave each session with one non-negotiable for the week — tied to your goals and stage.",
             },
             {
-              t: "Managers",
-              d: "Switch roster artists, track contracts and tasks, keep the next move visible.",
+              t: "Lean managers",
+              d: "See which of 3–15 developing acts should get this hour. Roster priority without a war room.",
             },
             {
-              t: "Labels",
-              d: "See who is release-ready and where attention should go across the roster.",
+              t: "Small labels",
+              d: "Who is release-ready, who needs content, where attention should go across the roster.",
             },
           ].map((r) => (
             <div
@@ -296,7 +277,7 @@ export default function LandingPage() {
                 <span className="text-sm font-semibold">Omniv</span>
               </div>
               <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-omniv-text-secondary">
-                AI career intelligence for independent music teams.
+                Career intelligence for independent artists and lean managers.
               </p>
             </div>
             <div>
