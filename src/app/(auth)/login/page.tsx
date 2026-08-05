@@ -62,12 +62,11 @@ export default function LoginPage() {
             should not be a guess.
           </p>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-omniv-text-secondary">
-            Sign in to your strategy command center. Ziki already knows the
-            context.
+            Return to ranked priorities. Ziki already holds your context.
           </p>
         </div>
         <p className="relative text-xs text-omniv-text-muted">
-          AI Chief Strategy Officer for artists, managers & labels.
+          Private career intelligence for independent operators.
         </p>
       </div>
 
@@ -82,9 +81,9 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Return to the system</h1>
           <p className="mt-1.5 text-sm text-omniv-text-secondary">
-            Sign in to continue to your command center.
+            Continue where intelligence left off.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
@@ -128,7 +127,7 @@ export default function LoginPage() {
           <p className="mt-6 text-center text-sm text-omniv-text-secondary">
             New to Omniv?{" "}
             <Link href="/signup" className="text-omniv-gold hover:underline">
-              Create account
+              Get access
             </Link>
           </p>
         </div>

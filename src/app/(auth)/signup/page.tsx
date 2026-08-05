@@ -52,7 +52,7 @@ export default function SignupPage() {
         setLoading(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sign up failed");
+      setError(err instanceof Error ? err.message : "Get access failed");
       setLoading(false);
     }
   }
@@ -71,12 +71,12 @@ export default function SignupPage() {
         </div>
         <div className="relative">
           <p className="text-2xl font-semibold leading-snug tracking-tight">
-            Strategy OS for
+            Private intelligence for
             <br />
             independent careers.
           </p>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-omniv-text-secondary">
-            Create your account. Onboarding builds Artist Brain in minutes.
+            Claim your seat. Onboarding seals Artist Brain in minutes.
           </p>
         </div>
         <p className="relative text-xs text-omniv-text-muted">
@@ -86,7 +86,7 @@ export default function SignupPage() {
 
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-[380px]">
-          <h1 className="text-2xl font-semibold tracking-tight">Create account</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Create access</h1>
           <p className="mt-1.5 text-sm text-omniv-text-secondary">
             Start with email. Platforms connect in onboarding.
           </p>
@@ -129,13 +129,13 @@ export default function SignupPage() {
               </p>
             )}
             <Button type="submit" className="w-full gap-2" disabled={loading}>
-              {loading ? "Creating…" : "Create account"}
+              {loading ? "Creating…" : "Create access"}
               {!loading && <ArrowRight className="h-4 w-4" />}
             </Button>
           </form>
 
           <p className="mt-6 text-center text-sm text-omniv-text-secondary">
-            Already have an account?{" "}
+            Already inside?{" "}
             <Link href="/login" className="text-omniv-gold hover:underline">
               Sign in
             </Link>
