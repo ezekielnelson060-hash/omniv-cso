@@ -1,5 +1,5 @@
 /**
- * Release Simulator — competitor proximity, indie priming, Go/Caution/Hold.
+ * Release Simulator: competitor proximity, indie priming, Go/Caution/Hold.
  */
 
 import type { ArtistBrain } from "@/types";
@@ -131,9 +131,7 @@ function pressureFor(hit: Omit<ProximityHit, "pressure">): number {
   if (hit.sameLane) p *= 1.35;
   if (hit.scale === "larger") p *= 1.4;
   if (hit.scale === "smaller") p *= 0.75;
-  // Competitor drops just before you steals the week
   if (hit.direction === "before" && hit.band !== "outside") p *= 1.15;
-  // You drop first — slightly better, still contested
   if (hit.direction === "after" && (hit.band === "d1_3" || hit.band === "d4_7"))
     p *= 0.9;
   return Math.round(p);
@@ -154,10 +152,8 @@ function analyzeProximity(
     const abs = Math.abs(signed);
     const direction: ProximityHit["direction"] =
       signed === 0 ? "same" : signed > 0 ? "after" : "before";
-    // signed > 0 means your date is after theirs → they drop before you
     const dirFixed: ProximityHit["direction"] =
       signed === 0 ? "same" : signed > 0 ? "before" : "after";
-    // Wait: signedGap = your - their. If your is later, signed > 0, they are BEFORE you.
     void direction;
     const band = bandFor(abs);
     const lane = sameLane(c, input.genre);
@@ -188,24 +184,24 @@ function analyzeProximity(
       );
       insights.push(
         dirFixed === "before"
-          ? `${c.name} lands just before you — expect attention debt. Either leapfrog earlier or wait until their peak cools (~10–14d).`
-          : `You land before ${c.name} — take first-mover posts, but don’t schedule your biggest spend on their premiere day.`
+          ? `${c.name} lands just before you. Expect attention debt. Either leapfrog earlier or wait until their peak cools (~10–14d).`
+          : `You land before ${c.name}. Take first-mover posts, but don’t schedule your biggest spend on their premiere day.`
       );
     } else if (band === "d4_7") {
-      reasons.push(`${c.name} is ${abs} days away — shared week attention.`);
+      reasons.push(`${c.name} is ${abs} days away: shared week attention.`);
       insights.push(
         `Within a week of ${c.name}: differentiate hook/format; avoid identical visual tropes.`
       );
     } else if (band === "d8_14") {
       insights.push(
-        `${c.name} (${c.date}) is 1–2 weeks off — monitor, slight calendar pressure.`
+        `${c.name} (${c.date}) is 1–2 weeks off. Monitor, slight calendar pressure.`
       );
     }
   }
 
   if ((input.competitorDrops || []).length === 0) {
     score -= 6;
-    reasons.push("No competitor dates logged — competition confidence is lower.");
+    reasons.push("No competitor dates logged. Competition confidence is lower.");
     insights.push(
       "Log 2–3 peer/larger drops in your lane. Proximity math is only as good as the calendar you feed it."
     );
@@ -218,7 +214,6 @@ function analyzeProximity(
     score += 8;
   }
 
-  // Sort hits by pressure
   hits.sort((a, b) => b.pressure - a.pressure);
 
   return {
@@ -230,10 +225,6 @@ function analyzeProximity(
   };
 }
 
-/**
- * Indie priming: independents who win usually run a multi-week content arc,
- * not a surprise dump. Score reflects whether lead time + readiness support that.
- */
 function primingScore(
   iso: string,
   input: ReleaseWindowInput
@@ -252,7 +243,7 @@ function primingScore(
     reasons.push("Two-week priming possible if you post with discipline.");
   } else if (lead >= 14 && !input.contentReady) {
     score += 5;
-    blockers.push("Runway exists but content pack is not ready — priming will slip.");
+    blockers.push("Runway exists but content pack is not ready. Priming will slip.");
   } else if (lead < 10) {
     score -= 15;
     blockers.push("Too little time for priming; drop will feel like a cold start.");
@@ -272,23 +263,21 @@ function primingScore(
     plan.push("Add at least one short-form surface for priming loops.");
   }
 
-  // Week-by-week plan shaped by lead
   if (lead >= 21) {
     plan.push("W-3: 2–3 process/teaser posts (no full chorus). Seed curiosity only.");
-    plan.push("W-2: Hook tests — 2 cuts of the same idea; kill the weaker format.");
+    plan.push("W-2: Hook tests: 2 cuts of the same idea; kill the weaker format.");
     plan.push("W-1: Pre-save / fan-gate push + one story-led piece.");
     plan.push("Drop day: 1 primary asset + 2 native variants, not five unfocused posts.");
     plan.push("W+1: Reply-driven content from early comments; soft playlist follow-up.");
   } else if (lead >= 10) {
     plan.push("Next 72h: lock one hook and shoot 3 variants.");
     plan.push("Days −7 to −3: daily short-form, same visual system.");
-    plan.push("Day −1: owned list + pre-save only — no new creative experiments.");
+    plan.push("Day −1: owned list + pre-save only, no new creative experiments.");
     plan.push("Drop + 48h: double down on the format that got saves, not vanity views.");
   } else {
     plan.push("Emergency path: one strong asset, owned list only, zero broad paid until signal.");
   }
 
-  // Classic indie heuristics
   plan.push(
     "Indie pattern: priming beats surprise dumps when you lack catalogue gravity."
   );
@@ -314,7 +303,7 @@ function timingScore(
     blockers.push("Date is in the past.");
   } else if (lead < 7) {
     score -= 28;
-    blockers.push("Under 7 days lead — pitching and content almost never catch up.");
+    blockers.push("Under 7 days lead. Pitching and content almost never catch up.");
   } else if (lead < 14) {
     score -= 14;
     reasons.push("Tight 1–2 week lead: only if content + pitches are already done.");
@@ -323,13 +312,13 @@ function timingScore(
     reasons.push("Optimal ~2–4 week runway for independent releases.");
   } else if (lead <= 45) {
     score += 14;
-    reasons.push("Solid 4–6 week runway — protect focus so the campaign doesn’t go cold.");
+    reasons.push("Solid 4–6 week runway. Protect focus so the campaign doesn’t go cold.");
   } else if (lead <= 90) {
     score += 4;
-    reasons.push("Long runway — schedule soft content so momentum doesn’t lag.");
+    reasons.push("Long runway. Schedule soft content so momentum doesn’t lag.");
   } else {
     score -= 10;
-    reasons.push("90+ days out — market context may shift before drop.");
+    reasons.push("90+ days out. Market context may shift before drop.");
   }
 
   const dow = dayOfWeek(iso);
@@ -347,7 +336,7 @@ function timingScore(
   const day = parseDate(iso).getDate();
   if (day <= 2 || day >= 28) {
     score -= 5;
-    reasons.push("Month edge — more catalogue noise and weaker editorial attention.");
+    reasons.push("Month edge: more catalogue noise and weaker editorial attention.");
   }
 
   if (noise === "crowded") {
@@ -380,7 +369,7 @@ function readinessScore(
     reasons.push("Content pack marked ready.");
   } else {
     score -= 14;
-    blockers.push("Content not ready — do not burn paid or favours.");
+    blockers.push("Content not ready. Do not burn paid or favours.");
   }
 
   if (input.ownedListReady) {
@@ -388,7 +377,7 @@ function readinessScore(
     reasons.push("Owned list / fan gate ready.");
   } else {
     score -= 10;
-    blockers.push("No owned list — algorithmic spikes won’t stick.");
+    blockers.push("No owned list. Algorithmic spikes won’t stick.");
   }
 
   if (input.playlistPitchReady) {
@@ -397,7 +386,7 @@ function readinessScore(
   }
 
   if (input.platforms.length >= 2) score += 8;
-  else blockers.push("Under 2 surfaces — distribution is thin.");
+  else blockers.push("Under 2 surfaces. Distribution is thin.");
 
   score += { none: 0, low: 4, medium: 8, high: 10 }[input.budgetBand];
 
@@ -425,7 +414,7 @@ function positioningScore(
     reasons.push("Positioning present but could be sharper.");
   } else {
     score -= 18;
-    blockers.push("Vague positioning — easy to burn the week on the wrong story.");
+    blockers.push("Vague positioning: easy to burn the week on the wrong story.");
   }
 
   const genre =
@@ -449,21 +438,6 @@ function positioningScore(
   return { score: clamp(score), reasons, blockers };
 }
 
-/**
- * Verdict gates (v3):
- * HOLD if any hard gate trips:
- *   - overall < 52
- *   - blockers ≥ 3
- *   - readiness < 40
- *   - competition < 35
- *   - priming < 35 AND lead path is short
- *   - any same_day larger same-lane hit
- * GO if all soft gates pass:
- *   - overall ≥ 76
- *   - blockers ≤ 1
- *   - readiness ≥ 58, timing ≥ 55, competition ≥ 50, priming ≥ 50
- * else CAUTION
- */
 function verdictFrom(parts: {
   overall: number;
   blockers: string[];
@@ -588,11 +562,11 @@ export function simulateRelease(
 
   let recommendation: string;
   if (alternate && alternate.overall > primary.overall + 6) {
-    recommendation = `Prefer the alternate window (${alternate.date}, ${alternate.verdict}). Primary is weaker on timing, competition, or priming — burning ${primary.date} risks a half-ready or contested drop.`;
+    recommendation = `Prefer the alternate window (${alternate.date}, ${alternate.verdict}). Primary is weaker on timing, competition, or priming. Burning ${primary.date} risks a half-ready or contested drop.`;
   } else if (primary.verdict === "Go") {
     recommendation = `Primary window (${primary.date}) is a Go if blockers stay closed. Run the priming plan; protect the story: “${input.positioning.slice(0, 90)}”.`;
   } else if (primary.verdict === "Hold") {
-    recommendation = `Hold ${primary.date}. Fix readiness, proximity conflicts, or priming gaps before spend — a quiet delay beats a loud miss.`;
+    recommendation = `Hold ${primary.date}. Fix readiness, proximity conflicts, or priming gaps before spend. A quiet delay beats a loud miss.`;
   } else {
     recommendation = `Caution on ${primary.date}: close top blockers, follow a thin priming arc, keep spend light until first 72h signal.`;
   }
@@ -619,7 +593,7 @@ export function simulateRelease(
       ? "Do not run paid media on this window."
       : primary.verdict === "Caution"
         ? "Cap paid until organic signal appears in the first 48–72 hours."
-        : "Paid is optional support — not a substitute for priming + readiness.";
+        : "Paid is optional support, not a substitute for priming + readiness.";
 
   const confidence = clamp(
     48 +
