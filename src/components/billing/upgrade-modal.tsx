@@ -91,21 +91,22 @@ export function UpgradeModal({
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-omniv-gold/15">
             <Sparkles className="h-5 w-5 text-omniv-gold" />
           </div>
-          <Badge variant="gold">Upgrade required</Badge>
+          <Badge variant="gold">Access required</Badge>
         </div>
 
         <h2
           id="upgrade-title"
           className="mt-3 text-xl font-semibold tracking-tight text-omniv-text"
         >
-          Unlock {featureLabel}
+          {featureLabel} is not on your tier
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-omniv-text-secondary">
-          You&apos;re on{" "}
+          You're on{" "}
           <span className="text-omniv-gold">{planName(currentPlan)}</span>.{" "}
           <strong className="font-medium text-omniv-text">{featureLabel}</strong>{" "}
-          starts at <span className="text-omniv-gold">{target.name}</span>. Access
-          unlocks after Flutterwave confirms payment.
+          is part of the intelligence stack from{" "}
+          <span className="text-omniv-gold">{target.name}</span>. Payment confirms
+          via Flutterwave before access opens — no soft unlocks.
         </p>
 
         <div className="mt-5 space-y-2">
@@ -142,7 +143,7 @@ export function UpgradeModal({
                         /mo
                       </span>
                     </p>
-                    <p className="text-[10px] text-omniv-text-muted">Pay now</p>
+                    <p className="text-[10px] text-omniv-text-muted">Secure access</p>
                   </>
                 )}
               </div>
@@ -164,7 +165,7 @@ export function UpgradeModal({
             Pay with Flutterwave
           </Button>
           <Button variant="outline" className="flex-1" onClick={onClose}>
-            Not now
+            Stay limited
           </Button>
         </div>
 
