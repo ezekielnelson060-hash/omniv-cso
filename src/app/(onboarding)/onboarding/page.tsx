@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 const TOTAL_STEPS = 6;
 
 const ROLES: { id: UserRole; label: string; desc: string }[] = [
-  { id: "artist", label: "Artist", desc: "Your career — one ranked move at a time" },
+  { id: "artist", label: "Artist", desc: "Your career. One ranked move at a time" },
   { id: "manager", label: "Manager", desc: "Roster clarity for developing acts" },
   { id: "label", label: "Label", desc: "Attention allocation across the roster" },
 ];
@@ -217,7 +217,7 @@ export default function OnboardingPage() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Lock your sound</h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              Genre, style, and stage become private context — the advantage most artists never lock in.
+              Genre, style, and stage become private context, the advantage most artists never lock in.
             </p>
             <p className="mt-5 text-xs font-medium uppercase tracking-wider text-omniv-text-muted">
               Genre (up to 4)
@@ -260,7 +260,7 @@ export default function OnboardingPage() {
                 value={musicStyle}
                 onChange={(e) => setMusicStyle(e.target.value)}
                 rows={3}
-                placeholder="Describe your sound — tempo, mood, production, influences…"
+                placeholder="Describe your sound: tempo, mood, production, influences…"
                 className="w-full rounded-[var(--radius)] border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm focus-gold"
               />
             </div>
@@ -322,7 +322,7 @@ export default function OnboardingPage() {
               What would make this year count?
             </h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              Goals and interests become the ranking engine — Opportunity Feed and
+              Goals and interests become the ranking engine. Opportunity Feed and
               Ziki optimise for these, not generic advice.
             </p>
             <div className="mt-5">
@@ -384,7 +384,7 @@ export default function OnboardingPage() {
             </h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
               Platforms bias scores and opportunities. Only select what you will
-              actually run — noise dilutes intelligence.
+              actually run. Noise dilutes intelligence.
             </p>
             <div className="mt-6 grid grid-cols-2 gap-2">
               {platforms.map((p) => {
@@ -431,7 +431,7 @@ export default function OnboardingPage() {
               Profile links
             </h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              Saved for weekly scans and Ziki context. Skip any you don&apos;t have.
+              Saved for weekly scans and Ziki context. Skip any you don't have.
             </p>
             <div className="mt-6 space-y-3">
               {selected.map((id) => (
