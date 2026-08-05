@@ -50,9 +50,9 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* HERO — exclusivity + irreversible cost of guessing */}
-      <section className="relative z-10 mx-auto max-w-4xl px-5 pb-16 pt-16 text-center md:px-8 md:pt-24 md:pb-24">
-        <p className="mb-6 font-data text-[11px] uppercase tracking-[0.22em] text-omniv-gold">
+      {/* HERO */}
+      <section className="relative z-10 mx-auto max-w-4xl px-5 pb-10 pt-12 text-center md:px-8 md:pb-12 md:pt-16">
+        <p className="mb-4 font-data text-[11px] uppercase tracking-[0.22em] text-omniv-gold">
           Private career intelligence · Independent music
         </p>
         <h1 className="text-balance text-[2.4rem] font-semibold leading-[1.06] tracking-tight md:text-5xl lg:text-[3.4rem]">
@@ -60,13 +60,13 @@ export default function LandingPage() {
           <br />
           <span className="text-omniv-gold">what they should have done</span>
         </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-[15px] leading-relaxed text-omniv-text-secondary md:text-[17px]">
+        <p className="mx-auto mt-5 max-w-2xl text-[15px] leading-relaxed text-omniv-text-secondary md:text-[17px]">
           While everyone else posts, guesses, and burns release windows, a small
           set of operators will run on ranked priorities, release timing, and
           roster clarity. Omniv is that system — career intelligence built like
           an inner circle, not another public dashboard.
         </p>
-        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link href="/signup">
             <Button size="lg" className="h-12 min-w-[200px] gap-2 text-sm">
               Enter the system
@@ -83,28 +83,28 @@ export default function LandingPage() {
             </Button>
           </a>
         </div>
-        <p className="mt-6 text-[12px] text-omniv-text-muted">
+        <p className="mt-5 text-[12px] text-omniv-text-muted">
           Free to start · Built for independents who refuse to wing another year
         </p>
       </section>
 
       {/* COST OF INACTION */}
       <section className="relative z-10 border-y border-omniv-border bg-omniv-elevated/50">
-        <div className="mx-auto max-w-3xl px-5 py-16 text-center md:px-8 md:py-20">
+        <div className="mx-auto max-w-3xl px-5 py-10 text-center md:px-8 md:py-12">
           <p className="font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">
             The invisible tax
           </p>
-          <h2 className="mt-4 text-2xl font-semibold tracking-tight md:text-3xl">
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight md:text-3xl">
             Guessing compounds. Clarity compounds faster.
           </h2>
-          <p className="mt-5 text-[15px] leading-relaxed text-omniv-text-secondary md:text-base">
+          <p className="mt-4 text-[15px] leading-relaxed text-omniv-text-secondary md:text-base">
             Every wrong week, scattered campaign, and “I'll figure it out”
             month is a decision you can't refund. Independents don't
             usually fail from zero talent — they fail from years of motion
             without a ranked next move. The artists and managers who pull ahead
             are not luckier. They stop improvising the strategy layer.
           </p>
-          <div className="mt-10 grid gap-4 text-left sm:grid-cols-3">
+          <div className="mt-8 grid gap-3 text-left sm:grid-cols-3">
             {[
               {
                 t: "Lost windows",
@@ -136,16 +136,16 @@ export default function LandingPage() {
       {/* INTELLIGENCE ARCHITECTURE */}
       <section
         id="intelligence"
-        className="relative z-10 mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-24"
+        className="relative z-10 mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-14"
       >
         <div className="max-w-2xl">
           <p className="font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">
             The system
           </p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight md:text-3xl">
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
             Intelligence, not noise
           </h2>
-          <p className="mt-4 text-[15px] leading-relaxed text-omniv-text-secondary">
+          <p className="mt-3 text-[15px] leading-relaxed text-omniv-text-secondary">
             Omniv is structured like a private strategist: it holds your stage,
             goals, and platforms — then returns one highest-impact move. No
             feed of equal tips. No vanity metrics theater. Operators who use it
@@ -153,7 +153,7 @@ export default function LandingPage() {
           </p>
         </div>
 
-        <div className="mt-14 grid gap-5 md:grid-cols-3">
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
           {[
             {
               t: "Command Center",
@@ -170,10 +170,10 @@ export default function LandingPage() {
           ].map((card) => (
             <div
               key={card.t}
-              className="rounded-2xl border border-omniv-border bg-omniv-card p-6 md:p-7"
+              className="rounded-2xl border border-omniv-border bg-omniv-card p-5 md:p-6"
             >
               <h3 className="text-base font-semibold tracking-tight">{card.t}</h3>
-              <p className="mt-3 text-[14px] leading-relaxed text-omniv-text-secondary">
+              <p className="mt-2 text-[14px] leading-relaxed text-omniv-text-secondary">
                 {card.d}
               </p>
             </div>
@@ -186,16 +186,16 @@ export default function LandingPage() {
         id="how"
         className="relative z-10 border-y border-omniv-border bg-omniv-elevated/30"
       >
-        <div className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20">
+        <div className="mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-12">
           <div className="max-w-xl">
             <p className="font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">
               Access path
             </p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight md:text-3xl">
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
               From profile to advantage in three steps
             </h2>
           </div>
-          <div className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
+          <div className="mt-8 grid gap-8 md:grid-cols-3 md:gap-6">
             {[
               {
                 n: "01",
@@ -215,8 +215,8 @@ export default function LandingPage() {
             ].map((s) => (
               <div key={s.n}>
                 <p className="font-data text-sm text-omniv-gold">{s.n}</p>
-                <h3 className="mt-3 text-base font-semibold tracking-tight">{s.t}</h3>
-                <p className="mt-2 text-[14px] leading-relaxed text-omniv-text-secondary">
+                <h3 className="mt-2 text-base font-semibold tracking-tight">{s.t}</h3>
+                <p className="mt-1.5 text-[14px] leading-relaxed text-omniv-text-secondary">
                   {s.d}
                 </p>
               </div>
@@ -225,19 +225,19 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* WHO — identity filter */}
+      {/* WHO */}
       <section
         id="for"
-        className="relative z-10 mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20"
+        className="relative z-10 mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-12"
       >
         <div className="max-w-2xl">
           <p className="font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">
             Who this is built for
           </p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight md:text-3xl">
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
             Serious independents. Not spectators.
           </h2>
-          <p className="mt-4 text-[15px] leading-relaxed text-omniv-text-secondary">
+          <p className="mt-3 text-[15px] leading-relaxed text-omniv-text-secondary">
             Omniv is for operators who already know talent isn't enough —
             early-stage artists building with intent, lean managers running
             developing rosters, small labels allocating attention under
@@ -246,7 +246,7 @@ export default function LandingPage() {
             running yet.
           </p>
         </div>
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
           {[
             {
               t: "Artists",
@@ -263,10 +263,10 @@ export default function LandingPage() {
           ].map((r) => (
             <div
               key={r.t}
-              className="rounded-2xl border border-omniv-border bg-omniv-card p-6 md:p-7"
+              className="rounded-2xl border border-omniv-border bg-omniv-card p-5 md:p-6"
             >
               <h3 className="text-base font-semibold tracking-tight">{r.t}</h3>
-              <p className="mt-3 text-[14px] leading-relaxed text-omniv-text-secondary">
+              <p className="mt-2 text-[14px] leading-relaxed text-omniv-text-secondary">
                 {r.d}
               </p>
             </div>
@@ -274,44 +274,44 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* IDENTITY / LINE IN THE SAND */}
+      {/* LINE IN THE SAND */}
       <section className="relative z-10 border-y border-omniv-border bg-omniv-elevated/60">
-        <div className="mx-auto max-w-3xl px-5 py-16 text-center md:py-20">
+        <div className="mx-auto max-w-3xl px-5 py-10 text-center md:py-12">
           <p className="text-xl font-semibold tracking-tight md:text-2xl md:leading-snug">
             In two years, the gap won't be talent.
             <br />
             It will be who ran on intelligence — and who kept guessing.
           </p>
-          <p className="mt-5 font-data text-[11px] uppercase tracking-[0.18em] text-omniv-gold">
+          <p className="mt-4 font-data text-[11px] uppercase tracking-[0.18em] text-omniv-gold">
             Omniv · Highest-impact move. Every week.
           </p>
         </div>
       </section>
 
       {/* FINAL CTA */}
-      <section className="relative z-10 mx-auto max-w-3xl px-5 py-16 text-center md:py-24">
+      <section className="relative z-10 mx-auto max-w-3xl px-5 py-12 text-center md:py-14">
         <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
           The cost of waiting is another cycle you can't buy back
         </h2>
-        <p className="mx-auto mt-4 max-w-md text-[15px] text-omniv-text-secondary">
+        <p className="mx-auto mt-3 max-w-md text-[15px] text-omniv-text-secondary">
           Create an account. Complete onboarding. Get your first priority the
           same day. The operators who start now won't explain later why they
           delayed.
         </p>
-        <Link href="/signup" className="mt-9 inline-block">
+        <Link href="/signup" className="mt-7 inline-block">
           <Button size="lg" className="h-12 gap-2 px-10 text-sm">
             Enter the system
             <ArrowRight className="h-4 w-4" />
           </Button>
         </Link>
-        <p className="mt-4 text-[12px] text-omniv-text-muted">
+        <p className="mt-3 text-[12px] text-omniv-text-muted">
           Free tier available · Upgrade when the roster demands it
         </p>
       </section>
 
       <footer className="relative z-10 border-t border-omniv-border bg-omniv-elevated">
-        <div className="mx-auto max-w-6xl px-5 py-12 md:px-8">
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto max-w-6xl px-5 py-8 md:px-8">
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             <div className="sm:col-span-2 lg:col-span-1">
               <div className="flex items-center gap-2">
                 <Image
@@ -383,7 +383,7 @@ export default function LandingPage() {
               </ul>
             </div>
           </div>
-          <div className="mt-12 flex flex-col gap-2 border-t border-omniv-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-8 flex flex-col gap-2 border-t border-omniv-border pt-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-[12px] text-omniv-text-muted">
               © {new Date().getFullYear()} Omniv Systems. All rights reserved.
             </p>
