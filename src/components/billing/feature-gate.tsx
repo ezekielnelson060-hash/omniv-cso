@@ -48,13 +48,13 @@ export function FeatureGate({
               {FEATURE_LABELS[feature]} is on {target.name}
             </h2>
             <p className="mt-1 max-w-md text-sm text-omniv-text-secondary">
-              Upgrade to unlock this module. Checkout stays on Flutterwave —
-              your existing connection is unchanged.
+              This module sits behind a higher tier. Operators on {target.name}{" "}
+              run this layer; free stays limited by design.
             </p>
           </div>
           <Button onClick={() => setOpen(true)} className="gap-1.5">
             <Sparkles className="h-3.5 w-3.5" />
-            See plans
+            View access tiers
           </Button>
         </Card>
       ) : (
@@ -69,7 +69,7 @@ export function FeatureGate({
                 {FEATURE_LABELS[feature]}
               </p>
               <p className="mt-1 text-xs text-omniv-text-muted">
-                Included from {target.name} (${target.priceMonthly}/mo)
+                Reserved for {target.name}+ · ${target.priceMonthly}/mo
               </p>
               <Button
                 size="sm"
@@ -77,7 +77,7 @@ export function FeatureGate({
                 onClick={() => setOpen(true)}
               >
                 <Sparkles className="h-3.5 w-3.5" />
-                Unlock
+                Claim access
               </Button>
             </Card>
           </div>
