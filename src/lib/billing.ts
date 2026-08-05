@@ -40,7 +40,7 @@ export const PLANS: PlanDef[] = [
     priceMonthly: 0,
     priceAnnual: 0,
     currency: "USD",
-    blurb: "Taste the system — limited Ziki, one workspace",
+    blurb: "Taste the system. Limited Ziki, one workspace",
     cta: "Enter free",
     features: [
       "Command Center",
@@ -56,7 +56,7 @@ export const PLANS: PlanDef[] = [
     priceMonthly: 29,
     priceAnnual: 23,
     currency: "USD",
-    blurb: "Solo operators — full feed, deeper Ziki, analytics",
+    blurb: "Solo operators. Full feed, deeper Ziki, analytics",
     cta: "Claim Starter",
     features: [
       "Everything in Free",
@@ -73,7 +73,7 @@ export const PLANS: PlanDef[] = [
     priceMonthly: 59,
     priceAnnual: 47,
     currency: "USD",
-    blurb: "Lean managers — roster clarity, simulator, unlimited Ziki",
+    blurb: "Lean managers. Roster clarity, simulator, unlimited Ziki",
     cta: "Claim Pro",
     highlighted: true,
     features: [
@@ -92,7 +92,7 @@ export const PLANS: PlanDef[] = [
     priceMonthly: 179,
     priceAnnual: 143,
     currency: "USD",
-    blurb: "Label OS — roster priority, reports, API",
+    blurb: "Label OS. Roster priority, reports, API",
     cta: "Claim Label",
     features: [
       "Everything in Pro",
