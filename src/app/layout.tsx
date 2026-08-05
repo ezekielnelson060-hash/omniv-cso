@@ -1,24 +1,26 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
+const instrument = Instrument_Sans({
   variable: "--font-sans",
+  subsets: ["latin"],
   display: "swap",
 });
 
-const jetbrains = JetBrains_Mono({
-  subsets: ["latin"],
+const plexMono = IBM_Plex_Mono({
   variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Omniv | Intelligence for Artists & Labels",
   description:
-    "Private career intelligence for independent artists, managers, and labels. Ranked priorities, release timing, and roster clarity.",
+    "AI Chief Strategy Officer for independent artists, managers and record labels. Career intelligence, not content spam.",
+  icons: { icon: "/logo.svg" },
 };
 
 export default function RootLayout({
@@ -27,8 +29,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
-      <body className="min-h-dvh font-sans antialiased">
+    <html
+      lang="en"
+      className={`${instrument.variable} ${plexMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col bg-omniv-black text-omniv-text font-sans">
         <Providers>{children}</Providers>
       </body>
     </html>
