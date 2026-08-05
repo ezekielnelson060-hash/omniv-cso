@@ -7,7 +7,8 @@ export default function LandingPage() {
   return (
     <div className="relative min-h-dvh bg-omniv-bg text-omniv-text">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-32 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-omniv-gold/[0.05] blur-[120px]" />
+        <div className="absolute -top-40 left-1/2 h-[560px] w-[920px] -translate-x-1/2 rounded-full bg-omniv-gold/[0.06] blur-[130px]" />
+        <div className="absolute bottom-0 right-0 h-[320px] w-[420px] rounded-full bg-omniv-gold/[0.03] blur-[100px]" />
       </div>
 
       <header className="relative z-20 border-b border-omniv-border/60 backdrop-blur-md">
@@ -24,11 +25,11 @@ export default function LandingPage() {
             <span className="text-[15px] font-semibold tracking-tight">Omniv</span>
           </Link>
           <nav className="hidden items-center gap-8 text-[13px] text-omniv-text-secondary md:flex">
-            <a href="#product" className="transition-colors hover:text-omniv-text">
-              Product
+            <a href="#intelligence" className="transition-colors hover:text-omniv-text">
+              Intelligence
             </a>
             <a href="#how" className="transition-colors hover:text-omniv-text">
-              How it works
+              Access
             </a>
             <a href="#for" className="transition-colors hover:text-omniv-text">
               Who it's for
@@ -42,103 +43,137 @@ export default function LandingPage() {
             </Link>
             <Link href="/signup">
               <Button size="sm" className="h-9 text-[13px]">
-                Start free
+                Request access
               </Button>
             </Link>
           </div>
         </div>
       </header>
 
-      <section className="relative z-10 mx-auto max-w-4xl px-5 pb-16 pt-14 text-center md:px-8 md:pt-20 md:pb-20">
-        <p className="mb-5 font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">
-          Stop guessing. Start executing.
+      {/* HERO — exclusivity + irreversible cost of guessing */}
+      <section className="relative z-10 mx-auto max-w-4xl px-5 pb-16 pt-16 text-center md:px-8 md:pt-24 md:pb-24">
+        <p className="mb-6 font-data text-[11px] uppercase tracking-[0.22em] text-omniv-gold">
+          Private career intelligence · Independent music
         </p>
-        <h1 className="text-balance text-[2.35rem] font-semibold leading-[1.08] tracking-tight md:text-5xl lg:text-[3.25rem]">
-          Know exactly what to do next{" "}
-          <span className="text-omniv-gold">for your music career</span>
+        <h1 className="text-balance text-[2.4rem] font-semibold leading-[1.06] tracking-tight md:text-5xl lg:text-[3.4rem]">
+          Most artists will never know
+          <br />
+          <span className="text-omniv-gold">what they should have done</span>
         </h1>
-        <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-omniv-text-secondary md:text-base">
-          Career intelligence for independent artists and lean managers. Omniv
-          learns your genre, goals, and stage — then gives you one clear
-          priority each week. Not another dashboard. Not a dealmaker.
+        <p className="mx-auto mt-6 max-w-2xl text-[15px] leading-relaxed text-omniv-text-secondary md:text-[17px]">
+          While everyone else posts, guesses, and burns release windows, a small
+          set of operators will run on ranked priorities, release timing, and
+          roster clarity. Omniv is that system — career intelligence built like
+          an inner circle, not another public dashboard.
         </p>
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link href="/signup">
-            <Button size="lg" className="h-12 min-w-[180px] gap-2 text-sm">
-              Get my next move
+            <Button size="lg" className="h-12 min-w-[200px] gap-2 text-sm">
+              Enter the system
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
-          <a href="#how">
+          <a href="#intelligence">
             <Button
               variant="outline"
               size="lg"
-              className="h-12 min-w-[180px] text-sm"
+              className="h-12 min-w-[200px] text-sm"
             >
-              How it works
+              See the architecture
             </Button>
           </a>
         </div>
+        <p className="mt-6 text-[12px] text-omniv-text-muted">
+          Free to start · Built for independents who refuse to wing another year
+        </p>
       </section>
 
-      <section className="relative z-10 border-y border-omniv-border bg-omniv-elevated/40">
-        <div className="mx-auto max-w-3xl px-5 py-14 text-center md:px-8 md:py-16">
-          <p className="font-data text-[11px] uppercase tracking-[0.18em] text-omniv-gold">
-            Why this matters
+      {/* COST OF INACTION */}
+      <section className="relative z-10 border-y border-omniv-border bg-omniv-elevated/50">
+        <div className="mx-auto max-w-3xl px-5 py-16 text-center md:px-8 md:py-20">
+          <p className="font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">
+            The invisible tax
           </p>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight md:text-3xl">
-            Talent isn't the bottleneck. Focus is.
+          <h2 className="mt-4 text-2xl font-semibold tracking-tight md:text-3xl">
+            Guessing compounds. Clarity compounds faster.
           </h2>
-          <p className="mt-4 text-[15px] leading-relaxed text-omniv-text-secondary">
-            Independent artists and small-roster managers lose months to the
-            wrong release week, scattered content, and advice that could apply
-            to anyone. When every act feels urgent, you default to whoever
-            messaged last. Omniv exists so the next cycle is deliberate — one
-            ranked priority, tied to your stage and goals.
+          <p className="mt-5 text-[15px] leading-relaxed text-omniv-text-secondary md:text-base">
+            Every wrong week, scattered campaign, and “I'll figure it out”
+            month is a decision you can't refund. Independents don't
+            usually fail from zero talent — they fail from years of motion
+            without a ranked next move. The artists and managers who pull ahead
+            are not luckier. They stop improvising the strategy layer.
           </p>
+          <div className="mt-10 grid gap-4 text-left sm:grid-cols-3">
+            {[
+              {
+                t: "Lost windows",
+                d: "A release on the wrong week doesn't come back. Timing is a one-shot asset.",
+              },
+              {
+                t: "Scattered focus",
+                d: "Five priorities feel productive. One ranked move builds a career.",
+              },
+              {
+                t: "Roster fog",
+                d: "Managers who run acts from memory quietly rank by whoever shouted last.",
+              },
+            ].map((item) => (
+              <div
+                key={item.t}
+                className="rounded-xl border border-omniv-border bg-omniv-card/80 p-4"
+              >
+                <p className="text-[13px] font-semibold text-omniv-gold">{item.t}</p>
+                <p className="mt-2 text-[13px] leading-relaxed text-omniv-text-secondary">
+                  {item.d}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
+      {/* INTELLIGENCE ARCHITECTURE */}
       <section
-        id="product"
-        className="relative z-10 mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20"
+        id="intelligence"
+        className="relative z-10 mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-24"
       >
         <div className="max-w-2xl">
-          <p className="font-data text-[11px] uppercase tracking-[0.18em] text-omniv-gold">
-            Product
+          <p className="font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">
+            The system
           </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
-            Built around one question
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight md:text-3xl">
+            Intelligence, not noise
           </h2>
-          <p className="mt-3 text-[15px] leading-relaxed text-omniv-text-secondary">
-            What is the highest-impact move for this artist right now? Every
-            screen answers that — not a wall of metrics, and not a promise to
-            land publishing deals or brand partners. Those still need humans.
-            We make the career legible enough to act.
+          <p className="mt-4 text-[15px] leading-relaxed text-omniv-text-secondary">
+            Omniv is structured like a private strategist: it holds your stage,
+            goals, and platforms — then returns one highest-impact move. No
+            feed of equal tips. No vanity metrics theater. Operators who use it
+            stop asking “what should I post?” and start executing a ranked plan.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+        <div className="mt-14 grid gap-5 md:grid-cols-3">
           {[
             {
               t: "Command Center",
-              d: "Momentum, audience, content, and release readiness in one place — with this week\'s priority on top.",
+              d: "The state of the career in one glance — momentum, audience, content, release readiness — with this week's non-negotiable on top.",
             },
             {
               t: "Opportunity Feed",
-              d: "Ranked moves with why, when, and expected outcome. Act on this opens a plan in Ziki.",
+              d: "Moves ranked by impact. Why it matters. When. Expected outcome. Act on this opens execution in Ziki — not another brainstorm.",
             },
             {
               t: "Release Simulator",
-              d: "Stress-test timing before you spend. Clear Go, Caution, or Hold — not a gut call.",
+              d: "Stress-test the window before you spend reputation and budget. Go. Caution. Hold. Most people only learn the answer after the drop.",
             },
           ].map((card) => (
             <div
               key={card.t}
-              className="rounded-2xl border border-omniv-border bg-omniv-card p-6"
+              className="rounded-2xl border border-omniv-border bg-omniv-card p-6 md:p-7"
             >
               <h3 className="text-base font-semibold tracking-tight">{card.t}</h3>
-              <p className="mt-2 text-[14px] leading-relaxed text-omniv-text-secondary">
+              <p className="mt-3 text-[14px] leading-relaxed text-omniv-text-secondary">
                 {card.d}
               </p>
             </div>
@@ -146,35 +181,36 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ACCESS / HOW */}
       <section
         id="how"
         className="relative z-10 border-y border-omniv-border bg-omniv-elevated/30"
       >
         <div className="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20">
           <div className="max-w-xl">
-            <p className="font-data text-[11px] uppercase tracking-[0.18em] text-omniv-gold">
-              How it works
+            <p className="font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">
+              Access path
             </p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
-              From profile to plan in three steps
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight md:text-3xl">
+              From profile to advantage in three steps
             </h2>
           </div>
           <div className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
             {[
               {
                 n: "01",
-                t: "Tell Omniv who you are",
-                d: "Genre, stage, goals, and platforms. That becomes Artist Brain — context for every score and chat.",
+                t: "Lock your context",
+                d: "Genre, stage, goals, platforms. This becomes Artist Brain — the private context most AI tools never hold.",
               },
               {
                 n: "02",
-                t: "Read this week\'s priority",
-                d: "One high-impact move on Command Center and the opportunity feed — not a wall of tips.",
+                t: "Receive the priority",
+                d: "One move. Ranked. Explained. Not a menu of options designed to make you feel busy.",
               },
               {
                 n: "03",
                 t: "Execute with Ziki",
-                d: "Get a plan, save tasks, run the release simulator. Next week, memory stays with the project.",
+                d: "Plans, tasks, release checks. Memory stays with the project so next week isn't a reset.",
               },
             ].map((s) => (
               <div key={s.n}>
@@ -189,44 +225,48 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* WHO — identity filter */}
       <section
         id="for"
         className="relative z-10 mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-20"
       >
-        <div className="max-w-xl">
-          <p className="font-data text-[11px] uppercase tracking-[0.18em] text-omniv-gold">
-            Who it's for
+        <div className="max-w-2xl">
+          <p className="font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">
+            Who this is built for
           </p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
-            Early-stage artists and lean managers
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight md:text-3xl">
+            Serious independents. Not spectators.
           </h2>
-          <p className="mt-3 text-[15px] leading-relaxed text-omniv-text-secondary">
-            Built for independents who are serious about the career but
-            don't have a full management machine yet. Not a replacement for
-            agents, lawyers, or A-list dealmaking.
+          <p className="mt-4 text-[15px] leading-relaxed text-omniv-text-secondary">
+            Omniv is for operators who already know talent isn't enough —
+            early-stage artists building with intent, lean managers running
+            developing rosters, small labels allocating attention under
+            constraint. It is not a substitute for agents, lawyers, or A-list
+            dealmaking. It is the strategy layer almost no one around you is
+            running yet.
           </p>
         </div>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {[
             {
               t: "Artists",
-              d: "Leave each session with one non-negotiable for the week — tied to your goals and stage.",
+              d: "Walk out with one non-negotiable for the week. Stop performing productivity. Start compounding the right move.",
             },
             {
               t: "Lean managers",
-              d: "See which of 3–15 developing acts should get this hour. Roster priority without a war room.",
+              d: "See which act gets this hour. Roster clarity without a full war room — before focus becomes politics.",
             },
             {
               t: "Small labels",
-              d: "Who is release-ready, who needs content, where attention should go across the roster.",
+              d: "Release-ready vs needs priming. Attention is finite. Omniv ranks where it should go.",
             },
           ].map((r) => (
             <div
               key={r.t}
-              className="rounded-2xl border border-omniv-border bg-omniv-card p-6"
+              className="rounded-2xl border border-omniv-border bg-omniv-card p-6 md:p-7"
             >
               <h3 className="text-base font-semibold tracking-tight">{r.t}</h3>
-              <p className="mt-2 text-[14px] leading-relaxed text-omniv-text-secondary">
+              <p className="mt-3 text-[14px] leading-relaxed text-omniv-text-secondary">
                 {r.d}
               </p>
             </div>
@@ -234,32 +274,39 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="relative z-10 border-y border-omniv-border bg-omniv-elevated/50">
-        <div className="mx-auto max-w-3xl px-5 py-14 text-center md:py-16">
-          <p className="text-xl font-semibold tracking-tight md:text-2xl">
-            “Every screen answers one question: what is the highest-impact move
-            right now?”
+      {/* IDENTITY / LINE IN THE SAND */}
+      <section className="relative z-10 border-y border-omniv-border bg-omniv-elevated/60">
+        <div className="mx-auto max-w-3xl px-5 py-16 text-center md:py-20">
+          <p className="text-xl font-semibold tracking-tight md:text-2xl md:leading-snug">
+            In two years, the gap won't be talent.
+            <br />
+            It will be who ran on intelligence — and who kept guessing.
           </p>
-          <p className="mt-4 font-data text-[11px] uppercase tracking-[0.16em] text-omniv-gold">
-            Omniv product principle
+          <p className="mt-5 font-data text-[11px] uppercase tracking-[0.18em] text-omniv-gold">
+            Omniv · Highest-impact move. Every week.
           </p>
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto max-w-3xl px-5 py-16 text-center md:py-20">
+      {/* FINAL CTA */}
+      <section className="relative z-10 mx-auto max-w-3xl px-5 py-16 text-center md:py-24">
         <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-          Stop guessing the week away
+          The cost of waiting is another cycle you can't buy back
         </h2>
-        <p className="mx-auto mt-3 max-w-md text-[15px] text-omniv-text-secondary">
-          Create a free account, finish onboarding, and get your first priority
-          the same day.
+        <p className="mx-auto mt-4 max-w-md text-[15px] text-omniv-text-secondary">
+          Create an account. Complete onboarding. Get your first priority the
+          same day. The operators who start now won't explain later why they
+          delayed.
         </p>
-        <Link href="/signup" className="mt-8 inline-block">
-          <Button size="lg" className="h-12 gap-2 px-8 text-sm">
-            Get my next move
+        <Link href="/signup" className="mt-9 inline-block">
+          <Button size="lg" className="h-12 gap-2 px-10 text-sm">
+            Enter the system
             <ArrowRight className="h-4 w-4" />
           </Button>
         </Link>
+        <p className="mt-4 text-[12px] text-omniv-text-muted">
+          Free tier available · Upgrade when the roster demands it
+        </p>
       </section>
 
       <footer className="relative z-10 border-t border-omniv-border bg-omniv-elevated">
@@ -277,25 +324,25 @@ export default function LandingPage() {
                 <span className="text-sm font-semibold">Omniv</span>
               </div>
               <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-omniv-text-secondary">
-                Career intelligence for independent artists and lean managers.
+                Private career intelligence for independent music operators.
               </p>
             </div>
             <div>
               <p className="text-[12px] font-medium text-omniv-text">Product</p>
               <ul className="mt-3 space-y-2 text-[13px] text-omniv-text-secondary">
                 <li>
-                  <a href="#product" className="hover:text-omniv-text">
-                    Platform
+                  <a href="#intelligence" className="hover:text-omniv-text">
+                    Intelligence
                   </a>
                 </li>
                 <li>
                   <a href="#how" className="hover:text-omniv-text">
-                    How it works
+                    Access
                   </a>
                 </li>
                 <li>
                   <Link href="/signup" className="hover:text-omniv-text">
-                    Start free
+                    Enter
                   </Link>
                 </li>
               </ul>
