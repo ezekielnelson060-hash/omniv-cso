@@ -4,7 +4,7 @@ function clamp(n: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, Math.round(n)));
 }
 
-/** Brain completeness 0–1 — drives score sensitivity */
+/** Brain completeness 0–1: drives score sensitivity */
 function brainCompleteness(brain: ArtistBrain): number {
   let filled = 0;
   const checks = [
@@ -88,7 +88,6 @@ export function computeScoresFromBrain(
       legacy: 20,
     }[brain.careerStage] ?? 0;
 
-  // Activity decay: idle profiles lose a few points on momentum / growth
   const idlePenalty =
     idleDays == null ? 0 : idleDays > 21 ? 10 : idleDays > 10 ? 5 : 0;
 
@@ -164,7 +163,6 @@ export function computeScoresFromBrain(
       socialLinks * 3
   );
 
-  // Opportunity rises when gaps exist but profile is defined enough to act
   const opportunity = clamp(
     32 +
       gapCount * 5 +
@@ -227,7 +225,7 @@ export function buildRecommendationsFromBrain(
     recs.push({
       id: "content-system",
       title: `Build a ${genre} content system this week`,
-      summary: `Ship 4 short-form pieces aligned to ${name}'s stated style — hooks in the first 1.5s.`,
+      summary: `Ship 4 short-form pieces aligned to ${name}'s stated style. Hooks in the first 1.5s.`,
       why: "Content focus was selected in onboarding; cadence compounds faster than one-off posts.",
       impact: "High",
       difficulty: "Moderate",
@@ -264,7 +262,7 @@ export function buildRecommendationsFromBrain(
       title: `Pitch independent ${genre} playlists`,
       summary:
         "Build a list of 8–12 curators that match your tempo and mood before the next drop.",
-      why: "Playlist interest was selected — outreach only works with a defined sound.",
+      why: "Playlist interest was selected. Outreach only works with a defined sound.",
       impact: "High",
       difficulty: "Moderate",
       confidence: 78,
@@ -281,7 +279,7 @@ export function buildRecommendationsFromBrain(
       title: "Re-engage quiet listeners",
       summary:
         "Target the 30–45 day dormant cohort with Stories + one exclusive snippet.",
-      why: `Audience health ${scores.audienceHealth}/100 — recovery is cheaper than cold acquisition.`,
+      why: `Audience health ${scores.audienceHealth}/100. Recovery is cheaper than cold acquisition.`,
       impact: "Medium",
       difficulty: "Easy",
       confidence: clamp(72 + scores.audienceHealth * 0.15),
@@ -314,7 +312,7 @@ export function buildRecommendationsFromBrain(
       id: "live",
       title: "Soft-pitch 2 rooms or day parties",
       summary:
-        "Match room size to current stage — overshooting kills conversion.",
+        "Match room size to current stage. Overshooting kills conversion.",
       why: `Level: ${brain?.careerStage}. Live interest selected.`,
       impact: "Medium",
       difficulty: "Hard",
@@ -348,7 +346,7 @@ export function buildRecommendationsFromBrain(
       id: "monetise",
       title: "Pick one monetisation experiment",
       summary:
-        "Merch, ticketed live, or paid community — one only this quarter.",
+        "Merch, ticketed live, or paid community. One only this quarter.",
       why: "Monetisation focus selected; scatter dilutes signal.",
       impact: "High",
       difficulty: "Moderate",
@@ -439,7 +437,7 @@ export function overallNarrative(
     return `${name}: opportunity surface is strong (${scores.opportunity}). Execute the top briefing before adding experiments.`;
   }
   if (scores.contentHealth < 45) {
-    return `${name}: content health is the softest lever right now — a 14-day cadence will move scores more than new tools.`;
+    return `${name}: content health is the softest lever right now: a 14-day cadence will move scores more than new tools.`;
   }
   return `${name}: scores update from your profile, goals, and platforms. Sharper data → sharper next moves.`;
 }
