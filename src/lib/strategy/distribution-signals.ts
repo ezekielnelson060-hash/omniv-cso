@@ -1,6 +1,6 @@
 /**
  * Distribution signals: algorithmic lists, Spotify editorial, Apple Music radio, TikTok.
- * Heuristic strategy models — not live platform APIs.
+ * Heuristic strategy models, not live platform APIs.
  */
 
 import type { ArtistBrain } from "@/types";
@@ -53,23 +53,23 @@ export function algorithmicPlaylistPlacement(
 
   if (input.platforms.includes("spotify") || input.platforms.includes("apple")) {
     score += 12;
-    levers.push("Streaming profile linked — algo systems can attribute listens.");
+    levers.push("Streaming profile linked. Algo systems can attribute listens.");
   } else {
-    avoid.push("No streaming surface selected — algorithmic placement has nowhere to land.");
+    avoid.push("No streaming surface selected. Algorithmic placement has nowhere to land.");
     score -= 15;
   }
 
   if (input.playlistPitchReady) {
     score += 10;
-    levers.push("Indie curator list ready — human lists still seed algo training data.");
+    levers.push("Indie curator list ready. Human lists still seed algo training data.");
     path.push("Pitch 8–12 niche independents in the first 5 days (not major editorial only).");
   } else {
-    path.push("Build a niche curator list — algo lift often follows early playlist density.");
+    path.push("Build a niche curator list. Algo lift often follows early playlist density.");
   }
 
   if (input.ownedListReady) {
     score += 14;
-    levers.push("Owned fans can drive first-week saves — the strongest algo signal you control.");
+    levers.push("Owned fans can drive first-week saves: the strongest algo signal you control.");
     path.push("Day 0–2: push owned list for listens + saves, not vanity share spam.");
   } else {
     avoid.push("Without an owned list, first-week save rate is mostly luck.");
@@ -97,7 +97,7 @@ export function algorithmicPlaylistPlacement(
   }
 
   path.push(
-    "Optimise for completion and saves in the first 30s — skip-heavy intros kill algo candidates."
+    "Optimise for completion and saves in the first 30s. Skip-heavy intros kill algo candidates."
   );
   path.push("Do not buy fake streams; algos detect inorganic patterns and suppress.");
   levers.push(
@@ -120,7 +120,7 @@ export function algorithmicPlaylistPlacement(
  * Spotify editorial curation (human + data-assisted):
  * - Pitch via Spotify for Artists (typically ~7 days before release)
  * - Editors weigh: story, timing, prior performance, market fit, audio quality, uniqueness
- * - Not a lottery ticket for cold artists — signals + narrative matter
+ * - Not a lottery ticket for cold artists. Signals + narrative matter
  * - Regional editorial and genre desks differ; global flagship lists are rare first hits
  */
 export function spotifyEditorialCuration(
@@ -160,7 +160,7 @@ export function spotifyEditorialCuration(
 
   if (window.positioning >= 55) {
     score += 12;
-    submitPath.push("Reuse your positioning line in the pitch — editors skim.");
+    submitPath.push("Reuse your positioning line in the pitch. Editors skim.");
   } else {
     score -= 8;
     submitPath.push("Sharpen positioning before any editorial submit.");
@@ -183,14 +183,14 @@ export function spotifyEditorialCuration(
 
   if (window.competition < 40) {
     score -= 6;
-    submitPath.push("Crowded week: editors have more same-lane options — differentiation is mandatory.");
+    submitPath.push("Crowded week: editors have more same-lane options. Differentiation is mandatory.");
   }
 
   submitPath.push(
     "Do not pitch every list; 3–5 realistic targets beat 30 spray-and-pray submissions."
   );
   submitPath.push(
-    "After release: let first-week save data work — follow-up only if you have a real update (remix, video, tour)."
+    "After release: let first-week save data work. Follow-up only if you have a real update (remix, video, tour)."
   );
 
   const likelihood: EditorialSignal["likelihood"] =
@@ -216,7 +216,7 @@ export function spotifyEditorialCuration(
  * Apple Music algorithmic radio / auto stations:
  * - Driven by listens, likes (favorite), adds to library, completion, skips
  * - Station seed from a song/artist expands via taste graph
- * - Editorial (Apple Music playlists) is separate from radio — still human-led for many flagships
+ * - Editorial (Apple Music playlists) is separate from radio, still human-led for many flagships
  * - Strong library-add rate helps more than raw play spam
  */
 export function appleMusicAlgorithmicRadio(
@@ -230,7 +230,7 @@ export function appleMusicAlgorithmicRadio(
   if (!input.platforms.includes("apple") && !input.platforms.includes("spotify")) {
     return {
       score: 12,
-      levers: ["No Apple/streaming surface — radio systems cannot train on your catalogue."],
+      levers: ["No Apple/streaming surface. Radio systems cannot train on your catalogue."],
       path: ["Distribute to Apple Music and complete artist metadata before optimising for radio."],
       note: "Apple Music radio/stations personalise from library and listening behaviour, not cold outreach.",
     };
@@ -238,16 +238,16 @@ export function appleMusicAlgorithmicRadio(
 
   if (input.platforms.includes("apple")) {
     score += 16;
-    levers.push("Apple Music surface on — stations can seed from your tracks.");
+    levers.push("Apple Music surface on. Stations can seed from your tracks.");
   } else {
     score += 4;
-    levers.push("Spotify selected but not Apple — dual-DSP still recommended for radio reach.");
+    levers.push("Spotify selected but not Apple. Dual-DSP still recommended for radio reach.");
     path.push("Add Apple Music distribution for station and library-add loops.");
   }
 
   if (input.ownedListReady) {
     score += 14;
-    levers.push("Owned fans can drive library adds — a key radio/station signal.");
+    levers.push("Owned fans can drive library adds: a key radio/station signal.");
     path.push("CTA: ‘Add to library’ / love track, not only ‘stream once’.");
   } else {
     score -= 8;
@@ -292,13 +292,13 @@ export function tiktokViralMechanics(
 
   if (input.platforms.includes("tiktok")) {
     score += 18;
-    mechanics.push("TikTok selected — treat sound ownership as a product, not a one-off post.");
+    mechanics.push("TikTok selected. Treat sound ownership as a product, not a one-off post.");
   } else if (input.platforms.includes("instagram")) {
     score += 10;
     mechanics.push("Reels can seed awareness; TikTok still wins pure sound discovery for many lanes.");
   } else {
     score -= 12;
-    mechanics.push("No short-form surface — viral sound mechanics are mostly unavailable.");
+    mechanics.push("No short-form surface. Viral sound mechanics are mostly unavailable.");
   }
 
   if (input.contentReady) {
@@ -316,7 +316,7 @@ export function tiktokViralMechanics(
   }
 
   mechanics.push("Hook <1.5s: face, text, or pattern interrupt before the title card.");
-  mechanics.push("Loop: end frame should reconnect to start — rewatches train the algo.");
+  mechanics.push("Loop: end frame should reconnect to start. Rewatches train the algo.");
   mechanics.push("Original sound: post from the sound page once a cut works; invite stitches.");
 
   if (hasTT && input.contentReady) {
@@ -495,7 +495,7 @@ export function buildVerdictTree(window: WindowScore): DecisionNode {
           window.verdict === "Go"
             ? "Action: execute priming + light optional paid"
             : window.verdict === "Hold"
-              ? "Action: do not spend — fix gates first"
+              ? "Action: do not spend. Fix gates first"
               : "Action: thin plan, cap paid until 72h signal",
         status:
           window.verdict === "Go"
