@@ -4,7 +4,7 @@ import type { UserRole } from "@/types";
 export const PERSONA = {
   artist: {
     label: "DIY Artist",
-    focus: "Simplicity & automation — your data only",
+    focus: "Simplicity and automation. Your data only",
     canSwitchRoster: false,
     canCrossPromote: false,
     canDeepSegment: false,

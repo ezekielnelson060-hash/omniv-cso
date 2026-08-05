@@ -28,7 +28,7 @@ export default function OpportunitiesPage() {
           setSubtitle(
             genre
               ? `Ranked for ${name} · ${genre}${interests.length ? ` · focus: ${interests.join(", ")}` : ""}`
-              : `Ranked from your Artist Brain — not a public tip list`
+              : `Ranked from your Artist Brain, not a public tip list`
           );
         }
       } finally {
@@ -56,7 +56,7 @@ export default function OpportunitiesPage() {
         </div>
       ) : recs.length === 0 ? (
         <p className="text-sm text-omniv-text-muted">
-          Seal onboarding so opportunities match your goals — not generic lists.
+          Seal onboarding so opportunities match your goals, not generic lists.
         </p>
       ) : (
         <div className="space-y-4">
