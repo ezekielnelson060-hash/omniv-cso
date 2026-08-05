@@ -54,7 +54,7 @@ export default function DashboardPage() {
       <AppShell>
         <div className="flex items-center gap-2 py-24 text-sm text-omniv-text-muted">
           <Loader2 className="h-4 w-4 animate-spin text-omniv-gold" />
-          Loading Command Center…
+          Opening Command Center…
         </div>
       </AppShell>
     );
@@ -89,10 +89,10 @@ export default function DashboardPage() {
             <Badge variant="gold">{displayName}</Badge>
           </div>
           <p className="text-sm text-omniv-text-secondary">
-            Strategy scores from your Artist Brain
+            Private scores from your Artist Brain — the state of the career in one view
             {platforms.length
-              ? ` · ${platforms.length} surface${platforms.length > 1 ? "s" : ""} selected`
-              : " · connect platforms to sharpen precision"}
+              ? ` · ${platforms.length} surface${platforms.length > 1 ? "s" : ""} in play`
+              : " · add platforms to tighten precision"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -172,7 +172,7 @@ export default function DashboardPage() {
         <div className="mb-8 flex flex-col gap-3 rounded-[var(--radius-lg)] border border-omniv-gold/25 bg-omniv-gold/5 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-[10px] font-medium uppercase tracking-wider text-omniv-gold">
-              Highest-impact move right now
+              This week's non-negotiable
             </p>
             <p className="mt-1 text-sm font-medium text-omniv-text">
               {topOpps[0].title}
@@ -183,7 +183,7 @@ export default function DashboardPage() {
           </div>
           <Link href="/opportunities">
             <Button size="sm" className="gap-1.5 whitespace-nowrap">
-              Review briefing
+              Open the move
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </Link>
@@ -193,10 +193,10 @@ export default function DashboardPage() {
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold tracking-tight">
-            Executive recommendations
+            Ranked intelligence
           </h2>
           <p className="text-sm text-omniv-text-secondary">
-            Ranked from your Artist Brain · not demo catalogue data
+            From your Artist Brain only — not generic industry tips
           </p>
         </div>
         <Link href="/opportunities">
