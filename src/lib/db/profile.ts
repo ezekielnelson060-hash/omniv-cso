@@ -28,6 +28,7 @@ function rowToBrain(row: Record<string, unknown>): ArtistBrain {
     strengths: (row.strengths as string[]) || [],
     weaknesses: (row.weaknesses as string[]) || [],
     goals: (row.goals as string[]) || [],
+    bigDream: (row.big_dream as string) || undefined,
     pastReleases: (row.past_releases as ArtistBrain["pastReleases"]) || [],
     contentStyle: (row.content_style as string) || "",
     competitors: (row.competitors as string[]) || [],
@@ -52,6 +53,7 @@ function brainToRow(brain: ArtistBrain, userId: string) {
     strengths: brain.strengths,
     weaknesses: brain.weaknesses,
     goals: brain.goals,
+    big_dream: brain.bigDream ?? null,
     past_releases: brain.pastReleases,
     content_style: brain.contentStyle,
     competitors: brain.competitors,
@@ -71,6 +73,7 @@ export function seedBrainFromOnboarding(opts: {
   brandVoice?: string;
   careerStage?: CareerStage;
   goals?: string[];
+  bigDream?: string;
   interests?: string[];
 }): ArtistBrain {
   const today = new Date().toISOString().slice(0, 10);
@@ -105,6 +108,10 @@ export function seedBrainFromOnboarding(opts: {
       opts.goals && opts.goals.length > 0
         ? opts.goals
         : ["Clarify next release window", "Grow engaged audience"],
+    bigDream:
+      opts.bigDream?.trim() ||
+      (opts.goals && opts.goals[0]) ||
+      "Build a career where every release compounds audience and income.",
     pastReleases: [],
     contentStyle: `Surfaces: ${opts.platforms.join(", ") || "not set"}. Focus: ${interests.join(", ") || "general"}.`,
     competitors: [],
@@ -125,23 +132,20 @@ export async function getProfile(): Promise<Profile | null> {
     .select("*")
     .eq("id", user.id)
     .maybeSingle();
-  if (error) {
-    console.error("getProfile", error);
-    return null;
-  }
-  return data as Profile | null;
+  if (error || !data) return null;
+  return data as Profile;
 }
 
-export async function upsertProfile(patch: {
-  full_name?: string;
-  role?: UserRole;
-  platforms?: string[];
-  social_links?: Record<string, string>;
-  interests?: string[];
-  onboarding_complete?: boolean;
-  last_scan_at?: string;
-  last_scan_briefing?: string;
-}): Promise<{ ok: boolean; error?: string }> {
+export async function upsertProfile(
+  patch: Partial<{
+    full_name: string;
+    role: UserRole;
+    platforms: string[];
+    social_links: Record<string, string>;
+    interests: string[];
+    onboarding_complete: boolean;
+  }>
+): Promise<{ ok: boolean; error?: string }> {
   if (!isSupabaseConfigured())
     return { ok: false, error: "Supabase not configured" };
   const supabase = createClient();
@@ -170,18 +174,12 @@ export async function getArtistBrain(): Promise<ArtistBrain | null> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
-
   const { data, error } = await supabase
     .from("artist_brains")
     .select("*")
     .eq("user_id", user.id)
     .maybeSingle();
-
-  if (error) {
-    console.error("getArtistBrain", error);
-    return null;
-  }
-  if (!data) return null;
+  if (error || !data) return null;
   return rowToBrain(data as Record<string, unknown>);
 }
 
@@ -213,6 +211,7 @@ export async function completeOnboarding(opts: {
   brandVoice?: string;
   careerStage?: CareerStage;
   goals?: string[];
+  bigDream?: string;
   interests?: string[];
 }): Promise<{ ok: boolean; error?: string }> {
   const profile = await upsertProfile({
