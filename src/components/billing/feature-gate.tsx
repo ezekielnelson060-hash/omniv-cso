@@ -45,16 +45,16 @@ export function FeatureGate({
           <div>
             <Badge variant="gold">{target.name}+</Badge>
             <h2 className="mt-2 text-lg font-semibold tracking-tight">
-              {FEATURE_LABELS[feature]} is on {target.name}
+              {FEATURE_LABELS[feature]} is locked
             </h2>
             <p className="mt-1 max-w-md text-sm text-omniv-text-secondary">
-              This module sits behind a higher tier. Operators on {target.name}{" "}
-              run this layer; free stays limited by design.
+              You do not have this layer yet. {target.name} operators do.
+              Free is intentionally thinner.
             </p>
           </div>
           <Button onClick={() => setOpen(true)} className="gap-1.5">
             <Sparkles className="h-3.5 w-3.5" />
-            View access tiers
+            See what unlocks
           </Button>
         </Card>
       ) : (
@@ -69,7 +69,7 @@ export function FeatureGate({
                 {FEATURE_LABELS[feature]}
               </p>
               <p className="mt-1 text-xs text-omniv-text-muted">
-                Reserved for {target.name}+ · ${target.priceMonthly}/mo
+                {target.name}+ only · ${target.priceMonthly}/mo. Upgrade or stay limited.
               </p>
               <Button
                 size="sm"
@@ -77,7 +77,7 @@ export function FeatureGate({
                 onClick={() => setOpen(true)}
               >
                 <Sparkles className="h-3.5 w-3.5" />
-                Claim access
+                Unlock this
               </Button>
             </Card>
           </div>

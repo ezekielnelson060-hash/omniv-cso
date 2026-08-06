@@ -28,7 +28,7 @@ export default function OpportunitiesPage() {
           setSubtitle(
             genre
               ? `Ranked for ${name} · ${genre}${interests.length ? ` · focus: ${interests.join(", ")}` : ""}`
-              : `Ranked from your Artist Brain, not a public tip list`
+              : `We ranked from your brain, not a public tip list`
           );
         }
       } finally {
@@ -44,7 +44,7 @@ export default function OpportunitiesPage() {
     <AppShell>
       <div className="mb-8">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Opportunity intelligence
+          What we ranked for you
         </h1>
         <p className="mt-1 text-sm text-omniv-text-secondary">{subtitle}</p>
       </div>
@@ -52,11 +52,11 @@ export default function OpportunitiesPage() {
       {loading ? (
         <div className="flex items-center gap-2 py-16 text-sm text-omniv-text-muted">
           <Loader2 className="h-4 w-4 animate-spin text-omniv-gold" />
-          Ranking moves…
+          Ranking your week…
         </div>
       ) : recs.length === 0 ? (
         <p className="text-sm text-omniv-text-muted">
-          Seal onboarding so opportunities match your goals, not generic lists.
+          Finish onboarding. We cannot rank an empty profile.
         </p>
       ) : (
         <div className="space-y-4">
