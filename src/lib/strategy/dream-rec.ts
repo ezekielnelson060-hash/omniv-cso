@@ -8,9 +8,9 @@ export function dreamRecommendation(
   if (!dream) return null;
   return {
     id: "dream-weekly",
-    title: "One move that compounds the Big Dream this week",
-    summary: `Everything else is noise until this week's action clearly serves: ${dream.slice(0, 160)}`,
-    why: "Managers sequence work against a held career image. Scattered effort feels busy and changes nothing.",
+    title: "This week must serve the dream",
+    summary: `We are watching. Until this week's action clearly serves the dream, the rest is noise: ${dream.slice(0, 140)}`,
+    why: "Scattered effort feels like progress. It is not. We only rank what moves the held image.",
     impact: "High",
     difficulty: "Moderate",
     confidence: 88,
@@ -19,7 +19,7 @@ export function dreamRecommendation(
     priority: 1,
     category: "Strategy",
     supportingData: dream.slice(0, 200),
-    strategicFrame: "Hold the image. Cut the rest.",
+    strategicFrame: "Hold it. Cut the rest.",
     timing: "This week",
     nextActions: [
       "Write the single highest-leverage action for the next 7 days",
