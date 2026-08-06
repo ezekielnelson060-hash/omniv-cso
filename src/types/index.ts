@@ -116,3 +116,55 @@ export interface ChatMessage {
   content: string;
   createdAt: number;
 }
+
+export interface ReleaseSimulation {
+  title: string;
+  commercialPotential: number;
+  viralPotential: number;
+  genreFit: number;
+  playlistPotential: number;
+  audienceFit: number;
+  riskScore: number;
+  viralProbability: number;
+  bestReleaseDate: string;
+  timingRationale: string;
+  competition: string;
+  marketingStrategy: string[];
+  budgetRecommendation: string;
+  launchPlan: { week: string; focus: string; actions: string[] }[];
+}
+
+export interface ContentAnalysis {
+  sourceLabel: string;
+  hookScore: number;
+  retentionScore: number;
+  editingScore: number;
+  storytellingScore: number;
+  emotionScore: number;
+  overall: number;
+  strengths: string[];
+  improvements: string[];
+  captions: string[];
+  hashtags: string[];
+  titleSuggestions: string[];
+  bestPostingTimes: string[];
+  platformNotes: string;
+}
+
+export interface ViralPrediction {
+  sourceLabel: string;
+  engagement: number;
+  watchTime: number;
+  retention: number;
+  shares: number;
+  comments: number;
+  algorithmScore: number;
+  overallViral: number;
+  why: string[];
+  risks: string[];
+}
+
+export interface StudioOutput {
+  platform: string;
+  content: string;
+}
