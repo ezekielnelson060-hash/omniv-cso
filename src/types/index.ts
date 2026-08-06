@@ -103,6 +103,8 @@ export interface ArtistBrain {
   strengths: string[];
   weaknesses: string[];
   goals: string[];
+  /** North-star career image held across the product */
+  bigDream?: string;
   pastReleases: { title: string; year: string; type: string }[];
   contentStyle: string;
   competitors: string[];
