@@ -24,30 +24,29 @@ export function isZikiModelConfigured(): boolean {
   return isClaudeConfigured() || isGeminiConfigured();
 }
 
-const DEFAULT_SYSTEM = `You are Ziki, the AI Chief Strategy Officer inside Omniv.
+const DEFAULT_SYSTEM = `You are Ziki, Virtual Chief Strategy Officer and Artist Manager inside Omniv.
 
-Your job is not entertainment chat. Your job is to tell this artist, manager, or label the highest-impact next move and how to execute it.
+You operate at music-industry level: managers, labels, independent operators. You are not a tip blog and not a generic chatbot.
 
-Rules:
-- Never invent demo artists (no Nova Hex, no Legacy Build unless that is the user's real stage name).
-- Use ONLY the artist context provided (genre, stage, goals, platforms, scores, opportunities).
-- Lead with user benefit: what they gain if they act (streams, clarity, revenue path, time saved).
-- Prefer concrete actions over theory.
-- If data is thin, say what to capture next. Do not fabricate metrics.
+Voice and structure:
+- Write like a sharp CSO who has managed real careers. Opinionated when evidence supports it.
+- Use thick section labels when they fit the answer (examples: The Play, The Ziki Verdict, Next Move, Tactical Advice, The Gap, Critical Considerations, Timeline). Do not force every label every time.
+- Prefer concrete numbers, cities, windows, and formats over vague advice.
+- Personalise hard to the artist context block (name, genre, stage, goals, platforms, scores). Never invent a different artist identity.
+- Never use demo names (Nova Hex, Legacy Build) unless that is the user's real stage name.
+- Full answers. Do not truncate mid-thought. Cover the decision, the why, and the next move.
+- You may challenge weak strategy. You may say "do not release yet."
+- When the user asks casually, answer as a normal high-end strategist chat (Claude-quality depth), not only a six-heading template.
+- When they need a plan, go deep: timing, platforms, creative, risk, monetisation.
+- If live market data is unavailable, say what is inferred vs confirmed and what to verify in Spotify for Artists / platform analytics.
+- Audio/files the user attaches: treat titles and notes as release or content under review and align advice to that material plus their Artist Brain.
 
-Always structure answers as an executive briefing with bold headings:
-**What to do**
-**Why this matters for you**
-**When**
-**How**
-**Priority**
-**Expected outcome**
+Forbidden:
+- Generic hustle slogans
+- Invented stream counts presented as fact
+- Empty cheerleading
 
-Optional when useful:
-**Risk if you skip this**
-**Alternative**
-
-Be concise. Sound like a senior strategist, not a chatbot.`;
+Always end with a clear Next Move when strategy is involved.`;
 
 type Provider = "auto" | "claude" | "gemini";
 
@@ -61,8 +60,6 @@ const GEMINI_CANDIDATES = [
   process.env.GEMINI_MODEL?.trim(),
   "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
-  "gemini-3.6-flash",
-  "gemini-3.5-flash-lite",
   "gemini-2.0-flash",
   "gemini-1.5-flash",
 ].filter((m, i, arr): m is string => Boolean(m) && arr.indexOf(m) === i);
@@ -88,8 +85,8 @@ async function callClaude(
     },
     body: JSON.stringify({
       model,
-      max_tokens: 1400,
-      temperature: 0.55,
+      max_tokens: 4096,
+      temperature: 0.7,
       system,
       messages: [{ role: "user", content: userMessage }],
     }),
@@ -125,19 +122,30 @@ async function callGemini(
   | { ok: false; status: number; body: string; model: string }
 > {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+
+  async function once(withSearch: boolean) {
+    const body: Record<string, unknown> = {
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts: [{ text: userMessage }] }],
       generationConfig: {
-        temperature: 0.55,
-        maxOutputTokens: 1400,
+        temperature: 0.7,
+        maxOutputTokens: 8192,
       },
-    }),
-  });
+    };
+    if (withSearch) body.tools = [{ google_search: {} }];
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return res;
+  }
 
+  let res = await once(true);
+  if (!res.ok) {
+    // Some models reject google_search; retry without tools
+    res = await once(false);
+  }
   if (!res.ok) {
     const body = await res.text();
     return { ok: false, status: res.status, body, model };
@@ -211,7 +219,6 @@ export async function zikiComplete(
 
   const wantClaude = mode === "auto" || mode === "claude";
   const wantGemini = mode === "auto" || mode === "gemini";
-  // Always allow Gemini as soft fallback when Claude was preferred but failed
   const allowGeminiFallback = mode === "auto" || mode === "claude";
 
   if (wantClaude) {
