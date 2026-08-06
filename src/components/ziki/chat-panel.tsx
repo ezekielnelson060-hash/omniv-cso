@@ -22,6 +22,11 @@ import {
 } from "@/lib/ziki-memory";
 import type { ChatMessage } from "@/types";
 import {
+  analyzeAudioFile,
+  formatPassportForZiki,
+  type AudioPassport,
+} from "@/lib/audio-passport";
+import {
   ArrowUp,
   Loader2,
   Plus,
@@ -111,7 +116,14 @@ export function ChatPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<
-    { id: string; name: string; type: string; data?: string }[]
+    {
+      id: string;
+      name: string;
+      type: string;
+      data?: string;
+      passport?: AudioPassport | null;
+      analyzing?: boolean;
+    }[]
   >([]);
   const [busy, setBusy] = useState(false);
   const [artistName, setArtistName] = useState("your project");
@@ -244,11 +256,20 @@ export function ChatPanel() {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     const MAX = 12 * 1024 * 1024;
-    const next: { id: string; name: string; type: string; data?: string }[] = [];
+    const next: {
+      id: string;
+      name: string;
+      type: string;
+      data?: string;
+      passport?: AudioPassport | null;
+      analyzing?: boolean;
+    }[] = [];
+
     for (const f of files.slice(0, 4)) {
+      const id = `${Date.now()}-${f.name}`;
       if (f.size > MAX) {
         next.push({
-          id: `${Date.now()}-${f.name}`,
+          id,
           name: `${f.name} (too large, max 12MB)`,
           type: f.type || "file",
         });
@@ -264,12 +285,29 @@ export function ChatPanel() {
         reader.onerror = () => reject(reader.error);
         reader.readAsDataURL(f);
       }).catch(() => "");
+
+      const isAudio =
+        (f.type || "").startsWith("audio/") ||
+        /\.(mp3|wav|m4a|flac|aac|ogg)$/i.test(f.name);
+
       next.push({
-        id: `${Date.now()}-${f.name}`,
+        id,
         name: f.name,
         type: f.type || "file",
         data: data || undefined,
+        analyzing: isAudio,
+        passport: null,
       });
+
+      if (isAudio) {
+        void analyzeAudioFile(f).then((passport) => {
+          setAttachments((prev) =>
+            prev.map((a) =>
+              a.id === id ? { ...a, passport, analyzing: false } : a
+            )
+          );
+        });
+      }
     }
     setAttachments((prev) => [...prev, ...next].slice(0, 4));
     e.target.value = "";
@@ -279,15 +317,22 @@ export function ChatPanel() {
     const trimmed = text.trim();
     if ((!trimmed && attachments.length === 0) || busy) return;
     const readyFiles = attachments.filter((a) => a.data);
+    const passports = attachments
+      .map((a) => a.passport)
+      .filter((p): p is AudioPassport => Boolean(p));
+    const passportBlock =
+      passports.length > 0
+        ? "\n\n" + passports.map((p) => formatPassportForZiki(p)).join("\n\n")
+        : "";
     const attachNote =
       attachments.length > 0
         ? `\n\n[Attached for review: ${attachments
             .map((a) => `${a.name} (${a.type || "file"})`)
             .join(", ")}]. Treat these as the artist's current material under discussion.${
             readyFiles.some((a) => (a.type || "").startsWith("audio/"))
-              ? " Listen to the audio and give a manager-grade assessment for this artist."
+              ? " Listen to the audio and give a manager-grade assessment for this artist. Use TRACK PASSPORT numbers when present."
               : ""
-          }`
+          }${passportBlock}`
         : "";
     const payload =
       `${trimmed}${attachNote}`.trim() ||
@@ -530,7 +575,16 @@ export function ChatPanel() {
                     className="inline-flex items-center gap-1.5 rounded-full border border-omniv-border bg-omniv-card px-2.5 py-1 text-[11px] text-omniv-text-secondary"
                   >
                     <Paperclip className="h-3 w-3 text-omniv-gold" />
-                    <span className="max-w-[140px] truncate">{a.name}</span>
+                    <span className="max-w-[160px] truncate">
+                      {a.name}
+                      {a.analyzing
+                        ? " · analysing…"
+                        : a.passport?.bpm
+                          ? ` · ${a.passport.bpm} BPM`
+                          : a.passport
+                            ? ` · ${a.passport.durationSec}s`
+                            : ""}
+                    </span>
                     <button
                       type="button"
                       className="text-omniv-text-muted hover:text-omniv-gold"
