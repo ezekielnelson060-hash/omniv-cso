@@ -1,6 +1,6 @@
 /**
  * Ziki model gateway: Claude first (when configured), Gemini fallback.
- * Multimodal audio/image/video analysis is Gemini-only (inline base64).
+ * Multimodal audio/image/video analysis is Gemini-only (inline base64 or Files API).
  *
  * Env:
  *   ANTHROPIC_API_KEY  – Claude
@@ -25,12 +25,14 @@ export function isZikiModelConfigured(): boolean {
   return isClaudeConfigured() || isGeminiConfigured();
 }
 
-/** Client-sent multimodal parts (base64, no data: prefix). */
+/** Client-sent multimodal parts. */
 export type ZikiAttachment = {
   name: string;
   mimeType: string;
-  /** Raw base64 payload */
-  data: string;
+  /** Raw base64 payload (inline, prefer under ~12MB) */
+  data?: string;
+  /** Gemini Files API URI (large demos) */
+  fileUri?: string;
 };
 
 const DEFAULT_SYSTEM = `You are Ziki, Virtual Chief Strategy Officer and Artist Manager inside Omniv.
@@ -155,7 +157,11 @@ function isMultimodalMime(mime: string): boolean {
 
 function hasMultimodal(attachments?: ZikiAttachment[]): boolean {
   return Boolean(
-    attachments?.some((a) => isMultimodalMime(normalizeMime(a.mimeType, a.name)))
+    attachments?.some(
+      (a) =>
+        (a.data || a.fileUri) &&
+        isMultimodalMime(normalizeMime(a.mimeType, a.name))
+    )
   );
 }
 
@@ -206,7 +212,8 @@ async function callClaude(
 
 type GeminiPart =
   | { text: string }
-  | { inlineData: { mimeType: string; data: string } };
+  | { inlineData: { mimeType: string; data: string } }
+  | { fileData: { fileUri: string; mimeType: string } };
 
 async function callGemini(
   key: string,
@@ -225,19 +232,29 @@ async function callGemini(
   if (attachments?.length) {
     let audioUsed = false;
     for (const a of attachments) {
-      if (!a.data) continue;
+      if (!a.data && !a.fileUri) continue;
       const mime = normalizeMime(a.mimeType, a.name);
       if (!isMultimodalMime(mime)) continue;
       if (AUDIO_MIME.has(mime) || mime.startsWith("audio/")) {
         if (audioUsed) continue;
         audioUsed = true;
       }
-      parts.push({
-        inlineData: {
-          mimeType: mime === "audio/mpeg" ? "audio/mp3" : mime,
-          data: a.data,
-        },
-      });
+      const mimeOut = mime === "audio/mpeg" ? "audio/mp3" : mime;
+      if (a.fileUri) {
+        parts.push({
+          fileData: {
+            fileUri: a.fileUri,
+            mimeType: mimeOut,
+          },
+        });
+      } else if (a.data) {
+        parts.push({
+          inlineData: {
+            mimeType: mimeOut,
+            data: a.data,
+          },
+        });
+      }
     }
   }
 
@@ -351,7 +368,7 @@ export async function zikiComplete(
       };
     }
     return {
-      text: `**Could not analyse the attachment**\n\nGemini did not return a response. Check file size (keep under ~12 MB inline), format (MP3, WAV, FLAC, M4A, AAC, PNG, JPEG, MP4), and Vercel logs.`,
+      text: `**Could not analyse the attachment**\n\nGemini did not return a response. Check file size (inline under ~12MB, or large upload under 50MB), format (MP3, WAV, FLAC, M4A, AAC, PNG, JPEG, MP4), and Vercel logs.`,
       source: "local",
     };
   }
