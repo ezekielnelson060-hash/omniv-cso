@@ -4,7 +4,6 @@ function clamp(n: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, Math.round(n)));
 }
 
-/** Brain completeness 0–1: drives score sensitivity */
 function brainCompleteness(brain: ArtistBrain): number {
   let filled = 0;
   const checks = [
@@ -27,15 +26,9 @@ export type ScoreInputs = {
   platforms?: string[];
   socialLinkCount?: number;
   interests?: string[];
-  /** Days since last profile/scan activity */
   daysSinceActivity?: number | null;
 };
 
-/**
- * Dynamic multi-factor scoring.
- * Recomputes from live profile + brain; no static demo numbers.
- * OAuth metrics (streams, followers) plug in later as optional overlays.
- */
 export function computeScoresFromBrain(
   brain: ArtistBrain | null,
   platformsOrInputs: string[] | ScoreInputs = []
@@ -224,7 +217,7 @@ export function buildRecommendationsFromBrain(
   if (interests.includes("content") || interests.length === 0) {
     recs.push({
       id: "content-system",
-      title: `Build a ${genre} content system this week`,
+      title: `Build your ${genre} content system this week`,
       summary: `Ship 4 short-form pieces aligned to ${name}'s stated style. Hooks in the first 1.5s.`,
       why: "Content focus was selected in onboarding; cadence compounds faster than one-off posts.",
       impact: "High",
@@ -234,7 +227,24 @@ export function buildRecommendationsFromBrain(
       priority: 1,
       category: "Content",
       timeWindow: "This week",
-      supportingData: `Style: ${brain?.musicStyle?.slice(0, 120) || "n/a"} · Content score ${scores.contentHealth}`,
+      timing: "Days 1–7: two hooks + two reactions. Review completion rate before scaling.",
+      platforms: platforms.length ? platforms.slice(0, 4) : ["tiktok", "instagram"],
+      positioning:
+        brain?.brandVoice?.slice(0, 140) ||
+        `Own the ${genre} lane with consistent visual + verbal system.`,
+      connections: brain?.competitors?.length
+        ? `Watch peers: ${brain.competitors.slice(0, 3).join(", ")}. Differentiate format, not just sound.`
+        : "Map 3 peer accounts in your lane and note their winning formats.",
+      strategicFrame:
+        "Consistency beats virality bets while release readiness is low.",
+      nextActions: [
+        "Lock one visual system for the week",
+        "Shoot 4 hooks under 1.5s",
+        "Post on primary surface first, then cross-cut",
+        "Log which hook held completion",
+      ],
+      supportingData: `Style: ${brain?.musicStyle?.slice(0, 120) || "n/a"} · Content score ${scores.contentHealth}%`,
+      detectedAt: "Just now",
     });
   }
 
@@ -244,7 +254,7 @@ export function buildRecommendationsFromBrain(
       title: `Lock next ${genre} release window`,
       summary:
         "A dated target forces assets, content, and pitch list into one critical path.",
-      why: `Career stage: ${brain?.careerStage || "emerging"}. Release readiness is currently ${scores.releaseReadiness}/100.`,
+      why: `Career stage: ${brain?.careerStage || "emerging"}. Release readiness is currently ${scores.releaseReadiness}%.`,
       impact: "High",
       difficulty: "Moderate",
       confidence: clamp(68 + scores.releaseReadiness * 0.2),
@@ -252,7 +262,24 @@ export function buildRecommendationsFromBrain(
       priority: 2,
       category: "Release",
       timeWindow: "This month",
+      timing: "Set a primary date + alternate before spend.",
+      platforms: platforms.filter((p) =>
+        ["spotify", "apple", "youtube"].includes(p)
+      ).length
+        ? platforms.filter((p) =>
+            ["spotify", "apple", "youtube", "tiktok"].includes(p)
+          )
+        : platforms.slice(0, 3),
+      positioning: `Frame the release for ${genre} listeners first.`,
+      connections: "Curators + owned list before paid.",
+      strategicFrame: "Readiness first. A quiet delay beats a loud miss.",
+      nextActions: [
+        "Pick primary + alternate dates",
+        "List missing assets",
+        "Draft pitch paragraph",
+      ],
       supportingData: (brain?.goals || []).slice(0, 2).join(" · "),
+      detectedAt: "Just now",
     });
   }
 
@@ -270,6 +297,17 @@ export function buildRecommendationsFromBrain(
       priority: 3,
       category: "Playlist",
       timeWindow: "Thu–Sun cycle",
+      platforms: ["spotify"],
+      timing: "Submit ≥7 days before release when possible.",
+      positioning: `Pitch mood + lane, not only the ${genre} tag.`,
+      connections: "8–12 niche independents before flagship editorial.",
+      strategicFrame: "Indie lists seed algo density.",
+      nextActions: [
+        "Build curator sheet",
+        "Write 2-sentence pitch",
+        "Track responses",
+      ],
+      detectedAt: "Just now",
     });
   }
 
@@ -279,7 +317,7 @@ export function buildRecommendationsFromBrain(
       title: "Re-engage quiet listeners",
       summary:
         "Target the 30–45 day dormant cohort with Stories + one exclusive snippet.",
-      why: `Audience health ${scores.audienceHealth}/100. Recovery is cheaper than cold acquisition.`,
+      why: `Audience health ${scores.audienceHealth}%. Recovery is cheaper than cold acquisition.`,
       impact: "Medium",
       difficulty: "Easy",
       confidence: clamp(72 + scores.audienceHealth * 0.15),
@@ -287,6 +325,20 @@ export function buildRecommendationsFromBrain(
       priority: 4,
       category: "Audience",
       timeWindow: "This week",
+      platforms: platforms.filter((p) =>
+        ["instagram", "tiktok", "email"].includes(p)
+      ).length
+        ? platforms.slice(0, 3)
+        : ["instagram"],
+      timing: "48-hour window for Stories sequence.",
+      connections: "Owned list / fan gate first.",
+      strategicFrame: "Warm recovery before cold ads.",
+      nextActions: [
+        "Segment quiet cohort",
+        "Ship exclusive snippet",
+        "Measure reply rate",
+      ],
+      detectedAt: "Just now",
     });
   }
 
@@ -304,6 +356,10 @@ export function buildRecommendationsFromBrain(
       priority: 5,
       category: "Collab",
       timeWindow: "30 days",
+      connections: brain?.competitors?.slice(0, 3).join(", ") || "Peer acts in lane",
+      strategicFrame: "Adjacent reach, shared audience, clear ask.",
+      nextActions: ["List 3 targets", "One-line value prop", "Warm intro path"],
+      detectedAt: "Just now",
     });
   }
 
@@ -321,6 +377,9 @@ export function buildRecommendationsFromBrain(
       priority: 6,
       category: "Festival",
       timeWindow: "Next 45 days",
+      strategicFrame: "Right-sized room beats empty prestige.",
+      nextActions: ["Shortlist 2 rooms", "One-pager", "Follow-up cadence"],
+      detectedAt: "Just now",
     });
   }
 
@@ -338,6 +397,10 @@ export function buildRecommendationsFromBrain(
       priority: 7,
       category: "Brand",
       timeWindow: "This week",
+      positioning: brain?.visualIdentity?.slice(0, 140) || "Define palette + framing",
+      strategicFrame: "Consistency is a growth asset.",
+      nextActions: ["Write voice rules", "Lock 3 visual refs", "Apply this week"],
+      detectedAt: "Just now",
     });
   }
 
@@ -355,6 +418,9 @@ export function buildRecommendationsFromBrain(
       priority: 8,
       category: "Market",
       timeWindow: "This quarter",
+      strategicFrame: "One experiment, clear kill criteria.",
+      nextActions: ["Choose one path", "Price + offer", "14-day test window"],
+      detectedAt: "Just now",
     });
   }
 
@@ -371,6 +437,10 @@ export function buildRecommendationsFromBrain(
       priority: 9,
       category: "Platform",
       timeWindow: "Today",
+      platforms: ["spotify"],
+      strategicFrame: "Missing DSP link caps scoring accuracy.",
+      nextActions: ["Paste Spotify URL in settings", "Re-scan profile"],
+      detectedAt: "Just now",
     });
   }
 
@@ -388,6 +458,19 @@ export function buildRecommendationsFromBrain(
       category: "Strategy",
       timeWindow: "This week",
       supportingData: brain.goals.join(" · "),
+      timing: "Protect calendar this week: one primary outcome only.",
+      platforms: platforms.slice(0, 3),
+      positioning:
+        brain.brandVoice?.slice(0, 120) ||
+        "Stay on the goal language from onboarding.",
+      connections: "Share weekly check with manager/label contact if applicable.",
+      strategicFrame: "Focus tax is the independent career default. One goal wins.",
+      nextActions: [
+        "Write the goal as a shippable deliverable",
+        "Block 3 work sessions",
+        "Kill one distraction surface for 7 days",
+      ],
+      detectedAt: "Just now",
     });
   }
 
@@ -404,6 +487,8 @@ export function buildRecommendationsFromBrain(
       priority: 1,
       category: "Strategy",
       timeWindow: "Today",
+      nextActions: ["Open Artist Brain", "Add genre + goals", "Save"],
+      detectedAt: "Just now",
     });
   }
 
@@ -413,12 +498,17 @@ export function buildRecommendationsFromBrain(
   }
 
   return recs
-    .map((r, idx) => ({
+    .map((r) => ({
       ...r,
       priority: preferred.has(String(r.category))
         ? r.priority
         : r.priority + 20,
-      detectedAt: idx === 0 ? "Just now" : undefined,
+      detectedAt: r.detectedAt || "Just now",
+      platforms: r.platforms?.length ? r.platforms : platforms.slice(0, 4),
+      timing: r.timing || r.timeWindow || "This week",
+      strategicFrame:
+        r.strategicFrame ||
+        `Highest-leverage ${String(r.category).toLowerCase()} move for ${name}.`,
     }))
     .sort((a, b) => a.priority - b.priority)
     .map((r, i) => ({ ...r, priority: i + 1 }));
@@ -431,10 +521,10 @@ export function overallNarrative(
   const name = brain?.stageName || brain?.name || "Your project";
   const genre = brain?.genre?.filter((g) => g !== "TBD").join(" / ");
   if (scores.releaseReadiness < scores.momentum - 8) {
-    return `${name}${genre ? ` (${genre})` : ""}: momentum is ahead of release readiness (${scores.releaseReadiness}). Closing that gap lifts overall fastest.`;
+    return `${name}${genre ? ` (${genre})` : ""}: momentum is ahead of release readiness (${scores.releaseReadiness}%). Closing that gap lifts overall fastest.`;
   }
   if (scores.opportunity > 60) {
-    return `${name}: opportunity surface is strong (${scores.opportunity}). Execute the top briefing before adding experiments.`;
+    return `${name}: opportunity surface is strong (${scores.opportunity}%). Execute the top briefing before adding experiments.`;
   }
   if (scores.contentHealth < 45) {
     return `${name}: content health is the softest lever right now: a 14-day cadence will move scores more than new tools.`;
