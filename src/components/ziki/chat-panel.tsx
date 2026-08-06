@@ -105,7 +105,7 @@ function welcomeMsg(name: string): ChatMessage {
   return {
     id: "welcome",
     role: "assistant",
-    content: `I'm **Ziki**, your Virtual Chief Strategy Officer for **${name}**.\n\nI work from your Artist Brain, ranked opportunities, and anything you attach (demos, covers, briefs). Ask anything: release timing, content systems, monetisation, tours, positioning.\n\nOpen **Act on this** from the feed and I already have the brief.`,
+    content: `Hey — I'm **Ziki**, strategy for **${name}**.\n\nAsk anything the way you would a manager: market reads, release timing, a track critique, what to do this week. Attach a demo or cover when you want me to listen.\n\nNo scripts. Just the highest-leverage next move.`,
     createdAt: Date.now(),
   };
 }
@@ -175,6 +175,7 @@ export function ChatPanel() {
           `Visual identity: ${brain?.visualIdentity || "n/a"}`,
           `Target audience: ${brain?.targetAudience || "n/a"}`,
           `Content style: ${brain?.contentStyle || "n/a"}`,
+          `Big Dream: ${brain?.bigDream || brain?.goals?.[0] || "n/a"}`,
           `Goals: ${brain?.goals?.join("; ") || "n/a"}`,
           `Strengths: ${brain?.strengths?.join("; ") || "n/a"}`,
           `Gaps: ${brain?.weaknesses?.join("; ") || "n/a"}`,
@@ -193,7 +194,7 @@ export function ChatPanel() {
       let list = loadThreads();
       let id = getActiveId();
       if (!id || !list.find((t) => t.id === id)) {
-        const t = createThread("New briefing");
+        const t = createThread("New chat");
         list = loadThreads();
         id = t.id;
       }
@@ -205,7 +206,7 @@ export function ChatPanel() {
       } else {
         const welcome = [welcomeMsg(name)];
         setMessages(welcome);
-        if (id) persist(id, welcome, "New briefing");
+        if (id) persist(id, welcome, "New chat");
       }
       setReady(true);
     })();
@@ -247,12 +248,12 @@ export function ChatPanel() {
   }
 
   function newChat() {
-    const t = createThread("New briefing");
+    const t = createThread("New chat");
     const welcome = [welcomeMsg(artistName)];
     setThreads(loadThreads());
     setActiveIdState(t.id);
     setMessages(welcome);
-    persist(t.id, welcome, "New briefing");
+    persist(t.id, welcome, "New chat");
     setHistoryOpen(false);
   }
 
@@ -276,11 +277,7 @@ export function ChatPanel() {
     for (const f of files.slice(0, 4)) {
       const id = `${Date.now()}-${f.name}`;
       if (f.size > HARD_MAX) {
-        next.push({
-          id,
-          name: `${f.name} (max 50MB)`,
-          type: f.type || "file",
-        });
+        next.push({ id, name: `${f.name} (max 50MB)`, type: f.type || "file" });
         continue;
       }
 
@@ -306,26 +303,16 @@ export function ChatPanel() {
           try {
             const fd = new FormData();
             fd.append("file", f);
-            const res = await fetch("/api/ziki/upload", {
-              method: "POST",
-              body: fd,
-            });
+            const res = await fetch("/api/ziki/upload", { method: "POST", body: fd });
             const data = (await res.json()) as {
               fileUri?: string;
               mimeType?: string;
-              error?: string;
-              message?: string;
             };
             if (!res.ok || !data.fileUri) {
               setAttachments((prev) =>
                 prev.map((a) =>
                   a.id === id
-                    ? {
-                        ...a,
-                        uploading: false,
-                        analyzing: false,
-                        name: `${f.name} (upload failed)`,
-                      }
+                    ? { ...a, uploading: false, analyzing: false, name: `${f.name} (upload failed)` }
                     : a
                 )
               );
@@ -334,12 +321,7 @@ export function ChatPanel() {
             setAttachments((prev) =>
               prev.map((a) =>
                 a.id === id
-                  ? {
-                      ...a,
-                      fileUri: data.fileUri,
-                      type: data.mimeType || a.type,
-                      uploading: false,
-                    }
+                  ? { ...a, fileUri: data.fileUri, type: data.mimeType || a.type, uploading: false }
                   : a
               )
             );
@@ -347,12 +329,7 @@ export function ChatPanel() {
             setAttachments((prev) =>
               prev.map((a) =>
                 a.id === id
-                  ? {
-                      ...a,
-                      uploading: false,
-                      analyzing: false,
-                      name: `${f.name} (upload failed)`,
-                    }
+                  ? { ...a, uploading: false, analyzing: false, name: `${f.name} (upload failed)` }
                   : a
               )
             );
@@ -362,9 +339,7 @@ export function ChatPanel() {
         if (isAudio) {
           void analyzeAudioFile(f).then((passport) => {
             setAttachments((prev) =>
-              prev.map((a) =>
-                a.id === id ? { ...a, passport, analyzing: false } : a
-              )
+              prev.map((a) => (a.id === id ? { ...a, passport, analyzing: false } : a))
             );
           });
         }
@@ -395,16 +370,12 @@ export function ChatPanel() {
       if (isAudio) {
         void analyzeAudioFile(f).then((passport) => {
           setAttachments((prev) =>
-            prev.map((a) =>
-              a.id === id ? { ...a, passport, analyzing: false } : a
-            )
+            prev.map((a) => (a.id === id ? { ...a, passport, analyzing: false } : a))
           );
         });
       }
     }
-    if (next.length) {
-      setAttachments((prev) => [...prev, ...next].slice(0, 4));
-    }
+    if (next.length) setAttachments((prev) => [...prev, ...next].slice(0, 4));
     e.target.value = "";
   }
 
@@ -455,9 +426,7 @@ export function ChatPanel() {
     const attachmentPayload = readyFiles.map((a) => ({
       name: a.name,
       mimeType: a.type || "application/octet-stream",
-      ...(a.fileUri
-        ? { fileUri: a.fileUri }
-        : { data: a.data as string }),
+      ...(a.fileUri ? { fileUri: a.fileUri } : { data: a.data as string }),
     }));
     attachments.forEach((a) => {
       if (a.url) {
@@ -484,7 +453,7 @@ export function ChatPanel() {
           message: payload,
           history,
           attachments: attachmentPayload.length ? attachmentPayload : undefined,
-          context: `You are Ziki, Virtual CSO for ${artistName} inside Omniv. Never invent demo artists.\n\nARTIST BRAIN (source of truth):\n${context}\n\nWrite full, industry-grade answers. Use section labels when useful (The Play, Verdict, Next Move, Tactical Advice). Chat naturally when the question is casual; go deep when strategy is required. Personalise every sentence to this artist. Do not truncate.${
+          context: `You are Ziki, Virtual CSO for ${artistName} inside Omniv. Never invent demo artists.\n\nARTIST BRAIN (source of truth):\n${context}\n\nAnswer like Claude or a senior manager in chat: natural paragraphs by default. Only use briefing labels (The Play, Verdict, Next Move) when they ask for a plan or stress-test. Full answers, no truncation. Personalise every sentence to this artist.${
             attachmentPayload.length
               ? "\n\nThe user attached media. If audio is present, listen and align strategy to the track plus Artist Brain."
               : ""
@@ -502,16 +471,12 @@ export function ChatPanel() {
       };
       const final = [...withUser, assistant];
       setMessages(final);
-      persist(
-        threadId,
-        final,
-        fromAct ? trimmed.slice(0, 48) : titleFromMessages(final)
-      );
+      persist(threadId, final, fromAct ? trimmed.slice(0, 48) : titleFromMessages(final));
     } catch {
       const assistant: ChatMessage = {
         id: uid(),
         role: "assistant",
-        content: `**Connection issue**\n\nCould not complete that reply for **${artistName}**. Try again.`,
+        content: `Could not complete that reply for **${artistName}**. Try again.`,
         createdAt: Date.now(),
       };
       const final = [...withUser, assistant];
@@ -547,9 +512,7 @@ export function ChatPanel() {
             </div>
             <div className="flex-1 overflow-y-auto p-2">
               {threads.length === 0 && (
-                <p className="px-2 py-4 text-xs text-omniv-text-muted">
-                  No saved chats yet.
-                </p>
+                <p className="px-2 py-4 text-xs text-omniv-text-muted">No saved chats yet.</p>
               )}
               {threads.map((t) => (
                 <div
@@ -592,8 +555,8 @@ export function ChatPanel() {
         </>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center justify-between border-b border-omniv-border px-3 py-3 md:px-5">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="sticky top-0 z-30 flex shrink-0 items-center justify-between border-b border-omniv-border bg-omniv-black/95 px-3 py-3 backdrop-blur-md md:px-5">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -620,7 +583,7 @@ export function ChatPanel() {
           </Button>
         </div>
 
-        <div className="relative flex-1 overflow-y-auto">
+        <div className="relative min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto max-w-3xl space-y-5 px-4 py-6 md:px-6">
             {messages.map((msg) => (
               <div
@@ -692,9 +655,7 @@ export function ChatPanel() {
                             /* noop */
                           }
                         }
-                        setAttachments((prev) =>
-                          prev.filter((x) => x.id !== a.id)
-                        );
+                        setAttachments((prev) => prev.filter((x) => x.id !== a.id));
                       }}
                     />
                   ))}
@@ -713,9 +674,7 @@ export function ChatPanel() {
                             type="button"
                             className="text-omniv-text-muted hover:text-omniv-gold"
                             onClick={() =>
-                              setAttachments((prev) =>
-                                prev.filter((x) => x.id !== a.id)
-                              )
+                              setAttachments((prev) => prev.filter((x) => x.id !== a.id))
                             }
                           >
                             ×
@@ -727,19 +686,21 @@ export function ChatPanel() {
               </div>
             )}
             <div className="flex items-end gap-2">
-              <label
-                className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-omniv-border bg-omniv-card text-omniv-text-muted transition hover:border-omniv-gold/40 hover:text-omniv-gold"
-                title="Attach audio, image, or file"
-              >
-                <Paperclip className="h-4 w-4" />
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="audio/*,image/*,video/*,.pdf,.txt,.mp3,.wav,.m4a,.flac"
-                  multiple
-                  onChange={(e) => void onPickFiles(e)}
-                />
-              </label>
+              <div className="relative shrink-0">
+                <label
+                  className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-2xl border border-omniv-border bg-omniv-card text-omniv-text-muted transition hover:border-omniv-gold/40 hover:text-omniv-gold"
+                  title="Add demo, cover, video, or brief"
+                >
+                  <Plus className="h-5 w-5" />
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="audio/*,image/*,video/*,.pdf,.txt,.mp3,.wav,.m4a,.flac,.aac,.ogg"
+                    multiple
+                    onChange={(e) => void onPickFiles(e)}
+                  />
+                </label>
+              </div>
               <textarea
                 ref={inputRef}
                 value={input}
@@ -751,7 +712,7 @@ export function ChatPanel() {
                   }
                 }}
                 rows={1}
-                placeholder="Strategy, release, sound notes…"
+                placeholder="Ask anything…"
                 className="max-h-32 min-h-12 flex-1 resize-none rounded-2xl border border-omniv-border bg-omniv-card px-4 py-3 text-sm focus-gold"
               />
               <Button
@@ -769,7 +730,7 @@ export function ChatPanel() {
               </Button>
             </div>
             <p className="mt-1.5 text-center text-[10px] text-omniv-text-muted">
-              Attach demos up to 50MB (MP3/WAV), covers, or briefs. Large files use secure upload. Ziki listens and aligns to your Artist Brain.
+              Tap + to attach a demo, cover, video, or brief (up to 50MB). Say what you want reviewed in the message.
             </p>
           </div>
         </div>
