@@ -16,12 +16,9 @@ export default function ContentPage() {
           Content Intelligence
         </h1>
         <p className="text-sm text-omniv-text-secondary">
-          Analyse hooks and retention, predict viral performance, generate
-          brand-matched studio copy
+          Hook analysis, retention read, and brand-matched studio copy. Pro
+          operators only.
         </p>
-      </div>
-      <div className="mb-6">
-        <ContentGenerator />
       </div>
       <FeatureGate
         feature="content_intelligence"
@@ -29,6 +26,9 @@ export default function ContentPage() {
         mode="hard"
         onPlanChange={setPlan}
       >
+        <div className="mb-6">
+          <ContentGenerator />
+        </div>
         <IntelligencePanel />
       </FeatureGate>
     </AppShell>
