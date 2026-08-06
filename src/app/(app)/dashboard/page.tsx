@@ -29,26 +29,30 @@ import type { ArtistBrain, ArtistScore, AIRecommendation } from "@/types";
 const COMMANDS = [
   {
     id: "priority",
-    label: "Highest-impact move",
-    prompt: "What is my highest-impact move this week? Be specific to my profile.",
+    label: "What you should do now",
+    prompt:
+      "You are watching my profile. Tell me the single move I must make this week. No alternatives.",
     icon: Target,
   },
   {
     id: "release",
-    label: "Release check",
-    prompt: "Stress-test my next release window. What must be true before I spend?",
+    label: "Would you release?",
+    prompt:
+      "Look at my readiness. Would you let me release this cycle? Go, Caution, or Hold — and why.",
     icon: Calendar,
   },
   {
     id: "content",
-    label: "Content this week",
-    prompt: "What should I post this week given my stage, goals, and surfaces?",
+    label: "What ships this week",
+    prompt:
+      "You know my stage and surfaces. Tell me exactly what content ships this week and why that, not more.",
     icon: FileText,
   },
   {
     id: "plan",
-    label: "7-day plan",
-    prompt: "Draft a concrete 7-day execution plan for my top priority only.",
+    label: "Lock the next 7 days",
+    prompt:
+      "Build a 7-day execution plan for my top priority only. Cut everything else.",
     icon: Zap,
   },
 ];
@@ -105,7 +109,7 @@ export default function DashboardPage() {
       <AppShell>
         <div className="flex items-center gap-2 py-24 text-sm text-omniv-text-muted">
           <Loader2 className="h-4 w-4 animate-spin text-omniv-gold" />
-          Loading Command Center…
+          Reading your week…
         </div>
       </AppShell>
     );
@@ -115,10 +119,10 @@ export default function DashboardPage() {
   const top = recs[0];
   const narrative = overallNarrative(s, brain);
   const gaps = [
-    { key: "Release readiness", value: s.releaseReadiness },
-    { key: "Content health", value: s.contentHealth },
-    { key: "Audience health", value: s.audienceHealth },
-    { key: "Momentum", value: s.momentum },
+    { key: "Release pressure", value: s.releaseReadiness },
+    { key: "Content pulse", value: s.contentHealth },
+    { key: "Audience hold", value: s.audienceHealth },
+    { key: "Forward motion", value: s.momentum },
   ].sort((a, b) => a.value - b.value);
 
   return (
@@ -132,20 +136,20 @@ export default function DashboardPage() {
             <Badge variant="gold">{name}</Badge>
           </div>
           <p className="max-w-xl text-sm text-omniv-text-secondary">
-            One priority. Clear scores. Commands that open Ziki with the brief
-            already loaded.
+            We see where you stand. One move this week. Everything else is noise
+            until this lands.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href="/opportunities">
             <Button variant="outline" size="sm" className="gap-1.5">
-              Opportunity feed
+              See what we ranked
             </Button>
           </Link>
           <Link href="/ziki">
             <Button size="sm" className="gap-1.5">
               <MessageSquare className="h-3.5 w-3.5" />
-              Open Ziki
+              Talk to Ziki
             </Button>
           </Link>
         </div>
@@ -153,7 +157,7 @@ export default function DashboardPage() {
 
       <section className="mb-6 rounded-[var(--radius-xl)] border border-omniv-gold/30 bg-gradient-to-b from-omniv-gold/10 to-transparent p-5 md:p-6">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
-          This week's non-negotiable
+          You are not skipping this
         </p>
         {top ? (
           <>
@@ -178,25 +182,24 @@ export default function DashboardPage() {
                   )
                 }
               >
-                Execute in Ziki
+                Do this now
                 <ArrowRight className="h-3.5 w-3.5" />
               </Button>
               <Link href="/opportunities">
                 <Button variant="outline" size="sm">
-                  See ranked list
+                  Show the rest
                 </Button>
               </Link>
             </div>
           </>
         ) : (
           <>
-            <h2 className="mt-2 text-lg font-semibold">Lock your Artist Brain</h2>
+            <h2 className="mt-2 text-lg font-semibold">We cannot rank an empty brain</h2>
             <p className="mt-2 text-sm text-omniv-text-secondary">
-              Complete genre, stage, and goals so Command Center can rank a real
-              next move.
+              Genre, stage, and the dream. Lock them or stay generic.
             </p>
             <Link href="/artist-brain" className="mt-4 inline-block">
-              <Button size="sm">Open Artist Brain</Button>
+              <Button size="sm">Fill what we need</Button>
             </Link>
           </>
         )}
@@ -204,9 +207,9 @@ export default function DashboardPage() {
 
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold tracking-tight">Commands</h2>
+          <h2 className="text-sm font-semibold tracking-tight">When you stall</h2>
           <p className="text-[11px] text-omniv-text-muted">
-            Runs in Ziki with your profile
+            We already know your profile
           </p>
         </div>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -225,7 +228,7 @@ export default function DashboardPage() {
                   {c.label}
                 </span>
                 <span className="block truncate text-[11px] text-omniv-text-muted">
-                  Send to Ziki
+                  Open with us
                 </span>
               </span>
             </button>
@@ -235,13 +238,13 @@ export default function DashboardPage() {
 
       <section className="mb-8">
         <div className="mb-3">
-          <h2 className="text-sm font-semibold tracking-tight">Focus scores</h2>
+          <h2 className="text-sm font-semibold tracking-tight">Where you stand</h2>
           <p className="mt-0.5 text-xs text-omniv-text-secondary">{narrative}</p>
         </div>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           {[
             { label: "Overall", value: s.overall },
-            { label: "Momentum", value: s.momentum },
+            { label: "Motion", value: s.momentum },
             { label: "Audience", value: s.audienceHealth },
             { label: "Content", value: s.contentHealth },
             { label: "Release", value: s.releaseReadiness },
@@ -272,19 +275,19 @@ export default function DashboardPage() {
           ))}
         </div>
         <p className="mt-3 text-xs text-omniv-text-muted">
-          Weakest lever:{" "}
+          Softest point:{" "}
           <span className="text-omniv-text-secondary">
             {gaps[0]?.key} ({gaps[0]?.value})
           </span>
-          . Raising it usually moves overall fastest.
+          . Fix this first.
         </p>
       </section>
 
       <section>
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold tracking-tight">Ranked next moves</h2>
-            <p className="text-sm text-omniv-text-secondary">From your Artist Brain only</p>
+            <h2 className="text-lg font-semibold tracking-tight">Next on your list</h2>
+            <p className="text-sm text-omniv-text-secondary">Ranked from what you locked in</p>
           </div>
           <Link href="/opportunities">
             <Button variant="ghost" size="sm" className="gap-1">
@@ -299,7 +302,7 @@ export default function DashboardPage() {
           ))}
           {recs.length === 0 && (
             <div className="rounded-[var(--radius-lg)] border border-omniv-border p-6 text-sm text-omniv-text-secondary">
-              No ranked moves yet. Add genre, stage, and goals in Artist Brain.
+              Nothing to rank yet. Lock genre, stage, and the dream.
             </div>
           )}
         </div>
