@@ -36,6 +36,11 @@ function sanitizeAttachments(raw: unknown): ZikiAttachment[] {
     const mimeType = String(
       (item as { mimeType?: string }).mimeType || "application/octet-stream"
     ).slice(0, 80);
+    const fileUri = String((item as { fileUri?: string }).fileUri || "").trim();
+    if (fileUri.startsWith("https://generativelanguage.googleapis.com/")) {
+      out.push({ name, mimeType, fileUri });
+      continue;
+    }
     let data = String((item as { data?: string }).data || "").replace(/\s/g, "");
     const comma = data.indexOf(",");
     if (data.startsWith("data:") && comma > 0) {
