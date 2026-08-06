@@ -9,7 +9,7 @@
  *   GEMINI_MODEL       – optional pin
  *   ZIKI_PROVIDER      – auto | claude | gemini  (default auto)
  *
- * No cash: set ZIKI_PROVIDER=gemini and GEMINI_API_KEY only. Redeploy required.
+ * No cash: ZIKI_PROVIDER=gemini + GEMINI_API_KEY. 429 = free quota used — wait or new key.
  */
 
 export function isGeminiConfigured(): boolean {
@@ -76,10 +76,12 @@ function providerMode(): Provider {
 
 const GEMINI_CANDIDATES = [
   process.env.GEMINI_MODEL?.trim(),
-  "gemini-2.5-flash",
-  "gemini-2.5-flash-lite",
+  "gemini-2.0-flash-lite",
   "gemini-2.0-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-flash",
   "gemini-1.5-flash",
+  "gemini-1.5-flash-8b",
 ].filter((m, i, arr): m is string => Boolean(m) && arr.indexOf(m) === i);
 
 const CLAUDE_CANDIDATES = [
@@ -307,8 +309,7 @@ async function tryClaude(
         result.status === 400 &&
         /credit balance|billing|purchase credits|too low/i.test(snippet)
       ) {
-        lastProviderDetail =
-          "Anthropic has no credits. Using Gemini if configured.";
+        lastProviderDetail = "Anthropic has no credits. Using Gemini if configured.";
         break;
       }
       if (result.status !== 404 && result.status !== 400) break;
@@ -336,7 +337,9 @@ async function tryGemini(
       lastStatus = result.status;
       lastBody = result.body;
       console.error("Gemini error", model, result.status, result.body.slice(0, 300));
-      if (result.status !== 404) break;
+      // 404 = model missing; 429 = this model's quota — try next model
+      if (result.status === 404 || result.status === 429) continue;
+      break;
     } catch (e) {
       console.error("Gemini exception", model, e);
     }
@@ -377,7 +380,6 @@ export async function zikiComplete(
     };
   }
 
-  // Pure Gemini: never call Anthropic (no credit noise)
   if (mode === "gemini") {
     if (!isGeminiConfigured()) {
       return {
@@ -390,8 +392,15 @@ export async function zikiComplete(
     const detail = lastProviderDetail
       ? `\n\nDetail: ${lastProviderDetail.slice(0, 400)}`
       : "";
+    const quota = /429|quota|rate/i.test(lastProviderDetail + detail);
+    if (quota) {
+      return {
+        text: `**Gemini free quota is used up (429)**\n\nGoogle's free tier has daily/minute limits. Options:\n\n1. Wait 1–24 hours for the quota to reset\n2. Create a **new** API key in a different Google AI Studio project\n3. In Vercel set **GEMINI_MODEL**=gemini-2.0-flash-lite (often separate quota) and Redeploy\n4. Enable billing on Google AI (pay-as-you-go; small free credit sometimes)\n\nClaude is paused until Anthropic has credits. This is a quota wall, not an Omniv bug.`,
+        source: "local",
+      };
+    }
     return {
-      text: `**Gemini rejected the request**${detail}\n\nCheck the key is valid, not restricted, and Production was redeployed.`,
+      text: `**Gemini rejected the request**${detail}\n\nCheck the key is valid and Production was redeployed.`,
       source: "local",
     };
   }
@@ -423,6 +432,12 @@ export async function zikiComplete(
   const detail = lastProviderDetail
     ? `\n\nDetail: ${lastProviderDetail.slice(0, 400)}`
     : "";
+  if (/429|quota/i.test(lastProviderDetail)) {
+    return {
+      text: `**Gemini free quota is used up (429)**\n\nWait for reset, or use a new Google AI Studio project key. Optional: **GEMINI_MODEL**=gemini-2.0-flash-lite + Redeploy.`,
+      source: "local",
+    };
+  }
   return {
     text: `**Provider error**${detail}\n\nBoth Claude and Gemini failed. Verify GEMINI_API_KEY in Production and Redeploy.`,
     source: "local",
