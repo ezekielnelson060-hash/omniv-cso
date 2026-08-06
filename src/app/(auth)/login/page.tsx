@@ -50,9 +50,7 @@ export default function LoginPage() {
           <div className="absolute -left-20 top-1/3 h-64 w-64 rounded-full bg-omniv-gold/8 blur-[80px]" />
         </div>
         <div className="relative flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-omniv-gold/15">
-            <span className="text-base font-bold text-omniv-gold">O</span>
-          </div>
+          <img src="/logo.svg" alt="Omniv" className="h-9 w-9 rounded-lg" />
           <span className="text-lg font-semibold">Omniv</span>
         </div>
         <div className="relative">
@@ -74,9 +72,7 @@ export default function LoginPage() {
         <div className="w-full max-w-[380px]">
           <div className="mb-8 lg:hidden">
             <div className="mb-6 flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-omniv-gold/15">
-                <span className="text-sm font-bold text-omniv-gold">O</span>
-              </div>
+              <img src="/logo.svg" alt="Omniv" className="h-8 w-8 rounded-lg" />
               <span className="font-semibold">Omniv</span>
             </div>
           </div>
