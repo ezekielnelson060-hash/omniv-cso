@@ -209,15 +209,16 @@ export function buildRecommendationsFromBrain(
   interests: string[] = []
 ): AIRecommendation[] {
   const name = brain?.stageName || brain?.name || "your project";
-  const genre =
-    brain?.genre?.filter((g) => g && g !== "TBD").join(" / ") || "your genre";
+  const rawGenre = brain?.genre?.filter((g) => g && g !== "TBD").join(" / ");
+  const genre = rawGenre || "core";
+  const genreLabel = rawGenre || "your";
   const recs: AIRecommendation[] = [];
   const scores = computeScoresFromBrain(brain, { platforms, interests });
 
   if (interests.includes("content") || interests.length === 0) {
     recs.push({
       id: "content-system",
-      title: `Build your ${genre} content system this week`,
+      title: `Build your ${genreLabel} content system this week`,
       summary: `Ship 4 short-form pieces aligned to ${name}'s stated style. Hooks in the first 1.5s.`,
       why: "Content focus was selected in onboarding; cadence compounds faster than one-off posts.",
       impact: "High",
