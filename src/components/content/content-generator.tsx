@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Loader2, Sparkles } from "lucide-react";
+import { StudioText } from "@/components/ui/studio-text";
 
 const TYPES = [
   { id: "instagram_caption", label: "Instagram captions" },
@@ -74,7 +75,7 @@ export function ContentGenerator({ artistName }: { artistName?: string }) {
       </div>
       <div className="mt-3">
         <Input
-          placeholder="Brief — e.g. new single drop Friday, Afrobeats, Lagos"
+          placeholder="Brief: e.g. new single drop Friday, Afrobeats, Lagos"
           value={brief}
           onChange={(e) => setBrief(e.target.value)}
         />
@@ -94,9 +95,9 @@ export function ContentGenerator({ artistName }: { artistName?: string }) {
       </Button>
       {err && <p className="mt-2 text-xs text-omniv-danger">{err}</p>}
       {out && (
-        <pre className="mt-4 whitespace-pre-wrap rounded-xl border border-omniv-gold/20 bg-omniv-gold/5 p-4 font-sans text-[13px] leading-relaxed text-omniv-text-secondary">
-          {out}
-        </pre>
+        <div className="mt-4 rounded-xl border border-omniv-gold/20 bg-omniv-gold/5 p-4">
+          <StudioText text={out} />
+        </div>
       )}
     </Card>
   );
