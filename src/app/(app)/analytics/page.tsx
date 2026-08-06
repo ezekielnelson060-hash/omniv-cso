@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { ChartLine } from "@/components/analytics/chart-line";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getArtistBrain, getProfile } from "@/lib/db/profile";
 import { computeScoresFromBrain } from "@/lib/strategy/scores";
 import { cn } from "@/lib/utils";
-import { BarChart3, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import {
+  BarChart3,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Target,
+} from "lucide-react";
 import type { ArtistScore } from "@/types";
 
 function buildPersonalSeries(scores: ArtistScore) {
@@ -19,7 +27,9 @@ function buildPersonalSeries(scores: ArtistScore) {
     return {
       label: `W${i + 1}`,
       overall,
-      growth: Math.round(overall * (scores.growth / Math.max(1, scores.overall))),
+      growth: Math.round(
+        overall * (scores.growth / Math.max(1, scores.overall))
+      ),
       momentum: Math.round(
         overall * (scores.momentum / Math.max(1, scores.overall))
       ),
@@ -58,6 +68,7 @@ function DeltaBadge({ delta }: { delta: number }) {
 export default function AnalyticsPage() {
   const [scores, setScores] = useState<ArtistScore | null>(null);
   const [name, setName] = useState("");
+  const [dream, setDream] = useState("");
   const [metric, setMetric] = useState<
     "overall" | "growth" | "momentum" | "content" | "readiness"
   >("overall");
@@ -66,6 +77,11 @@ export default function AnalyticsPage() {
     (async () => {
       const [b, p] = await Promise.all([getArtistBrain(), getProfile()]);
       setName(b?.stageName || b?.name || p?.full_name || "Your project");
+      setDream(
+        b?.bigDream?.trim() ||
+          b?.goals?.[0] ||
+          "Set your Big Dream in Artist Brain"
+      );
       setScores(computeScoresFromBrain(b, p?.platforms || []));
     })();
   }, []);
@@ -81,44 +97,65 @@ export default function AnalyticsPage() {
 
   const momentumRead =
     delta > 3
-      ? "Forward. Modelled trajectory is climbing on this lever."
+      ? "Execution is compounding. Protect the routine that produced this climb."
       : delta < -2
-        ? "Falling back. This lever needs a corrective move this week."
-        : "Steady. Small disciplined actions will tip momentum.";
+        ? "You are drifting from the dream. One corrective move this week, not five new ideas."
+        : "Steady. Discipline on the highest-leverage action will tip this forward.";
 
   if (!scores) {
     return (
       <AppShell>
-        <p className="text-sm text-omniv-text-muted">Loading analytics…</p>
+        <p className="text-sm text-omniv-text-muted">Loading execution…</p>
       </AppShell>
     );
   }
 
-  const tiles = [
-    ["overall", "Overall", scores.overall],
+  const tiles: [typeof metric, string, number][] = [
+    ["overall", "Alignment", scores.overall],
     ["growth", "Growth", scores.growth],
     ["momentum", "Momentum", scores.momentum],
     ["content", "Content", scores.contentHealth],
-    ["readiness", "Release readiness", scores.releaseReadiness],
-  ] as const;
+    ["readiness", "Readiness", scores.releaseReadiness],
+  ];
 
   return (
     <AppShell>
-      <div className="mb-6">
-        <div className="mb-1 flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Historical Analytics
-          </h1>
-          <Badge variant="gold">
-            <BarChart3 className="mr-1 h-3 w-3" />
-            {name}
-          </Badge>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-omniv-gold" />
+            <h1 className="text-lg font-semibold tracking-tight">
+              Execution progress
+            </h1>
+          </div>
+          <p className="mt-1 max-w-lg text-sm text-omniv-text-secondary">
+            Not vanity metrics. These levers show whether {name} is walking
+            toward the Big Dream or spending cycles elsewhere.
+          </p>
         </div>
-        <p className="text-sm text-omniv-text-secondary">
-          Direction of travel from your Artist Brain. Live platform charts unlock
-          when OAuth is connected.
-        </p>
+        <Badge variant="gold">Personal model</Badge>
       </div>
+
+      <Card className="mb-5 border-omniv-gold/20 bg-omniv-gold/[0.04] p-5">
+        <div className="flex items-start gap-3">
+          <Target className="mt-0.5 h-4 w-4 shrink-0 text-omniv-gold" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
+              Held image
+            </p>
+            <p className="mt-1 text-sm font-medium leading-relaxed text-omniv-text">
+              {dream}
+            </p>
+            <p className="mt-2 text-xs text-omniv-text-muted">
+              Every score below is a proxy for progress against this picture.
+              Refine it in Artist Brain if the strategy has changed.
+            </p>
+            <Link href="/artist-brain" className="mt-3 inline-block">
+              <Button variant="outline" size="sm">Edit Big Dream</Button>
+            </Link>
+          </div>
+        </div>
+      </Card>
 
       <div className="mb-4 flex items-center justify-between rounded-[var(--radius-lg)] border border-omniv-border bg-omniv-card px-4 py-3">
         <div>
@@ -149,7 +186,9 @@ export default function AnalyticsPage() {
               </p>
               <p className="mt-1 font-data text-2xl font-semibold tabular-nums text-omniv-gold">
                 {val}
-                <span className="text-sm font-normal text-omniv-text-muted">%</span>
+                <span className="text-sm font-normal text-omniv-text-muted">
+                  %
+                </span>
               </p>
               <div className="mt-2">
                 <DeltaBadge delta={d} />
@@ -165,10 +204,10 @@ export default function AnalyticsPage() {
             <TrendingUp className="h-4 w-4 text-omniv-gold" />
             <div>
               <h2 className="text-sm font-semibold tracking-tight">
-                Score trajectory · 8 weeks
+                Execution trajectory · 8 weeks
               </h2>
               <p className="text-xs text-omniv-text-muted">
-                Modelled path for {name}. Select a tile to switch lever.
+                Modelled path for {name} against the dream. Select a lever.
               </p>
             </div>
           </div>
@@ -185,6 +224,11 @@ export default function AnalyticsPage() {
           ]}
         />
       </Card>
+
+      <p className="mt-4 text-center text-[11px] text-omniv-text-muted">
+        Scores improve when Artist Brain, platforms, and weekly execution stay
+        connected. Empty brain means empty signal.
+      </p>
     </AppShell>
   );
 }
