@@ -9,7 +9,7 @@
  *   GEMINI_MODEL       – optional pin
  *   ZIKI_PROVIDER      – auto | claude | gemini  (default auto)
  *
- * No cash: set ZIKI_PROVIDER=gemini and GEMINI_API_KEY only.
+ * No cash: set ZIKI_PROVIDER=gemini and GEMINI_API_KEY only. Redeploy required.
  */
 
 export function isGeminiConfigured(): boolean {
@@ -308,7 +308,7 @@ async function tryClaude(
         /credit balance|billing|purchase credits|too low/i.test(snippet)
       ) {
         lastProviderDetail =
-          "Anthropic has no credits. Using Gemini if configured (ZIKI_PROVIDER=gemini or auto).";
+          "Anthropic has no credits. Using Gemini if configured.";
         break;
       }
       if (result.status !== 404 && result.status !== 400) break;
@@ -377,23 +377,45 @@ export async function zikiComplete(
     };
   }
 
+  // Pure Gemini: never call Anthropic (no credit noise)
+  if (mode === "gemini") {
+    if (!isGeminiConfigured()) {
+      return {
+        text: `**Gemini not configured**\n\nZIKI_PROVIDER is gemini but **GEMINI_API_KEY** is missing in Vercel Production.\n\n1. Add GEMINI_API_KEY from aistudio.google.com/apikey\n2. Confirm scope = Production\n3. Redeploy (required after env changes)`,
+        source: "local",
+      };
+    }
+    const gemini = await tryGemini(system, userMessage);
+    if (gemini) return { text: gemini.text, source: "gemini", model: gemini.model };
+    const detail = lastProviderDetail
+      ? `\n\nDetail: ${lastProviderDetail.slice(0, 400)}`
+      : "";
+    return {
+      text: `**Gemini rejected the request**${detail}\n\nCheck the key is valid, not restricted, and Production was redeployed.`,
+      source: "local",
+    };
+  }
+
   const wantClaude = mode === "auto" || mode === "claude";
-  const wantGemini = mode === "auto" || mode === "gemini";
-  const allowGeminiFallback = mode === "auto" || mode === "claude";
 
   if (wantClaude) {
     const claude = await tryClaude(system, userMessage);
     if (claude) return { text: claude.text, source: "claude", model: claude.model };
   }
 
-  if (wantGemini || allowGeminiFallback) {
-    const gemini = await tryGemini(system, userMessage);
-    if (gemini) return { text: gemini.text, source: "gemini", model: gemini.model };
-  }
+  const gemini = await tryGemini(system, userMessage);
+  if (gemini) return { text: gemini.text, source: "gemini", model: gemini.model };
 
   if (!isClaudeConfigured() && !isGeminiConfigured()) {
     return {
-      text: `**Model offline**\n\nAdd **GEMINI_API_KEY** (free path) or **ANTHROPIC_API_KEY** (paid) in Vercel Production, then Redeploy.\n\nNo cash: **ZIKI_PROVIDER**=gemini + **GEMINI_API_KEY** only.`,
+      text: `**Model offline**\n\nNo cash path: set **GEMINI_API_KEY** + **ZIKI_PROVIDER**=gemini in Vercel Production, then Redeploy.`,
+      source: "local",
+    };
+  }
+
+  if (!isGeminiConfigured()) {
+    return {
+      text: `**Need Gemini for free path**\n\nClaude failed or has no credits. Add **GEMINI_API_KEY** and set **ZIKI_PROVIDER**=gemini, then Redeploy Production.`,
       source: "local",
     };
   }
@@ -401,15 +423,8 @@ export async function zikiComplete(
   const detail = lastProviderDetail
     ? `\n\nDetail: ${lastProviderDetail.slice(0, 400)}`
     : "";
-  const noCredits = /no credits|credit balance|billing/i.test(lastProviderDetail);
-  if (noCredits) {
-    return {
-      text: `**Claude needs paid credits**\n\nAnthropic rejected the key: balance is too low.\n\n**No cash path:** use Gemini (free tier for now).\n1. Vercel → Environment Variables → Production\n2. Set **GEMINI_API_KEY** (from aistudio.google.com/apikey)\n3. Set **ZIKI_PROVIDER**=gemini\n4. Redeploy Production\n\nIgnore ANTHROPIC_API_KEY until you can top up credits.`,
-      source: "local",
-    };
-  }
   return {
-    text: `**Provider error**\n\nKeys are present but the model rejected the request.${detail}\n\nConfirm **GEMINI_API_KEY** is set for Production and **ZIKI_PROVIDER**=gemini, then Redeploy.`,
+    text: `**Provider error**${detail}\n\nBoth Claude and Gemini failed. Verify GEMINI_API_KEY in Production and Redeploy.`,
     source: "local",
   };
 }
