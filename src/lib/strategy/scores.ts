@@ -1,4 +1,5 @@
 import type { ArtistBrain, ArtistScore, AIRecommendation } from "@/types";
+import { dreamRecommendation } from "@/lib/strategy/dream-rec";
 
 function clamp(n: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, Math.round(n)));
@@ -10,23 +11,21 @@ function brainCompleteness(brain: ArtistBrain): number {
     brain.genre.length > 0 && brain.genre[0] !== "TBD",
     Boolean(brain.musicStyle && brain.musicStyle.length > 20),
     Boolean(brain.brandVoice && brain.brandVoice.length > 8),
-    Boolean(brain.targetAudience && brain.targetAudience.length > 12),
+    Boolean(brain.targetAudience && brain.targetAudience.length > 8),
     brain.goals.length > 0,
     brain.strengths.length > 0,
-    brain.competitors.length > 0,
-    (brain.pastReleases?.length ?? 0) > 0,
+    brain.weaknesses.length > 0,
     Boolean(brain.contentStyle),
     Boolean(brain.careerStage),
+    Boolean(brain.notes && brain.notes.length > 10),
   ];
-  for (const c of checks) if (c) filled += 1;
+  for (const c of checks) if (c) filled++;
   return filled / checks.length;
 }
 
 export type ScoreInputs = {
   platforms?: string[];
-  socialLinkCount?: number;
   interests?: string[];
-  daysSinceActivity?: number | null;
 };
 
 export function computeScoresFromBrain(
@@ -35,147 +34,74 @@ export function computeScoresFromBrain(
 ): ArtistScore {
   const inputs: ScoreInputs = Array.isArray(platformsOrInputs)
     ? { platforms: platformsOrInputs }
-    : platformsOrInputs;
-
+    : platformsOrInputs || {};
   const platforms = inputs.platforms || [];
-  const socialLinks = inputs.socialLinkCount ?? 0;
   const interests = inputs.interests || [];
-  const idleDays = inputs.daysSinceActivity ?? null;
 
   if (!brain) {
     return {
-      overall: 22,
-      growth: 24,
-      momentum: 20,
-      audienceHealth: 18,
-      releaseReadiness: 15,
-      contentHealth: 20,
-      fanGrowth: 16,
+      overall: 28,
+      growth: 25,
+      momentum: 22,
+      audienceHealth: 20,
+      releaseReadiness: 18,
+      contentHealth: 24,
+      fanGrowth: 20,
       streamingTrend: 18,
-      socialGrowth: 20,
-      opportunity: 28,
+      socialGrowth: 22,
+      opportunity: 30,
     };
   }
 
-  const complete = brainCompleteness(brain);
-  const platformBoost = Math.min(platforms.length * 5 + socialLinks * 4, 36);
-  const hasGenre = brain.genre.length > 0 && brain.genre[0] !== "TBD";
+  const completeness = brainCompleteness(brain);
+  const platformCount = platforms.length;
   const goalCount = brain.goals.length;
-  const strengthCount = brain.strengths.length;
-  const gapCount = Math.max(brain.weaknesses.length, 1);
-  const hasStyle = Boolean(brain.musicStyle && brain.musicStyle.length > 30);
-  const hasAudience = Boolean(
-    brain.targetAudience &&
-      !brain.targetAudience.toLowerCase().includes("refined from") &&
-      !brain.targetAudience.toLowerCase().includes("to be")
-  );
-  const releaseCount = brain.pastReleases?.length ?? 0;
+  const hasDream = Boolean(brain.bigDream?.trim() || goalCount > 0);
+
   const interestBoost = Math.min(interests.length * 3, 15);
+  const platformBoost = Math.min(platformCount * 8, 32);
+  const completeBoost = Math.round(completeness * 35);
+  const dreamBoost = hasDream ? 8 : 0;
 
   const stageBoost =
-    {
-      emerging: 0,
-      developing: 7,
-      breakthrough: 14,
-      established: 18,
-      legacy: 20,
-    }[brain.careerStage] ?? 0;
-
-  const idlePenalty =
-    idleDays == null ? 0 : idleDays > 21 ? 10 : idleDays > 10 ? 5 : 0;
+    (
+      {
+        emerging: 4,
+        developing: 8,
+        breakthrough: 12,
+        established: 14,
+        legacy: 10,
+      } as Record<string, number>
+    )[brain.careerStage] ?? 0;
 
   const contentHealth = clamp(
-    28 +
-      platformBoost * 0.6 +
-      (hasStyle ? 14 : 0) +
-      goalCount * 3 +
-      complete * 18 +
-      (interests.includes("content") ? 6 : 0)
+    28 + completeBoost * 0.4 + interestBoost + (interests.includes("content") ? 6 : 0)
   );
-
   const audienceHealth = clamp(
-    24 +
-      platformBoost * 0.7 +
-      (hasAudience ? 16 : 2) +
-      strengthCount * 3 +
-      complete * 12 +
-      (interests.includes("audience") ? 5 : 0)
+    22 + platformBoost * 0.5 + completeBoost * 0.25 + (interests.includes("audience") ? 5 : 0)
   );
-
   const releaseReadiness = clamp(
-    18 +
-      releaseCount * 14 +
-      (hasGenre ? 12 : 0) +
-      (goalCount > 1 ? 8 : 0) +
-      stageBoost * 0.6 +
-      (interests.includes("release") || interests.includes("playlist") ? 8 : 0) +
-      complete * 10
-  );
-
-  const momentum = clamp(
-    26 +
-      platformBoost +
-      strengthCount * 4 -
-      gapCount * 2 +
-      stageBoost -
-      idlePenalty +
-      complete * 14
-  );
-
-  const growth = clamp(
-    24 +
-      platformBoost * 0.85 +
-      goalCount * 5 +
-      stageBoost +
-      interestBoost -
-      idlePenalty * 0.5 +
-      complete * 12
-  );
-
-  const fanGrowth = clamp(
-    22 +
-      platformBoost * 0.5 +
-      (hasAudience ? 12 : 0) +
-      (platforms.includes("tiktok") || platforms.includes("instagram") ? 8 : 0)
-  );
-
-  const streamingTrend = clamp(
     20 +
-      (platforms.includes("spotify") ? 20 : 3) +
-      (platforms.includes("apple") ? 8 : 0) +
-      releaseCount * 7 +
-      socialLinks * 2
+      completeBoost * 0.35 +
+      stageBoost +
+      (interests.includes("release") || interests.includes("playlist") ? 8 : 0) +
+      dreamBoost
   );
-
-  const socialGrowth = clamp(
-    24 +
-      (platforms.includes("tiktok") ? 12 : 0) +
-      (platforms.includes("instagram") ? 10 : 0) +
-      (platforms.includes("youtube") ? 8 : 0) +
-      (hasStyle ? 8 : 0) +
-      socialLinks * 3
-  );
-
-  const opportunity = clamp(
-    32 +
-      gapCount * 5 +
-      (platforms.length < 3 ? 10 : 2) +
-      (hasGenre ? 10 : 0) +
-      interestBoost +
-      complete * 15 -
-      (complete < 0.3 ? 8 : 0)
-  );
-
+  const growth = clamp(25 + platformBoost * 0.4 + interestBoost + dreamBoost * 0.5);
+  const momentum = clamp(24 + completeBoost * 0.3 + platformBoost * 0.35 + stageBoost);
+  const opportunity = clamp(30 + interestBoost + platformBoost * 0.25 + dreamBoost);
+  const fanGrowth = clamp(audienceHealth * 0.85 + platformBoost * 0.15);
+  const streamingTrend = clamp(releaseReadiness * 0.7 + growth * 0.3);
+  const socialGrowth = clamp(contentHealth * 0.6 + audienceHealth * 0.4);
   const overall = clamp(
-    growth * 0.14 +
-      momentum * 0.16 +
-      audienceHealth * 0.14 +
-      releaseReadiness * 0.16 +
-      contentHealth * 0.12 +
-      opportunity * 0.1 +
-      fanGrowth * 0.06 +
-      streamingTrend * 0.06 +
-      socialGrowth * 0.06
+    overallFromParts({
+      growth,
+      momentum,
+      audienceHealth,
+      releaseReadiness,
+      contentHealth,
+      opportunity,
+    })
   );
 
   return {
@@ -192,10 +118,28 @@ export function computeScoresFromBrain(
   };
 }
 
+function overallFromParts(p: {
+  growth: number;
+  momentum: number;
+  audienceHealth: number;
+  releaseReadiness: number;
+  contentHealth: number;
+  opportunity: number;
+}) {
+  return (
+    p.growth * 0.18 +
+    p.momentum * 0.18 +
+    p.audienceHealth * 0.16 +
+    p.releaseReadiness * 0.16 +
+    p.contentHealth * 0.16 +
+    p.opportunity * 0.16
+  );
+}
+
 const INTEREST_CATEGORY: Record<string, string[]> = {
-  content: ["Content", "Trend", "Platform"],
-  release: ["Release"],
-  playlist: ["Playlist"],
+  content: ["Content"],
+  release: ["Release", "Playlist"],
+  playlist: ["Playlist", "Release"],
   live: ["Festival", "Market"],
   collab: ["Collab"],
   brand: ["Brand", "Strategy"],
@@ -213,6 +157,8 @@ export function buildRecommendationsFromBrain(
   const genre = rawGenre || "core";
   const genreLabel = rawGenre || "your";
   const recs: AIRecommendation[] = [];
+  const dreamRec = dreamRecommendation(brain);
+  if (dreamRec) recs.push(dreamRec);
   const scores = computeScoresFromBrain(brain, { platforms, interests });
 
   if (interests.includes("content") || interests.length === 0) {
@@ -225,271 +171,78 @@ export function buildRecommendationsFromBrain(
       difficulty: "Moderate",
       confidence: clamp(70 + scores.contentHealth * 0.25),
       expectedOutcome: "Measurable reach test within 14 days",
-      priority: 1,
+      priority: 2,
       category: "Content",
-      timeWindow: "This week",
-      timing: "Days 1–7: two hooks + two reactions. Review completion rate before scaling.",
-      platforms: platforms.length ? platforms.slice(0, 4) : ["tiktok", "instagram"],
-      positioning:
-        brain?.brandVoice?.slice(0, 140) ||
-        `Own the ${genre} lane with consistent visual + verbal system.`,
-      connections: brain?.competitors?.length
-        ? `Watch peers: ${brain.competitors.slice(0, 3).join(", ")}. Differentiate format, not just sound.`
-        : "Map 3 peer accounts in your lane and note their winning formats.",
-      strategicFrame:
-        "Consistency beats virality bets while release readiness is low.",
+      platforms: platforms.slice(0, 3),
+      timing: "This week",
+      strategicFrame: "Cadence over virality",
       nextActions: [
-        "Lock one visual system for the week",
-        "Shoot 4 hooks under 1.5s",
-        "Post on primary surface first, then cross-cut",
-        "Log which hook held completion",
+        "Lock 4 hooks from catalogue or writing",
+        "Film in one session",
+        "Post on the two strongest platforms",
       ],
-      supportingData: `Style: ${brain?.musicStyle?.slice(0, 120) || "n/a"} · Content score ${scores.contentHealth}%`,
-      detectedAt: "Just now",
     });
   }
 
   if (interests.includes("release") || interests.includes("playlist")) {
     recs.push({
       id: "release-window",
-      title: `Lock next ${genre} release window`,
-      summary:
-        "A dated target forces assets, content, and pitch list into one critical path.",
+      title: "Stress-test the next release window",
+      summary: `Run release readiness for ${name} before spending the cycle.`,
       why: `Career stage: ${brain?.careerStage || "emerging"}. Release readiness is currently ${scores.releaseReadiness}%.`,
       impact: "High",
       difficulty: "Moderate",
-      confidence: clamp(68 + scores.releaseReadiness * 0.2),
-      expectedOutcome: "Clear 6–8 week path",
+      confidence: clamp(65 + scores.releaseReadiness * 0.3),
+      expectedOutcome: "Clear Go / Caution / Hold before budget is spent",
       priority: 2,
       category: "Release",
-      timeWindow: "This month",
-      timing: "Set a primary date + alternate before spend.",
-      platforms: platforms.filter((p) =>
-        ["spotify", "apple", "youtube"].includes(p)
-      ).length
-        ? platforms.filter((p) =>
-            ["spotify", "apple", "youtube", "tiktok"].includes(p)
-          )
-        : platforms.slice(0, 3),
-      positioning: `Frame the release for ${genre} listeners first.`,
-      connections: "Curators + owned list before paid.",
-      strategicFrame: "Readiness first. A quiet delay beats a loud miss.",
+      timing: "Before next spend",
+      strategicFrame: "Timing is strategy",
       nextActions: [
-        "Pick primary + alternate dates",
-        "List missing assets",
-        "Draft pitch paragraph",
+        "Open Release Simulator",
+        "List competing drops in the same week",
+        "Decide Go, Caution, or Hold",
       ],
-      supportingData: (brain?.goals || []).slice(0, 2).join(" · "),
-      detectedAt: "Just now",
     });
   }
 
-  if (interests.includes("playlist")) {
+  if (scores.audienceHealth < 50 || interests.includes("audience")) {
     recs.push({
-      id: "playlist-pitch",
-      title: `Pitch independent ${genre} playlists`,
-      summary:
-        "Build a list of 8–12 curators that match your tempo and mood before the next drop.",
-      why: "Playlist interest was selected. Outreach only works with a defined sound.",
+      id: "owned-audience",
+      title: "Grow owned audience, not rented reach",
+      summary: "Move attention from algorithmic feeds into a list you control.",
+      why: "Platform reach can vanish overnight. Owned audience compounds toward the Big Dream.",
       impact: "High",
       difficulty: "Moderate",
       confidence: 78,
-      expectedOutcome: "2–4 relevant submissions in the next window",
+      expectedOutcome: "Weekly list growth and higher conversion on the next drop",
       priority: 3,
-      category: "Playlist",
-      timeWindow: "Thu–Sun cycle",
-      platforms: ["spotify"],
-      timing: "Submit ≥7 days before release when possible.",
-      positioning: `Pitch mood + lane, not only the ${genre} tag.`,
-      connections: "8–12 niche independents before flagship editorial.",
-      strategicFrame: "Indie lists seed algo density.",
-      nextActions: [
-        "Build curator sheet",
-        "Write 2-sentence pitch",
-        "Track responses",
-      ],
-      detectedAt: "Just now",
-    });
-  }
-
-  if (interests.includes("audience")) {
-    recs.push({
-      id: "audience-cohort",
-      title: "Re-engage quiet listeners",
-      summary:
-        "Target the 30–45 day dormant cohort with Stories + one exclusive snippet.",
-      why: `Audience health ${scores.audienceHealth}%. Recovery is cheaper than cold acquisition.`,
-      impact: "Medium",
-      difficulty: "Easy",
-      confidence: clamp(72 + scores.audienceHealth * 0.15),
-      expectedOutcome: "Recovery of engaged listeners",
-      priority: 4,
       category: "Audience",
-      timeWindow: "This week",
-      platforms: platforms.filter((p) =>
-        ["instagram", "tiktok", "email"].includes(p)
-      ).length
-        ? platforms.slice(0, 3)
-        : ["instagram"],
-      timing: "48-hour window for Stories sequence.",
-      connections: "Owned list / fan gate first.",
-      strategicFrame: "Warm recovery before cold ads.",
+      supportingData: (brain?.goals || []).slice(0, 2).join(" · "),
+      timing: "Ongoing this month",
+      strategicFrame: "Own the relationship",
       nextActions: [
-        "Segment quiet cohort",
-        "Ship exclusive snippet",
-        "Measure reply rate",
+        "Primary CTA on every post to Fan Gate",
+        "One lead magnet tied to the next release",
+        "Weekly review of fan tiers",
       ],
-      detectedAt: "Just now",
     });
   }
 
-  if (interests.includes("collab")) {
+  if (platforms.length < 2) {
     recs.push({
-      id: "collab",
-      title: `Map 3 ${genre} collab targets`,
-      summary:
-        "Peer acts 0.7–1.5× your reach with overlapping audience are highest ROI.",
-      why: "Collab interest selected in onboarding.",
+      id: "connect-platforms",
+      title: "Connect the platforms that feed the model",
+      summary: "Scores and opportunities stay soft until live surfaces are linked.",
+      why: "Empty inputs produce empty strategy. Managers need signal, not guesses.",
       impact: "Medium",
-      difficulty: "Hard",
-      confidence: 72,
-      expectedOutcome: "One warm conversation this month",
-      priority: 5,
-      category: "Collab",
-      timeWindow: "30 days",
-      connections: brain?.competitors?.slice(0, 3).join(", ") || "Peer acts in lane",
-      strategicFrame: "Adjacent reach, shared audience, clear ask.",
-      nextActions: ["List 3 targets", "One-line value prop", "Warm intro path"],
-      detectedAt: "Just now",
-    });
-  }
-
-  if (interests.includes("live")) {
-    recs.push({
-      id: "live",
-      title: "Soft-pitch 2 rooms or day parties",
-      summary:
-        "Match room size to current stage. Overshooting kills conversion.",
-      why: `Level: ${brain?.careerStage}. Live interest selected.`,
-      impact: "Medium",
-      difficulty: "Hard",
-      confidence: 70,
-      expectedOutcome: "One confirmed date or hold",
-      priority: 6,
-      category: "Festival",
-      timeWindow: "Next 45 days",
-      strategicFrame: "Right-sized room beats empty prestige.",
-      nextActions: ["Shortlist 2 rooms", "One-pager", "Follow-up cadence"],
-      detectedAt: "Just now",
-    });
-  }
-
-  if (interests.includes("brand")) {
-    recs.push({
-      id: "brand",
-      title: "Codify visual + voice rules",
-      summary:
-        "One-page brand sheet so every post and cover looks intentional.",
-      why: `Voice: ${brain?.brandVoice || "not set"}. Brand focus selected.`,
-      impact: "Medium",
-      difficulty: "Easy",
-      confidence: 84,
-      expectedOutcome: "Consistent identity across surfaces",
-      priority: 7,
-      category: "Brand",
-      timeWindow: "This week",
-      positioning: brain?.visualIdentity?.slice(0, 140) || "Define palette + framing",
-      strategicFrame: "Consistency is a growth asset.",
-      nextActions: ["Write voice rules", "Lock 3 visual refs", "Apply this week"],
-      detectedAt: "Just now",
-    });
-  }
-
-  if (interests.includes("monetise")) {
-    recs.push({
-      id: "monetise",
-      title: "Pick one monetisation experiment",
-      summary:
-        "Merch, ticketed live, or paid community. One only this quarter.",
-      why: "Monetisation focus selected; scatter dilutes signal.",
-      impact: "High",
-      difficulty: "Moderate",
-      confidence: 74,
-      expectedOutcome: "First revenue test designed",
-      priority: 8,
-      category: "Market",
-      timeWindow: "This quarter",
-      strategicFrame: "One experiment, clear kill criteria.",
-      nextActions: ["Choose one path", "Price + offer", "14-day test window"],
-      detectedAt: "Just now",
-    });
-  }
-
-  if (!platforms.includes("spotify") && platforms.length > 0) {
-    recs.push({
-      id: "spotify",
-      title: "Add Spotify profile link",
-      summary: "Streaming signals sharpen release and playlist scoring.",
-      why: "Selected platforms omit Spotify.",
-      impact: "High",
       difficulty: "Easy",
       confidence: 90,
-      expectedOutcome: "Better Command Center precision",
-      priority: 9,
+      expectedOutcome: "Personalised scores and tighter opportunity ranking",
+      priority: 4,
       category: "Platform",
-      timeWindow: "Today",
-      platforms: ["spotify"],
-      strategicFrame: "Missing DSP link caps scoring accuracy.",
-      nextActions: ["Paste Spotify URL in settings", "Re-scan profile"],
-      detectedAt: "Just now",
-    });
-  }
-
-  if (brain?.goals?.[0]) {
-    recs.push({
-      id: "goal-1",
-      title: `Protect focus: ${brain.goals[0]}`,
-      summary: "Your #1 onboarding goal is this week's non-negotiable.",
-      why: "Scattered execution is the independent career tax.",
-      impact: "High",
-      difficulty: "Easy",
-      confidence: 82,
-      expectedOutcome: "One shipped outcome on the primary goal",
-      priority: 10,
-      category: "Strategy",
-      timeWindow: "This week",
-      supportingData: brain.goals.join(" · "),
-      timing: "Protect calendar this week: one primary outcome only.",
-      platforms: platforms.slice(0, 3),
-      positioning:
-        brain.brandVoice?.slice(0, 120) ||
-        "Stay on the goal language from onboarding.",
-      connections: "Share weekly check with manager/label contact if applicable.",
-      strategicFrame: "Focus tax is the independent career default. One goal wins.",
-      nextActions: [
-        "Write the goal as a shippable deliverable",
-        "Block 3 work sessions",
-        "Kill one distraction surface for 7 days",
-      ],
-      detectedAt: "Just now",
-    });
-  }
-
-  if (recs.length === 0) {
-    recs.push({
-      id: "default",
-      title: "Complete Artist Brain gaps",
-      summary: "Add genre, goals, and platforms so the feed can personalise.",
-      why: "Insufficient onboarding signal.",
-      impact: "High",
-      difficulty: "Easy",
-      confidence: 95,
-      expectedOutcome: "Accurate opportunity ranking",
-      priority: 1,
-      category: "Strategy",
-      timeWindow: "Today",
-      nextActions: ["Open Artist Brain", "Add genre + goals", "Save"],
-      detectedAt: "Just now",
+      timing: "Today",
+      nextActions: ["Open Settings → Integrations", "Connect primary surfaces"],
     });
   }
 
@@ -504,12 +257,6 @@ export function buildRecommendationsFromBrain(
       priority: preferred.has(String(r.category))
         ? r.priority
         : r.priority + 20,
-      detectedAt: r.detectedAt || "Just now",
-      platforms: r.platforms?.length ? r.platforms : platforms.slice(0, 4),
-      timing: r.timing || r.timeWindow || "This week",
-      strategicFrame:
-        r.strategicFrame ||
-        `Highest-leverage ${String(r.category).toLowerCase()} move for ${name}.`,
     }))
     .sort((a, b) => a.priority - b.priority)
     .map((r, i) => ({ ...r, priority: i + 1 }));
@@ -521,6 +268,10 @@ export function overallNarrative(
 ): string {
   const name = brain?.stageName || brain?.name || "Your project";
   const genre = brain?.genre?.filter((g) => g !== "TBD").join(" / ");
+  const dream = brain?.bigDream?.trim() || brain?.goals?.[0];
+  if (dream && scores.overall < 45) {
+    return `${name}: the Big Dream is set, but execution levers are still soft (${scores.overall}%). One weekly move beats ten ideas.`;
+  }
   if (scores.releaseReadiness < scores.momentum - 8) {
     return `${name}${genre ? ` (${genre})` : ""}: momentum is ahead of release readiness (${scores.releaseReadiness}%). Closing that gap lifts overall fastest.`;
   }
@@ -530,5 +281,5 @@ export function overallNarrative(
   if (scores.contentHealth < 45) {
     return `${name}: content health is the softest lever right now: a 14-day cadence will move scores more than new tools.`;
   }
-  return `${name}: scores update from your profile, goals, and platforms. Sharper data → sharper next moves.`;
+  return `${name}: scores update from your profile, Big Dream, and platforms. Sharper data → sharper next moves.`;
 }
