@@ -122,10 +122,11 @@ export function ChatPanel() {
       name: string;
       type: string;
       data?: string;
-      /** Object URL for waveform playback */
+      fileUri?: string;
       url?: string;
       passport?: AudioPassport | null;
       analyzing?: boolean;
+      uploading?: boolean;
     }[]
   >([]);
   const [busy, setBusy] = useState(false);
@@ -258,27 +259,118 @@ export function ChatPanel() {
   async function onPickFiles(e: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    const MAX = 12 * 1024 * 1024;
+    const INLINE_MAX = 12 * 1024 * 1024;
+    const HARD_MAX = 50 * 1024 * 1024;
     const next: {
       id: string;
       name: string;
       type: string;
       data?: string;
+      fileUri?: string;
       url?: string;
       passport?: AudioPassport | null;
       analyzing?: boolean;
+      uploading?: boolean;
     }[] = [];
 
     for (const f of files.slice(0, 4)) {
       const id = `${Date.now()}-${f.name}`;
-      if (f.size > MAX) {
+      if (f.size > HARD_MAX) {
         next.push({
           id,
-          name: `${f.name} (too large, max 12MB)`,
+          name: `${f.name} (max 50MB)`,
           type: f.type || "file",
         });
         continue;
       }
+
+      const isAudio =
+        (f.type || "").startsWith("audio/") ||
+        /\.(mp3|wav|m4a|flac|aac|ogg)$/i.test(f.name);
+      const url = isAudio ? URL.createObjectURL(f) : undefined;
+
+      if (f.size > INLINE_MAX) {
+        next.push({
+          id,
+          name: f.name,
+          type: f.type || "file",
+          url,
+          uploading: true,
+          analyzing: isAudio,
+          passport: null,
+        });
+        setAttachments((prev) => [...prev, ...next].slice(0, 4));
+        next.length = 0;
+
+        void (async () => {
+          try {
+            const fd = new FormData();
+            fd.append("file", f);
+            const res = await fetch("/api/ziki/upload", {
+              method: "POST",
+              body: fd,
+            });
+            const data = (await res.json()) as {
+              fileUri?: string;
+              mimeType?: string;
+              error?: string;
+              message?: string;
+            };
+            if (!res.ok || !data.fileUri) {
+              setAttachments((prev) =>
+                prev.map((a) =>
+                  a.id === id
+                    ? {
+                        ...a,
+                        uploading: false,
+                        analyzing: false,
+                        name: `${f.name} (upload failed)`,
+                      }
+                    : a
+                )
+              );
+              return;
+            }
+            setAttachments((prev) =>
+              prev.map((a) =>
+                a.id === id
+                  ? {
+                      ...a,
+                      fileUri: data.fileUri,
+                      type: data.mimeType || a.type,
+                      uploading: false,
+                    }
+                  : a
+              )
+            );
+          } catch {
+            setAttachments((prev) =>
+              prev.map((a) =>
+                a.id === id
+                  ? {
+                      ...a,
+                      uploading: false,
+                      analyzing: false,
+                      name: `${f.name} (upload failed)`,
+                    }
+                  : a
+              )
+            );
+          }
+        })();
+
+        if (isAudio) {
+          void analyzeAudioFile(f).then((passport) => {
+            setAttachments((prev) =>
+              prev.map((a) =>
+                a.id === id ? { ...a, passport, analyzing: false } : a
+              )
+            );
+          });
+        }
+        continue;
+      }
+
       const data = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
@@ -289,12 +381,6 @@ export function ChatPanel() {
         reader.onerror = () => reject(reader.error);
         reader.readAsDataURL(f);
       }).catch(() => "");
-
-      const isAudio =
-        (f.type || "").startsWith("audio/") ||
-        /\.(mp3|wav|m4a|flac|aac|ogg)$/i.test(f.name);
-
-      const url = isAudio ? URL.createObjectURL(f) : undefined;
 
       next.push({
         id,
@@ -316,14 +402,16 @@ export function ChatPanel() {
         });
       }
     }
-    setAttachments((prev) => [...prev, ...next].slice(0, 4));
+    if (next.length) {
+      setAttachments((prev) => [...prev, ...next].slice(0, 4));
+    }
     e.target.value = "";
   }
 
   async function send(text: string, fromAct = false) {
     const trimmed = text.trim();
     if ((!trimmed && attachments.length === 0) || busy) return;
-    const readyFiles = attachments.filter((a) => a.data);
+    const readyFiles = attachments.filter((a) => a.data || a.fileUri);
     const passports = attachments
       .map((a) => a.passport)
       .filter((p): p is AudioPassport => Boolean(p));
@@ -367,7 +455,9 @@ export function ChatPanel() {
     const attachmentPayload = readyFiles.map((a) => ({
       name: a.name,
       mimeType: a.type || "application/octet-stream",
-      data: a.data as string,
+      ...(a.fileUri
+        ? { fileUri: a.fileUri }
+        : { data: a.data as string }),
     }));
     attachments.forEach((a) => {
       if (a.url) {
@@ -593,7 +683,7 @@ export function ChatPanel() {
                       url={a.url as string}
                       name={a.name}
                       passport={a.passport}
-                      analyzing={a.analyzing}
+                      analyzing={a.analyzing || a.uploading}
                       onRemove={() => {
                         if (a.url) {
                           try {
@@ -667,7 +757,11 @@ export function ChatPanel() {
               <Button
                 size="icon"
                 className="h-12 w-12 shrink-0 rounded-2xl"
-                disabled={busy || (!input.trim() && attachments.length === 0)}
+                disabled={
+                  busy ||
+                  attachments.some((a) => a.uploading) ||
+                  (!input.trim() && attachments.length === 0)
+                }
                 onClick={() => void send(input)}
                 aria-label="Send"
               >
@@ -675,7 +769,7 @@ export function ChatPanel() {
               </Button>
             </div>
             <p className="mt-1.5 text-center text-[10px] text-omniv-text-muted">
-              Attach demos (MP3/WAV up to 12MB), covers, or briefs. Ziki listens and aligns to your Artist Brain.
+              Attach demos up to 50MB (MP3/WAV), covers, or briefs. Large files use secure upload. Ziki listens and aligns to your Artist Brain.
             </p>
           </div>
         </div>
