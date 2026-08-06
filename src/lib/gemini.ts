@@ -4,7 +4,7 @@
  *
  * Env:
  *   ANTHROPIC_API_KEY  – Claude
- *   CLAUDE_MODEL       – default claude-sonnet-4-6
+ *   CLAUDE_MODEL       – preferred model (falls through candidates on 404)
  *   GEMINI_API_KEY     – Gemini (fallback / primary if no Anthropic)
  *   GEMINI_MODEL       – optional pin
  *   ZIKI_PROVIDER      – auto | claude | gemini  (default auto)
@@ -81,8 +81,13 @@ const GEMINI_CANDIDATES = [
   "gemini-1.5-flash",
 ].filter((m, i, arr): m is string => Boolean(m) && arr.indexOf(m) === i);
 
-const CLAUDE_MODEL =
-  process.env.CLAUDE_MODEL?.trim() || "claude-sonnet-4-6";
+const CLAUDE_CANDIDATES = [
+  process.env.CLAUDE_MODEL?.trim(),
+  "claude-sonnet-4-6",
+  "claude-sonnet-4-20250514",
+  "claude-3-5-sonnet-latest",
+  "claude-3-5-sonnet-20241022",
+].filter((m, i, arr): m is string => Boolean(m) && arr.indexOf(m) === i);
 
 const AUDIO_MIME = new Set([
   "audio/wav",
@@ -281,21 +286,29 @@ async function callGemini(
   return { ok: true, text, model };
 }
 
+let lastProviderDetail = "";
+
 async function tryClaude(
   system: string,
   userMessage: string
 ): Promise<{ text: string; model: string } | null> {
   const key = process.env.ANTHROPIC_API_KEY?.trim();
   if (!key) return null;
-  try {
-    const result = await callClaude(key, CLAUDE_MODEL, system, userMessage);
-    if (result.ok) return { text: result.text, model: result.model };
-    console.error("Claude error", result.model, result.status, result.body.slice(0, 300));
-    return null;
-  } catch (e) {
-    console.error("Claude exception", e);
-    return null;
+  for (const model of CLAUDE_CANDIDATES) {
+    try {
+      const result = await callClaude(key, model, system, userMessage);
+      if (result.ok) return { text: result.text, model: result.model };
+      const snippet = result.body.slice(0, 280);
+      lastProviderDetail = `Claude ${model} → HTTP ${result.status}: ${snippet}`;
+      console.error("Claude error", model, result.status, snippet);
+      if (result.status === 401 || result.status === 403) break;
+      if (result.status !== 404 && result.status !== 400) break;
+    } catch (e) {
+      lastProviderDetail = `Claude exception: ${e instanceof Error ? e.message : String(e)}`;
+      console.error("Claude exception", e);
+    }
   }
+  return null;
 }
 
 async function tryGemini(
@@ -319,7 +332,12 @@ async function tryGemini(
       console.error("Gemini exception", model, e);
     }
   }
-  if (lastStatus) console.error("Gemini exhausted", lastStatus, lastBody.slice(0, 200));
+  if (lastStatus) {
+    lastProviderDetail =
+      lastProviderDetail ||
+      `Gemini → HTTP ${lastStatus}: ${lastBody.slice(0, 200)}`;
+    console.error("Gemini exhausted", lastStatus, lastBody.slice(0, 200));
+  }
   return null;
 }
 
@@ -333,6 +351,7 @@ export async function zikiComplete(
   const system = systemContext ?? DEFAULT_SYSTEM;
   const mode = providerMode();
   const multimodal = hasMultimodal(attachments);
+  lastProviderDetail = "";
 
   if (multimodal) {
     const gemini = await tryGemini(system, userMessage, attachments);
@@ -365,13 +384,16 @@ export async function zikiComplete(
 
   if (!isClaudeConfigured() && !isGeminiConfigured()) {
     return {
-      text: `**Model offline**\n\nAdd **ANTHROPIC_API_KEY** and/or **GEMINI_API_KEY** in Vercel → Production env, then Redeploy.\n\nOptional: **CLAUDE_MODEL**=claude-sonnet-4-6 · **ZIKI_PROVIDER**=claude`,
+      text: `**Model offline**\n\nAdd **ANTHROPIC_API_KEY** and/or **GEMINI_API_KEY** in Vercel → Production env, then Redeploy.\n\nOptional: **CLAUDE_MODEL**=claude-sonnet-4-20250514 · **ZIKI_PROVIDER**=auto`,
       source: "local",
     };
   }
 
+  const detail = lastProviderDetail
+    ? `\n\nDetail: ${lastProviderDetail.slice(0, 400)}`
+    : "";
   return {
-    text: `**Provider error**\n\nCheck Vercel logs. Claude: ANTHROPIC_API_KEY + CLAUDE_MODEL=claude-sonnet-4-6`,
+    text: `**Provider error**\n\nKeys are present but the model rejected the request.${detail}\n\nFix: Vercel → Settings → Environment Variables → **Production**\n• ANTHROPIC_API_KEY (starts with sk-ant-)\n• CLAUDE_MODEL=claude-sonnet-4-20250514 (safe default)\n• GEMINI_API_KEY as fallback\n• ZIKI_PROVIDER=auto\nThen Redeploy (env alone does not restart functions).`,
     source: "local",
   };
 }
