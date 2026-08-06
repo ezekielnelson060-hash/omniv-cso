@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { getArtistBrain, getProfile } from "@/lib/db/profile";
 import { computeScoresFromBrain } from "@/lib/strategy/scores";
 import { cn } from "@/lib/utils";
-import { BarChart3, TrendingUp } from "lucide-react";
+import { BarChart3, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { ArtistScore } from "@/types";
 
 function buildPersonalSeries(scores: ArtistScore) {
@@ -33,6 +33,28 @@ function buildPersonalSeries(scores: ArtistScore) {
   });
 }
 
+function DeltaBadge({ delta }: { delta: number }) {
+  if (delta > 1)
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-emerald-400">
+        <TrendingUp className="h-3 w-3" />+{delta}
+      </span>
+    );
+  if (delta < -1)
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-rose-400">
+        <TrendingDown className="h-3 w-3" />
+        {delta}
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-0.5 text-[11px] text-omniv-text-muted">
+      <Minus className="h-3 w-3" />
+      Flat
+    </span>
+  );
+}
+
 export default function AnalyticsPage() {
   const [scores, setScores] = useState<ArtistScore | null>(null);
   const [name, setName] = useState("");
@@ -54,6 +76,15 @@ export default function AnalyticsPage() {
   );
   const labels = series.map((p) => p.label);
   const primary = series.map((p) => p[metric]);
+  const delta =
+    primary.length >= 2 ? primary[primary.length - 1]! - primary[0]! : 0;
+
+  const momentumRead =
+    delta > 3
+      ? "Forward. Modelled trajectory is climbing on this lever."
+      : delta < -2
+        ? "Falling back. This lever needs a corrective move this week."
+        : "Steady. Small disciplined actions will tip momentum.";
 
   if (!scores) {
     return (
@@ -63,10 +94,18 @@ export default function AnalyticsPage() {
     );
   }
 
+  const tiles = [
+    ["overall", "Overall", scores.overall],
+    ["growth", "Growth", scores.growth],
+    ["momentum", "Momentum", scores.momentum],
+    ["content", "Content", scores.contentHealth],
+    ["readiness", "Release readiness", scores.releaseReadiness],
+  ] as const;
+
   return (
     <AppShell>
       <div className="mb-6">
-        <div className="mb-1 flex items-center gap-2">
+        <div className="mb-1 flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">
             Historical Analytics
           </h1>
@@ -76,49 +115,64 @@ export default function AnalyticsPage() {
           </Badge>
         </div>
         <p className="text-sm text-omniv-text-secondary">
-          Score trajectory derived from your Artist Brain. Live streaming charts
-          appear when platform OAuth is connected.
+          Direction of travel from your Artist Brain. Live platform charts unlock
+          when OAuth is connected.
         </p>
       </div>
 
+      <div className="mb-4 flex items-center justify-between rounded-[var(--radius-lg)] border border-omniv-border bg-omniv-card px-4 py-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-omniv-text-muted">
+            Momentum on {metric}
+          </p>
+          <p className="mt-0.5 text-sm text-omniv-text-secondary">{momentumRead}</p>
+        </div>
+        <DeltaBadge delta={delta} />
+      </div>
+
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        {(
-          [
-            ["overall", "Overall", scores.overall],
-            ["growth", "Growth", scores.growth],
-            ["momentum", "Momentum", scores.momentum],
-            ["content", "Content", scores.contentHealth],
-            ["readiness", "Readiness", scores.releaseReadiness],
-          ] as const
-        ).map(([key, label, val]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setMetric(key)}
-            className={cn(
-              "card-elevated p-4 text-left",
-              metric === key && "border-omniv-gold/30 glow-gold"
-            )}
-          >
-            <p className="text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
-              {label}
-            </p>
-            <p className="mt-1 font-data text-2xl font-semibold text-omniv-gold">
-              {val}
-            </p>
-          </button>
-        ))}
+        {tiles.map(([key, label, val]) => {
+          const s = series.map((p) => p[key]);
+          const d = s.length >= 2 ? s[s.length - 1]! - s[0]! : 0;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setMetric(key)}
+              className={cn(
+                "rounded-[var(--radius-lg)] border border-omniv-border bg-omniv-card p-4 text-left transition",
+                metric === key && "border-omniv-gold/40 bg-omniv-gold/5"
+              )}
+            >
+              <p className="text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
+                {label}
+              </p>
+              <p className="mt-1 font-data text-2xl font-semibold tabular-nums text-omniv-gold">
+                {val}
+                <span className="text-sm font-normal text-omniv-text-muted">%</span>
+              </p>
+              <div className="mt-2">
+                <DeltaBadge delta={d} />
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       <Card className="p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <TrendingUp className="h-4 w-4 text-omniv-gold" />
-          <div>
-            <h2 className="text-sm font-medium">Score trajectory · 8 weeks</h2>
-            <p className="text-xs text-omniv-text-muted">
-              Modelled from current Command Center inputs for {name}
-            </p>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-omniv-gold" />
+            <div>
+              <h2 className="text-sm font-semibold tracking-tight">
+                Score trajectory · 8 weeks
+              </h2>
+              <p className="text-xs text-omniv-text-muted">
+                Modelled path for {name}. Select a tile to switch lever.
+              </p>
+            </div>
           </div>
+          <DeltaBadge delta={delta} />
         </div>
         <ChartLine
           labels={labels}
@@ -126,7 +180,7 @@ export default function AnalyticsPage() {
             {
               name: metric,
               data: primary,
-              color: "#d4af37",
+              color: delta < -1 ? "#f43f5e" : "#d4af37",
             },
           ]}
         />
