@@ -97,15 +97,15 @@ export default function AnalyticsPage() {
 
   const momentumRead =
     delta > 3
-      ? "Execution is compounding. Protect the routine that produced this climb."
+      ? "You are compounding. Do not break the routine that built this climb."
       : delta < -2
-        ? "You are drifting from the dream. One corrective move this week, not five new ideas."
-        : "Steady. Discipline on the highest-leverage action will tip this forward.";
+        ? "You drifted. One corrective move this week. Not five new ideas."
+        : "You are steady. One hard action tips this forward.";
 
   if (!scores) {
     return (
       <AppShell>
-        <p className="text-sm text-omniv-text-muted">Loading execution…</p>
+        <p className="text-sm text-omniv-text-muted">Measuring how far you have moved…</p>
       </AppShell>
     );
   }
@@ -125,12 +125,12 @@ export default function AnalyticsPage() {
           <div className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-omniv-gold" />
             <h1 className="text-lg font-semibold tracking-tight">
-              Execution progress
+              Are you moving?
             </h1>
           </div>
           <p className="mt-1 max-w-lg text-sm text-omniv-text-secondary">
-            Not vanity metrics. These levers show whether {name} is walking
-            toward the Big Dream or spending cycles elsewhere.
+            We are tracking {name} against the dream you named. Flat lines mean
+            you are busy. Rising lines mean you are dangerous.
           </p>
         </div>
         <Badge variant="gold">Personal model</Badge>
@@ -141,19 +141,50 @@ export default function AnalyticsPage() {
           <Target className="mt-0.5 h-4 w-4 shrink-0 text-omniv-gold" />
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
-              Held image
+              What we are holding you to
             </p>
             <p className="mt-1 text-sm font-medium leading-relaxed text-omniv-text">
               {dream}
             </p>
             <p className="mt-2 text-xs text-omniv-text-muted">
-              Every score below is a proxy for progress against this picture.
-              Refine it in Artist Brain if the strategy has changed.
+              If this no longer matches what you want, change it in Artist Brain.
+              Until then, every score is judged against this.
             </p>
             <Link href="/artist-brain" className="mt-3 inline-block">
-              <Button variant="outline" size="sm">Edit Big Dream</Button>
+              <Button variant="outline" size="sm">Change what we hold</Button>
             </Link>
           </div>
+        </div>
+      </Card>
+
+      <Card className="mb-5 p-5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
+          Roadmap · this quarter
+        </p>
+        <p className="mt-1 text-xs text-omniv-text-muted">
+          Objective: the Big Dream. Key results are the levers below. We nudge
+          the softest one first.
+        </p>
+        <div className="mt-4 space-y-3">
+          {[
+            { label: "Alignment (overall)", v: scores.overall },
+            { label: "Content pulse", v: scores.contentHealth },
+            { label: "Release pressure", v: scores.releaseReadiness },
+            { label: "Audience hold", v: scores.audienceHealth },
+          ].map((row) => (
+            <div key={row.label}>
+              <div className="mb-1 flex justify-between text-[11px]">
+                <span className="text-omniv-text-secondary">{row.label}</span>
+                <span className="font-data text-omniv-gold">{row.v}%</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-omniv-border">
+                <div
+                  className="h-full rounded-full bg-omniv-gold/80 transition-all"
+                  style={{ width: `${Math.min(100, row.v)}%` }}
+                />
+              </div>
+            </div>
+          ))}
         </div>
       </Card>
 
@@ -186,9 +217,7 @@ export default function AnalyticsPage() {
               </p>
               <p className="mt-1 font-data text-2xl font-semibold tabular-nums text-omniv-gold">
                 {val}
-                <span className="text-sm font-normal text-omniv-text-muted">
-                  %
-                </span>
+                <span className="text-sm font-normal text-omniv-text-muted">%</span>
               </p>
               <div className="mt-2">
                 <DeltaBadge delta={d} />
@@ -204,10 +233,10 @@ export default function AnalyticsPage() {
             <TrendingUp className="h-4 w-4 text-omniv-gold" />
             <div>
               <h2 className="text-sm font-semibold tracking-tight">
-                Execution trajectory · 8 weeks
+                Where you have been · 8 weeks
               </h2>
               <p className="text-xs text-omniv-text-muted">
-                Modelled path for {name} against the dream. Select a lever.
+                Your path against the dream. Touch a lever.
               </p>
             </div>
           </div>
@@ -226,8 +255,7 @@ export default function AnalyticsPage() {
       </Card>
 
       <p className="mt-4 text-center text-[11px] text-omniv-text-muted">
-        Scores improve when Artist Brain, platforms, and weekly execution stay
-        connected. Empty brain means empty signal.
+        Empty brain. Empty signal. We cannot rank what you refuse to define.
       </p>
     </AppShell>
   );
