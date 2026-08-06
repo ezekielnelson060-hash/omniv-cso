@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,7 @@ import {
   MessageSquare,
   Trash2,
   PanelLeft,
+  Paperclip,
 } from "lucide-react";
 
 function uid() {
@@ -42,22 +43,37 @@ const SUGGESTIONS = [
 ];
 
 function RichText({ text, dark }: { text: string; dark?: boolean }) {
-  const lines = text.split("\n");
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
   return (
     <div className="space-y-1.5">
       {lines.map((line, i) => {
-        const heading = /^(\*\*[^*]+\*\*)/.test(line.trim());
+        const trimmed = line.trim();
+        if (!trimmed) return <div key={i} className="h-1.5" />;
+        const full = /^\*\*(.+?)\*\*$/.exec(trimmed);
+        if (full) {
+          return (
+            <p
+              key={i}
+              className={cn(
+                "mt-2 text-[13px] font-semibold tracking-tight first:mt-0",
+                dark ? "text-omniv-black" : "text-omniv-text"
+              )}
+            >
+              {full[1]}
+            </p>
+          );
+        }
         const parts = line.split(/(\*\*[^*]+\*\*)/g);
         return (
           <p
             key={i}
             className={cn(
-              heading && "mt-2 text-[13px] font-semibold tracking-tight",
-              dark ? "text-omniv-black" : "text-omniv-text-secondary"
+              "text-sm leading-relaxed",
+              dark ? "text-omniv-black/90" : "text-omniv-text-secondary"
             )}
           >
             {parts.map((part, j) => {
-              if (part.startsWith("**") && part.endsWith("**")) {
+              if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
                 return (
                   <strong
                     key={j}
@@ -83,7 +99,7 @@ function welcomeMsg(name: string): ChatMessage {
   return {
     id: "welcome",
     role: "assistant",
-    content: `I'm **Ziki**, private strategy for **${name}**.\n\nI only work from your Artist Brain (stage, goals, platforms). Ask for the highest-impact move, a release check, or a content plan, not generic tips. Open any opportunity with **Act on this** and I already have the brief.`,
+    content: `I'm **Ziki**, your Virtual Chief Strategy Officer for **${name}**.\n\nI work from your Artist Brain, ranked opportunities, and anything you attach (demos, covers, briefs). Ask anything: release timing, content systems, monetisation, tours, positioning.\n\nOpen **Act on this** from the feed and I already have the brief.`,
     createdAt: Date.now(),
   };
 }
@@ -94,6 +110,9 @@ export function ChatPanel() {
   const [activeId, setActiveIdState] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<
+    { id: string; name: string; type: string }[]
+  >([]);
   const [busy, setBusy] = useState(false);
   const [artistName, setArtistName] = useState("your project");
   const [context, setContext] = useState("");
@@ -131,7 +150,28 @@ export function ChatPanel() {
       const scores = computeScoresFromBrain(brain, platforms);
       const recs = buildRecommendationsFromBrain(brain, platforms, interests);
       setContext(
-        `Artist: ${name}\nGenre: ${brain?.genre?.join(", ") || "TBD"}\nStage: ${brain?.careerStage || "emerging"}\nStyle: ${brain?.musicStyle || "n/a"}\nVoice: ${brain?.brandVoice || "n/a"}\nGoals: ${brain?.goals?.join("; ") || "n/a"}\nInterests: ${interests.join(", ") || "general"}\nPlatforms: ${platforms.join(", ") || "none"}\nScores: overall ${scores.overall}, momentum ${scores.momentum}, release readiness ${scores.releaseReadiness}\nTop opportunities: ${recs.slice(0, 4).map((r) => r.title).join(" | ")}`
+        [
+          `Artist / stage name: ${name}`,
+          `Genre: ${brain?.genre?.join(", ") || "not set"}`,
+          `Career stage: ${brain?.careerStage || "emerging"}`,
+          `Music style: ${brain?.musicStyle || "n/a"}`,
+          `Brand voice: ${brain?.brandVoice || "n/a"}`,
+          `Visual identity: ${brain?.visualIdentity || "n/a"}`,
+          `Target audience: ${brain?.targetAudience || "n/a"}`,
+          `Content style: ${brain?.contentStyle || "n/a"}`,
+          `Goals: ${brain?.goals?.join("; ") || "n/a"}`,
+          `Strengths: ${brain?.strengths?.join("; ") || "n/a"}`,
+          `Gaps: ${brain?.weaknesses?.join("; ") || "n/a"}`,
+          `Peers: ${brain?.competitors?.join("; ") || "n/a"}`,
+          `Notes: ${brain?.notes || "n/a"}`,
+          `Interests: ${interests.join(", ") || "general"}`,
+          `Platforms: ${platforms.join(", ") || "none connected"}`,
+          `Scores %: overall ${scores.overall}, growth ${scores.growth}, momentum ${scores.momentum}, audience ${scores.audienceHealth}, content ${scores.contentHealth}, release readiness ${scores.releaseReadiness}`,
+          `Top ranked moves: ${recs
+            .slice(0, 5)
+            .map((r) => r.title)
+            .join(" | ")}`,
+        ].join("\n")
       );
 
       let list = loadThreads();
@@ -200,16 +240,37 @@ export function ChatPanel() {
     setHistoryOpen(false);
   }
 
+  function onPickFiles(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setAttachments((prev) => [
+      ...prev,
+      ...files.slice(0, 6).map((f) => ({
+        id: `${Date.now()}-${f.name}`,
+        name: f.name,
+        type: f.type || "file",
+      })),
+    ]);
+    e.target.value = "";
+  }
+
   async function send(text: string, fromAct = false) {
     const trimmed = text.trim();
-    if (!trimmed || busy) return;
+    if ((!trimmed && attachments.length === 0) || busy) return;
+    const attachNote =
+      attachments.length > 0
+        ? `\n\n[Attached for review: ${attachments
+            .map((a) => `${a.name} (${a.type || "file"})`)
+            .join(", ")}]. Treat these as the artist's current material under discussion.`
+        : "";
+    const payload = `${trimmed}${attachNote}`.trim();
     const threadId = activeId || createThread().id;
     if (!activeId) setActiveIdState(threadId);
 
     const userMsg: ChatMessage = {
       id: uid(),
       role: "user",
-      content: trimmed,
+      content: payload,
       createdAt: Date.now(),
     };
     const withUser =
@@ -219,6 +280,7 @@ export function ChatPanel() {
 
     setMessages(withUser);
     setInput("");
+    setAttachments([]);
     setBusy(true);
 
     const history = withUser
@@ -231,9 +293,9 @@ export function ChatPanel() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: trimmed,
+          message: payload,
           history,
-          context: `You are Ziki, private strategist for ${artistName}. Never mention Nova Hex.\nUse only this profile:\n${context}\n\nRecent conversation:\n${history}\n\nAnswer as executive briefing with bold headings:\n**What to do**\n**Why**\n**When**\n**How**\n**Priority**\n**Expected outcome**`,
+          context: `You are Ziki, Virtual CSO for ${artistName} inside Omniv. Never invent demo artists.\n\nARTIST BRAIN (source of truth):\n${context}\n\nWrite full, industry-grade answers. Use section labels when useful (The Play, Verdict, Next Move, Tactical Advice). Chat naturally when the question is casual; go deep when strategy is required. Personalise every sentence to this artist. Do not truncate.\n\nRecent conversation:\n${history}`,
         }),
       });
       const data = (await res.json()) as { text?: string };
@@ -256,7 +318,7 @@ export function ChatPanel() {
       const assistant: ChatMessage = {
         id: uid(),
         role: "assistant",
-        content: `**Connection issue**\n\nCould not complete that briefing for **${artistName}**. Try again.`,
+        content: `**Connection issue**\n\nCould not complete that reply for **${artistName}**. Try again.`,
         createdAt: Date.now(),
       };
       const final = [...withUser, assistant];
@@ -395,14 +457,14 @@ export function ChatPanel() {
             {busy && (
               <div className="flex items-center gap-2 text-xs text-omniv-text-muted">
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-omniv-gold" />
-                Ziki is briefing…
+                Ziki is thinking…
               </div>
             )}
             <div ref={bottomRef} />
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-omniv-border bg-omniv-elevated/80 px-4 py-3 backdrop-blur-md md:px-6">
+        <div className="sticky bottom-0 z-20 shrink-0 border-t border-omniv-border bg-omniv-elevated/95 px-3 py-3 backdrop-blur-xl supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))] md:px-6">
           <div className="mx-auto max-w-3xl">
             {showSuggestions && (
               <div className="mb-3 flex flex-wrap gap-1.5">
@@ -418,7 +480,42 @@ export function ChatPanel() {
                 ))}
               </div>
             )}
+            {attachments.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {attachments.map((a) => (
+                  <span
+                    key={a.id}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-omniv-border bg-omniv-card px-2.5 py-1 text-[11px] text-omniv-text-secondary"
+                  >
+                    <Paperclip className="h-3 w-3 text-omniv-gold" />
+                    <span className="max-w-[140px] truncate">{a.name}</span>
+                    <button
+                      type="button"
+                      className="text-omniv-text-muted hover:text-omniv-gold"
+                      onClick={() =>
+                        setAttachments((prev) => prev.filter((x) => x.id !== a.id))
+                      }
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="flex items-end gap-2">
+              <label
+                className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-omniv-border bg-omniv-card text-omniv-text-muted transition hover:border-omniv-gold/40 hover:text-omniv-gold"
+                title="Attach audio, image, or file"
+              >
+                <Paperclip className="h-4 w-4" />
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="audio/*,image/*,video/*,.pdf,.txt,.mp3,.wav,.m4a,.flac"
+                  multiple
+                  onChange={onPickFiles}
+                />
+              </label>
               <textarea
                 ref={inputRef}
                 value={input}
@@ -430,19 +527,22 @@ export function ChatPanel() {
                   }
                 }}
                 rows={1}
-                placeholder="Message Ziki…"
+                placeholder="Strategy, release, sound notes…"
                 className="max-h-32 min-h-12 flex-1 resize-none rounded-2xl border border-omniv-border bg-omniv-card px-4 py-3 text-sm focus-gold"
               />
               <Button
                 size="icon"
                 className="h-12 w-12 shrink-0 rounded-2xl"
-                disabled={busy || !input.trim()}
+                disabled={busy || (!input.trim() && attachments.length === 0)}
                 onClick={() => void send(input)}
                 aria-label="Send"
               >
                 <ArrowUp className="h-4 w-4" />
               </Button>
             </div>
+            <p className="mt-1.5 text-center text-[10px] text-omniv-text-muted">
+              Attach demos, covers, or briefs. Ziki aligns to your Artist Brain.
+            </p>
           </div>
         </div>
       </div>
