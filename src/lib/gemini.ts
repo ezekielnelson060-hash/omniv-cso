@@ -4,13 +4,10 @@
  *
  * Env:
  *   ANTHROPIC_API_KEY  – Claude
- *   CLAUDE_MODEL       – default claude-sonnet-4-20250514
+ *   CLAUDE_MODEL       – default claude-sonnet-4-6
  *   GEMINI_API_KEY     – Gemini (fallback / primary if no Anthropic)
  *   GEMINI_MODEL       – optional pin
  *   ZIKI_PROVIDER      – auto | claude | gemini  (default auto)
- *
- * Billing: Claude and Gemini both charge per token on the API.
- * Plan gates (messages/day) live in ziki-usage + billing limits, not in this file.
  */
 
 export function isGeminiConfigured(): boolean {
@@ -29,9 +26,7 @@ export function isZikiModelConfigured(): boolean {
 export type ZikiAttachment = {
   name: string;
   mimeType: string;
-  /** Raw base64 payload (inline, prefer under ~12MB) */
   data?: string;
-  /** Gemini Files API URI (large demos) */
   fileUri?: string;
 };
 
@@ -42,11 +37,13 @@ You operate at music-industry level: managers, labels, independent operators. Yo
 Voice and structure:
 - Write like a sharp manager who has roster skin in the game. Opinionated when evidence supports it.
 - Prefer one hard call over five soft options. "Do not release yet" is allowed.
-- Use thick section labels when they fit (The Play, The Ziki Verdict, Next Move, Tactical Advice, The Gap, Timeline). Do not force every label every time.
+- Default to natural conversation like a senior manager on Slack or Claude: clear paragraphs, no forced briefing template.
+- Only use section labels (The Play, Verdict, Next Move) when the user asks for a plan, stress-test, or briefing. Casual and market questions get direct answers.
 - Prefer concrete numbers, cities, rooms, windows, and formats over vague advice.
-- Personalise hard to the artist context block (name, genre, stage, goals, platforms, scores). Never invent a different artist identity.
+- Personalise hard to the artist context block (name, genre, stage, Big Dream, goals, platforms, scores). Never invent a different artist identity.
+- When a Big Dream is present, treat it as the north star. Weekly moves must compound toward it. Call out work that is busy but off-dream.
 - Never use demo names (Nova Hex, Legacy Build) unless that is the user's real stage name.
-- Full answers. Do not truncate mid-thought. Cover the decision, the why, and the next move.
+- Full answers. Do not truncate mid-thought. Cover the decision, the why, and the next move when strategy is the ask.
 - When the user asks casually, answer as a normal high-end strategist chat, not only a six-heading template.
 - When they need a plan, go deep: timing, platforms, creative, risk, monetisation.
 - If live market data is unavailable, say what is inferred vs confirmed and what to verify in Spotify for Artists / platform analytics.
@@ -56,7 +53,6 @@ When the user attaches AUDIO (demo, single, mix):
 - Align every recommendation to the Artist Brain (genre, goals, stage). Do not invent stream counts.
 - Call out the single highest-impact change before release when relevant.
 - If a TRACK PASSPORT block is present (BPM, peak/RMS, duration), treat those as measured client estimates and use them in The Play / Tactical Advice. Still listen to the audio for structure and commercial feel.
-- Structure useful answers with The Play / Verdict / Next Move when strategy is the ask.
 
 When they attach images or video:
 - Treat as cover art, content frames, or campaign assets and judge fit for platforms and brand voice.
@@ -65,6 +61,7 @@ Forbidden:
 - Generic hustle slogans
 - Invented stream counts presented as fact
 - Empty cheerleading
+- Forced briefing headings on casual questions
 
 Always end with a clear Next Move when strategy is involved.`;
 
@@ -85,9 +82,8 @@ const GEMINI_CANDIDATES = [
 ].filter((m, i, arr): m is string => Boolean(m) && arr.indexOf(m) === i);
 
 const CLAUDE_MODEL =
-  process.env.CLAUDE_MODEL?.trim() || "claude-sonnet-4-20250514";
+  process.env.CLAUDE_MODEL?.trim() || "claude-sonnet-4-6";
 
-/** Gemini supports these audio MIME types for understanding. */
 const AUDIO_MIME = new Set([
   "audio/wav",
   "audio/mp3",
@@ -241,19 +237,9 @@ async function callGemini(
       }
       const mimeOut = mime === "audio/mpeg" ? "audio/mp3" : mime;
       if (a.fileUri) {
-        parts.push({
-          fileData: {
-            fileUri: a.fileUri,
-            mimeType: mimeOut,
-          },
-        });
+        parts.push({ fileData: { fileUri: a.fileUri, mimeType: mimeOut } });
       } else if (a.data) {
-        parts.push({
-          inlineData: {
-            mimeType: mimeOut,
-            data: a.data,
-          },
-        });
+        parts.push({ inlineData: { mimeType: mimeOut, data: a.data } });
       }
     }
   }
@@ -262,26 +248,20 @@ async function callGemini(
     const body: Record<string, unknown> = {
       systemInstruction: { parts: [{ text: system }] },
       contents: [{ role: "user", parts }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 8192,
-      },
+      generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
     };
     if (withSearch && !hasMultimodal(attachments)) {
       body.tools = [{ google_search: {} }];
     }
-    const res = await fetch(url, {
+    return fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    return res;
   }
 
   let res = await once(true);
-  if (!res.ok) {
-    res = await once(false);
-  }
+  if (!res.ok) res = await once(false);
   if (!res.ok) {
     const body = await res.text();
     return { ok: false, status: res.status, body, model };
@@ -339,9 +319,7 @@ async function tryGemini(
       console.error("Gemini exception", model, e);
     }
   }
-  if (lastStatus) {
-    console.error("Gemini exhausted", lastStatus, lastBody.slice(0, 200));
-  }
+  if (lastStatus) console.error("Gemini exhausted", lastStatus, lastBody.slice(0, 200));
   return null;
 }
 
@@ -358,17 +336,15 @@ export async function zikiComplete(
 
   if (multimodal) {
     const gemini = await tryGemini(system, userMessage, attachments);
-    if (gemini) {
-      return { text: gemini.text, source: "gemini", model: gemini.model };
-    }
+    if (gemini) return { text: gemini.text, source: "gemini", model: gemini.model };
     if (!isGeminiConfigured()) {
       return {
-        text: `**Audio analysis needs Gemini**\n\nAttach demos and covers after **GEMINI_API_KEY** is set in Vercel (Production) and redeployed.\n\nClaude handles text strategy; listening to tracks uses Gemini multimodal.`,
+        text: `**Audio analysis needs Gemini**\n\nAttach demos after **GEMINI_API_KEY** is set in Vercel (Production) and redeployed. Claude handles text; listening uses Gemini.`,
         source: "local",
       };
     }
     return {
-      text: `**Could not analyse the attachment**\n\nGemini did not return a response. Check file size (inline under ~12MB, or large upload under 50MB), format (MP3, WAV, FLAC, M4A, AAC, PNG, JPEG, MP4), and Vercel logs.`,
+      text: `**Could not analyse the attachment**\n\nCheck size (inline ~12MB or upload under 50MB), format, and Vercel logs.`,
       source: "local",
     };
   }
@@ -379,27 +355,23 @@ export async function zikiComplete(
 
   if (wantClaude) {
     const claude = await tryClaude(system, userMessage);
-    if (claude) {
-      return { text: claude.text, source: "claude", model: claude.model };
-    }
+    if (claude) return { text: claude.text, source: "claude", model: claude.model };
   }
 
   if (wantGemini || allowGeminiFallback) {
     const gemini = await tryGemini(system, userMessage);
-    if (gemini) {
-      return { text: gemini.text, source: "gemini", model: gemini.model };
-    }
+    if (gemini) return { text: gemini.text, source: "gemini", model: gemini.model };
   }
 
   if (!isClaudeConfigured() && !isGeminiConfigured()) {
     return {
-      text: `**Model offline**\n\nAdd **ANTHROPIC_API_KEY** (Claude) and/or **GEMINI_API_KEY** in Vercel → Settings → Environment Variables (Production), then **Redeploy**.\n\nClaude: [console.anthropic.com](https://console.anthropic.com/)\nGemini: [Google AI Studio](https://aistudio.google.com/apikey)\n\nOptional: **ZIKI_PROVIDER**=auto|claude|gemini · **CLAUDE_MODEL**=claude-sonnet-4-20250514`,
+      text: `**Model offline**\n\nAdd **ANTHROPIC_API_KEY** and/or **GEMINI_API_KEY** in Vercel → Production env, then Redeploy.\n\nOptional: **CLAUDE_MODEL**=claude-sonnet-4-6 · **ZIKI_PROVIDER**=claude`,
       source: "local",
     };
   }
 
   return {
-    text: `**Provider error**\n\nConfigured keys did not return a response. Check Vercel logs.\n\n- Claude: ANTHROPIC_API_KEY + CLAUDE_MODEL\n- Gemini: GEMINI_API_KEY + GEMINI_MODEL=gemini-2.5-flash\n- ZIKI_PROVIDER=auto tries Claude first, then Gemini`,
+    text: `**Provider error**\n\nCheck Vercel logs. Claude: ANTHROPIC_API_KEY + CLAUDE_MODEL=claude-sonnet-4-6`,
     source: "local",
   };
 }
