@@ -1,13 +1,15 @@
 /**
  * Ziki model gateway: Claude first (when configured), Gemini fallback.
- * Multimodal audio/image/video analysis is Gemini-only (inline base64 or Files API).
+ * Multimodal audio/image/video analysis is Gemini-only.
  *
  * Env:
- *   ANTHROPIC_API_KEY  – Claude
- *   CLAUDE_MODEL       – preferred model (falls through candidates on 404)
- *   GEMINI_API_KEY     – Gemini (fallback / primary if no Anthropic)
+ *   ANTHROPIC_API_KEY  – Claude (needs paid credits)
+ *   CLAUDE_MODEL       – preferred model
+ *   GEMINI_API_KEY     – Gemini (free-tier friendly)
  *   GEMINI_MODEL       – optional pin
  *   ZIKI_PROVIDER      – auto | claude | gemini  (default auto)
+ *
+ * No cash: set ZIKI_PROVIDER=gemini and GEMINI_API_KEY only.
  */
 
 export function isGeminiConfigured(): boolean {
@@ -22,7 +24,6 @@ export function isZikiModelConfigured(): boolean {
   return isClaudeConfigured() || isGeminiConfigured();
 }
 
-/** Client-sent multimodal parts. */
 export type ZikiAttachment = {
   name: string;
   mimeType: string;
@@ -302,6 +303,14 @@ async function tryClaude(
       lastProviderDetail = `Claude ${model} → HTTP ${result.status}: ${snippet}`;
       console.error("Claude error", model, result.status, snippet);
       if (result.status === 401 || result.status === 403) break;
+      if (
+        result.status === 400 &&
+        /credit balance|billing|purchase credits|too low/i.test(snippet)
+      ) {
+        lastProviderDetail =
+          "Anthropic has no credits. Using Gemini if configured (ZIKI_PROVIDER=gemini or auto).";
+        break;
+      }
       if (result.status !== 404 && result.status !== 400) break;
     } catch (e) {
       lastProviderDetail = `Claude exception: ${e instanceof Error ? e.message : String(e)}`;
@@ -358,12 +367,12 @@ export async function zikiComplete(
     if (gemini) return { text: gemini.text, source: "gemini", model: gemini.model };
     if (!isGeminiConfigured()) {
       return {
-        text: `**Audio analysis needs Gemini**\n\nAttach demos after **GEMINI_API_KEY** is set in Vercel (Production) and redeployed. Claude handles text; listening uses Gemini.`,
+        text: `**Audio analysis needs Gemini**\n\nSet **GEMINI_API_KEY** in Vercel Production and redeploy.`,
         source: "local",
       };
     }
     return {
-      text: `**Could not analyse the attachment**\n\nCheck size (inline ~12MB or upload under 50MB), format, and Vercel logs.`,
+      text: `**Could not analyse the attachment**\n\nCheck size, format, and Vercel logs.`,
       source: "local",
     };
   }
@@ -384,7 +393,7 @@ export async function zikiComplete(
 
   if (!isClaudeConfigured() && !isGeminiConfigured()) {
     return {
-      text: `**Model offline**\n\nAdd **ANTHROPIC_API_KEY** and/or **GEMINI_API_KEY** in Vercel → Production env, then Redeploy.\n\nOptional: **CLAUDE_MODEL**=claude-sonnet-4-20250514 · **ZIKI_PROVIDER**=auto`,
+      text: `**Model offline**\n\nAdd **GEMINI_API_KEY** (free path) or **ANTHROPIC_API_KEY** (paid) in Vercel Production, then Redeploy.\n\nNo cash: **ZIKI_PROVIDER**=gemini + **GEMINI_API_KEY** only.`,
       source: "local",
     };
   }
@@ -392,8 +401,15 @@ export async function zikiComplete(
   const detail = lastProviderDetail
     ? `\n\nDetail: ${lastProviderDetail.slice(0, 400)}`
     : "";
+  const noCredits = /no credits|credit balance|billing/i.test(lastProviderDetail);
+  if (noCredits) {
+    return {
+      text: `**Claude needs paid credits**\n\nAnthropic rejected the key: balance is too low.\n\n**No cash path:** use Gemini (free tier for now).\n1. Vercel → Environment Variables → Production\n2. Set **GEMINI_API_KEY** (from aistudio.google.com/apikey)\n3. Set **ZIKI_PROVIDER**=gemini\n4. Redeploy Production\n\nIgnore ANTHROPIC_API_KEY until you can top up credits.`,
+      source: "local",
+    };
+  }
   return {
-    text: `**Provider error**\n\nKeys are present but the model rejected the request.${detail}\n\nFix: Vercel → Settings → Environment Variables → **Production**\n• ANTHROPIC_API_KEY (starts with sk-ant-)\n• CLAUDE_MODEL=claude-sonnet-4-20250514 (safe default)\n• GEMINI_API_KEY as fallback\n• ZIKI_PROVIDER=auto\nThen Redeploy (env alone does not restart functions).`,
+    text: `**Provider error**\n\nKeys are present but the model rejected the request.${detail}\n\nConfirm **GEMINI_API_KEY** is set for Production and **ZIKI_PROVIDER**=gemini, then Redeploy.`,
     source: "local",
   };
 }
