@@ -26,6 +26,7 @@ import {
   formatPassportForZiki,
   type AudioPassport,
 } from "@/lib/audio-passport";
+import { TrackWaveform } from "@/components/ziki/track-waveform";
 import {
   ArrowUp,
   Loader2,
@@ -121,6 +122,8 @@ export function ChatPanel() {
       name: string;
       type: string;
       data?: string;
+      /** Object URL for waveform playback */
+      url?: string;
       passport?: AudioPassport | null;
       analyzing?: boolean;
     }[]
@@ -261,6 +264,7 @@ export function ChatPanel() {
       name: string;
       type: string;
       data?: string;
+      url?: string;
       passport?: AudioPassport | null;
       analyzing?: boolean;
     }[] = [];
@@ -290,11 +294,14 @@ export function ChatPanel() {
         (f.type || "").startsWith("audio/") ||
         /\.(mp3|wav|m4a|flac|aac|ogg)$/i.test(f.name);
 
+      const url = isAudio ? URL.createObjectURL(f) : undefined;
+
       next.push({
         id,
         name: f.name,
         type: f.type || "file",
         data: data || undefined,
+        url,
         analyzing: isAudio,
         passport: null,
       });
@@ -362,6 +369,15 @@ export function ChatPanel() {
       mimeType: a.type || "application/octet-stream",
       data: a.data as string,
     }));
+    attachments.forEach((a) => {
+      if (a.url) {
+        try {
+          URL.revokeObjectURL(a.url);
+        } catch {
+          /* noop */
+        }
+      }
+    });
     setAttachments([]);
     setBusy(true);
 
@@ -568,34 +584,56 @@ export function ChatPanel() {
               </div>
             )}
             {attachments.length > 0 && (
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {attachments.map((a) => (
-                  <span
-                    key={a.id}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-omniv-border bg-omniv-card px-2.5 py-1 text-[11px] text-omniv-text-secondary"
-                  >
-                    <Paperclip className="h-3 w-3 text-omniv-gold" />
-                    <span className="max-w-[160px] truncate">
-                      {a.name}
-                      {a.analyzing
-                        ? " · analysing…"
-                        : a.passport?.bpm
-                          ? ` · ${a.passport.bpm} BPM`
-                          : a.passport
-                            ? ` · ${a.passport.durationSec}s`
-                            : ""}
-                    </span>
-                    <button
-                      type="button"
-                      className="text-omniv-text-muted hover:text-omniv-gold"
-                      onClick={() =>
-                        setAttachments((prev) => prev.filter((x) => x.id !== a.id))
-                      }
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+              <div className="mb-2 space-y-2">
+                {attachments
+                  .filter((a) => a.url)
+                  .map((a) => (
+                    <TrackWaveform
+                      key={a.id}
+                      url={a.url as string}
+                      name={a.name}
+                      passport={a.passport}
+                      analyzing={a.analyzing}
+                      onRemove={() => {
+                        if (a.url) {
+                          try {
+                            URL.revokeObjectURL(a.url);
+                          } catch {
+                            /* noop */
+                          }
+                        }
+                        setAttachments((prev) =>
+                          prev.filter((x) => x.id !== a.id)
+                        );
+                      }}
+                    />
+                  ))}
+                {attachments.some((a) => !a.url) && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {attachments
+                      .filter((a) => !a.url)
+                      .map((a) => (
+                        <span
+                          key={a.id}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-omniv-border bg-omniv-card px-2.5 py-1 text-[11px] text-omniv-text-secondary"
+                        >
+                          <Paperclip className="h-3 w-3 text-omniv-gold" />
+                          <span className="max-w-[160px] truncate">{a.name}</span>
+                          <button
+                            type="button"
+                            className="text-omniv-text-muted hover:text-omniv-gold"
+                            onClick={() =>
+                              setAttachments((prev) =>
+                                prev.filter((x) => x.id !== a.id)
+                              )
+                            }
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                  </div>
+                )}
               </div>
             )}
             <div className="flex items-end gap-2">
