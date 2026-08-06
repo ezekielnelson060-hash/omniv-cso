@@ -40,14 +40,17 @@ export async function POST(req: Request) {
       );
     }
 
+    let userId: string | null = null;
+    let supabase: Awaited<ReturnType<typeof createClient>> | null = null;
     try {
-      const supabase = await createClient();
+      supabase = await createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
         return NextResponse.json({ error: "Sign in required" }, { status: 401 });
       }
+      userId = user.id;
     } catch {
       /* if supabase misconfigured, still allow upload in dev */
     }
@@ -71,6 +74,22 @@ export async function POST(req: Request) {
     const mimeType = normalizeMime(file.type || "", file.name);
     const bytes = Buffer.from(await file.arrayBuffer());
 
+    // Optional audit trail in private Supabase Storage
+    let storagePath: string | null = null;
+    if (supabase && userId) {
+      try {
+        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
+        const path = `${userId}/${Date.now()}-${safe}`;
+        const { error: upErr } = await supabase.storage
+          .from("ziki-media")
+          .upload(path, bytes, { contentType: mimeType, upsert: false });
+        if (!upErr) storagePath = path;
+        else console.warn("ziki-media storage", upErr.message);
+      } catch (e) {
+        console.warn("ziki-media storage failed", e);
+      }
+    }
+
     const ref = await uploadBytesToGeminiFiles(bytes, mimeType, file.name);
 
     return NextResponse.json({
@@ -79,7 +98,8 @@ export async function POST(req: Request) {
       fileUri: ref.uri,
       geminiName: ref.name,
       sizeBytes: ref.sizeBytes,
-      via: "gemini_files",
+      storagePath,
+      via: storagePath ? "gemini_files+supabase" : "gemini_files",
       note:
         file.size >= MIN_LARGE
           ? "Uploaded via Gemini Files API (large demo)."
