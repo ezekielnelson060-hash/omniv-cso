@@ -7,7 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getArtistBrain, saveArtistBrain } from "@/lib/db/profile";
 import type { ArtistBrain, CareerStage } from "@/types";
-import { Brain, Loader2, Check, MessageSquare } from "lucide-react";
+import {
+  Brain,
+  Loader2,
+  Check,
+  MessageSquare,
+  Target,
+  Compass,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STAGES: { id: CareerStage; label: string }[] = [
@@ -31,6 +38,7 @@ const emptyBrain = (): ArtistBrain => ({
   strengths: [],
   weaknesses: [],
   goals: [],
+  bigDream: "",
   pastReleases: [],
   contentStyle: "",
   competitors: [],
@@ -47,6 +55,31 @@ function textToList(s: string) {
     .map((x) => x.trim())
     .filter(Boolean);
 }
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-omniv-text-muted">
+        {label}
+      </span>
+      {children}
+      {hint ? (
+        <span className="block text-[11px] text-omniv-text-muted/80">{hint}</span>
+      ) : null}
+    </label>
+  );
+}
+
+const inputClass =
+  "w-full rounded-xl border border-omniv-border bg-omniv-black/40 px-3 py-2.5 text-sm text-omniv-text placeholder:text-omniv-text-muted/50 focus-gold";
 
 export function BrainView() {
   const [brain, setBrain] = useState<ArtistBrain | null>(null);
@@ -82,6 +115,7 @@ export function BrainView() {
     const payload: ArtistBrain = {
       ...brain,
       name: brain.stageName || brain.name || "Artist",
+      bigDream: brain.bigDream?.trim() || brain.goals?.[0] || "",
       lastUpdated: new Date().toISOString().slice(0, 10),
     };
     const res = await saveArtistBrain(payload);
@@ -94,7 +128,7 @@ export function BrainView() {
     setSaved(true);
   }
 
-  if (loading) {
+  if (loading || !brain) {
     return (
       <div className="flex items-center gap-2 py-16 text-sm text-omniv-text-muted">
         <Loader2 className="h-4 w-4 animate-spin text-omniv-gold" />
@@ -103,219 +137,212 @@ export function BrainView() {
     );
   }
 
-  if (!brain) {
-    return (
-      <Card className="p-8 text-center">
-        <p className="text-sm text-omniv-text-secondary">
-          No Artist Brain yet. Complete onboarding first.
-        </p>
-        <Link href="/onboarding" className="mt-4 inline-block">
-          <Button size="sm">Start onboarding</Button>
-        </Link>
-      </Card>
-    );
-  }
+  const dream =
+    brain.bigDream?.trim() ||
+    brain.goals?.[0] ||
+    "Name the career image you refuse to dilute.";
 
-  const field =
-    "w-full rounded-xl border border-omniv-border bg-omniv-elevated px-3.5 py-2.5 text-sm text-omniv-text outline-none transition focus:border-omniv-gold/50 focus:ring-1 focus:ring-omniv-gold/30";
-  const labelCls =
-    "mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-omniv-text-muted";
+  const zikiHref = `/ziki?q=${encodeURIComponent(
+    `Hold my Big Dream and give me this week's highest-impact moves toward it: ${dream}`
+  )}`;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 rounded-[var(--radius-xl)] border border-omniv-gold/20 bg-omniv-gold/5 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-omniv-gold/15">
-            <Brain className="h-5 w-5 text-omniv-gold" />
+    <div className="mx-auto max-w-3xl space-y-6 pb-16">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <Brain className="h-4 w-4 text-omniv-gold" />
+            <h1 className="text-lg font-semibold tracking-tight">Artist Brain</h1>
           </div>
-          <div>
-            <Badge variant="gold">Editable memory</Badge>
-            <p className="mt-1.5 text-sm text-omniv-text-secondary">
-              Every change rewires scores, Opportunity Feed, and Ziki. Save when
-              you update positioning.
-            </p>
-          </div>
+          <p className="mt-1 max-w-md text-sm text-omniv-text-secondary">
+            The operating picture Ziki and Command Center use. Vague brain,
+            vague moves. Sharp brain, sharp week.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/ziki">
+        <div className="flex items-center gap-2">
+          <Link href={zikiHref}>
             <Button variant="outline" size="sm" className="gap-1.5">
               <MessageSquare className="h-3.5 w-3.5" />
-              Ask Ziki
+              Walk the dream in Ziki
             </Button>
           </Link>
           <Button size="sm" onClick={() => void onSave()} disabled={saving}>
             {saving ? (
-              <>
-                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                Saving
-              </>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : saved ? (
-              <>
-                <Check className="mr-1.5 h-3.5 w-3.5" />
-                Saved
-              </>
-            ) : (
-              "Save Brain"
-            )}
+              <Check className="h-3.5 w-3.5" />
+            ) : null}
+            <span className="ml-1">{saved ? "Saved" : "Save brain"}</span>
           </Button>
         </div>
       </div>
 
-      {error && <p className="text-sm text-rose-400">{error}</p>}
+      {error && (
+        <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+          {error}
+        </p>
+      )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="space-y-4 rounded-[var(--radius-lg)] border border-omniv-border bg-omniv-card p-5">
-          <h2 className="text-sm font-semibold tracking-tight">Identity</h2>
-          <div>
-            <label className={labelCls}>Stage name</label>
-            <input
-              className={field}
-              value={brain.stageName || brain.name}
-              onChange={(e) => {
-                patch("stageName", e.target.value);
-                patch("name", e.target.value);
-              }}
-              placeholder="How the industry should say your name"
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Genre (comma-separated)</label>
-            <input
-              className={field}
-              value={listToText(brain.genre)}
-              onChange={(e) => patch("genre", textToList(e.target.value))}
-              placeholder="Afrobeats, Alté, Amapiano"
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Career stage</label>
-            <div className="flex flex-wrap gap-2">
-              {STAGES.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => patch("careerStage", s.id)}
-                  className={cn(
-                    "rounded-full border px-3 py-1.5 text-xs transition",
-                    brain.careerStage === s.id
-                      ? "border-omniv-gold/50 bg-omniv-gold/15 text-omniv-gold"
-                      : "border-omniv-border text-omniv-text-muted hover:border-omniv-gold/30"
-                  )}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className={labelCls}>Music style</label>
-            <textarea
-              className={cn(field, "min-h-[72px] resize-y")}
-              value={brain.musicStyle}
-              onChange={(e) => patch("musicStyle", e.target.value)}
-              placeholder="Tempo, mood, production character"
-            />
-          </div>
-        </section>
+      <Card className="relative overflow-hidden border-omniv-gold/25 bg-gradient-to-br from-omniv-gold/[0.07] via-omniv-card to-omniv-card p-6">
+        <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-omniv-gold/10 blur-3xl" />
+        <div className="flex items-center gap-2 text-omniv-gold">
+          <Target className="h-4 w-4" />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">
+            Big Dream
+          </span>
+        </div>
+        <p className="mt-3 text-[15px] font-medium leading-relaxed tracking-tight text-omniv-text">
+          {dream}
+        </p>
+        <p className="mt-3 text-xs leading-relaxed text-omniv-text-muted">
+          Managers hold one picture of the artist&apos;s career and refuse
+          weekly noise that does not serve it. Every opportunity, score, and
+          Ziki plan is measured against this image. Change it only when the
+          career strategy changes.
+        </p>
+        <textarea
+          className={cn(inputClass, "mt-4 min-h-[88px] resize-y")}
+          value={brain.bigDream || ""}
+          placeholder="e.g. Headlining 2k rooms across West Africa within 24 months while owning my masters and a direct fan list of 50k."
+          onChange={(e) => patch("bigDream", e.target.value)}
+        />
+      </Card>
 
-        <section className="space-y-4 rounded-[var(--radius-lg)] border border-omniv-border bg-omniv-card p-5">
-          <h2 className="text-sm font-semibold tracking-tight">Positioning</h2>
-          <div>
-            <label className={labelCls}>Brand voice</label>
-            <textarea
-              className={cn(field, "min-h-[72px] resize-y")}
-              value={brain.brandVoice}
-              onChange={(e) => patch("brandVoice", e.target.value)}
-              placeholder="How you speak on and off record"
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Visual identity</label>
-            <textarea
-              className={cn(field, "min-h-[72px] resize-y")}
-              value={brain.visualIdentity}
-              onChange={(e) => patch("visualIdentity", e.target.value)}
-              placeholder="Palette, framing, references"
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Target audience</label>
-            <textarea
-              className={cn(field, "min-h-[72px] resize-y")}
-              value={brain.targetAudience}
-              onChange={(e) => patch("targetAudience", e.target.value)}
-              placeholder="Who should care first"
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Content style</label>
-            <input
-              className={field}
-              value={brain.contentStyle}
-              onChange={(e) => patch("contentStyle", e.target.value)}
-              placeholder="Documentary, performance, lifestyle…"
-            />
-          </div>
-        </section>
+      <Card className="p-5">
+        <div className="flex items-center gap-2 text-omniv-text">
+          <Compass className="h-4 w-4 text-omniv-gold" />
+          <h2 className="text-sm font-semibold tracking-tight">
+            How Omniv walks you there
+          </h2>
+        </div>
+        <ul className="mt-3 space-y-2 text-xs leading-relaxed text-omniv-text-secondary">
+          <li>
+            <span className="font-medium text-omniv-text">Daily.</span> One
+            priority on Command Center. Execute or lose the week to noise.
+          </li>
+          <li>
+            <span className="font-medium text-omniv-text">Weekly.</span>{" "}
+            Opportunity Feed ranks moves that compound toward the Big Dream,
+            not random industry tips.
+          </li>
+          <li>
+            <span className="font-medium text-omniv-text">Progress.</span>{" "}
+            Analytics is execution against this dream, not vanity charts.
+          </li>
+        </ul>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/dashboard">
+            <Button size="sm">Open Command Center</Button>
+          </Link>
+          <Link href="/opportunities">
+            <Button size="sm" variant="outline">See ranked moves</Button>
+          </Link>
+        </div>
+      </Card>
 
-        <section className="space-y-4 rounded-[var(--radius-lg)] border border-omniv-border bg-omniv-card p-5">
-          <h2 className="text-sm font-semibold tracking-tight">Strategy</h2>
-          <div>
-            <label className={labelCls}>Goals (comma-separated)</label>
-            <textarea
-              className={cn(field, "min-h-[72px] resize-y")}
-              value={listToText(brain.goals)}
-              onChange={(e) => patch("goals", textToList(e.target.value))}
-              placeholder="Playlist growth, sold-out room, sync"
-            />
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label="Stage name">
+          <input
+            className={inputClass}
+            value={brain.stageName || brain.name}
+            onChange={(e) => {
+              patch("stageName", e.target.value);
+              patch("name", e.target.value);
+            }}
+          />
+        </Field>
+        <Field label="Career stage">
+          <div className="flex flex-wrap gap-1.5">
+            {STAGES.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => patch("careerStage", s.id)}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-[11px] transition",
+                  brain.careerStage === s.id
+                    ? "border-omniv-gold/50 bg-omniv-gold/15 text-omniv-gold"
+                    : "border-omniv-border text-omniv-text-muted hover:border-omniv-gold/30"
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
           </div>
-          <div>
-            <label className={labelCls}>Strengths</label>
-            <input
-              className={field}
-              value={listToText(brain.strengths)}
-              onChange={(e) => patch("strengths", textToList(e.target.value))}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Gaps to close</label>
-            <input
-              className={field}
-              value={listToText(brain.weaknesses)}
-              onChange={(e) => patch("weaknesses", textToList(e.target.value))}
-            />
-          </div>
-          <div>
-            <label className={labelCls}>Peers / competitors</label>
-            <input
-              className={field}
-              value={listToText(brain.competitors)}
-              onChange={(e) => patch("competitors", textToList(e.target.value))}
-              placeholder="Acts in your lane"
-            />
-          </div>
-        </section>
-
-        <section className="space-y-4 rounded-[var(--radius-lg)] border border-omniv-border bg-omniv-card p-5">
-          <h2 className="text-sm font-semibold tracking-tight">Notes</h2>
-          <div>
-            <label className={labelCls}>Private strategy notes</label>
-            <textarea
-              className={cn(field, "min-h-[160px] resize-y")}
-              value={brain.notes}
-              onChange={(e) => patch("notes", e.target.value)}
-              placeholder="Context Ziki should always remember"
-            />
-          </div>
-          <p className="text-[11px] text-omniv-text-muted">
-            Last saved {brain.lastUpdated || "—"}
-          </p>
-        </section>
+        </Field>
+        <Field label="Genre" hint="Comma-separated">
+          <input
+            className={inputClass}
+            value={listToText(brain.genre)}
+            onChange={(e) => patch("genre", textToList(e.target.value))}
+          />
+        </Field>
+        <Field label="Music style">
+          <input
+            className={inputClass}
+            value={brain.musicStyle}
+            onChange={(e) => patch("musicStyle", e.target.value)}
+          />
+        </Field>
+        <Field label="Brand voice">
+          <input
+            className={inputClass}
+            value={brain.brandVoice}
+            onChange={(e) => patch("brandVoice", e.target.value)}
+          />
+        </Field>
+        <Field label="Target audience">
+          <input
+            className={inputClass}
+            value={brain.targetAudience}
+            onChange={(e) => patch("targetAudience", e.target.value)}
+          />
+        </Field>
       </div>
 
-      <div className="flex justify-end gap-2 border-t border-omniv-border pt-4">
-        <Button variant="outline" size="sm" onClick={() => void onSave()} disabled={saving}>
-          {saving ? "Saving…" : "Save Artist Brain"}
+      <Field
+        label="Near-term goals"
+        hint="Supporting targets under the Big Dream (comma-separated)"
+      >
+        <textarea
+          className={cn(inputClass, "min-h-[72px] resize-y")}
+          value={listToText(brain.goals)}
+          onChange={(e) => patch("goals", textToList(e.target.value))}
+        />
+      </Field>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label="Strengths" hint="Comma-separated">
+          <textarea
+            className={cn(inputClass, "min-h-[72px] resize-y")}
+            value={listToText(brain.strengths)}
+            onChange={(e) => patch("strengths", textToList(e.target.value))}
+          />
+        </Field>
+        <Field label="Gaps" hint="What a manager would fix first">
+          <textarea
+            className={cn(inputClass, "min-h-[72px] resize-y")}
+            value={listToText(brain.weaknesses)}
+            onChange={(e) => patch("weaknesses", textToList(e.target.value))}
+          />
+        </Field>
+      </div>
+
+      <Field label="Notes for Ziki">
+        <textarea
+          className={cn(inputClass, "min-h-[88px] resize-y")}
+          value={brain.notes}
+          onChange={(e) => patch("notes", e.target.value)}
+          placeholder="Catalogue context, team, constraints, non-negotiables…"
+        />
+      </Field>
+
+      <div className="flex items-center justify-between border-t border-omniv-border pt-4">
+        <Badge variant="outline" className="text-[10px]">
+          Updated {brain.lastUpdated}
+        </Badge>
+        <Button onClick={() => void onSave()} disabled={saving}>
+          {saving ? "Saving…" : saved ? "Saved" : "Save Artist Brain"}
         </Button>
       </div>
     </div>
