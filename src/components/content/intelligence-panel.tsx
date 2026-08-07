@@ -1,175 +1,96 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Film, Sparkles, Loader2, Upload } from "lucide-react";
-
-const PLATFORMS = ["TikTok", "Instagram Reels", "YouTube Shorts", "X"];
+import { Loader2, Sparkles } from "lucide-react";
 
 export function IntelligencePanel() {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [url, setUrl] = useState("");
+  const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [notes, setNotes] = useState("");
-  const [platform, setPlatform] = useState("TikTok");
-  const [brief, setBrief] = useState("");
   const [result, setResult] = useState<string | null>(null);
-  const [studio, setStudio] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function analyse(file?: File | null) {
-    const name = file?.name || fileName || brief || "content-piece";
+  async function run() {
     setBusy(true);
     setError(null);
     setResult(null);
     try {
-      const res = await fetch("/api/analyze", {
+      const res = await fetch("/api/ziki/content", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "content",
-          fileName: name,
-          fileType: file?.type || "video",
-          notes: [notes, brief].filter(Boolean).join(" | "),
-          platform,
-        }),
+        body: JSON.stringify({ url: url.trim() || undefined, note: note.trim() }),
       });
-      const data = (await res.json()) as { text?: string; error?: string };
-      if (!res.ok) setError(data.error || "Analysis failed");
-      else setResult(data.text || "");
-    } catch {
-      setError("Network error");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function genStudio() {
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "content",
-          fileName: brief || "studio-brief",
-          notes: `Generate platform-native content system for: ${brief}. Platform: ${platform}`,
-          platform,
-        }),
-      });
-      const data = (await res.json()) as { text?: string; error?: string };
-      if (!res.ok) setError(data.error || "Generate failed");
-      else setStudio(data.text || "");
-    } catch {
-      setError("Network error");
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Analysis failed");
+        return;
+      }
+      setResult(data.text || data.analysis || JSON.stringify(data));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="space-y-5">
-      <Card className="p-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-omniv-gold/15">
-            <Film className="h-5 w-5 text-omniv-gold" />
-          </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-semibold">Analyse your content</h2>
-            <p className="text-sm text-omniv-text-secondary">
-              Upload a clip or describe it — personalized scores, not sample demos
-            </p>
-          </div>
-          <input
-            ref={inputRef}
-            type="file"
-            accept="video/*,image/*,audio/*"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) {
-                setFileName(f.name);
-                void analyse(f);
-              }
-            }}
+    <div className="space-y-3">
+      <Card className="p-3">
+        <div className="flex items-center gap-1.5 text-omniv-gold">
+          <Sparkles className="h-3.5 w-3.5" />
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em]">
+            Scan
+          </p>
+        </div>
+        <p className="mt-1 text-[11px] text-omniv-text-muted">
+          Paste a post, video, or brief. Get a personalized read tied to your brain.
+        </p>
+        <div className="mt-2 space-y-2">
+          <Input
+            className="h-8 text-xs"
+            placeholder="URL (optional)"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+          />
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={3}
+            placeholder="What you are testing…"
+            className="w-full resize-none rounded-lg border border-omniv-border bg-omniv-card px-2.5 py-2 text-[13px] focus-gold"
           />
           <Button
-            onClick={() => inputRef.current?.click()}
-            disabled={busy}
-            className="gap-2"
+            size="sm"
+            className="h-8 gap-1 text-[11px]"
+            disabled={busy || (!url.trim() && !note.trim())}
+            onClick={() => void run()}
           >
             {busy ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Upload className="h-4 w-4" />
+              <Sparkles className="h-3.5 w-3.5" />
             )}
-            {busy ? "Analysing…" : "Upload & analyse"}
+            Analyze
           </Button>
         </div>
-        {fileName && (
-          <p className="mt-2 font-data text-[11px] text-omniv-text-muted">
-            {fileName}
-          </p>
-        )}
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={2}
-          placeholder="Context: hook idea, target audience, campaign…"
-          className="mt-3 w-full rounded-[var(--radius)] border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm focus-gold"
-        />
       </Card>
 
-      {error && <p className="text-xs text-omniv-danger">{error}</p>}
-
+      {error && (
+        <Card className="border-rose-500/30 p-3 text-xs text-rose-300">{error}</Card>
+      )}
       {result && (
-        <Card className="animate-fade-in-up border-omniv-gold/20 p-5">
-          <Badge variant="gold">Content intelligence</Badge>
-          <pre className="mt-3 whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-omniv-text-secondary">
+        <Card className="border-omniv-gold/20 p-3">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
+            Result
+          </p>
+          <pre className="mt-1.5 whitespace-pre-wrap font-sans text-[12px] leading-snug text-omniv-text-secondary">
             {result}
           </pre>
         </Card>
       )}
-
-      <Card className="p-5">
-        <h3 className="text-sm font-medium">Content Studio</h3>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {PLATFORMS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPlatform(p)}
-              className={
-                platform === p
-                  ? "rounded-full border border-omniv-gold/40 bg-omniv-gold/10 px-3 py-1 text-xs text-omniv-gold"
-                  : "rounded-full border border-omniv-border px-3 py-1 text-xs text-omniv-text-muted"
-              }
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <Input
-            value={brief}
-            onChange={(e) => setBrief(e.target.value)}
-            placeholder="Release title or topic"
-          />
-          <Button onClick={() => void genStudio()} disabled={busy || !brief.trim()} className="gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" />
-            Generate
-          </Button>
-        </div>
-        {studio && (
-          <pre className="mt-4 whitespace-pre-wrap rounded-[var(--radius)] border border-omniv-border bg-omniv-elevated p-4 text-xs text-omniv-text-secondary">
-            {studio}
-          </pre>
-        )}
-      </Card>
     </div>
   );
 }
