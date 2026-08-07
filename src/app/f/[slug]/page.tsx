@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { track } from "@/lib/analytics";
-import { CheckCircle2, Loader2, Unlock } from "lucide-react";
+import { CheckCircle2, Loader2, MapPin } from "lucide-react";
 
 function GateInner() {
   const params = useParams();
@@ -15,6 +15,8 @@ function GateInner() {
   const source = search.get("source") || "bio_link";
 
   const [email, setEmail] = useState("");
+  const [city, setCity] = useState("");
+  const [wouldAttend, setWouldAttend] = useState(true);
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -29,7 +31,7 @@ function GateInner() {
   }, [slug, source]);
 
   const headline = useMemo(
-    () => `Unlock exclusive updates from ${artistName}`,
+    () => `Join the room around ${artistName}`,
     [artistName]
   );
 
@@ -45,6 +47,8 @@ function GateInner() {
         body: JSON.stringify({
           artistSlug: slug,
           email: email.trim(),
+          city: city.trim() || undefined,
+          wouldAttend,
           consent: true,
           source,
         }),
@@ -78,92 +82,95 @@ function GateInner() {
           <Image
             src="/logo.svg"
             alt="Omniv"
-            width={36}
-            height={36}
-            className="rounded-lg"
+            width={40}
+            height={40}
+            className="mb-4 rounded-lg"
           />
-          <p className="mt-3 font-data text-[10px] uppercase tracking-[0.18em] text-omniv-gold">
-            Fan access
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-omniv-gold">
+            Omniv · Fan list
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-omniv-text">
-            {artistName}
+            {headline}
           </h1>
-          <p className="mt-2 text-sm text-omniv-text-secondary">{headline}</p>
+          <p className="mt-2 text-sm text-omniv-text-secondary">
+            Drops, rooms near you, and the next move — not another random follow.
+          </p>
         </div>
 
-        {!done ? (
-          <form
-            onSubmit={submit}
-            className="rounded-2xl border border-omniv-border bg-omniv-card/90 p-5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)] backdrop-blur"
-          >
-            <Input
-              label="Email"
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="you@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={busy}
-            />
-            <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-left text-xs leading-relaxed text-omniv-text-secondary">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 rounded border-omniv-border accent-omniv-gold"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-                disabled={busy}
-              />
-              <span>
-                I agree to receive updates from {artistName}. I can unsubscribe
-                anytime. (Required for privacy compliance.)
-              </span>
-            </label>
-            {error && (
-              <p className="mt-3 text-xs text-omniv-danger">{error}</p>
-            )}
-            <Button
-              type="submit"
-              className="mt-5 w-full gap-2"
-              disabled={busy || !email.trim() || !consent}
-            >
-              {busy ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Unlocking…
-                </>
-              ) : (
-                <>
-                  <Unlock className="h-4 w-4" />
-                  Unlock access
-                </>
-              )}
-            </Button>
-            <p className="mt-3 text-center text-[10px] text-omniv-text-muted">
-              Powered by Omniv · source: {source}
-            </p>
-          </form>
-        ) : (
-          <div className="rounded-2xl border border-omniv-gold/30 bg-omniv-card p-6 text-center">
-            <CheckCircle2 className="mx-auto h-10 w-10 text-omniv-gold" />
-            <h2 className="mt-3 text-lg font-semibold">You're in</h2>
-            <p className="mt-1 text-sm text-omniv-text-secondary">
-              Thanks — {artistName} has your email for exclusive drops.
+        {done ? (
+          <div className="rounded-2xl border border-omniv-gold/30 bg-omniv-gold/5 p-6 text-center">
+            <CheckCircle2 className="mx-auto h-8 w-8 text-omniv-gold" />
+            <p className="mt-3 text-sm font-medium text-omniv-text">
+              You are on the list.
             </p>
             {reward && (
-              <div className="mt-4 rounded-xl border border-omniv-border bg-omniv-elevated px-4 py-3 text-left text-sm">
-                <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
-                  Your unlock
-                </p>
-                <p className="mt-1 break-all text-omniv-gold">{reward}</p>
-              </div>
+              <p className="mt-2 text-xs text-omniv-text-secondary">{reward}</p>
             )}
-            {!reward && (
-              <p className="mt-4 text-xs text-omniv-text-muted">
-                Watch your inbox for the next release and live dates.
-              </p>
-            )}
+            <p className="mt-3 text-[11px] text-omniv-text-muted">
+              {wouldAttend
+                ? "We will flag you when a gathering opens in your city."
+                : "You will get updates. You can opt into rooms later."}
+            </p>
           </div>
+        ) : (
+          <form
+            onSubmit={submit}
+            className="space-y-3 rounded-2xl border border-omniv-border bg-omniv-card p-5"
+          >
+            <Input
+              type="email"
+              required
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-11 rounded-xl"
+            />
+            <div className="relative">
+              <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-omniv-text-muted" />
+              <Input
+                placeholder="City (where you are)"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="h-11 rounded-xl pl-9"
+              />
+            </div>
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-omniv-border bg-omniv-elevated/50 px-3 py-2.5">
+              <input
+                type="checkbox"
+                checked={wouldAttend}
+                onChange={(e) => setWouldAttend(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span className="text-xs leading-relaxed text-omniv-text-secondary">
+                I would come to a small show or listening session near me.
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2.5 px-1">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+                className="mt-0.5"
+                required
+              />
+              <span className="text-[11px] leading-relaxed text-omniv-text-muted">
+                I agree to be contacted about updates and gatherings. Coarse
+                location may be inferred to route rooms near me.
+              </span>
+            </label>
+            {error && <p className="text-xs text-rose-400">{error}</p>}
+            <Button
+              type="submit"
+              disabled={busy || !email.trim() || !consent}
+              className="h-11 w-full rounded-xl font-semibold"
+            >
+              {busy ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Join the list"
+              )}
+            </Button>
+          </form>
         )}
       </div>
     </div>
