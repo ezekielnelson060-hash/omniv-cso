@@ -3,27 +3,33 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import {
+  ArrowRight,
+  MapPin,
+  MessageSquare,
+  Radio,
+  Ticket,
+  Users,
+  Brain,
+  Banknote,
+} from "lucide-react";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import type { ReactNode } from "react";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
 function useMotionSafe() {
-  const reduce = useReducedMotion();
-  return !reduce;
+  return !useReducedMotion();
 }
 
 function FadeUp({
   children,
   className,
   delay = 0,
-  once = true,
 }: {
   children: ReactNode;
   className?: string;
   delay?: number;
-  once?: boolean;
 }) {
   const animate = useMotionSafe();
   if (!animate) return <div className={className}>{children}</div>;
@@ -32,7 +38,7 @@ function FadeUp({
       className={className}
       initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once, margin: "-40px 0px" }}
+      viewport={{ once: true, margin: "-40px 0px" }}
       transition={{ duration: 0.55, delay, ease }}
     >
       {children}
@@ -40,376 +46,301 @@ function FadeUp({
   );
 }
 
-function Stagger({
-  children,
-  className,
-  delay = 0,
-}: {
-  children: ReactNode;
-  className?: string;
-  delay?: number;
-}) {
-  const animate = useMotionSafe();
-  const container: Variants = {
-    hidden: {},
-    show: {
-      transition: { staggerChildren: 0.09, delayChildren: delay },
-    },
-  };
-  const item: Variants = {
-    hidden: { opacity: 0, y: 16 },
-    show: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5, ease },
-    },
-  };
-  if (!animate) return <div className={className}>{children}</div>;
-  return (
-    <motion.div
-      className={className}
-      variants={container}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: "-30px 0px" }}
-    >
-      {Array.isArray(children)
-        ? children.map((child, i) => (
-            <motion.div key={i} variants={item}>
-              {child}
-            </motion.div>
-          ))
-        : children}
-    </motion.div>
-  );
-}
-
 function GoldShimmer({ children }: { children: ReactNode }) {
-  return (
-    <span className="relative inline-block text-omniv-gold">
-      <span className="relative z-10">{children}</span>
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent bg-[length:200%_100%] animate-[shimmer_2.8s_ease-in-out_infinite] bg-clip-text text-transparent"
-        style={{ WebkitBackgroundClip: "text" }}
-      >
-        {children}
-      </span>
-    </span>
-  );
+  return <span className="text-omniv-gold">{children}</span>;
 }
 
 export default function LandingPage() {
   const animate = useMotionSafe();
-
   const heroContainer: Variants = {
     hidden: {},
-    show: { transition: { staggerChildren: 0.11, delayChildren: 0.08 } },
+    show: { transition: { staggerChildren: 0.1, delayChildren: 0.06 } },
   };
   const heroItem: Variants = {
-    hidden: { opacity: 0, y: 22 },
-    show: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.65, ease },
-    },
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.6, ease } },
   };
-
-  const costCards = [
-    {
-      t: "Lost windows",
-      d: "A release on the wrong week doesn't come back. Timing is a one-shot asset.",
-    },
-    {
-      t: "Scattered focus",
-      d: "Five priorities feel productive. One ranked move builds a career.",
-    },
-    {
-      t: "Roster fog",
-      d: "Managers who run acts from memory quietly rank by whoever shouted last.",
-    },
-  ];
-
-  const systemCards = [
-    {
-      t: "Command Center",
-      d: "The state of the career in one glance: momentum, audience, content, release readiness, with this week's non-negotiable on top.",
-    },
-    {
-      t: "Opportunity Feed",
-      d: "Moves ranked by impact. Why it matters. When. Expected outcome. Act on this opens execution in Ziki, not another brainstorm.",
-    },
-    {
-      t: "Release Simulator",
-      d: "Stress-test the window before you spend reputation and budget. Go. Caution. Hold. Most people only learn the answer after the drop.",
-    },
-  ];
 
   const steps = [
     {
       n: "01",
-      t: "Lock your context",
-      d: "Genre, stage, goals, platforms. This becomes Artist Brain: the private context most AI tools never hold.",
+      t: "Tell Omniv who you are",
+      d: "Genre, stage, platforms, Big Dream. Everything positions around what you are building.",
     },
     {
       n: "02",
-      t: "Receive the priority",
-      d: "One move. Ranked. Explained. Not a menu of options designed to make you feel busy.",
+      t: "Own your audience",
+      d: "Fan Gate captures email, city, and who would show up. Not followers you rent from an algorithm.",
     },
     {
       n: "03",
-      t: "Execute with Ziki",
-      d: "Plans, tasks, release checks. Memory stays with the project so next week isn't a reset.",
+      t: "Host a room. Get paid.",
+      d: "Open a gathering link for any city. Free or ticketed. Tips on the same page. First cash without a label.",
+    },
+    {
+      n: "04",
+      t: "Move on ranked priority",
+      d: "Ziki and Command Center surface the highest-impact next move — not a feed of equal tips.",
     },
   ];
 
-  const personas = [
+  const pillars = [
     {
-      t: "Artists",
-      d: "Walk out with one non-negotiable for the week. Stop performing productivity. Start compounding the right move.",
+      icon: Brain,
+      t: "Career OS",
+      d: "Artist Brain, scores, opportunities tied to your goals. One priority when it matters.",
     },
     {
-      t: "Lean managers",
-      d: "See which act gets this hour. Roster clarity without a full war room, before focus becomes politics.",
+      icon: Users,
+      t: "Owned fans",
+      d: "Cities, intent to attend, tiers. The map of who will actually show up.",
     },
     {
-      t: "Small labels",
-      d: "Release-ready vs needs priming. Attention is finite. Omniv ranks where it should go.",
+      icon: Ticket,
+      t: "Rooms and revenue",
+      d: "Public event links, RSVP, tickets, tip jar. Money without waiting for a deal.",
+    },
+    {
+      icon: MessageSquare,
+      t: "Ziki",
+      d: "Manager-grade chat: strategy, deal emails in your voice, tasks, release stress-tests.",
     },
   ];
 
   return (
-    <div className="relative min-h-dvh overflow-x-hidden bg-omniv-bg text-omniv-text">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <motion.div
-          className="absolute -top-40 left-1/2 h-[560px] w-[920px] -translate-x-1/2 rounded-full bg-omniv-gold/[0.07] blur-[130px]"
-          animate={animate ? { opacity: [0.45, 0.75, 0.45], scale: [1, 1.04, 1] } : undefined}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
-          className="absolute bottom-0 right-0 h-[320px] w-[420px] rounded-full bg-omniv-gold/[0.04] blur-[100px]"
-          animate={animate ? { opacity: [0.35, 0.6, 0.35] } : undefined}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
-        />
-      </div>
+    <div className="relative min-h-dvh overflow-x-hidden bg-omniv-black text-omniv-text">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(212,175,55,0.09),_transparent_55%)]" />
 
-      <header className="relative z-20 border-b border-omniv-border/60 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 md:px-8">
-          <Link href="/" className="flex items-center gap-2.5">
-            <Image src="/logo.svg" alt="Omniv" width={30} height={30} className="rounded-md" priority />
-            <span className="text-[15px] font-semibold tracking-tight">Omniv</span>
+      <header className="relative z-20 border-b border-omniv-border/80">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 md:px-8">
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/logo.svg" alt="Omniv" width={28} height={28} className="rounded-md" />
+            <span className="text-sm font-semibold tracking-tight">Omniv</span>
           </Link>
-          <nav className="hidden items-center gap-8 text-[13px] text-omniv-text-secondary md:flex">
-            <a href="#intelligence" className="transition-colors hover:text-omniv-text">Intelligence</a>
-            <a href="#how" className="transition-colors hover:text-omniv-text">Access</a>
-            <a href="#for" className="transition-colors hover:text-omniv-text">Who it's for</a>
-          </nav>
           <div className="flex items-center gap-2">
-            <Link href="/login"><Button variant="ghost" size="sm" className="h-9 text-[13px]">Sign in</Button></Link>
-            <Link href="/signup"><Button size="sm" className="h-9 text-[13px]">Request access</Button></Link>
+            <Link href="/login">
+              <Button variant="ghost" size="sm" className="h-9 text-[13px]">
+                Log in
+              </Button>
+            </Link>
+            <Link href="/signup">
+              <Button size="sm" className="h-9 text-[13px]">
+                Start free
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
 
-      <section className="relative z-10 mx-auto max-w-4xl px-5 pb-10 pt-12 text-center md:px-8 md:pb-12 md:pt-16">
-        <motion.div variants={heroContainer} initial={animate ? "hidden" : false} animate="show">
-          <motion.p variants={heroItem} className="mb-4 font-data text-[11px] uppercase tracking-[0.22em] text-omniv-gold">
-            Private career intelligence · Independent music
+      <section className="relative z-10 mx-auto max-w-4xl px-5 pb-12 pt-14 text-center md:px-8 md:pt-20">
+        <motion.div
+          variants={heroContainer}
+          initial={animate ? "hidden" : false}
+          animate="show"
+        >
+          <motion.p
+            variants={heroItem}
+            className="mb-4 font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold"
+          >
+            Career OS for independent artists
           </motion.p>
-          <motion.h1 variants={heroItem} className="text-balance text-[2.4rem] font-semibold leading-[1.06] tracking-tight md:text-5xl lg:text-[3.4rem]">
-            Most artists will never know
+          <motion.h1
+            variants={heroItem}
+            className="text-balance text-[2.35rem] font-semibold leading-[1.08] tracking-tight md:text-5xl lg:text-[3.25rem]"
+          >
+            From zero budget
             <br />
-            <GoldShimmer>what they should have done</GoldShimmer>
+            to <GoldShimmer>first cash and clarity</GoldShimmer>
           </motion.h1>
-          <motion.p variants={heroItem} className="mx-auto mt-5 max-w-2xl text-[15px] leading-relaxed text-omniv-text-secondary md:text-[17px]">
-            While everyone else posts, guesses, and burns release windows, a small
-            set of operators will run on ranked priorities, release timing, and
-            roster clarity. Omniv is that system: career intelligence built like
-            an inner circle, not another public dashboard.
+          <motion.p
+            variants={heroItem}
+            className="mx-auto mt-5 max-w-2xl text-[15px] leading-relaxed text-omniv-text-secondary md:text-[17px]"
+          >
+            Omniv is not another analytics dashboard. It builds your list, maps
+            who is in which city, opens a small room, takes tickets and tips,
+            and tells you the next strategic move — even if you have never been
+            signed and have nothing to spend.
           </motion.p>
-          <motion.div variants={heroItem} className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <motion.div
+            variants={heroItem}
+            className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
+          >
             <Link href="/signup">
-              <Button size="lg" className="h-12 min-w-[200px] gap-2 text-sm transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]">
-                Enter the system
+              <Button size="lg" className="h-12 min-w-[200px] gap-2 text-sm">
+                Start building
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <a href="#intelligence">
-              <Button variant="outline" size="lg" className="h-12 min-w-[200px] text-sm transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]">
-                See the architecture
+            <a href="#how">
+              <Button variant="outline" size="lg" className="h-12 min-w-[200px] text-sm">
+                How it works
               </Button>
             </a>
           </motion.div>
-          <motion.p variants={heroItem} className="mt-5 text-[12px] text-omniv-text-muted">
-            Free to start · Built for independents who refuse to wing another year
+          <motion.p
+            variants={heroItem}
+            className="mt-5 text-[12px] text-omniv-text-muted"
+          >
+            Free scan · Fan list · Rooms · Ziki strategist
           </motion.p>
         </motion.div>
       </section>
 
-      <section className="relative z-10 border-y border-omniv-border bg-omniv-elevated/50">
-        <div className="mx-auto max-w-3xl px-5 py-10 text-center md:px-8 md:py-12">
-          <FadeUp>
-            <p className="font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">The invisible tax</p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight md:text-3xl">
-              Guessing compounds. Clarity compounds faster.
-            </h2>
-            <p className="mt-4 text-[15px] leading-relaxed text-omniv-text-secondary md:text-base">
-              Every wrong week, scattered campaign, and “I'll figure it out”
-              month is a decision you can't refund. Independents don't
-              usually fail from zero talent. They fail from years of motion
-              without a ranked next move. The artists and managers who pull ahead
-              are not luckier. They stop improvising the strategy layer.
-            </p>
-          </FadeUp>
-          <Stagger className="mt-8 grid gap-3 text-left sm:grid-cols-3" delay={0.1}>
-            {costCards.map((item) => (
-              <div key={item.t} className="rounded-xl border border-omniv-border bg-omniv-card/80 p-4 transition-colors duration-300 hover:border-omniv-gold/30">
-                <p className="text-[13px] font-semibold text-omniv-gold">{item.t}</p>
-                <p className="mt-2 text-[13px] leading-relaxed text-omniv-text-secondary">{item.d}</p>
-              </div>
-            ))}
-          </Stagger>
-        </div>
-      </section>
-
-      <section id="intelligence" className="relative z-10 mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-14">
-        <FadeUp className="max-w-2xl">
-          <p className="font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">The system</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">Intelligence, not noise</h2>
-          <p className="mt-3 text-[15px] leading-relaxed text-omniv-text-secondary">
-            Omniv is structured like a private strategist: it holds your stage,
-            goals, and platforms, then returns one highest-impact move. No
-            feed of equal tips. No vanity metrics theater. Operators who use it
-            stop asking “what should I post?” and start executing a ranked plan.
-          </p>
-        </FadeUp>
-        <Stagger className="mt-8 grid gap-4 md:grid-cols-3" delay={0.08}>
-          {systemCards.map((card) => (
-            <div key={card.t} className="rounded-2xl border border-omniv-border bg-omniv-card p-5 transition-all duration-300 hover:border-omniv-gold/25 hover:shadow-[0_12px_40px_-16px_rgba(212,175,55,0.18)] md:p-6">
-              <h3 className="text-base font-semibold tracking-tight">{card.t}</h3>
-              <p className="mt-2 text-[14px] leading-relaxed text-omniv-text-secondary">{card.d}</p>
-            </div>
-          ))}
-        </Stagger>
-      </section>
-
-      <section id="how" className="relative z-10 border-y border-omniv-border bg-omniv-elevated/30">
-        <div className="mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-12">
-          <FadeUp className="max-w-xl">
-            <p className="font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">Access path</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">From profile to advantage in three steps</h2>
-          </FadeUp>
-          <Stagger className="mt-8 grid gap-8 md:grid-cols-3 md:gap-6" delay={0.1}>
-            {steps.map((s) => (
-              <div key={s.n}>
-                <p className="font-data text-sm text-omniv-gold">{s.n}</p>
-                <h3 className="mt-2 text-base font-semibold tracking-tight">{s.t}</h3>
-                <p className="mt-1.5 text-[14px] leading-relaxed text-omniv-text-secondary">{s.d}</p>
-              </div>
-            ))}
-          </Stagger>
-        </div>
-      </section>
-
-      <section id="for" className="relative z-10 mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-12">
-        <FadeUp className="max-w-2xl">
-          <p className="font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">Who this is built for</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">Serious independents. Not spectators.</h2>
-          <p className="mt-3 text-[15px] leading-relaxed text-omniv-text-secondary">
-            Omniv is for operators who already know talent isn't enough:
-            early-stage artists building with intent, lean managers running
-            developing rosters, small labels allocating attention under
-            constraint. It is not a substitute for agents, lawyers, or A-list
-            dealmaking. It is the strategy layer almost no one around you is
-            running yet.
-          </p>
-        </FadeUp>
-        <Stagger className="mt-8 grid gap-4 md:grid-cols-3" delay={0.08}>
-          {personas.map((r) => (
-            <div key={r.t} className="rounded-2xl border border-omniv-border bg-omniv-card p-5 transition-all duration-300 hover:border-omniv-gold/25 md:p-6">
-              <h3 className="text-base font-semibold tracking-tight">{r.t}</h3>
-              <p className="mt-2 text-[14px] leading-relaxed text-omniv-text-secondary">{r.d}</p>
-            </div>
-          ))}
-        </Stagger>
-      </section>
-
-      <section className="relative z-10 border-y border-omniv-border bg-omniv-elevated/60">
-        <div className="mx-auto max-w-3xl px-5 py-10 text-center md:py-12">
-          <FadeUp>
-            <p className="text-xl font-semibold tracking-tight md:text-2xl md:leading-snug">
-              In two years, the gap won't be talent.
-              <br />
-              It will be who ran on intelligence, and who kept guessing.
-            </p>
-            <p className="mt-4 font-data text-[11px] uppercase tracking-[0.18em] text-omniv-gold">
-              Omniv · Highest-impact move. Every week.
-            </p>
-          </FadeUp>
-        </div>
-      </section>
-
-      <section className="relative z-10 mx-auto max-w-3xl px-5 py-12 text-center md:py-14">
-        <FadeUp>
-          <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-            The cost of waiting is another cycle you can't buy back
-          </h2>
-          <p className="mx-auto mt-3 max-w-md text-[15px] text-omniv-text-secondary">
-            Create an account. Complete onboarding. Get your first priority the
-            same day. The operators who start now won't explain later why they
-            delayed.
-          </p>
-          <Link href="/signup" className="mt-7 inline-block">
-            <Button size="lg" className="h-12 gap-2 px-10 text-sm transition-transform duration-200 hover:scale-[1.03] active:scale-[0.98]">
-              Enter the system
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
-          <p className="mt-3 text-[12px] text-omniv-text-muted">
-            Free tier available · Upgrade when the roster demands it
-          </p>
-        </FadeUp>
-      </section>
-
-      <footer className="relative z-10 border-t border-omniv-border bg-omniv-elevated">
-        <div className="mx-auto max-w-6xl px-5 py-8 md:px-8">
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="sm:col-span-2 lg:col-span-1">
-              <div className="flex items-center gap-2">
-                <Image src="/logo.svg" alt="" width={24} height={24} className="rounded" />
-                <span className="text-sm font-semibold">Omniv</span>
-              </div>
-              <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-omniv-text-secondary">
-                Private career intelligence for independent music operators.
+      <section className="relative z-10 border-y border-omniv-border bg-omniv-elevated/40">
+        <div className="mx-auto grid max-w-5xl gap-6 px-5 py-10 md:grid-cols-3 md:px-8">
+          {[
+            {
+              t: "No money to record or promote",
+              d: "You still need fans in a room and a path to cash. Omniv starts there.",
+            },
+            {
+              t: "Followers are not a list",
+              d: "Algorithm reach dies overnight. Email, city, and intent to attend does not.",
+            },
+            {
+              t: "Guessing every week",
+              d: "Wrong release week, wrong platform. One ranked move beats ten random posts.",
+            },
+          ].map((c) => (
+            <FadeUp key={c.t}>
+              <p className="text-sm font-medium">{c.t}</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-omniv-text-muted">
+                {c.d}
               </p>
-            </div>
-            <div>
-              <p className="text-[12px] font-medium text-omniv-text">Product</p>
-              <ul className="mt-3 space-y-2 text-[13px] text-omniv-text-secondary">
-                <li><a href="#intelligence" className="hover:text-omniv-text">Intelligence</a></li>
-                <li><a href="#how" className="hover:text-omniv-text">Access</a></li>
-                <li><Link href="/signup" className="hover:text-omniv-text">Enter</Link></li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-[12px] font-medium text-omniv-text">Company</p>
-              <ul className="mt-3 space-y-2 text-[13px] text-omniv-text-secondary">
-                <li><Link href="/privacy" className="hover:text-omniv-text">Privacy</Link></li>
-                <li><Link href="/terms" className="hover:text-omniv-text">Terms</Link></li>
-                <li><Link href="/contact" className="hover:text-omniv-text">Contact</Link></li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-[12px] font-medium text-omniv-text">Account</p>
-              <ul className="mt-3 space-y-2 text-[13px] text-omniv-text-secondary">
-                <li><Link href="/login" className="hover:text-omniv-text">Sign in</Link></li>
-                <li><Link href="/signup" className="hover:text-omniv-text">Create account</Link></li>
-              </ul>
+            </FadeUp>
+          ))}
+        </div>
+      </section>
+
+      <section id="how" className="relative z-10 mx-auto max-w-5xl px-5 py-16 md:px-8 md:py-20">
+        <FadeUp>
+          <p className="font-data text-[11px] uppercase tracking-[0.18em] text-omniv-gold">
+            How Omniv works
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
+            Four moves. One system.
+          </h2>
+        </FadeUp>
+        <div className="mt-10 grid gap-6 md:grid-cols-2">
+          {steps.map((s, i) => (
+            <FadeUp key={s.n} delay={i * 0.05}>
+              <div className="rounded-2xl border border-omniv-border bg-omniv-card/60 p-5">
+                <span className="font-data text-[11px] text-omniv-gold">{s.n}</span>
+                <h3 className="mt-2 text-base font-semibold">{s.t}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-omniv-text-secondary">
+                  {s.d}
+                </p>
+              </div>
+            </FadeUp>
+          ))}
+        </div>
+      </section>
+
+      <section className="relative z-10 border-t border-omniv-border bg-omniv-elevated/30">
+        <div className="mx-auto max-w-5xl px-5 py-16 md:px-8">
+          <FadeUp>
+            <p className="font-data text-[11px] uppercase tracking-[0.18em] text-omniv-gold">
+              Inside the product
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
+              Built to run a career, not a moodboard
+            </h2>
+          </FadeUp>
+          <div className="mt-10 grid gap-5 sm:grid-cols-2">
+            {pillars.map((p, i) => (
+              <FadeUp key={p.t} delay={i * 0.04}>
+                <div className="flex gap-3 rounded-2xl border border-omniv-border bg-omniv-card/50 p-5">
+                  <p.icon className="mt-0.5 h-5 w-5 shrink-0 text-omniv-gold" />
+                  <div>
+                    <h3 className="text-sm font-semibold">{p.t}</h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-omniv-text-secondary">
+                      {p.d}
+                    </p>
+                  </div>
+                </div>
+              </FadeUp>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="relative z-10 mx-auto max-w-5xl px-5 py-16 md:px-8">
+        <FadeUp>
+          <div className="rounded-2xl border border-omniv-gold/25 bg-omniv-gold/5 p-6 md:p-8">
+            <div className="flex items-start gap-3">
+              <Banknote className="mt-0.5 h-5 w-5 text-omniv-gold" />
+              <div>
+                <h2 className="text-xl font-semibold tracking-tight">
+                  Money without a Flutterwave account
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-omniv-text-secondary">
+                  Fans pay on your room link. Omniv collects. You save bank or
+                  MoMo details once. You get paid out — no RS codes, no developer
+                  setup. Create as many event links as you need.
+                </p>
+                <ul className="mt-4 space-y-2 text-sm text-omniv-text-secondary">
+                  <li className="flex gap-2">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-omniv-gold" />
+                    See which city has the most fans ready to attend
+                  </li>
+                  <li className="flex gap-2">
+                    <Ticket className="mt-0.5 h-4 w-4 shrink-0 text-omniv-gold" />
+                    Edit every room after you create it
+                  </li>
+                  <li className="flex gap-2">
+                    <Radio className="mt-0.5 h-4 w-4 shrink-0 text-omniv-gold" />
+                    Free public relevance audit from Spotify or YouTube
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
-          <div className="mt-8 flex flex-col gap-2 border-t border-omniv-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[12px] text-omniv-text-muted">© {new Date().getFullYear()} Omniv Systems. All rights reserved.</p>
-            <p className="text-[12px] text-omniv-text-muted">omniv.media</p>
+        </FadeUp>
+      </section>
+
+      <section className="relative z-10 border-t border-omniv-border bg-omniv-elevated/40">
+        <div className="mx-auto max-w-3xl px-5 py-16 text-center md:px-8">
+          <FadeUp>
+            <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
+              Stop guessing. Build the list. Open the room.
+            </h2>
+            <p className="mx-auto mt-3 max-w-lg text-sm text-omniv-text-secondary">
+              Omniv is the career operating system independents did not have —
+              intelligence, audience, and a path to cash in one place.
+            </p>
+            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link href="/signup">
+                <Button size="lg" className="h-12 min-w-[200px] gap-2">
+                  Create your account
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <Link href="/audit">
+                <Button variant="outline" size="lg" className="h-12 min-w-[200px]">
+                  Free relevance audit
+                </Button>
+              </Link>
+            </div>
+          </FadeUp>
+        </div>
+      </section>
+
+      <footer className="relative z-10 border-t border-omniv-border">
+        <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-5 py-8 text-center text-xs text-omniv-text-muted md:flex-row md:px-8 md:text-left">
+          <div className="flex items-center gap-2">
+            <Image src="/logo.svg" alt="" width={18} height={18} className="rounded" />
+            <span>Omniv · Know your next move</span>
+          </div>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link href="/privacy" className="hover:text-omniv-text">
+              Privacy
+            </Link>
+            <Link href="/terms" className="hover:text-omniv-text">
+              Terms
+            </Link>
+            <Link href="/login" className="hover:text-omniv-text">
+              Log in
+            </Link>
           </div>
         </div>
       </footer>
