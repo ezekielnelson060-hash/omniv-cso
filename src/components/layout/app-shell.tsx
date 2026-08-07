@@ -19,12 +19,12 @@ export function AppShell({
         className={cn(
           "md:pl-[240px]",
           fullBleed
-            ? "pt-14 md:pt-0"
-            : "px-4 pb-16 pt-[4.5rem] sm:px-6 md:px-8 md:pt-8"
+            ? "pt-12 md:pt-0"
+            : "px-3 pb-12 pt-14 sm:px-4 md:px-6 md:pt-5"
         )}
       >
         {fullBleed ? (
-          <div className="h-[calc(100dvh-3.5rem)] md:h-dvh">{children}</div>
+          <div className="h-[calc(100dvh-3rem)] md:h-dvh">{children}</div>
         ) : (
           <div className="mx-auto max-w-6xl">{children}</div>
         )}
