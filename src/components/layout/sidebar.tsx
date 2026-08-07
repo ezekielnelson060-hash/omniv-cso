@@ -23,6 +23,7 @@ import {
   Menu,
   X,
   Library,
+  Compass,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -50,6 +51,7 @@ const studio: NavItem[] = [
 
 const org: NavItem[] = [
   { href: "/label", label: "Label", icon: Building2 },
+  { href: "/discover", label: "Discover", icon: Compass },
   { href: "/reports", label: "Reports", icon: FileText },
 ];
 
