@@ -4,6 +4,40 @@ import { trackServer } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/server";
 import { checkAndIncrementZikiUsage } from "@/lib/ziki-usage";
 
+function scrubZiki(text: string): string {
+  return text
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\n#{1,6}\s+/g, "\n")
+    .trim();
+}
+
+async function liveContext(query: string): Promise<string> {
+  const q = query.slice(0, 180).trim();
+  if (!q || q.length < 12) return "";
+  try {
+    const url = `https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1&skip_disambig=1`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "OmnivZiki/1.0" },
+      signal: AbortSignal.timeout(2500),
+    });
+    if (!res.ok) return "";
+    const data = (await res.json()) as {
+      AbstractText?: string;
+      RelatedTopics?: { Text?: string }[];
+    };
+    const bits: string[] = [];
+    if (data.AbstractText) bits.push(data.AbstractText.slice(0, 400));
+    for (const r of data.RelatedTopics || []) {
+      if (r.Text) bits.push(r.Text.slice(0, 160));
+      if (bits.length >= 4) break;
+    }
+    if (!bits.length) return "";
+    return `\n\nLIVE PUBLIC CONTEXT (verify before treating as fact):\n- ${bits.join("\n- ")}`;
+  } catch {
+    return "";
+  }
+}
+
 /** ~12MB decoded; leave headroom under Gemini 20MB request limit */
 const MAX_ATTACHMENT_BYTES = 12 * 1024 * 1024;
 const MAX_ATTACHMENTS = 4;
@@ -119,14 +153,19 @@ export async function POST(req: Request) {
       },
     });
 
-    const system =
-      body.context ||
-      `You are Ziki, Omniv CSO. Never invent demo artists. Executive briefings with bold headings.`;
+    const managerRules = `FORMATTING: Never use # ## ### headings. No template labels like When/How/Priority/Expected outcome. Write like a real manager: concrete posts, hooks, shot lists, captions, platform, timing. One Next Move in 24-48h.
 
+ACTIONABLE: If advising content, specify exact structure (hook line, BTS shots, caption, sound/style fit for THIS artist). No generic "create engaging content".`;
+
+    const system = [
+      body.context || "You are Ziki, Omniv CSO. Never invent demo artists.",
+      managerRules,
+    ].join("\n\n");
+
+    const live = await liveContext(message || "");
     const userPayload = body.history
-      ? `${message || "(See attached media)"}\n\n(Conversation so far for continuity:\n${body.history})`
-      : message ||
-        "Listen to the attached audio/media. Give a manager-grade assessment aligned to my Artist Brain.";
+      ? `${message || "(See attached media)"}\n\n(Conversation so far for continuity:\n${body.history})${live}`
+      : `${message || "Listen to the attached audio/media. Give a manager-grade assessment aligned to my Artist Brain."}${live}`;
 
     const result = await zikiComplete(
       userPayload,
@@ -135,6 +174,7 @@ export async function POST(req: Request) {
     );
     return NextResponse.json({
       ...result,
+      text: scrubZiki(result.text || ""),
       usage: usageMeta,
       plan,
       multimodal: attachments.length > 0,
