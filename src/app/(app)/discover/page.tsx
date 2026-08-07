@@ -5,13 +5,13 @@ import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PageChrome, Toolbar, Segmented } from "@/components/ui/page-chrome";
 import {
-  Compass,
-  MapPin,
   ExternalLink,
   Loader2,
   TrendingUp,
   Filter,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,29 +23,41 @@ type Audit = {
   headline: string | null;
   overall_score: number;
   created_at: string;
+  peak_score: number;
+  spotify_popularity: number | null;
+  spotify_followers: number | null;
+  genres: string | null;
+  momentum: number | null;
+  reach: number | null;
 };
 
 type City = { city: string; fans: number; ready: number };
+type Roster = {
+  id: string;
+  stage_name: string;
+  slug: string;
+  genre: string | null;
+};
 
-type Tab = "rising" | "audits" | "cities";
+type Tab = "rising" | "audits" | "cities" | "roster";
 
-function peakLabel(score: number, createdAt: string) {
-  const ageDays =
-    (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24);
-  if (score >= 70 && ageDays <= 14) return "Peaking";
-  if (score >= 55 && ageDays <= 30) return "Rising";
-  if (score >= 40) return "Steady";
+function signalOf(a: Audit) {
+  if (a.peak_score >= 75 && (a.spotify_popularity ?? 0) >= 40) return "Peaking";
+  if (a.peak_score >= 60) return "Rising";
+  if (a.overall_score >= 40) return "Steady";
   return "Early";
 }
 
 export default function DiscoverPage() {
   const [audits, setAudits] = useState<Audit[]>([]);
   const [cities, setCities] = useState<City[]>([]);
+  const [roster, setRoster] = useState<Roster[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("rising");
   const [q, setQ] = useState("");
   const [source, setSource] = useState<"all" | "spotify" | "youtube">("all");
-  const [minScore, setMinScore] = useState(0);
+  const [minPeak, setMinPeak] = useState(0);
+  const [watch, setWatch] = useState<string[]>([]);
 
   useEffect(() => {
     void (async () => {
@@ -54,239 +66,260 @@ export default function DiscoverPage() {
         const json = await res.json();
         setAudits(json.audits || []);
         setCities(json.cities || []);
+        setRoster(json.roster || []);
       } finally {
         setLoading(false);
       }
     })();
+    try {
+      const w = JSON.parse(localStorage.getItem("omniv-ar-watch") || "[]");
+      if (Array.isArray(w)) setWatch(w);
+    } catch {
+      /* ignore */
+    }
   }, []);
+
+  function toggleWatch(id: string) {
+    setWatch((prev) => {
+      const next = prev.includes(id)
+        ? prev.filter((x) => x !== id)
+        : [...prev, id];
+      try {
+        localStorage.setItem("omniv-ar-watch", JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
-    return audits
-      .filter((a) => {
-        if (source !== "all" && a.source_type !== source) return false;
-        if (a.overall_score < minScore) return false;
-        if (!query) return true;
-        const hay =
-          `${a.artist_name || ""} ${a.headline || ""} ${a.source_type}`.toLowerCase();
-        return hay.includes(query);
-      })
-      .sort((a, b) => {
-        const ageA = Date.now() - new Date(a.created_at).getTime();
-        const ageB = Date.now() - new Date(b.created_at).getTime();
-        const rankA = a.overall_score * 2 - ageA / (1000 * 60 * 60 * 24);
-        const rankB = b.overall_score * 2 - ageB / (1000 * 60 * 60 * 24);
-        return rankB - rankA;
-      });
-  }, [audits, q, source, minScore]);
+    return audits.filter((a) => {
+      if (source !== "all" && a.source_type !== source) return false;
+      if (a.peak_score < minPeak) return false;
+      if (!query) return true;
+      const hay =
+        `${a.artist_name || ""} ${a.headline || ""} ${a.genres || ""}`.toLowerCase();
+      return hay.includes(query);
+    });
+  }, [audits, q, source, minPeak]);
 
   const rising = useMemo(
     () =>
       filtered.filter((a) => {
-        const label = peakLabel(a.overall_score, a.created_at);
-        return label === "Peaking" || label === "Rising";
+        const s = signalOf(a);
+        return s === "Peaking" || s === "Rising";
       }),
     [filtered]
   );
-
-  const cityFiltered = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    return cities.filter((c) =>
-      query ? c.city.toLowerCase().includes(query) : true
-    );
-  }, [cities, q]);
 
   const list = tab === "rising" ? rising : tab === "audits" ? filtered : [];
 
   return (
     <AppShell>
-      <div className="flex flex-col gap-3 pb-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 text-omniv-gold">
-              <Compass className="h-4 w-4" />
-              <span className="font-data text-[10px] uppercase tracking-[0.14em]">
-                Discover
-              </span>
-            </div>
-            <h1 className="text-lg font-semibold tracking-tight md:text-xl">
-              Signal board
-            </h1>
-          </div>
-          <p className="max-w-sm text-[11px] text-omniv-text-muted md:text-right">
-            Who is peaking. Where rooms will fill. No private emails.
-          </p>
-        </div>
+      <PageChrome eyebrow="A&R" title="Discover">
+        <p className="text-[11px] text-omniv-text-muted">
+          Peak blends audit, Spotify popularity/followers when present, and
+          recency.
+        </p>
+      </PageChrome>
 
-        <div className="sticky top-14 z-20 -mx-4 border-y border-omniv-border bg-omniv-elevated/95 px-4 py-2.5 backdrop-blur md:top-0 md:mx-0 md:rounded-xl md:border">
-          <div className="flex flex-wrap items-center gap-2">
-            {(
-              [
-                ["rising", "Rising"],
-                ["audits", "All audits"],
-                ["cities", "Cities"],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setTab(id)}
-                className={cn(
-                  "rounded-full px-3 py-1 text-[12px] font-medium transition",
-                  tab === id
-                    ? "bg-omniv-gold text-omniv-black"
-                    : "bg-omniv-hover text-omniv-text-secondary hover:text-omniv-text"
-                )}
+      <Toolbar>
+        <Segmented
+          value={tab}
+          onChange={(id) => setTab(id as Tab)}
+          options={[
+            { id: "rising", label: "Rising" },
+            { id: "audits", label: "All" },
+            { id: "cities", label: "Cities" },
+            { id: "roster", label: "Roster" },
+          ]}
+        />
+        <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          <div className="relative">
+            <Filter className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-omniv-text-muted" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Filter…"
+              className="h-7 w-[120px] pl-7 text-[11px] sm:w-[160px]"
+            />
+          </div>
+          {tab !== "cities" && tab !== "roster" && (
+            <>
+              <select
+                value={source}
+                onChange={(e) => setSource(e.target.value as typeof source)}
+                className="h-7 rounded-md border border-omniv-border bg-omniv-card px-1.5 text-[11px]"
               >
-                {label}
-              </button>
-            ))}
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              <div className="relative">
-                <Filter className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-omniv-text-muted" />
-                <Input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder={
-                    tab === "cities" ? "Filter city…" : "Search artist…"
-                  }
-                  className="h-8 w-[140px] pl-8 text-xs sm:w-[180px]"
-                />
-              </div>
-              {tab !== "cities" && (
-                <>
-                  <select
-                    value={source}
-                    onChange={(e) =>
-                      setSource(
-                        e.target.value as "all" | "spotify" | "youtube"
-                      )
-                    }
-                    className="h-8 rounded-lg border border-omniv-border bg-omniv-card px-2 text-[11px] text-omniv-text"
-                  >
-                    <option value="all">All sources</option>
-                    <option value="spotify">Spotify</option>
-                    <option value="youtube">YouTube</option>
-                  </select>
-                  <select
-                    value={minScore}
-                    onChange={(e) => setMinScore(Number(e.target.value))}
-                    className="h-8 rounded-lg border border-omniv-border bg-omniv-card px-2 text-[11px] text-omniv-text"
-                  >
-                    <option value={0}>Any score</option>
-                    <option value={40}>40+</option>
-                    <option value={55}>55+</option>
-                    <option value={70}>70+</option>
-                  </select>
-                </>
-              )}
-            </div>
-          </div>
+                <option value="all">Source</option>
+                <option value="spotify">Spotify</option>
+                <option value="youtube">YouTube</option>
+              </select>
+              <select
+                value={minPeak}
+                onChange={(e) => setMinPeak(Number(e.target.value))}
+                className="h-7 rounded-md border border-omniv-border bg-omniv-card px-1.5 text-[11px]"
+              >
+                <option value={0}>Peak any</option>
+                <option value={50}>Peak 50+</option>
+                <option value={65}>Peak 65+</option>
+                <option value={75}>Peak 75+</option>
+              </select>
+            </>
+          )}
         </div>
+      </Toolbar>
 
-        {loading && (
-          <div className="flex items-center gap-2 py-8 text-sm text-omniv-text-muted">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+      {loading && (
+        <div className="flex items-center gap-2 py-6 text-xs text-omniv-text-muted">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+        </div>
+      )}
+
+      {!loading && (tab === "rising" || tab === "audits") && (
+        <div className="mt-2 overflow-hidden rounded-lg border border-omniv-border">
+          <div className="grid grid-cols-[1fr_48px_48px_auto] gap-1 border-b border-omniv-border bg-omniv-elevated/60 px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-omniv-text-muted sm:grid-cols-[1fr_56px_64px_72px_56px_auto]">
+            <span>Artist</span>
+            <span className="text-right">Peak</span>
+            <span className="hidden text-right sm:block">Pop</span>
+            <span className="hidden text-right sm:block">Followers</span>
+            <span className="text-right">Signal</span>
+            <span />
           </div>
-        )}
-
-        {!loading && tab !== "cities" && (
-          <div className="overflow-hidden rounded-xl border border-omniv-border">
-            <div className="grid grid-cols-[1fr_auto_auto] gap-2 border-b border-omniv-border bg-omniv-elevated/50 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted sm:grid-cols-[1fr_80px_72px_88px_auto]">
-              <span>Artist</span>
-              <span className="hidden sm:block">Source</span>
-              <span className="text-right">Score</span>
-              <span className="hidden text-right sm:block">Signal</span>
-              <span className="w-16" />
-            </div>
-            {list.length === 0 && (
-              <p className="px-3 py-8 text-center text-sm text-omniv-text-muted">
-                {tab === "rising"
-                  ? "No peaking scans yet. New high-score audits land here."
-                  : "No audits match filters."}
-              </p>
-            )}
-            {list.map((a) => {
-              const signal = peakLabel(a.overall_score, a.created_at);
-              return (
-                <div
-                  key={a.id}
-                  className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-omniv-border px-3 py-2.5 last:border-0 hover:bg-omniv-hover/40 sm:grid-cols-[1fr_80px_72px_88px_auto]"
+          {list.length === 0 && (
+            <p className="px-3 py-6 text-center text-xs text-omniv-text-muted">
+              No matches. Run Spotify audits for live pop/followers.
+            </p>
+          )}
+          {list.map((a) => {
+            const signal = signalOf(a);
+            const watched = watch.includes(a.id);
+            return (
+              <div
+                key={a.id}
+                className="grid grid-cols-[1fr_48px_48px_auto] items-center gap-1 border-b border-omniv-border px-2.5 py-2 last:border-0 hover:bg-omniv-hover/50 sm:grid-cols-[1fr_56px_64px_72px_56px_auto]"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-medium">
+                    {a.artist_name || "Unknown"}
+                  </p>
+                  <p className="truncate text-[10px] text-omniv-text-muted">
+                    {a.genres || a.source_type}
+                    {a.momentum != null ? ` · mom ${a.momentum}` : ""}
+                  </p>
+                </div>
+                <span className="text-right font-data text-[13px] text-omniv-gold">
+                  {a.peak_score}
+                </span>
+                <span className="hidden text-right font-data text-[12px] sm:block">
+                  {a.spotify_popularity ?? "—"}
+                </span>
+                <span className="hidden text-right font-data text-[11px] text-omniv-text-muted sm:block">
+                  {a.spotify_followers != null
+                    ? a.spotify_followers >= 1000
+                      ? `${(a.spotify_followers / 1000).toFixed(1)}k`
+                      : a.spotify_followers
+                    : "—"}
+                </span>
+                <span
+                  className={cn(
+                    "inline-flex items-center justify-end gap-0.5 text-[10px] font-medium",
+                    signal === "Peaking" && "text-omniv-gold",
+                    signal === "Rising" && "text-omniv-success",
+                    signal === "Steady" && "text-omniv-text-secondary",
+                    signal === "Early" && "text-omniv-text-muted"
+                  )}
                 >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">
-                      {a.artist_name || "Unknown"}
-                    </p>
-                    <p className="truncate text-[11px] text-omniv-text-muted">
-                      {a.headline || "Relevance audit"}
-                    </p>
-                  </div>
-                  <span className="hidden text-[11px] capitalize text-omniv-text-muted sm:block">
-                    {a.source_type}
-                  </span>
-                  <span className="text-right font-data text-sm text-omniv-gold">
-                    {a.overall_score}
-                  </span>
-                  <span
+                  {(signal === "Peaking" || signal === "Rising") && (
+                    <TrendingUp className="h-3 w-3" />
+                  )}
+                  {signal}
+                </span>
+                <div className="flex items-center justify-end gap-0.5">
+                  <button
+                    type="button"
+                    aria-label="Watchlist"
+                    onClick={() => toggleWatch(a.id)}
                     className={cn(
-                      "hidden items-center justify-end gap-1 text-[11px] font-medium sm:inline-flex",
-                      signal === "Peaking" && "text-omniv-gold",
-                      signal === "Rising" && "text-omniv-success",
-                      signal === "Steady" && "text-omniv-text-secondary",
-                      signal === "Early" && "text-omniv-text-muted"
+                      "rounded p-1",
+                      watched
+                        ? "text-omniv-gold"
+                        : "text-omniv-text-muted hover:text-omniv-text"
                     )}
                   >
-                    {(signal === "Peaking" || signal === "Rising") && (
-                      <TrendingUp className="h-3 w-3" />
-                    )}
-                    {signal}
-                  </span>
+                    <Star
+                      className={cn("h-3.5 w-3.5", watched && "fill-current")}
+                    />
+                  </button>
                   <Link href={`/audit/${a.share_slug}`}>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-8 gap-1 px-2 text-[11px]"
+                      className="h-7 px-1.5 text-[10px]"
                     >
                       <ExternalLink className="h-3 w-3" />
-                      Open
                     </Button>
                   </Link>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-        {!loading && tab === "cities" && (
-          <div className="overflow-hidden rounded-xl border border-omniv-border">
-            <div className="grid grid-cols-[1fr_auto_auto] gap-2 border-b border-omniv-border bg-omniv-elevated/50 px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
-              <span>City</span>
-              <span className="text-right">Fans</span>
-              <span className="text-right">Would attend</span>
-            </div>
-            {cityFiltered.length === 0 && (
-              <p className="px-3 py-8 text-center text-sm text-omniv-text-muted">
-                City density grows as Fan Gates fill.
-              </p>
-            )}
-            {cityFiltered.map((c) => (
+      {!loading && tab === "cities" && (
+        <div className="mt-2 overflow-hidden rounded-lg border border-omniv-border">
+          {cities
+            .filter((c) =>
+              q ? c.city.toLowerCase().includes(q.toLowerCase()) : true
+            )
+            .map((c) => (
               <div
                 key={c.city}
-                className="grid grid-cols-[1fr_auto_auto] items-center gap-2 border-b border-omniv-border px-3 py-2.5 last:border-0 hover:bg-omniv-hover/40"
+                className="flex items-center justify-between border-b border-omniv-border px-2.5 py-2 last:border-0 hover:bg-omniv-hover/50"
               >
-                <span className="inline-flex min-w-0 items-center gap-1.5 truncate text-sm">
-                  <MapPin className="h-3.5 w-3.5 shrink-0 text-omniv-gold" />
-                  {c.city}
-                </span>
-                <span className="font-data text-sm tabular-nums">{c.fans}</span>
-                <span className="font-data text-sm tabular-nums text-omniv-gold">
-                  {c.ready}
+                <span className="text-[13px]">{c.city}</span>
+                <span className="font-data text-[12px] text-omniv-text-muted">
+                  {c.fans} ·{" "}
+                  <span className="text-omniv-gold">{c.ready} ready</span>
                 </span>
               </div>
             ))}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {!loading && tab === "roster" && (
+        <div className="mt-2 overflow-hidden rounded-lg border border-omniv-border">
+          {roster.length === 0 && (
+            <p className="px-3 py-6 text-center text-xs text-omniv-text-muted">
+              No roster artists yet. Add them from Label workspace.
+            </p>
+          )}
+          {roster
+            .filter((r) =>
+              q
+                ? `${r.stage_name} ${r.genre || ""}`
+                    .toLowerCase()
+                    .includes(q.toLowerCase())
+                : true
+            )
+            .map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between border-b border-omniv-border px-2.5 py-2 last:border-0"
+              >
+                <div>
+                  <p className="text-[13px] font-medium">{r.stage_name}</p>
+                  <p className="text-[10px] text-omniv-text-muted">
+                    {r.genre || "—"} · {r.slug}
+                  </p>
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
     </AppShell>
   );
 }
