@@ -5,6 +5,7 @@ export type Profile = {
   id: string;
   email: string | null;
   full_name: string | null;
+  avatar_url?: string | null;
   role: UserRole | null;
   platforms: string[] | null;
   social_links?: Record<string, string> | null;
@@ -144,6 +145,7 @@ export async function upsertProfile(
     social_links: Record<string, string>;
     interests: string[];
     onboarding_complete: boolean;
+    avatar_url: string | null;
   }>
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isSupabaseConfigured())
