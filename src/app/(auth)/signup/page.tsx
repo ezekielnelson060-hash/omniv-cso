@@ -32,7 +32,7 @@ export default function SignupPage() {
         email,
         password,
         options: {
-          data: { full_name: name },
+          data: { full_name: name.trim() },
           emailRedirectTo:
             typeof window !== "undefined"
               ? `${window.location.origin}/onboarding`
@@ -47,98 +47,114 @@ export default function SignupPage() {
       if (data.session) {
         router.push("/onboarding");
         router.refresh();
-      } else {
-        setInfo("Check your email to confirm your account, then sign in.");
-        setLoading(false);
+        return;
       }
+      setInfo("Check your email to confirm, then sign in.");
+      setLoading(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Get access failed");
+      setError(err instanceof Error ? err.message : "Sign up failed");
       setLoading(false);
     }
   }
 
   return (
     <div className="flex min-h-dvh">
-      <div className="relative hidden w-[42%] flex-col justify-between overflow-hidden border-r border-omniv-border bg-omniv-elevated p-12 lg:flex">
+      <div className="relative hidden w-[42%] flex-col justify-between overflow-hidden border-r border-omniv-border bg-omniv-elevated p-8 lg:flex">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -left-20 top-1/3 h-64 w-64 rounded-full bg-omniv-gold/8 blur-[80px]" />
         </div>
         <div className="relative flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-omniv-gold/15">
-            <span className="text-base font-bold text-omniv-gold">O</span>
-          </div>
-          <span className="text-lg font-semibold">Omniv</span>
+          <img src="/logo.svg" alt="Omniv" className="h-8 w-8 rounded-lg" />
+          <span className="text-base font-semibold">Omniv</span>
         </div>
         <div className="relative">
-          <p className="text-2xl font-semibold leading-snug tracking-tight">
-            Private intelligence for
+          <p className="text-xl font-semibold leading-snug tracking-tight text-omniv-text">
+            Build the list.
             <br />
-            independent careers.
+            Open the room.
+            <br />
+            Rank the week.
           </p>
-          <p className="mt-4 max-w-sm text-sm leading-relaxed text-omniv-text-secondary">
-            Claim your seat. Onboarding seals Artist Brain in minutes.
+          <p className="mt-2 max-w-sm text-[12px] leading-snug text-omniv-text-muted">
+            Career OS for independent artists, managers, and labels.
           </p>
         </div>
-        <p className="relative text-xs text-omniv-text-muted">
-          Artists · Managers · Labels
+        <p className="relative text-[10px] text-omniv-text-muted">
+          Free audit at /audit · omniv.media
         </p>
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-        <div className="w-full max-w-[380px]">
-          <h1 className="text-2xl font-semibold tracking-tight">Create access</h1>
-          <p className="mt-1.5 text-sm text-omniv-text-secondary">
-            Start with email. Platforms connect in onboarding.
-          </p>
-
-          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-            <Input
-              label="Full name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              autoComplete="name"
-            />
-            <Input
-              label="Email"
-              type="email"
-              placeholder="you@artist.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
-            <Input
-              label="Password"
-              type="password"
-              placeholder="Min. 8 characters"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              autoComplete="new-password"
-            />
-            {error && (
-              <p className="rounded-[var(--radius)] border border-omniv-danger/30 bg-omniv-danger/10 px-3 py-2 text-xs text-omniv-danger">
-                {error}
-              </p>
-            )}
-            {info && (
-              <p className="rounded-[var(--radius)] border border-omniv-gold/30 bg-omniv-gold/10 px-3 py-2 text-xs text-omniv-gold">
-                {info}
-              </p>
-            )}
-            <Button type="submit" className="w-full gap-2" disabled={loading}>
-              {loading ? "Creating…" : "Create access"}
-              {!loading && <ArrowRight className="h-4 w-4" />}
-            </Button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-omniv-text-secondary">
-            Already inside?{" "}
+      <div className="flex flex-1 flex-col justify-center px-4 py-8 sm:px-8">
+        <div className="mx-auto w-full max-w-sm">
+          <div className="mb-4 flex items-center gap-2 lg:hidden">
+            <img src="/logo.svg" alt="Omniv" className="h-7 w-7 rounded-lg" />
+            <span className="text-sm font-semibold">Omniv</span>
+          </div>
+          <h1 className="text-xl font-semibold tracking-tight">Create account</h1>
+          <p className="mt-1 text-[11px] text-omniv-text-muted">
+            Already on Omniv?{" "}
             <Link href="/login" className="text-omniv-gold hover:underline">
               Sign in
             </Link>
+          </p>
+
+          <form onSubmit={handleSubmit} className="mt-5 space-y-3">
+            <div>
+              <label className="text-[10px] font-medium text-omniv-text-muted">
+                Name
+              </label>
+              <Input
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="mt-1 h-10"
+                placeholder="Stage or full name"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-medium text-omniv-text-muted">
+                Email
+              </label>
+              <Input
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="mt-1 h-10"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-medium text-omniv-text-muted">
+                Password
+              </label>
+              <Input
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-1 h-10"
+              />
+            </div>
+            {error && <p className="text-xs text-rose-400">{error}</p>}
+            {info && <p className="text-xs text-omniv-gold">{info}</p>}
+            <Button type="submit" className="h-10 w-full gap-1.5" disabled={loading}>
+              {loading ? "Creating…" : "Create account"}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          </form>
+          <p className="mt-3 text-[10px] text-omniv-text-muted">
+            By continuing you agree to our{" "}
+            <Link href="/terms" className="text-omniv-gold hover:underline">
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="text-omniv-gold hover:underline">
+              Privacy
+            </Link>
+            .
           </p>
         </div>
       </div>
