@@ -42,24 +42,27 @@ export default function OpportunitiesPage() {
 
   return (
     <AppShell>
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          What we ranked for you
+      <div className="mb-3">
+        <p className="font-data text-[10px] uppercase tracking-[0.14em] text-omniv-gold">
+          Ranked
+        </p>
+        <h1 className="text-lg font-semibold tracking-tight md:text-xl">
+          Opportunities
         </h1>
-        <p className="mt-1 text-sm text-omniv-text-secondary">{subtitle}</p>
+        <p className="mt-0.5 text-[11px] text-omniv-text-muted">{subtitle}</p>
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 py-16 text-sm text-omniv-text-muted">
-          <Loader2 className="h-4 w-4 animate-spin text-omniv-gold" />
+        <div className="flex items-center gap-2 py-8 text-xs text-omniv-text-muted">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-omniv-gold" />
           Ranking your week…
         </div>
       ) : recs.length === 0 ? (
-        <p className="text-sm text-omniv-text-muted">
+        <p className="text-xs text-omniv-text-muted">
           Finish onboarding. We cannot rank an empty profile.
         </p>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {recs.map((r, i) => (
             <RecommendationCard key={r.id} recommendation={r} index={i} />
           ))}

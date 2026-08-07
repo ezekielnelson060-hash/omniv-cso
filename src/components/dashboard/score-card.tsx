@@ -28,13 +28,13 @@ export function ScoreCard({
   return (
     <div
       className={cn(
-        "card-elevated flex flex-col justify-between p-4",
-        size === "lg" && "p-5",
+        "card-elevated flex flex-col justify-between p-3",
+        size === "lg" && "p-3",
         className
       )}
     >
       <div className="flex items-start justify-between">
-        <p className="text-xs font-medium uppercase tracking-wider text-omniv-text-muted">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
           {label}
         </p>
         {delta !== undefined && (
@@ -54,19 +54,19 @@ export function ScoreCard({
           </span>
         )}
       </div>
-      <div className="mt-3 flex items-end gap-2">
+      <div className="mt-2 flex items-end gap-1.5">
         <span
           className={cn(
             "font-semibold tracking-tight",
-            size === "lg" ? "text-4xl" : "text-3xl",
+            size === "lg" ? "text-2xl" : "text-xl",
             scoreColor(value)
           )}
         >
           {value}
         </span>
-        <span className="mb-1 text-xs text-omniv-text-muted">/100</span>
+        <span className="mb-0.5 text-[10px] text-omniv-text-muted">/100</span>
       </div>
-      <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-white/5">
+      <div className="mt-1.5 h-0.5 w-full overflow-hidden rounded-full bg-white/5">
         <div
           className={cn(
             "h-full rounded-full transition-all duration-700",
