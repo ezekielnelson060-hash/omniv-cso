@@ -38,6 +38,8 @@ export default function AuditResultPage() {
   const [payload, setPayload] = useState<AuditPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const [claimMsg, setClaimMsg] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,6 +61,35 @@ export default function AuditResultPage() {
       cancelled = true;
     };
   }, [slug]);
+
+  async function claimAudit() {
+    setClaiming(true);
+    setClaimMsg(null);
+    try {
+      const res = await fetch("/api/audit/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      });
+      const data = (await res.json()) as { error?: string; name?: string };
+      if (res.status === 401) {
+        window.location.href = `/login?next=/audit/${slug}`;
+        return;
+      }
+      if (!res.ok) {
+        setClaimMsg(data.error || "Could not claim");
+        return;
+      }
+      setClaimMsg(`Seeded Artist Brain for ${data.name || "you"}`);
+      setTimeout(() => {
+        window.location.href = "/artist-brain";
+      }, 800);
+    } catch {
+      setClaimMsg("Claim failed");
+    } finally {
+      setClaiming(false);
+    }
+  }
 
   async function share() {
     const link = typeof window !== "undefined" ? window.location.href : "";
@@ -176,9 +207,17 @@ export default function AuditResultPage() {
           <p className="mt-2 text-sm leading-relaxed text-omniv-text">
             {payload.nextMove}
           </p>
+          {claimMsg && (
+            <p className="mt-3 text-xs text-omniv-gold">{claimMsg}</p>
+          )}
           <div className="mt-4 flex flex-wrap gap-2">
+            <Button size="sm" disabled={claiming} onClick={claimAudit}>
+              {claiming ? "Seeding…" : "Claim into Artist Brain"}
+            </Button>
             <Link href="/onboarding">
-              <Button size="sm">Claim this in Omniv</Button>
+              <Button size="sm" variant="outline">
+                Full onboarding
+              </Button>
             </Link>
             <Link href="/audit">
               <Button size="sm" variant="outline">
