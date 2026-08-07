@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
     const { data: g, error } = await admin
       .from("gatherings")
-      .select("id, title, ticket_price_cents, status, city, capacity")
+      .select("id, title, ticket_price_cents, status, city, capacity, user_id")
       .eq("id", gatheringId)
       .maybeSingle();
 
@@ -80,8 +80,18 @@ export async function POST(req: Request) {
       });
     }
 
+    let subaccountId: string | null = null;
+    if (g.user_id) {
+      const { data: prof } = await admin
+        .from("profiles")
+        .select("payout_subaccount_id")
+        .eq("id", g.user_id)
+        .maybeSingle();
+      subaccountId = (prof?.payout_subaccount_id as string | null) || null;
+    }
+
     const tx_ref = `omniv_gath_${gatheringId.slice(0, 8)}_${Date.now()}`;
-    const payload = {
+    const payload: Record<string, unknown> = {
       tx_ref,
       amount,
       currency: process.env.FLW_CURRENCY || "USD",
@@ -101,6 +111,17 @@ export async function POST(req: Request) {
         is_tip: isTip,
       },
     };
+
+    if (subaccountId) {
+      payload.subaccounts = [
+        {
+          id: subaccountId,
+          transaction_split_ratio: 9,
+          transaction_charge_type: "percentage",
+          transaction_charge: 10,
+        },
+      ];
+    }
 
     const res = await fetch("https://api.flutterwave.com/v3/payments", {
       method: "POST",
