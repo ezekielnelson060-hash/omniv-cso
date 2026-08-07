@@ -21,6 +21,7 @@ import {
   HelpCircle,
   Menu,
   X,
+  Library,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -30,6 +31,7 @@ const nav = [
   { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
   { href: "/ziki", label: "Ziki AI", icon: MessageSquare },
   { href: "/artist-brain", label: "Artist Brain", icon: Brain },
+  { href: "/catalogue", label: "Catalogue", icon: Library },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/opportunities", label: "Opportunity Feed", icon: Sparkles },
   { href: "/release-simulator", label: "Release Simulator", icon: Rocket },
@@ -93,25 +95,21 @@ function UserChip({ onNavigate }: { onNavigate?: () => void }) {
     <Link
       href="/settings"
       onClick={onNavigate}
-      className="flex items-center gap-2.5 rounded-lg px-1 py-1 transition-colors hover:bg-omniv-gold/5"
+      className="flex items-center gap-2.5 rounded-xl px-2 py-2 transition hover:bg-white/[0.04]"
     >
-      <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/15 ring-1 ring-omniv-gold/30">
+      <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/15 text-[11px] font-semibold text-omniv-gold">
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          <span className="font-data text-[11px] font-semibold text-omniv-gold">
-            {initials(name)}
-          </span>
+          initials(name)
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-semibold leading-tight tracking-tight text-omniv-text">
-          {name}
-        </p>
-        <p className="truncate font-data text-[10px] leading-tight text-omniv-text-muted">
-          {email || "View profile"}
-        </p>
+        <p className="truncate text-xs font-medium text-omniv-text">{name}</p>
+        {email ? (
+          <p className="truncate text-[10px] text-omniv-text-muted">{email}</p>
+        ) : null}
       </div>
       <ChevronRight className="h-3.5 w-3.5 shrink-0 text-omniv-text-muted" />
     </Link>
@@ -120,92 +118,61 @@ function UserChip({ onNavigate }: { onNavigate?: () => void }) {
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-
   return (
-    <>
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-2.5 py-1.5">
-        <p className="mb-1.5 px-2 font-data text-[10px] font-medium uppercase tracking-widest text-omniv-text-muted">
-          Core
-        </p>
-        {nav.map((item) => {
-          const active =
-            pathname === item.href || pathname.startsWith(item.href + "/");
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-all duration-150",
-                active
-                  ? "bg-omniv-gold/10 text-omniv-gold"
-                  : "text-omniv-text-secondary hover:bg-white/[0.03] hover:text-omniv-text"
-              )}
-            >
-              <Icon
-                className={cn(
-                  "h-4 w-4 shrink-0",
-                  active
-                    ? "text-omniv-gold"
-                    : "text-omniv-text-muted group-hover:text-omniv-text-secondary"
-                )}
-              />
-              <span className="truncate">{item.label}</span>
-              {active && (
-                <ChevronRight className="ml-auto h-3.5 w-3.5 text-omniv-gold/60" />
-              )}
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="space-y-0.5 border-t border-omniv-border px-2.5 py-2.5">
-        {bottom.map((item) => {
-          const Icon = item.icon;
-          const active = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-all",
-                active
-                  ? "bg-omniv-gold/10 text-omniv-gold"
-                  : "text-omniv-text-secondary hover:bg-white/[0.03] hover:text-omniv-text"
-              )}
-            >
-              <Icon className="h-4 w-4 text-omniv-text-muted" />
-              {item.label}
-            </Link>
-          );
-        })}
-      </div>
-    </>
+    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
+      {nav.map((item) => {
+        const active =
+          pathname === item.href || pathname.startsWith(item.href + "/");
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition",
+              active
+                ? "bg-omniv-gold/10 font-medium text-omniv-gold"
+                : "text-omniv-text-secondary hover:bg-white/[0.04] hover:text-omniv-text"
+            )}
+          >
+            <Icon className="h-4 w-4 shrink-0 opacity-80" />
+            <span className="truncate">{item.label}</span>
+          </Link>
+        );
+      })}
+      <div className="my-2 border-t border-omniv-border" />
+      {bottom.map((item) => {
+        const active =
+          pathname === item.href || pathname.startsWith(item.href + "/");
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition",
+              active
+                ? "bg-omniv-gold/10 font-medium text-omniv-gold"
+                : "text-omniv-text-secondary hover:bg-white/[0.04] hover:text-omniv-text"
+            )}
+          >
+            <Icon className="h-4 w-4 shrink-0 opacity-80" />
+            <span className="truncate">{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
   );
 }
 
 export function Sidebar() {
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
 
   return (
     <>
-      {/* Mobile top bar — logo only; profile lives in drawer at flush top */}
-      <div className="fixed left-0 right-0 top-0 z-50 flex h-12 items-center gap-3 border-b border-omniv-border bg-omniv-elevated/95 px-3 backdrop-blur-md md:hidden">
+      <div className="fixed left-0 right-0 top-0 z-40 flex h-12 items-center gap-3 border-b border-omniv-border bg-omniv-elevated/95 px-3 backdrop-blur md:hidden">
         <button
           type="button"
           aria-label={open ? "Close menu" : "Open menu"}
@@ -242,10 +209,6 @@ export function Sidebar() {
           open ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >
-        {/*
-          Console-style: profile flush to the top edge of the drawer.
-          No large spacer — matches Google Cloud account strip.
-        */}
         <div className="shrink-0 border-b border-omniv-border px-2.5 pb-2 pt-2 md:pt-3">
           <div className="mb-2 flex items-center justify-between gap-2 px-1">
             <div className="flex items-center gap-2">
