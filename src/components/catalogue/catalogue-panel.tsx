@@ -6,43 +6,56 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  addRelease,
-  loadReleases,
-  removeRelease,
-} from "@/lib/catalogue/store";
+  createCatalogueRelease,
+  deleteCatalogueRelease,
+  listCatalogueReleases,
+  syncLocalCatalogueToCloud,
+} from "@/lib/catalogue/db";
 import type { CatalogueRelease, ReleaseStatus, ReleaseType } from "@/types";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Loader2 } from "lucide-react";
 
 export function CataloguePanel() {
   const [rows, setRows] = useState<CatalogueRelease[]>([]);
+  const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [type, setType] = useState<ReleaseType>("single");
   const [status, setStatus] = useState<ReleaseStatus>("draft");
   const [spotify, setSpotify] = useState("");
   const [genre, setGenre] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    setRows(loadReleases());
-  }, []);
-
-  function refresh() {
-    setRows(loadReleases());
+  async function refresh() {
+    const list = await listCatalogueReleases();
+    setRows(list);
   }
 
-  function onAdd(e: React.FormEvent) {
+  useEffect(() => {
+    (async () => {
+      await syncLocalCatalogueToCloud();
+      await refresh();
+      setLoading(false);
+    })();
+  }, []);
+
+  async function onAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
-    addRelease({
-      title,
-      releaseType: type,
-      status,
-      spotifyUrl: spotify || undefined,
-      primaryGenre: genre || undefined,
-    });
-    setTitle("");
-    setSpotify("");
-    setGenre("");
-    refresh();
+    setBusy(true);
+    try {
+      await createCatalogueRelease({
+        title,
+        releaseType: type,
+        status,
+        spotifyUrl: spotify || undefined,
+        primaryGenre: genre || undefined,
+      });
+      setTitle("");
+      setSpotify("");
+      setGenre("");
+      await refresh();
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -50,8 +63,9 @@ export function CataloguePanel() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Catalogue</h1>
         <p className="mt-1 max-w-xl text-sm text-omniv-text-secondary">
-          Your releases live here. Ziki, audits, and reports should reference
-          this list — not a chat memory of what you might have dropped.
+          Releases you own in Omniv. Synced when you are signed in. Ziki and
+          audits should reference this list, not a memory of what you might have
+          dropped.
         </p>
       </div>
 
@@ -99,15 +113,28 @@ export function CataloguePanel() {
             value={spotify}
             onChange={(e) => setSpotify(e.target.value)}
           />
-          <Button type="submit" className="gap-1.5 sm:col-span-2 sm:w-auto">
-            <Plus className="h-4 w-4" />
+          <Button
+            type="submit"
+            disabled={busy}
+            className="gap-1.5 sm:col-span-2 sm:w-auto"
+          >
+            {busy ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
             Add to catalogue
           </Button>
         </form>
       </Card>
 
       <div className="space-y-3">
-        {rows.length === 0 && (
+        {loading && (
+          <p className="flex items-center gap-2 text-sm text-omniv-text-muted">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading catalogue…
+          </p>
+        )}
+        {!loading && rows.length === 0 && (
           <p className="text-sm text-omniv-text-muted">
             Empty catalogue. Add the next release before you spend the window.
           </p>
@@ -132,9 +159,9 @@ export function CataloguePanel() {
               type="button"
               aria-label="Remove"
               className="text-omniv-text-muted hover:text-rose-400"
-              onClick={() => {
-                removeRelease(r.id);
-                refresh();
+              onClick={async () => {
+                await deleteCatalogueRelease(r.id);
+                await refresh();
               }}
             >
               <Trash2 className="h-4 w-4" />
