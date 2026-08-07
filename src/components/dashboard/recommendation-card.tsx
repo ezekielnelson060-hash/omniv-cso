@@ -52,20 +52,20 @@ export function RecommendationCard({
   return (
     <article
       className={cn(
-        "overflow-hidden rounded-[var(--radius-lg)] border border-omniv-border bg-omniv-card transition",
+        "overflow-hidden rounded-lg border border-omniv-border bg-omniv-card transition",
         open && "border-omniv-gold/30 shadow-[0_0_0_1px_rgba(212,175,55,0.08)]"
       )}
     >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-start gap-3 p-4 text-left md:p-5"
+        className="flex w-full items-start gap-2.5 p-2.5 text-left md:p-3"
       >
-        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-omniv-gold/25 bg-omniv-gold/10 font-data text-xs font-semibold text-omniv-gold">
+        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-omniv-gold/25 bg-omniv-gold/10 font-data text-[10px] font-semibold text-omniv-gold">
           {r.priority}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+          <div className="mb-1 flex flex-wrap items-center gap-1">
             <Badge variant="outline" className="text-[10px]">
               {r.category}
             </Badge>
@@ -84,13 +84,13 @@ export function RecommendationCard({
               {r.confidence}% confidence
             </span>
           </div>
-          <h3 className="text-base font-semibold tracking-tight text-omniv-text">
+          <h3 className="text-sm font-semibold tracking-tight text-omniv-text">
             {r.title}
           </h3>
-          <p className="mt-1.5 text-sm leading-relaxed text-omniv-text-secondary">
+          <p className="mt-1 text-[12px] leading-snug text-omniv-text-muted">
             {r.summary}
           </p>
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-omniv-text-muted">
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[10px] text-omniv-text-muted">
             {r.timeWindow && (
               <span className="inline-flex items-center gap-1">
                 <Clock className="h-3 w-3 text-omniv-gold/70" />
@@ -120,7 +120,7 @@ export function RecommendationCard({
         )}
       >
         <div className="overflow-hidden">
-          <div className="space-y-3 border-t border-omniv-border/80 px-4 pb-4 pt-3 md:px-5 md:pb-5">
+          <div className="space-y-2 border-t border-omniv-border/80 px-2.5 pb-2.5 pt-2 md:px-3">
             <ContextRow icon={Target} label="Why this matters" body={r.why} />
             <ContextRow
               icon={Compass}
@@ -153,12 +153,12 @@ export function RecommendationCard({
               body={r.expectedOutcome}
             />
             {r.nextActions && r.nextActions.length > 0 && (
-              <div className="rounded-xl border border-omniv-border/60 bg-omniv-elevated/50 p-3">
-                <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-omniv-text-muted">
+              <div className="rounded-lg border border-omniv-border/60 bg-omniv-elevated/50 p-2.5">
+                <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-omniv-text-muted">
                   <ListChecks className="h-3 w-3 text-omniv-gold" />
                   Next actions
                 </div>
-                <ol className="space-y-1.5 text-sm text-omniv-text-secondary">
+                <ol className="space-y-1 text-[12px] text-omniv-text-muted">
                   {r.nextActions.map((a, i) => (
                     <li key={i} className="flex gap-2">
                       <span className="font-data text-omniv-gold">{i + 1}.</span>
@@ -172,25 +172,25 @@ export function RecommendationCard({
               <ContextRow icon={Compass} label="Alternative" body={r.alternative} />
             )}
             {r.supportingData && (
-              <p className="text-[11px] leading-relaxed text-omniv-text-muted">
+              <p className="text-[11px] leading-snug text-omniv-text-muted">
                 {r.supportingData}
               </p>
             )}
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-              <p className="text-[11px] text-omniv-text-muted">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+              <p className="text-[10px] text-omniv-text-muted">
                 Priority #{r.priority}
                 {r.detectedAt ? ` · ${r.detectedAt}` : ""}
               </p>
               <Button
                 size="sm"
-                className="gap-1.5"
+                className="h-7 gap-1 text-[11px]"
                 onClick={(e) => {
                   e.stopPropagation();
                   actOnThis();
                 }}
               >
                 Execute in Ziki
-                <ArrowRight className="h-3.5 w-3.5" />
+                <ArrowRight className="h-3 w-3" />
               </Button>
             </div>
           </div>
@@ -210,13 +210,13 @@ function ContextRow({
   body: string;
 }) {
   return (
-    <div className="flex gap-2.5">
+    <div className="flex gap-2">
       <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-omniv-gold/80" />
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-wider text-omniv-text-muted">
           {label}
         </p>
-        <p className="mt-0.5 text-sm leading-relaxed text-omniv-text-secondary">
+        <p className="mt-0.5 text-[12px] leading-snug text-omniv-text-muted">
           {body}
         </p>
       </div>
