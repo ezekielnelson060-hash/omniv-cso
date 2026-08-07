@@ -14,10 +14,10 @@ const ThemeCtx = createContext<{
   theme: Theme;
   toggle: () => void;
   setTheme: (t: Theme) => void;
-}>({ theme: "dark", toggle: () => {}, setTheme: () => {} });
+}>({ theme: "light", toggle: () => {}, setTheme: () => {} });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("dark");
+  const [theme, setThemeState] = useState<Theme>("light");
 
   useEffect(() => {
     try {
@@ -25,9 +25,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (stored === "light" || stored === "dark") {
         setThemeState(stored);
         document.documentElement.classList.toggle("light", stored === "light");
+      } else {
+        // First visit: light is default
+        setThemeState("light");
+        document.documentElement.classList.add("light");
+        localStorage.setItem("omniv-theme", "light");
       }
     } catch {
-      /* ignore */
+      document.documentElement.classList.add("light");
     }
   }, []);
 

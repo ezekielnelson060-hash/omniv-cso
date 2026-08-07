@@ -24,10 +24,13 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Omniv",
   },
-  themeColor: "#0a0a0a",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f6f3" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
 };
 
 export default function RootLayout({
@@ -38,8 +41,16 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${instrument.variable} ${plexMono.variable} h-full antialiased`}
+      className={`light ${instrument.variable} ${plexMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('omniv-theme');if(t==='dark'){document.documentElement.classList.remove('light');}else{document.documentElement.classList.add('light');}}catch(e){document.documentElement.classList.add('light');}})();`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-omniv-black text-omniv-text font-sans">
         <Providers>{children}</Providers>
       </body>
