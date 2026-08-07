@@ -5,13 +5,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import { Calendar, Loader2, Plus } from "lucide-react";
+import { Calendar, Loader2, Plus, Copy, ExternalLink } from "lucide-react";
 
 type Gathering = {
   id: string;
   title: string;
   city: string | null;
   capacity: number | null;
+  ticket_price_cents: number | null;
   status: string;
   starts_at: string | null;
 };
@@ -29,6 +30,7 @@ export function GatheringsPanel({
   const [capacity, setCapacity] = useState(
     seedReady ? String(Math.min(seedReady, 40)) : "20"
   );
+  const [price, setPrice] = useState("0");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -42,7 +44,9 @@ export function GatheringsPanel({
     const supabase = createClient();
     const { data } = await supabase
       .from("gatherings")
-      .select("id, title, city, capacity, status, starts_at")
+      .select(
+        "id, title, city, capacity, ticket_price_cents, status, starts_at"
+      )
       .order("created_at", { ascending: false })
       .limit(20);
     setRows((data as Gathering[]) || []);
@@ -70,11 +74,13 @@ export function GatheringsPanel({
         setMsg("Sign in required");
         return;
       }
+      const cents = Math.round(Number(price || 0) * 100);
       const { error } = await supabase.from("gatherings").insert({
         user_id: user.id,
         title: title.trim(),
         city: city.trim() || null,
         capacity: Number(capacity) || 20,
+        ticket_price_cents: cents,
         status: "open",
         notes: seedReady
           ? `Seeded from audience map: ${seedReady} fans marked would attend`
@@ -85,11 +91,21 @@ export function GatheringsPanel({
         return;
       }
       setTitle("");
-      setMsg("Gathering opened. Invite from your city list next.");
+      setMsg("Gathering open. Share the room link so fans can RSVP and pay.");
       await load();
     } finally {
       setBusy(false);
     }
+  }
+
+  function roomUrl(id: string) {
+    if (typeof window === "undefined") return `/g/${id}`;
+    return `${window.location.origin}/g/${id}`;
+  }
+
+  async function copyLink(id: string) {
+    await navigator.clipboard.writeText(roomUrl(id));
+    setMsg("Room link copied");
   }
 
   return (
@@ -99,8 +115,8 @@ export function GatheringsPanel({
         <h2 className="text-sm font-semibold tracking-tight">Gatherings</h2>
       </div>
       <p className="mt-1 text-xs text-omniv-text-muted">
-        Small rooms from your list. Zero-budget path: living room, café, 15–40
-        people.
+        Small rooms from your list. Ticket price can be $0 (free) or paid via
+        Flutterwave.
       </p>
 
       <form onSubmit={create} className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -123,6 +139,15 @@ export function GatheringsPanel({
           min={5}
           max={200}
         />
+        <Input
+          placeholder="Ticket price (USD, 0 = free)"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          type="number"
+          min={0}
+          step="0.01"
+          className="sm:col-span-2"
+        />
         <Button
           type="submit"
           disabled={busy}
@@ -139,18 +164,47 @@ export function GatheringsPanel({
       {msg && <p className="mt-2 text-xs text-omniv-gold">{msg}</p>}
 
       <ul className="mt-4 space-y-2">
-        {rows.map((g) => (
-          <li
-            key={g.id}
-            className="rounded-xl border border-omniv-border px-3 py-2 text-sm"
-          >
-            <span className="font-medium">{g.title}</span>
-            <span className="text-omniv-text-muted">
-              {" "}
-              · {g.city || "TBD"} · cap {g.capacity || "—"} · {g.status}
-            </span>
-          </li>
-        ))}
+        {rows.map((g) => {
+          const dollars = ((g.ticket_price_cents || 0) / 100).toFixed(2);
+          return (
+            <li
+              key={g.id}
+              className="rounded-xl border border-omniv-border px-3 py-2 text-sm"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="font-medium">{g.title}</span>
+                  <span className="text-omniv-text-muted">
+                    {" "}
+                    · {g.city || "TBD"} · cap {g.capacity || "—"} · $
+                    {dollars} · {g.status}
+                  </span>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1 text-[11px]"
+                    onClick={() => void copyLink(g.id)}
+                  >
+                    <Copy className="h-3 w-3" />
+                    Copy link
+                  </Button>
+                  <a href={`/g/${g.id}`} target="_blank" rel="noreferrer">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1 text-[11px]"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Open
+                    </Button>
+                  </a>
+                </div>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </Card>
   );
