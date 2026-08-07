@@ -5,7 +5,7 @@ import { trackServer } from "@/lib/analytics";
 
 /**
  * Public fan capture endpoint.
- * POST { artistSlug, email, phone?, consent, source?, campaignId? }
+ * POST { artistSlug, email, phone?, consent, source?, city?, wouldAttend? }
  */
 export async function POST(req: Request) {
   try {
@@ -19,6 +19,7 @@ export async function POST(req: Request) {
       campaignId?: string;
       city?: string;
       countryCode?: string;
+      wouldAttend?: boolean;
     };
 
     const email = body.email?.trim().toLowerCase();
@@ -30,10 +31,7 @@ export async function POST(req: Request) {
       );
     }
     if (!body.consent) {
-      return NextResponse.json(
-        { error: "Consent required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Consent required" }, { status: 400 });
     }
 
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -107,6 +105,7 @@ export async function POST(req: Request) {
           first_name: body.firstName || null,
           city: body.city || null,
           country_code: body.countryCode || null,
+          would_attend: Boolean(body.wouldAttend),
           opt_in_consent: true,
           is_email_subscribed: true,
           acquisition_source: body.source || "landing",
@@ -131,7 +130,11 @@ export async function POST(req: Request) {
       fan_id: fan.id,
       campaign_id: body.campaignId || null,
       action_type: "form_submit",
-      metadata: { source: body.source || "landing" },
+      metadata: {
+        source: body.source || "landing",
+        wouldAttend: Boolean(body.wouldAttend),
+        city: body.city || null,
+      },
     });
 
     void trackServer({
