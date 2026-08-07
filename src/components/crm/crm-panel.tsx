@@ -9,6 +9,8 @@ import { CrmNextSteps } from "@/components/crm/crm-next-steps";
 import { FanGateMetrics } from "@/components/crm/fan-gate-metrics";
 import { RosterSwitcher } from "@/components/crm/roster-switcher";
 import { ContractsPanel } from "@/components/crm/contracts-panel";
+import { AudienceMap } from "@/components/crm/audience-map";
+import { GatheringsPanel } from "@/components/crm/gatherings-panel";
 import { isPlaceholderStageName } from "@/lib/crm-priority";
 import {
   addArtist,
@@ -63,6 +65,8 @@ export function CrmPanel() {
   const [noteBody, setNoteBody] = useState("");
   const [eventTitle, setEventTitle] = useState("");
   const [eventDate, setEventDate] = useState("");
+  const [gatherCity, setGatherCity] = useState<string | null>(null);
+  const [gatherReady, setGatherReady] = useState<number | null>(null);
 
   useEffect(() => {
     setArtists(loadArtists());
@@ -78,35 +82,45 @@ export function CrmPanel() {
       const { data: roster } = await supabase
         .from("roster_artists")
         .select("id, stage_name, slug");
-      const list = roster || [];
-      setRosterCount(list.length);
-      const primary = list[0];
-      if (primary && !isPlaceholderStageName(primary.stage_name)) {
-        setPrimaryArtistName(primary.stage_name);
-        setGateSlug(primary.slug);
+      const rows = roster || [];
+      setRosterCount(rows.length);
+      const real = rows.find(
+        (r) => !isPlaceholderStageName(String(r.stage_name || ""))
+      );
+      if (real) {
+        setPrimaryArtistName(String(real.stage_name));
+        setGateSlug(String(real.slug));
+      } else if (rows[0]) {
+        setPrimaryArtistName(String(rows[0].stage_name));
+        setGateSlug(String(rows[0].slug));
       }
+      const ids = rows.map((r) => r.id as string);
+      if (ids.length === 0) return;
       const { data: fans } = await supabase
         .from("fans")
-        .select("id, created_at, tier, source");
-      const fanList = fans || [];
-      setFanCount(fanList.length);
+        .select("fan_tier, acquisition_source, created_at")
+        .in("artist_id", ids);
+      const list = fans || [];
+      setFanCount(list.length);
       const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
       setFans7d(
-        fanList.filter((f) => new Date(f.created_at).getTime() > weekAgo)
+        list.filter((f) => new Date(String(f.created_at)).getTime() > weekAgo)
           .length
       );
-      setSuperfanCount(fanList.filter((f) => f.tier === "superfan").length);
-      setColdCount(fanList.filter((f) => f.tier === "cold").length);
-      const bySource: Record<string, number> = {};
-      for (const f of fanList) {
-        const s = f.source || "unknown";
-        bySource[s] = (bySource[s] || 0) + 1;
+      setSuperfanCount(
+        list.filter((f) => f.fan_tier === "Superfan").length
+      );
+      setColdCount(list.filter((f) => f.fan_tier === "Cold").length);
+      const srcMap = new Map<string, number>();
+      for (const f of list) {
+        const s = String(f.acquisition_source || "unknown");
+        srcMap.set(s, (srcMap.get(s) || 0) + 1);
       }
-      const sorted = Object.entries(bySource)
+      const srcList = [...srcMap.entries()]
         .map(([source, count]) => ({ source, count }))
         .sort((a, b) => b.count - a.count);
-      setSources(sorted);
-      setTopSource(sorted[0]?.source || null);
+      setSources(srcList);
+      setTopSource(srcList[0]?.source || null);
     })();
   }, []);
 
@@ -149,6 +163,17 @@ export function CrmPanel() {
   return (
     <div className="space-y-5">
       <RosterSwitcher />
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <AudienceMap
+          onCreateGathering={(city, ready) => {
+            setGatherCity(city);
+            setGatherReady(ready);
+          }}
+        />
+        <GatheringsPanel seedCity={gatherCity} seedReady={gatherReady} />
+      </div>
+
       <ContractsPanel />
 
       <CrmNextSteps
@@ -180,9 +205,9 @@ export function CrmPanel() {
       <Card className="p-5">
         <div className="mb-3 flex items-center gap-2">
           <Users className="h-4 w-4 text-omniv-gold" />
-          <p className="text-sm font-medium">Local roster notes</p>
+          <h2 className="text-sm font-semibold">Local roster notes</h2>
         </div>
-        <div className="mb-3 grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-3">
           <Input
             placeholder="Artist name"
             value={name}
@@ -199,158 +224,108 @@ export function CrmPanel() {
             onChange={(e) => setListeners(e.target.value)}
           />
         </div>
-        <Button size="sm" className="gap-1.5" onClick={handleAddArtist}>
+        <Button size="sm" className="mt-3 gap-1" onClick={handleAddArtist}>
           <Plus className="h-3.5 w-3.5" />
-          Add local note
+          Add
         </Button>
-        <ul className="mt-3 space-y-2">
+        <ul className="mt-3 space-y-1 text-sm">
           {artists.map((a) => (
-            <li
-              key={a.id}
-              className="flex justify-between text-sm text-omniv-text-secondary"
-            >
-              <span>
-                {a.name}
-                {a.genre ? ` · ${a.genre}` : ""}
-              </span>
-              {a.monthlyListeners != null && (
-                <span className={cn("font-data text-xs", scoreColor(50))}>
-                  {a.monthlyListeners.toLocaleString()}
-                </span>
-              )}
-            </li>
-          ))}
-        </ul>
-        {rosterCount > 0 && (
-          <p className="mt-2 text-[11px] text-omniv-text-muted">
-            Cloud roster: {rosterCount} artist(s)
-          </p>
-        )}
-      </Card>
-
-      <Card className="p-5">
-        <div className="mb-3 flex items-center gap-2">
-          <CheckSquare className="h-4 w-4 text-omniv-gold" />
-          <p className="text-sm font-medium">Tasks</p>
-        </div>
-        <div className="mb-3 flex gap-2">
-          <Input
-            placeholder="New task"
-            value={taskTitle}
-            onChange={(e) => setTaskTitle(e.target.value)}
-          />
-          <Button size="sm" onClick={handleAddTask}>
-            Add
-          </Button>
-        </div>
-        <ul className="space-y-2">
-          {tasks.map((t) => (
-            <li key={t.id} className="flex items-center gap-2 text-sm">
-              <button
-                type="button"
-                onClick={() => setTasks(toggleTask(t.id))}
-                className={cn(
-                  "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-                  t.done
-                    ? "border-omniv-gold bg-omniv-gold text-black"
-                    : "border-omniv-border"
-                )}
-              >
-                {t.done ? "✓" : ""}
-              </button>
-              <span
-                className={cn(
-                  t.done
-                    ? "text-omniv-text-muted line-through"
-                    : "text-omniv-text-secondary"
-                )}
-              >
-                {t.title}
-              </span>
+            <li key={a.id} className="text-omniv-text-secondary">
+              {a.name}
+              {a.genre ? ` · ${a.genre}` : ""}
             </li>
           ))}
         </ul>
       </Card>
 
-      <Card className="p-5">
-        <div className="mb-3 flex items-center gap-2">
-          <StickyNote className="h-4 w-4 text-omniv-gold" />
-          <p className="text-sm font-medium">Notes</p>
-        </div>
-        <div className="mb-3 flex gap-2">
-          <Input
-            placeholder="Write a note"
-            value={noteBody}
-            onChange={(e) => setNoteBody(e.target.value)}
-          />
-          <Button size="sm" onClick={handleAddNote}>
-            Save
-          </Button>
-        </div>
-        <ul className="space-y-2">
-          {notes.map((n) => (
-            <li key={n.id} className="text-sm text-omniv-text-secondary">
-              {n.body}
-            </li>
-          ))}
-        </ul>
-      </Card>
-
-      <Card className="p-5">
-        <div className="mb-3 flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-omniv-gold" />
-          <p className="text-sm font-medium">Calendar</p>
-        </div>
-        <div className="mb-3 grid gap-2 sm:grid-cols-3">
-          <Input
-            placeholder="Event"
-            value={eventTitle}
-            onChange={(e) => setEventTitle(e.target.value)}
-          />
-          <Input
-            type="date"
-            value={eventDate}
-            onChange={(e) => setEventDate(e.target.value)}
-          />
-          <Button size="sm" onClick={handleAddEvent}>
-            Add
-          </Button>
-        </div>
-        <ul className="space-y-2">
-          {events
-            .slice()
-            .sort((a, b) => a.eventDate.localeCompare(b.eventDate))
-            .map((e) => (
-              <li key={e.id} className="flex items-center gap-2 text-sm">
-                <button
-                  type="button"
-                  onClick={() => setEvents(toggleEvent(e.id))}
-                  className={cn(
-                    "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-                    e.done
-                      ? "border-omniv-gold bg-omniv-gold text-black"
-                      : "border-omniv-border"
-                  )}
-                >
-                  {e.done ? "✓" : ""}
-                </button>
-                <span
-                  className={cn(
-                    "flex-1",
-                    e.done
-                      ? "text-omniv-text-muted line-through"
-                      : "text-omniv-text-secondary"
-                  )}
-                >
-                  {e.title}
-                </span>
-                <span className="font-data text-[11px] text-omniv-text-muted">
-                  {e.eventDate}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+            <CheckSquare className="h-4 w-4 text-omniv-gold" />
+            Tasks
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder="New task"
+              value={taskTitle}
+              onChange={(e) => setTaskTitle(e.target.value)}
+            />
+            <Button size="sm" onClick={handleAddTask}>
+              Add
+            </Button>
+          </div>
+          <ul className="mt-2 space-y-1 text-xs">
+            {tasks.map((t) => (
+              <li key={t.id} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={t.done}
+                  onChange={() => setTasks(toggleTask(t.id))}
+                />
+                <span className={cn(t.done && "line-through opacity-50")}>
+                  {t.title}
                 </span>
               </li>
             ))}
-        </ul>
-      </Card>
+          </ul>
+        </Card>
+        <Card className="p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+            <StickyNote className="h-4 w-4 text-omniv-gold" />
+            Notes
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Note"
+              value={noteBody}
+              onChange={(e) => setNoteBody(e.target.value)}
+            />
+            <Button size="sm" onClick={handleAddNote}>
+              Add
+            </Button>
+          </div>
+          <ul className="mt-2 space-y-1 text-xs text-omniv-text-secondary">
+            {notes.map((n) => (
+              <li key={n.id}>{n.body}</li>
+            ))}
+          </ul>
+        </Card>
+        <Card className="p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+            <Calendar className="h-4 w-4 text-omniv-gold" />
+            Calendar
+          </div>
+          <div className="flex flex-col gap-2">
+            <Input
+              placeholder="Event"
+              value={eventTitle}
+              onChange={(e) => setEventTitle(e.target.value)}
+            />
+            <Input
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+            />
+            <Button size="sm" onClick={handleAddEvent}>
+              Add
+            </Button>
+          </div>
+          <ul className="mt-2 space-y-1 text-xs">
+            {events.map((ev) => (
+              <li key={ev.id} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={ev.done}
+                  onChange={() => setEvents(toggleEvent(ev.id))}
+                />
+                <span className={cn(ev.done && "line-through opacity-50")}>
+                  {ev.title} · {ev.date}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
     </div>
   );
 }
