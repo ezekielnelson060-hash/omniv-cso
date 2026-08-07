@@ -1,15 +1,9 @@
 import { NextResponse } from "next/server";
 import { zikiComplete, type ZikiAttachment } from "@/lib/gemini";
+import { ZIKI_MANAGER_RULES, scrubZikiMarkdown } from "@/lib/ziki-voice";
 import { trackServer } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/server";
 import { checkAndIncrementZikiUsage } from "@/lib/ziki-usage";
-
-function scrubZiki(text: string): string {
-  return text
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/\n#{1,6}\s+/g, "\n")
-    .trim();
-}
 
 async function liveContext(query: string): Promise<string> {
   const q = query.slice(0, 180).trim();
@@ -38,7 +32,6 @@ async function liveContext(query: string): Promise<string> {
   }
 }
 
-/** ~12MB decoded; leave headroom under Gemini 20MB request limit */
 const MAX_ATTACHMENT_BYTES = 12 * 1024 * 1024;
 const MAX_ATTACHMENTS = 4;
 
@@ -126,7 +119,7 @@ export async function POST(req: Request) {
           return NextResponse.json(
             {
               error: "quota_exceeded",
-              text: `**Ziki limit reached**\n\nYour **${plan}** plan allows **${usageMeta.label || usageMeta.limit}**. You have used ${usageMeta.used}.\n\nUpgrade for more depth. Pro and Label include unlimited Ziki.`,
+              text: `**Ziki limit reached**\n\nYour **${plan}** plan allows **${usageMeta.label || usageMeta.limit}**. You have used ${usageMeta.used}.\n\nUpgrade for more depth.`,
               source: "local",
               usage: usageMeta,
               plan,
@@ -136,7 +129,7 @@ export async function POST(req: Request) {
         }
       }
     } catch {
-      /* soft: continue without hard gate */
+      /* soft */
     }
 
     void trackServer({
@@ -153,19 +146,15 @@ export async function POST(req: Request) {
       },
     });
 
-    const managerRules = `FORMATTING: Never use # ## ### headings. No template labels like When/How/Priority/Expected outcome. Write like a real manager: concrete posts, hooks, shot lists, captions, platform, timing. One Next Move in 24-48h.
-
-ACTIONABLE: If advising content, specify exact structure (hook line, BTS shots, caption, sound/style fit for THIS artist). No generic "create engaging content".`;
-
     const system = [
       body.context || "You are Ziki, Omniv CSO. Never invent demo artists.",
-      managerRules,
+      ZIKI_MANAGER_RULES,
     ].join("\n\n");
 
     const live = await liveContext(message || "");
     const userPayload = body.history
-      ? `${message || "(See attached media)"}\n\n(Conversation so far for continuity:\n${body.history})${live}`
-      : `${message || "Listen to the attached audio/media. Give a manager-grade assessment aligned to my Artist Brain."}${live}`;
+      ? `${message || "(See attached media)"}\n\n(Conversation so far:\n${body.history})${live}`
+      : `${message || "Listen to the attached media. Manager-grade assessment for my Artist Brain."}${live}`;
 
     const result = await zikiComplete(
       userPayload,
@@ -174,7 +163,7 @@ ACTIONABLE: If advising content, specify exact structure (hook line, BTS shots, 
     );
     return NextResponse.json({
       ...result,
-      text: scrubZiki(result.text || ""),
+      text: scrubZikiMarkdown(result.text || ""),
       usage: usageMeta,
       plan,
       multimodal: attachments.length > 0,
