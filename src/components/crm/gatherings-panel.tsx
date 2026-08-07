@@ -108,6 +108,18 @@ export function GatheringsPanel({
     setMsg("Room link copied");
   }
 
+  function inviteMail(g: Gathering) {
+    const link = roomUrl(g.id);
+    const cityLabel = g.city || "your city";
+    const subject = encodeURIComponent(
+      `${g.title} — small room in ${cityLabel}`
+    );
+    const body = encodeURIComponent(
+      `You are on my list in ${cityLabel}.\n\nI am hosting a small gathering: ${g.title}.\n\nReserve here: ${link}\n\nSee you in the room.`
+    );
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+  }
+
   return (
     <Card className="p-5">
       <div className="flex items-center gap-2">
@@ -180,7 +192,7 @@ export function GatheringsPanel({
                     {dollars} · {g.status}
                   </span>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex flex-wrap gap-1">
                   <Button
                     size="sm"
                     variant="outline"
@@ -200,6 +212,14 @@ export function GatheringsPanel({
                       Open
                     </Button>
                   </a>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-[11px]"
+                    onClick={() => inviteMail(g)}
+                  >
+                    Invite
+                  </Button>
                 </div>
               </div>
             </li>
