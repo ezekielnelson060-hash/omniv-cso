@@ -39,17 +39,11 @@ export interface AIRecommendation {
   alternative?: string;
   timeWindow?: string;
   detectedAt?: string;
-  /** Surfaces this move targets */
   platforms?: string[];
-  /** When to act / deadline framing */
   timing?: string;
-  /** Positioning / story angle */
   positioning?: string;
-  /** Who or what to connect */
   connections?: string;
-  /** Strategic frame in one line */
   strategicFrame?: string;
-  /** Concrete next steps */
   nextActions?: string[];
 }
 
@@ -103,7 +97,6 @@ export interface ArtistBrain {
   strengths: string[];
   weaknesses: string[];
   goals: string[];
-  /** North-star career image held across the product */
   bigDream?: string;
   pastReleases: { title: string; year: string; type: string }[];
   contentStyle: string;
@@ -169,4 +162,72 @@ export interface ViralPrediction {
 export interface StudioOutput {
   platform: string;
   content: string;
+}
+
+/** Catalogue */
+export type ReleaseType =
+  | "single"
+  | "ep"
+  | "album"
+  | "mixtape"
+  | "live"
+  | "other";
+export type ReleaseStatus =
+  | "idea"
+  | "draft"
+  | "scheduled"
+  | "released"
+  | "archived";
+
+export interface CatalogueRelease {
+  id: string;
+  userId: string;
+  rosterArtistId?: string | null;
+  title: string;
+  releaseType: ReleaseType;
+  status: ReleaseStatus;
+  releaseDate?: string | null;
+  primaryGenre?: string | null;
+  coverUrl?: string | null;
+  spotifyUrl?: string | null;
+  appleUrl?: string | null;
+  youtubeUrl?: string | null;
+  notes?: string | null;
+  createdAt?: string;
+}
+
+export interface CatalogueTrack {
+  id: string;
+  userId: string;
+  releaseId?: string | null;
+  title: string;
+  trackNumber?: number | null;
+  isrc?: string | null;
+  durationSec?: number | null;
+  spotifyUrl?: string | null;
+  youtubeUrl?: string | null;
+}
+
+export type AuditSourceType = "spotify" | "youtube" | "unknown";
+
+export interface AuditFinding {
+  id: string;
+  severity: "critical" | "watch" | "strength";
+  title: string;
+  detail: string;
+}
+
+export interface AuditPayload {
+  sourceUrl: string;
+  sourceType: AuditSourceType;
+  artistName: string;
+  thumbnail?: string;
+  overall: number;
+  reach: number;
+  revenue: number;
+  momentum: number;
+  findings: AuditFinding[];
+  nextMove: string;
+  disclaimer: string;
+  signals: Record<string, string | number | boolean | null>;
 }
