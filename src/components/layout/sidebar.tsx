@@ -27,23 +27,34 @@ import { cn } from "@/lib/utils";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { getProfile } from "@/lib/db/profile";
 
-const nav = [
-  { href: "/dashboard", label: "Command Center", icon: LayoutDashboard },
-  { href: "/ziki", label: "Ziki AI", icon: MessageSquare },
+type NavItem = { href: string; label: string; icon: typeof LayoutDashboard };
+
+const primary: NavItem[] = [
+  { href: "/dashboard", label: "Command", icon: LayoutDashboard },
+  { href: "/ziki", label: "Ziki", icon: MessageSquare },
   { href: "/artist-brain", label: "Artist Brain", icon: Brain },
   { href: "/catalogue", label: "Catalogue", icon: Library },
+];
+
+const growth: NavItem[] = [
+  { href: "/crm", label: "Audience", icon: Users },
+  { href: "/opportunities", label: "Opportunities", icon: Sparkles },
+];
+
+const studio: NavItem[] = [
+  { href: "/release-simulator", label: "Release", icon: Rocket },
+  { href: "/content", label: "Content", icon: Film },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/opportunities", label: "Opportunity Feed", icon: Sparkles },
-  { href: "/release-simulator", label: "Release Simulator", icon: Rocket },
-  { href: "/content", label: "Content Intelligence", icon: Film },
-  { href: "/crm", label: "Manager CRM", icon: Users },
-  { href: "/label", label: "Label Dashboard", icon: Building2 },
+];
+
+const org: NavItem[] = [
+  { href: "/label", label: "Label", icon: Building2 },
   { href: "/reports", label: "Reports", icon: FileText },
 ];
 
-const bottom = [
-  { href: "/notifications", label: "Notifications", icon: Bell },
-  { href: "/help", label: "Help Centre", icon: HelpCircle },
+const bottom: NavItem[] = [
+  { href: "/notifications", label: "Alerts", icon: Bell },
+  { href: "/help", label: "Help", icon: HelpCircle },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -66,6 +77,7 @@ function UserChip({ onNavigate }: { onNavigate?: () => void }) {
         const p = await getProfile();
         if (p?.full_name) setName(p.full_name);
         if (p?.email) setEmail(p.email);
+        if (p?.avatar_url) setAvatarUrl(p.avatar_url);
         const supabase = createClient();
         const {
           data: { user },
@@ -79,11 +91,13 @@ function UserChip({ onNavigate }: { onNavigate?: () => void }) {
             );
           }
           if (!p?.email && user.email) setEmail(user.email);
-          const metaAvatar =
-            (user.user_metadata?.avatar_url as string) ||
-            (user.user_metadata?.picture as string) ||
-            null;
-          if (metaAvatar) setAvatarUrl(metaAvatar);
+          if (!p?.avatar_url) {
+            const metaAvatar =
+              (user.user_metadata?.avatar_url as string) ||
+              (user.user_metadata?.picture as string) ||
+              null;
+            if (metaAvatar) setAvatarUrl(metaAvatar);
+          }
         }
       } catch {
         /* ignore */
@@ -116,53 +130,92 @@ function UserChip({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function NavItemLink({
+  item,
+  pathname,
+  onNavigate,
+}: {
+  item: NavItem;
+  pathname: string;
+  onNavigate?: () => void;
+}) {
+  const active =
+    pathname === item.href || pathname.startsWith(item.href + "/");
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      className={cn(
+        "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] transition",
+        active
+          ? "bg-omniv-gold/10 font-medium text-omniv-gold"
+          : "text-omniv-text-secondary hover:bg-white/[0.04] hover:text-omniv-text"
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0 opacity-80" />
+      <span className="truncate">{item.label}</span>
+    </Link>
+  );
+}
+
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <p className="mb-1 mt-3 px-2.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-omniv-text-muted first:mt-0">
+      {children}
+    </p>
+  );
+}
+
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
-    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
-      {nav.map((item) => {
-        const active =
-          pathname === item.href || pathname.startsWith(item.href + "/");
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            className={cn(
-              "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition",
-              active
-                ? "bg-omniv-gold/10 font-medium text-omniv-gold"
-                : "text-omniv-text-secondary hover:bg-white/[0.04] hover:text-omniv-text"
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0 opacity-80" />
-            <span className="truncate">{item.label}</span>
-          </Link>
-        );
-      })}
+    <nav className="flex flex-1 flex-col overflow-y-auto px-2 py-2">
+      <SectionLabel>Core</SectionLabel>
+      {primary.map((item) => (
+        <NavItemLink
+          key={item.href}
+          item={item}
+          pathname={pathname}
+          onNavigate={onNavigate}
+        />
+      ))}
+      <SectionLabel>Growth</SectionLabel>
+      {growth.map((item) => (
+        <NavItemLink
+          key={item.href}
+          item={item}
+          pathname={pathname}
+          onNavigate={onNavigate}
+        />
+      ))}
+      <SectionLabel>Studio</SectionLabel>
+      {studio.map((item) => (
+        <NavItemLink
+          key={item.href}
+          item={item}
+          pathname={pathname}
+          onNavigate={onNavigate}
+        />
+      ))}
+      <SectionLabel>Org</SectionLabel>
+      {org.map((item) => (
+        <NavItemLink
+          key={item.href}
+          item={item}
+          pathname={pathname}
+          onNavigate={onNavigate}
+        />
+      ))}
       <div className="my-2 border-t border-omniv-border" />
-      {bottom.map((item) => {
-        const active =
-          pathname === item.href || pathname.startsWith(item.href + "/");
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            className={cn(
-              "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition",
-              active
-                ? "bg-omniv-gold/10 font-medium text-omniv-gold"
-                : "text-omniv-text-secondary hover:bg-white/[0.04] hover:text-omniv-text"
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0 opacity-80" />
-            <span className="truncate">{item.label}</span>
-          </Link>
-        );
-      })}
+      {bottom.map((item) => (
+        <NavItemLink
+          key={item.href}
+          item={item}
+          pathname={pathname}
+          onNavigate={onNavigate}
+        />
+      ))}
     </nav>
   );
 }
