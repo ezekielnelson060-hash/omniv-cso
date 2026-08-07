@@ -29,7 +29,7 @@ import {
   type ManagerTask,
 } from "@/lib/workspace-store";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import { cn, scoreColor } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import {
   Users,
   CheckSquare,
@@ -107,9 +107,7 @@ export function CrmPanel() {
         list.filter((f) => new Date(String(f.created_at)).getTime() > weekAgo)
           .length
       );
-      setSuperfanCount(
-        list.filter((f) => f.fan_tier === "Superfan").length
-      );
+      setSuperfanCount(list.filter((f) => f.fan_tier === "Superfan").length);
       setColdCount(list.filter((f) => f.fan_tier === "Cold").length);
       const srcMap = new Map<string, number>();
       for (const f of list) {
@@ -132,7 +130,7 @@ export function CrmPanel() {
     setArtists(
       addArtist({
         name: name.trim(),
-        genre: genre.trim() || undefined,
+        genre: genre.trim() || "",
         monthlyListeners: listeners ? Number(listeners) : undefined,
       })
     );
@@ -319,7 +317,7 @@ export function CrmPanel() {
                   onChange={() => setEvents(toggleEvent(ev.id))}
                 />
                 <span className={cn(ev.done && "line-through opacity-50")}>
-                  {ev.title} · {ev.date}
+                  {ev.title} · {ev.eventDate}
                 </span>
               </li>
             ))}
