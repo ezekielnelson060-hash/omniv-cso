@@ -228,9 +228,26 @@ function Inner() {
           </div>
         </div>
 
-        <p className="mt-4 text-center text-[11px] text-omniv-text-muted">
-          Powered by Omniv. Paid seats and tips confirm via Flutterwave.
-        </p>
+        <div className="mt-6 space-y-2 border-t border-omniv-border pt-4 text-[11px] leading-relaxed text-omniv-text-muted">
+          <p>
+            Powered by Omniv. Paid seats and tips confirm via Flutterwave.
+          </p>
+          <p>
+            <span className="font-medium text-omniv-text-secondary">Refunds:</span>{" "}
+            Contact the host within 24 hours of payment if the room is cancelled
+            or you cannot attend. Approved refunds are processed within 5–7
+            business days to the original payment method.
+          </p>
+          <p>
+            <span className="font-medium text-omniv-text-secondary">Support:</span>{" "}
+            <a
+              href="mailto:support@omniv.media?subject=Room%20support"
+              className="text-omniv-gold underline"
+            >
+              support@omniv.media
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );
