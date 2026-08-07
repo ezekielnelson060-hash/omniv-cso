@@ -27,6 +27,7 @@ function Inner() {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [tip, setTip] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(
     paid ? "Payment received. You are on the list." : null
@@ -79,6 +80,34 @@ function Inner() {
         return;
       }
       setMsg(data.message || "You are on the list");
+    } catch {
+      setError("Network error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendTip() {
+    if (!email.trim() || !tip || Number(tip) <= 0) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/gatherings/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          gatheringId: id,
+          email: email.trim(),
+          name: name.trim() || undefined,
+          tipUsd: Number(tip),
+        }),
+      });
+      const data = (await res.json()) as { link?: string; error?: string };
+      if (!res.ok || !data.link) {
+        setError(data.error || "Tip failed");
+        return;
+      }
+      window.location.href = data.link;
     } catch {
       setError("Network error");
     } finally {
@@ -169,8 +198,38 @@ function Inner() {
             )}
           </Button>
         </form>
+
+        <div className="mt-4 rounded-2xl border border-omniv-border bg-omniv-card/80 p-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
+            Tip jar
+          </p>
+          <p className="mt-1 text-xs text-omniv-text-muted">
+            Support the room even if entry is free. Enter email above first.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <Input
+              type="number"
+              min={1}
+              step="1"
+              placeholder="Amount USD"
+              value={tip}
+              onChange={(e) => setTip(e.target.value)}
+              className="h-10 rounded-xl"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy || !email.trim() || !tip || Number(tip) <= 0}
+              className="h-10 shrink-0"
+              onClick={() => void sendTip()}
+            >
+              Tip
+            </Button>
+          </div>
+        </div>
+
         <p className="mt-4 text-center text-[11px] text-omniv-text-muted">
-          Powered by Omniv. Paid seats confirm via Flutterwave.
+          Powered by Omniv. Paid seats and tips confirm via Flutterwave.
         </p>
       </div>
     </div>
