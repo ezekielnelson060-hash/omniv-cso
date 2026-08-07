@@ -17,6 +17,7 @@ import {
   Settings,
   Bell,
   ChevronRight,
+  ChevronDown,
   FileText,
   HelpCircle,
   Menu,
@@ -159,11 +160,63 @@ function NavItemLink({
   );
 }
 
-function SectionLabel({ children }: { children: string }) {
+function NavDropdown({
+  label,
+  items,
+  pathname,
+  onNavigate,
+  defaultOpen,
+}: {
+  label: string;
+  items: NavItem[];
+  pathname: string;
+  onNavigate?: () => void;
+  defaultOpen?: boolean;
+}) {
+  const hasActive = items.some(
+    (i) => pathname === i.href || pathname.startsWith(i.href + "/")
+  );
+  const [open, setOpen] = useState(defaultOpen || hasActive);
+
+  useEffect(() => {
+    if (hasActive) setOpen(true);
+  }, [hasActive]);
+
   return (
-    <p className="mb-1 mt-3 px-2.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-omniv-text-muted first:mt-0">
-      {children}
-    </p>
+    <div className="mb-0.5">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left transition",
+          hasActive
+            ? "text-omniv-gold"
+            : "text-omniv-text-muted hover:bg-white/[0.04] hover:text-omniv-text-secondary"
+        )}
+      >
+        <span className="text-[9px] font-semibold uppercase tracking-[0.14em]">
+          {label}
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 transition-transform",
+            open && "rotate-180"
+          )}
+        />
+      </button>
+      {open && (
+        <div className="mt-0.5 space-y-0.5 pl-0.5">
+          {items.map((item) => (
+            <NavItemLink
+              key={item.href}
+              item={item}
+              pathname={pathname}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -171,42 +224,31 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
     <nav className="flex flex-1 flex-col overflow-y-auto px-2 py-2">
-      <SectionLabel>Core</SectionLabel>
-      {primary.map((item) => (
-        <NavItemLink
-          key={item.href}
-          item={item}
-          pathname={pathname}
-          onNavigate={onNavigate}
-        />
-      ))}
-      <SectionLabel>Growth</SectionLabel>
-      {growth.map((item) => (
-        <NavItemLink
-          key={item.href}
-          item={item}
-          pathname={pathname}
-          onNavigate={onNavigate}
-        />
-      ))}
-      <SectionLabel>Studio</SectionLabel>
-      {studio.map((item) => (
-        <NavItemLink
-          key={item.href}
-          item={item}
-          pathname={pathname}
-          onNavigate={onNavigate}
-        />
-      ))}
-      <SectionLabel>Org</SectionLabel>
-      {org.map((item) => (
-        <NavItemLink
-          key={item.href}
-          item={item}
-          pathname={pathname}
-          onNavigate={onNavigate}
-        />
-      ))}
+      <NavDropdown
+        label="Core"
+        items={primary}
+        pathname={pathname}
+        onNavigate={onNavigate}
+        defaultOpen
+      />
+      <NavDropdown
+        label="Growth"
+        items={growth}
+        pathname={pathname}
+        onNavigate={onNavigate}
+      />
+      <NavDropdown
+        label="Studio"
+        items={studio}
+        pathname={pathname}
+        onNavigate={onNavigate}
+      />
+      <NavDropdown
+        label="Org"
+        items={org}
+        pathname={pathname}
+        onNavigate={onNavigate}
+      />
       <div className="my-2 border-t border-omniv-border" />
       {bottom.map((item) => (
         <NavItemLink
