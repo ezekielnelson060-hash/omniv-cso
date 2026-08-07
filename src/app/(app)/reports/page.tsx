@@ -6,10 +6,15 @@ import { ReportsPanel } from "@/components/reports/reports-panel";
 export default function ReportsPage() {
   return (
     <AppShell>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
-        <p className="text-sm text-omniv-text-secondary">
-          Investor, artist, campaign, monthly growth, and label PDF briefings
+      <div className="mb-3">
+        <p className="font-data text-[10px] uppercase tracking-[0.14em] text-omniv-gold">
+          Org
+        </p>
+        <h1 className="text-lg font-semibold tracking-tight md:text-xl">
+          Reports
+        </h1>
+        <p className="text-[11px] text-omniv-text-muted">
+          Investor, artist, campaign, growth
         </p>
       </div>
       <ReportsPanel />
