@@ -17,10 +17,17 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Omniv | Intelligence for Artists & Labels",
+  title: "Omniv | Career OS for independent artists",
   description:
-    "AI Chief Strategy Officer for independent artists, managers and record labels. Career intelligence, not content spam.",
-  icons: { icon: "/logo.svg" },
+    "List, rooms, first cash, and ranked next moves. Career operating system for independent artists, managers, and labels.",
+  icons: { icon: "/logo.svg", apple: "/logo.svg" },
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Omniv",
+  },
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({

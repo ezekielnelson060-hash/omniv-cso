@@ -1,0 +1,18 @@
+{
+  "name": "Omniv",
+  "short_name": "Omniv",
+  "description": "Career OS for independent artists — list, rooms, cash, next move.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

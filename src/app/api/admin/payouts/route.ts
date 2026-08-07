@@ -41,15 +41,12 @@ export async function GET() {
 
     const { data: payments, error } = await svc
       .from("payments")
-      .select("amount_cents, status, meta, user_id")
+      .select("amount, currency, status, user_id, plan, tx_ref, raw, email")
       .eq("status", "successful")
       .limit(2000);
 
     if (error) {
-      const alt = await svc.from("payments").select("*").limit(500);
-      if (alt.error) {
-        return NextResponse.json({ error: alt.error.message }, { status: 500 });
-      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     const byUser = new Map<
@@ -58,12 +55,15 @@ export async function GET() {
     >();
 
     for (const pay of payments || []) {
-      const meta = (pay as { meta?: Record<string, unknown> }).meta || {};
+      const raw = (pay.raw || {}) as Record<string, unknown>;
+      const meta = (raw.meta || raw) as Record<string, unknown>;
       const owner =
         (meta.owner_user_id as string) ||
-        (pay as { user_id?: string }).user_id;
+        (pay.user_id as string | null) ||
+        null;
       if (!owner) continue;
-      const cents = Number((pay as { amount_cents?: number }).amount_cents || 0);
+      const major = Number(pay.amount || 0);
+      const cents = Math.round(major * 100);
       const cur = byUser.get(owner) || { total_cents: 0, payments: 0 };
       cur.total_cents += cents;
       cur.payments += 1;
