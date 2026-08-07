@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-/** Flutterwave checkout for gathering ticket or free RSVP. */
+/** Flutterwave checkout for gathering ticket, tip, or free RSVP. */
 export async function POST(req: Request) {
   const secret = process.env.FLW_SECRET_KEY;
   if (!secret) {
@@ -16,6 +16,7 @@ export async function POST(req: Request) {
       gatheringId?: string;
       email?: string;
       name?: string;
+      tipUsd?: number;
     };
     const gatheringId = body.gatheringId?.trim();
     const email = body.email?.trim().toLowerCase();
@@ -54,7 +55,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const amount = Math.max(0, Number(g.ticket_price_cents || 0) / 100);
+    const ticket = Math.max(0, Number(g.ticket_price_cents || 0) / 100);
+    const tip = Math.max(0, Number(body.tipUsd || 0));
+    const isTip = tip > 0;
+    const amount = isTip ? tip : ticket;
     const origin =
       process.env.NEXT_PUBLIC_APP_URL ||
       req.headers.get("origin") ||
@@ -87,13 +91,14 @@ export async function POST(req: Request) {
         name: body.name || "Fan",
       },
       customizations: {
-        title: "Omniv Gathering",
-        description: g.title as string,
+        title: isTip ? "Omniv Tip" : "Omniv Gathering",
+        description: isTip ? `Tip · ${g.title}` : (g.title as string),
       },
       meta: {
         type: "gathering",
         gathering_id: gatheringId,
         email,
+        is_tip: isTip,
       },
     };
 
