@@ -76,7 +76,13 @@ export async function POST(req: Request) {
       amount?: number;
       currency?: string;
       status?: string;
-      meta?: { plan?: string; user_id?: string };
+      meta?: {
+        plan?: string;
+        user_id?: string;
+        type?: string;
+        gathering_id?: string;
+        email?: string;
+      };
       customer?: { email?: string };
     };
   };
@@ -107,15 +113,62 @@ export async function POST(req: Request) {
   }
 
   const txRef = String(verified.tx_ref || data.tx_ref || "");
+  const meta = (verified.meta || data.meta || {}) as {
+    plan?: string;
+    user_id?: string;
+    type?: string;
+    gathering_id?: string;
+    email?: string;
+  };
+
+  // Gathering ticket — confirm RSVP, do not change SaaS plan
+  if (meta.type === "gathering" || txRef.startsWith("omniv_gath_")) {
+    const adminG = createClient(url, service, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const fanEmail = (
+      (verified.customer?.email as string | undefined) ||
+      data.customer?.email ||
+      meta.email ||
+      ""
+    ).toLowerCase();
+    const gid = meta.gathering_id || null;
+    if (gid && fanEmail) {
+      await adminG.from("gathering_rsvps").upsert(
+        {
+          gathering_id: gid,
+          email: fanEmail,
+          status: "going",
+        },
+        { onConflict: "gathering_id,email" }
+      );
+      await adminG.from("payments").upsert(
+        {
+          provider: "flutterwave",
+          provider_payment_id: String(verified.id ?? data.id ?? txRef),
+          user_id: null,
+          email: fanEmail,
+          plan: "gathering",
+          amount: Number(verified.amount ?? data.amount ?? 0),
+          currency: String(verified.currency ?? data.currency ?? "USD"),
+          status: "successful",
+          tx_ref: txRef,
+          raw: verified,
+        },
+        { onConflict: "provider,provider_payment_id" }
+      );
+    }
+    return NextResponse.json({ ok: true, type: "gathering" });
+  }
+
   const parsed = parseTxRef(txRef);
-  const metaPlan = (verified.meta?.plan || data.meta?.plan || "") as string;
+  const metaPlan = (meta.plan || "") as string;
   const planRaw = parsed.plan || metaPlan || "starter";
   const plan = PLAN_IDS.has(planRaw) ? planRaw : "starter";
 
   let userId =
     parsed.userId ||
-    (verified.meta?.user_id as string | undefined) ||
-    (data.meta?.user_id as string | undefined) ||
+    meta.user_id ||
     null;
   const email = (
     (verified.customer?.email as string | undefined) ||
