@@ -64,6 +64,26 @@ html {
   scroll-behavior: smooth;
 }
 
+html.light {
+  color-scheme: light;
+  --omniv-black: #f7f6f3;
+  --omniv-black-elevated: #ffffff;
+  --omniv-black-card: #ffffff;
+  --omniv-black-hover: #f0eee8;
+  --omniv-border: #e6e2d8;
+  --omniv-border-subtle: #d4cfc3;
+  --omniv-text-primary: #14130f;
+  --omniv-text-secondary: #5c584e;
+  --omniv-text-muted: #8a8478;
+  --omniv-gold: #b8922a;
+  --omniv-gold-soft: #a07d24;
+  --omniv-gold-muted: #8a6c1f;
+  --omniv-gold-glow: rgba(184, 146, 42, 0.12);
+  --omniv-gold-glow-strong: rgba(184, 146, 42, 0.22);
+  --background: var(--omniv-black);
+  --foreground: var(--omniv-text-primary);
+}
+
 body {
   background: var(--omniv-black);
   color: var(--omniv-text-primary);
@@ -91,6 +111,11 @@ h1, h2, h3, h4 {
   backdrop-filter: blur(20px) saturate(140%);
   -webkit-backdrop-filter: blur(20px) saturate(140%);
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+html.light .glass {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .glass-gold {
