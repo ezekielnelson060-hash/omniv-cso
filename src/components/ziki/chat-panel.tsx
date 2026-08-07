@@ -34,6 +34,7 @@ import {
 } from "@/lib/audio-passport";
 import { TrackWaveform } from "@/components/ziki/track-waveform";
 import { MessageActions } from "@/components/ziki/message-actions";
+import { RichText } from "@/components/ziki/rich-text";
 import {
   ArrowUp,
   Loader2,
@@ -55,64 +56,11 @@ const SUGGESTIONS = [
   "Draft a 7-day execution plan",
 ];
 
-function RichText({ text, dark }: { text: string; dark?: boolean }) {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
-  return (
-    <div className="space-y-1.5">
-      {lines.map((line, i) => {
-        const trimmed = line.trim();
-        if (!trimmed) return <div key={i} className="h-1.5" />;
-        const full = /^\*\*(.+?)\*\*$/.exec(trimmed);
-        if (full) {
-          return (
-            <p
-              key={i}
-              className={cn(
-                "mt-1.5 text-[12px] font-semibold tracking-tight first:mt-0",
-                dark ? "text-omniv-black" : "text-omniv-text"
-              )}
-            >
-              {full[1]}
-            </p>
-          );
-        }
-        const parts = line.split(/(\*\*[^*]+\*\*)/g);
-        return (
-          <p
-            key={i}
-            className={cn(
-              "text-[13px] leading-snug",
-              dark ? "text-omniv-black/90" : "text-omniv-text-secondary"
-            )}
-          >
-            {parts.map((part, j) => {
-              if (part.startsWith("**") && part.endsWith("**") && part.length > 4) {
-                return (
-                  <strong
-                    key={j}
-                    className={cn(
-                      "font-semibold",
-                      dark ? "text-omniv-black" : "text-omniv-text"
-                    )}
-                  >
-                    {part.slice(2, -2)}
-                  </strong>
-                );
-              }
-              return <span key={j}>{part}</span>;
-            })}
-          </p>
-        );
-      })}
-    </div>
-  );
-}
-
 function welcomeMsg(name: string): ChatMessage {
   return {
     id: "welcome",
     role: "assistant",
-    content: `Hey — I'm **Ziki**, strategy for **${name}**.\n\nAsk anything the way you would a manager: market reads, release timing, a track critique, what to do this week. Attach a demo when you want me to listen.\n\nNo scripts. Just the highest-leverage next move.`,
+    content: `Hey — I'm **Ziki**, strategy for **${name}**.\n\nAsk anything the way you would a manager: market reads, release timing, a track critique, what to post this week. Attach a demo when you want me to listen.\n\nNo scripts. Just the highest-leverage next move.`,
     createdAt: Date.now(),
   };
 }
@@ -184,14 +132,14 @@ export function ChatPanel() {
 
       let list = loadThreads();
       let id = getActiveId();
-      if (!id || !list.find((t) => t.id === id)) {
-        const t = createThread("New chat");
+      if (!id || !list.find((x) => x.id === id)) {
+        const th = createThread("New chat");
         list = loadThreads();
-        id = t.id;
+        id = th.id;
       }
       setThreads(list);
       setActiveIdState(id);
-      const active = list.find((t) => t.id === id);
+      const active = list.find((x) => x.id === id);
       if (active && active.messages.length > 0) {
         setMessages(active.messages);
       } else {
@@ -209,7 +157,7 @@ export function ChatPanel() {
     if (act) {
       bootstrapped.current = true;
       void send(
-        `Help me execute this opportunity:\n\n**${act.title}**\n${act.summary || ""}\n\nWhy: ${act.why || "n/a"}\nExpected: ${act.expectedOutcome || "n/a"}\n\nGive a concrete 7-day execution plan.`,
+        `Help me execute this opportunity:\n\n**${act.title}**\n${act.summary || ""}\n\nWhy: ${act.why || "n/a"}\nExpected: ${act.expectedOutcome || "n/a"}\n\nGive a concrete 7-day plan with exact posts and timing.`,
         true
       );
       return;
@@ -232,21 +180,21 @@ export function ChatPanel() {
   }, [messages, busy]);
 
   function openThread(id: string) {
-    const t = loadThreads().find((x) => x.id === id);
-    if (!t) return;
+    const th = loadThreads().find((x) => x.id === id);
+    if (!th) return;
     setActiveIdState(id);
     localStorage.setItem("omniv_ziki_active_v1", id);
-    setMessages(t.messages.length > 0 ? t.messages : [welcomeMsg(artistName)]);
+    setMessages(th.messages.length > 0 ? th.messages : [welcomeMsg(artistName)]);
     setHistoryOpen(false);
   }
 
   function newChat() {
-    const t = createThread("New chat");
+    const th = createThread("New chat");
     const welcome = [welcomeMsg(artistName)];
     setThreads(loadThreads());
-    setActiveIdState(t.id);
+    setActiveIdState(th.id);
     setMessages(welcome);
-    persist(t.id, welcome, "New chat");
+    persist(th.id, welcome, "New chat");
     setHistoryOpen(false);
   }
 
@@ -290,7 +238,12 @@ export function ChatPanel() {
               setAttachments((prev) =>
                 prev.map((a) =>
                   a.id === id
-                    ? { ...a, uploading: false, analyzing: false, name: `${f.name} (upload failed)` }
+                    ? {
+                        ...a,
+                        uploading: false,
+                        analyzing: false,
+                        name: `${f.name} (upload failed)`,
+                      }
                     : a
                 )
               );
@@ -312,7 +265,12 @@ export function ChatPanel() {
             setAttachments((prev) =>
               prev.map((a) =>
                 a.id === id
-                  ? { ...a, uploading: false, analyzing: false, name: `${f.name} (upload failed)` }
+                  ? {
+                      ...a,
+                      uploading: false,
+                      analyzing: false,
+                      name: `${f.name} (upload failed)`,
+                    }
                   : a
               )
             );
@@ -431,27 +389,56 @@ export function ChatPanel() {
           message: payload,
           history,
           attachments: attachmentPayload.length ? attachmentPayload : undefined,
-          context: `You are Ziki, Virtual CSO for ${artistName} inside Omniv. Never invent demo artists.\n\nARTIST BRAIN:\n${context}\n\nAnswer like a senior manager in chat. Full answers. Personalise every sentence.${
-            attachmentPayload.length ? " User attached media — use it." : ""
-          }\n\nRecent:\n${history}`,
+          context: `You are Ziki, Virtual CSO for ${artistName} inside Omniv. Never invent demo artists.\n\nARTIST BRAIN:\n${context}\n\nNever use # markdown headings. Give exact posts, hooks, shot lists when advising content. Natural manager chat.\n\nRecent:\n${history}`,
         }),
       });
       const data = (await res.json()) as { text?: string };
-      const assistant: ChatMessage = {
-        id: uid(),
-        role: "assistant",
-        content:
-          data.text ||
-          "Ziki could not reach the model. Check API keys, then retry.",
-        createdAt: Date.now(),
-      };
-      const final = [...withUser, assistant];
-      setMessages(final);
-      persist(
-        threadId,
-        final,
-        fromAct ? trimmed.slice(0, 48) : titleFromMessages(final)
-      );
+      const fullText =
+        data.text ||
+        "Ziki could not reach the model. Check API keys, then retry.";
+      const assistantId = uid();
+      setMessages([
+        ...withUser,
+        {
+          id: assistantId,
+          role: "assistant",
+          content: "",
+          createdAt: Date.now(),
+        },
+      ]);
+      await new Promise<void>((resolve) => {
+        let i = 0;
+        const step = Math.max(2, Math.floor(fullText.length / 90));
+        const tick = () => {
+          i = Math.min(fullText.length, i + step);
+          const slice = fullText.slice(0, i);
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: slice } : m
+            )
+          );
+          if (i >= fullText.length) {
+            const final = [
+              ...withUser,
+              {
+                id: assistantId,
+                role: "assistant" as const,
+                content: fullText,
+                createdAt: Date.now(),
+              },
+            ];
+            persist(
+              threadId,
+              final,
+              fromAct ? trimmed.slice(0, 48) : titleFromMessages(final)
+            );
+            resolve();
+            return;
+          }
+          setTimeout(tick, 14);
+        };
+        tick();
+      });
     } catch {
       const assistant: ChatMessage = {
         id: uid(),
@@ -496,12 +483,12 @@ export function ChatPanel() {
               </Button>
             </div>
             <div className="flex-1 overflow-y-auto p-1.5">
-              {threads.map((t) => (
+              {threads.map((th) => (
                 <div
-                  key={t.id}
+                  key={th.id}
                   className={cn(
                     "group mb-0.5 flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px]",
-                    t.id === activeId
+                    th.id === activeId
                       ? "bg-omniv-gold/10 text-omniv-gold"
                       : "text-omniv-text-secondary hover:bg-white/[0.04]"
                   )}
@@ -509,20 +496,20 @@ export function ChatPanel() {
                   <button
                     type="button"
                     className="min-w-0 flex-1 truncate text-left"
-                    onClick={() => openThread(t.id)}
+                    onClick={() => openThread(th.id)}
                   >
                     <MessageSquare className="mr-1 inline h-3 w-3 opacity-60" />
-                    {t.title}
+                    {th.title}
                   </button>
                   <button
                     type="button"
                     className="opacity-0 group-hover:opacity-100"
                     aria-label="Delete"
                     onClick={() => {
-                      deleteThread(t.id);
+                      deleteThread(th.id);
                       const next = loadThreads();
                       setThreads(next);
-                      if (t.id === activeId) {
+                      if (th.id === activeId) {
                         if (next[0]) openThread(next[0].id);
                         else newChat();
                       }
@@ -596,7 +583,7 @@ export function ChatPanel() {
                   >
                     <RichText text={msg.content} dark={msg.role === "user"} />
                   </div>
-                  {msg.role === "assistant" && msg.id !== "welcome" && (
+                  {msg.role === "assistant" && msg.id !== "welcome" && msg.content && (
                     <MessageActions content={msg.content} />
                   )}
                 </div>
@@ -665,7 +652,9 @@ export function ChatPanel() {
                           <button
                             type="button"
                             onClick={() =>
-                              setAttachments((prev) => prev.filter((x) => x.id !== a.id))
+                              setAttachments((prev) =>
+                                prev.filter((x) => x.id !== a.id)
+                              )
                             }
                           >
                             ×
