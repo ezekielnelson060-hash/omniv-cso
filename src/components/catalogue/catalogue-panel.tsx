@@ -59,31 +59,34 @@ export function CataloguePanel() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Catalogue</h1>
-        <p className="mt-1 max-w-xl text-sm text-omniv-text-secondary">
-          Releases you own in Omniv. Synced when you are signed in. Ziki and
-          audits should reference this list, not a memory of what you might have
-          dropped.
+        <p className="font-data text-[10px] uppercase tracking-[0.14em] text-omniv-gold">
+          Core
+        </p>
+        <h1 className="text-lg font-semibold tracking-tight md:text-xl">
+          Catalogue
+        </h1>
+        <p className="mt-0.5 max-w-xl text-[11px] text-omniv-text-muted">
+          Releases you own. Ziki and audits reference this list.
         </p>
       </div>
 
-      <Card className="p-5">
+      <Card className="p-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
           Add release
         </p>
-        <form onSubmit={onAdd} className="mt-3 grid gap-3 sm:grid-cols-2">
+        <form onSubmit={onAdd} className="mt-2 grid gap-2 sm:grid-cols-2">
           <Input
             placeholder="Title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="sm:col-span-2"
+            className="h-8 sm:col-span-2"
           />
           <select
             value={type}
             onChange={(e) => setType(e.target.value as ReleaseType)}
-            className="h-10 rounded-xl border border-omniv-border bg-omniv-card px-3 text-sm"
+            className="h-8 rounded-lg border border-omniv-border bg-omniv-card px-2 text-xs"
           >
             <option value="single">Single</option>
             <option value="ep">EP</option>
@@ -95,7 +98,7 @@ export function CataloguePanel() {
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as ReleaseStatus)}
-            className="h-10 rounded-xl border border-omniv-border bg-omniv-card px-3 text-sm"
+            className="h-8 rounded-lg border border-omniv-border bg-omniv-card px-2 text-xs"
           >
             <option value="idea">Idea</option>
             <option value="draft">Draft</option>
@@ -107,52 +110,59 @@ export function CataloguePanel() {
             placeholder="Genre"
             value={genre}
             onChange={(e) => setGenre(e.target.value)}
+            className="h-8"
           />
           <Input
             placeholder="Spotify URL"
             value={spotify}
             onChange={(e) => setSpotify(e.target.value)}
+            className="h-8"
           />
           <Button
             type="submit"
             disabled={busy}
-            className="gap-1.5 sm:col-span-2 sm:w-auto"
+            size="sm"
+            className="h-8 gap-1 sm:col-span-2 sm:w-auto"
           >
             {busy ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5" />
             )}
-            Add to catalogue
+            Add
           </Button>
         </form>
       </Card>
 
-      <div className="space-y-3">
+      <div className="overflow-hidden rounded-lg border border-omniv-border">
         {loading && (
-          <p className="flex items-center gap-2 text-sm text-omniv-text-muted">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading catalogue…
+          <p className="flex items-center gap-2 px-2.5 py-4 text-xs text-omniv-text-muted">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
           </p>
         )}
         {!loading && rows.length === 0 && (
-          <p className="text-sm text-omniv-text-muted">
-            Empty catalogue. Add the next release before you spend the window.
+          <p className="px-2.5 py-4 text-xs text-omniv-text-muted">
+            Empty. Add the next release before you spend the window.
           </p>
         )}
         {rows.map((r) => (
           <div
             key={r.id}
-            className="flex items-start justify-between gap-3 rounded-2xl border border-omniv-border bg-omniv-card p-4"
+            className="flex items-center justify-between gap-2 border-b border-omniv-border px-2.5 py-2 last:border-0 hover:bg-omniv-hover/40"
           >
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="font-medium">{r.title}</p>
-                <Badge variant="outline">{r.releaseType}</Badge>
-                <Badge variant="gold">{r.status}</Badge>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <p className="truncate text-[13px] font-medium">{r.title}</p>
+                <Badge variant="outline" className="text-[9px]">
+                  {r.releaseType}
+                </Badge>
+                <Badge variant="gold" className="text-[9px]">
+                  {r.status}
+                </Badge>
               </div>
-              <p className="mt-1 text-xs text-omniv-text-muted">
+              <p className="mt-0.5 truncate text-[10px] text-omniv-text-muted">
                 {[r.primaryGenre, r.spotifyUrl].filter(Boolean).join(" · ") ||
-                  "No links yet"}
+                  "No links"}
               </p>
             </div>
             <button
@@ -164,7 +174,7 @@ export function CataloguePanel() {
                 await refresh();
               }}
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>
         ))}
