@@ -1,5 +1,6 @@
 import type { AuditFinding, AuditPayload, AuditSourceType } from "@/types";
 import { detectSource, fetchOEmbed, type PublicMeta } from "@/lib/audit/fetch-public";
+import { fetchSpotifyArtist } from "@/lib/audit/spotify";
 
 function clamp(n: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, Math.round(n)));
@@ -19,13 +20,19 @@ export function makeShareSlug(name: string) {
   return `${base}-${tail}`;
 }
 
-/** Public-signals relevance audit. No invented private revenue. */
+/** Public-signals relevance audit. Optional Spotify API enrichment. */
 export async function runPublicAudit(rawUrl: string): Promise<AuditPayload> {
   const detected = detectSource(rawUrl);
   const meta: PublicMeta | null =
     detected.type !== "unknown" ? await fetchOEmbed(detected.url) : null;
 
+  const spotify =
+    detected.type === "spotify" && detected.id
+      ? await fetchSpotifyArtist(detected.id)
+      : null;
+
   const artistName =
+    spotify?.name ||
     meta?.title?.replace(/\s*-\s*topic$/i, "").trim() ||
     meta?.author ||
     (detected.type === "spotify"
@@ -56,6 +63,16 @@ export async function runPublicAudit(rawUrl: string): Promise<AuditPayload> {
     reach += 4;
     momentum += 4;
   }
+
+  if (spotify) {
+    reach = Math.round(reach * 0.35 + spotify.popularity * 0.65);
+    momentum = Math.round(momentum * 0.4 + spotify.popularity * 0.6);
+    if (spotify.followers >= 100_000) revenue += 12;
+    else if (spotify.followers >= 10_000) revenue += 6;
+    else if (spotify.followers < 500) revenue -= 4;
+    if (spotify.genres.length >= 2) momentum += 4;
+  }
+
   if (sourceType === "spotify" || sourceType === "youtube") {
     revenue -= 6;
   }
@@ -74,6 +91,23 @@ export async function runPublicAudit(rawUrl: string): Promise<AuditPayload> {
       title: "Link could not be classified",
       detail:
         "Use a full Spotify artist URL or YouTube channel URL. Without a clean public surface, the audit stays soft.",
+    });
+  }
+
+  if (spotify) {
+    findings.push({
+      id: "spotify-pop",
+      severity:
+        spotify.popularity < 25
+          ? "critical"
+          : spotify.popularity < 50
+            ? "watch"
+            : "strength",
+      title: `Spotify popularity ${spotify.popularity}/100 · ${spotify.followers.toLocaleString()} followers`,
+      detail:
+        spotify.genres.length > 0
+          ? `Genres: ${spotify.genres.slice(0, 4).join(", ")}. Popularity is a relative ranking signal, not monthly listeners.`
+          : "Popularity is a relative ranking signal on Spotify, not monthly listeners or revenue.",
     });
   }
 
@@ -111,7 +145,7 @@ export async function runPublicAudit(rawUrl: string): Promise<AuditPayload> {
     });
   }
 
-  if (hasMeta) {
+  if (hasMeta || spotify) {
     findings.push({
       id: "identity",
       severity: "strength",
@@ -154,7 +188,7 @@ export async function runPublicAudit(rawUrl: string): Promise<AuditPayload> {
     sourceUrl: detected.url,
     sourceType,
     artistName,
-    thumbnail: meta?.thumbnail,
+    thumbnail: spotify?.images[0] || meta?.thumbnail,
     overall,
     reach,
     revenue,
@@ -164,10 +198,13 @@ export async function runPublicAudit(rawUrl: string): Promise<AuditPayload> {
     disclaimer:
       "Public signals only. This audit does not access Spotify for Artists, YouTube Analytics, or private revenue. Scores are directional.",
     signals: {
-      resolved: hasMeta,
-      hasThumbnail: hasThumb,
-      provider: meta?.provider || null,
+      resolved: hasMeta || Boolean(spotify),
+      hasThumbnail: hasThumb || Boolean(spotify?.images[0]),
+      provider: meta?.provider || (spotify ? "Spotify API" : null),
       sourceType,
+      spotifyPopularity: spotify?.popularity ?? null,
+      spotifyFollowers: spotify?.followers ?? null,
+      genres: spotify?.genres?.slice(0, 5).join(", ") || null,
     },
   };
 }
