@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { SettingsPanel } from "@/components/settings/settings-panel";
 import { PayoutAndPhoto } from "@/components/settings/payout-and-photo";
+import { ThemeToggleCard } from "@/components/settings/theme-toggle";
 
 export default function SettingsPage() {
   return (
@@ -11,9 +12,10 @@ export default function SettingsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-omniv-text-secondary">
-          Photo, payout, profile, surfaces, billing
+          Appearance, photo, payout, profile, surfaces, billing
         </p>
       </div>
+      <ThemeToggleCard />
       <PayoutAndPhoto />
       <Suspense
         fallback={

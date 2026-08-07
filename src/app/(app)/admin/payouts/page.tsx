@@ -105,7 +105,7 @@ export default function AdminPayoutsPage() {
                     </div>
                     <Button
                       size="sm"
-                      variant={isPaid ? "outline" : "default"}
+                      variant={isPaid ? "outline" : "primary"}
                       className="gap-1"
                       onClick={() =>
                         setPaid((p) => ({ ...p, [r.user_id]: true }))
