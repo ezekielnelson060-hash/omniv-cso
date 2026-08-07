@@ -14,7 +14,9 @@ export type FeatureId =
   | "crm"
   | "label_dashboard"
   | "team_seats"
-  | "api_keys";
+  | "api_keys"
+  | "fan_gate"
+  | "audience_basic";
 
 export interface PlanDef {
   id: PlanId;
@@ -40,12 +42,14 @@ export const PLANS: PlanDef[] = [
     priceMonthly: 0,
     priceAnnual: 0,
     currency: "USD",
-    blurb: "Taste the system. Limited Ziki, one workspace",
+    blurb: "Taste the system. List, rooms, limited Ziki",
     cta: "Enter free",
     features: [
       "Command Center",
       "Artist Brain",
       "5 Ziki messages / month",
+      "Fan Gate + fan list",
+      "Rooms, tips & tickets",
       "1 artist workspace",
     ],
     limits: { zikiMessagesPerDay: 5, artists: 1, teamSeats: 1 },
@@ -64,6 +68,7 @@ export const PLANS: PlanDef[] = [
       "Historical Analytics",
       "20 Ziki messages / day",
       "Surface scan",
+      "City map + invite",
     ],
     limits: { zikiMessagesPerDay: 20, artists: 1, teamSeats: 1 },
   },
@@ -124,6 +129,8 @@ export const FEATURE_GATES: Record<FeatureId, PlanId> = {
   label_dashboard: "label",
   team_seats: "pro",
   api_keys: "label",
+  fan_gate: "free",
+  audience_basic: "free",
 };
 
 export const PLAN_ORDER: PlanId[] = ["free", "starter", "pro", "label"];
@@ -161,6 +168,8 @@ export const FEATURE_LABELS: Record<FeatureId, string> = {
   label_dashboard: "Label Dashboard",
   team_seats: "Team seats",
   api_keys: "API keys",
+  fan_gate: "Fan Gate",
+  audience_basic: "Audience (basic)",
 };
 
 export const ROUTE_GATES: Record<string, FeatureId> = {
@@ -169,7 +178,7 @@ export const ROUTE_GATES: Record<string, FeatureId> = {
   "/release-simulator": "release_simulator",
   "/content": "content_intelligence",
   "/reports": "reports_basic",
-  "/crm": "crm",
+  "/crm": "audience_basic",
   "/label": "label_dashboard",
 };
 
