@@ -2,6 +2,7 @@
 
 import { AppShell } from "@/components/layout/app-shell";
 import { ReportsPanel } from "@/components/reports/reports-panel";
+import { PressKitPanel } from "@/components/press/press-kit-panel";
 
 export default function ReportsPage() {
   return (
@@ -17,7 +18,10 @@ export default function ReportsPage() {
           Investor, artist, campaign, growth
         </p>
       </div>
-      <ReportsPanel />
+      <div className="space-y-3">
+        <PressKitPanel />
+        <ReportsPanel />
+      </div>
     </AppShell>
   );
 }

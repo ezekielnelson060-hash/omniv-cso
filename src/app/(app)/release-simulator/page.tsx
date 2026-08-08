@@ -2,6 +2,7 @@
 
 import { AppShell } from "@/components/layout/app-shell";
 import { SimulatorPanel } from "@/components/release/simulator-panel";
+import { PredictiveCalendar } from "@/components/release/predictive-calendar";
 import { FeatureGate } from "@/components/billing/feature-gate";
 import { usePlan } from "@/components/billing/plan-provider";
 
@@ -26,7 +27,10 @@ export default function ReleaseSimulatorPage() {
         mode="hard"
         onPlanChange={setPlan}
       >
-        <SimulatorPanel />
+        <div className="space-y-3">
+          <PredictiveCalendar />
+          <SimulatorPanel />
+        </div>
       </FeatureGate>
     </AppShell>
   );
