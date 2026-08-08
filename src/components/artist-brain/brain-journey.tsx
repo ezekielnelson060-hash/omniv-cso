@@ -46,7 +46,7 @@ export function BrainJourney({
           <li>
             <span className="font-medium text-omniv-text">This week.</span>{" "}
             {hasDream
-              ? `Command Center ranks one move that serves “${dream.slice(0, 72)}${dream.length > 72 ? "…" : "””}.`
+              ? `Command Center ranks one move that serves “${dream.slice(0, 72)}${dream.length > 72 ? "…" : ""}”.`
               : "Set the Big Dream first — then we can rank a real priority."}
           </li>
           <li>
