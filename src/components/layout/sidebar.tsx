@@ -5,8 +5,6 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  LayoutDashboard,
-  Brain,
   BarChart3,
   Sparkles,
   Rocket,
@@ -29,24 +27,20 @@ import { cn } from "@/lib/utils";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { getProfile } from "@/lib/db/profile";
 
-type NavItem = { href: string; label: string; icon: typeof LayoutDashboard };
+type NavItem = { href: string; label: string; icon: typeof Users };
 
+/** Home is Audience — owned fans, rooms, density. */
 const primary: NavItem[] = [
-  { href: "/dashboard", label: "Command", icon: LayoutDashboard },
-  { href: "/ziki", label: "Ziki", icon: MessageSquare },
-  { href: "/artist-brain", label: "Artist Brain", icon: Brain },
-  { href: "/catalogue", label: "Catalogue", icon: Library },
-];
-
-const growth: NavItem[] = [
   { href: "/crm", label: "Audience", icon: Users },
-  { href: "/opportunities", label: "Opportunities", icon: Sparkles },
+  { href: "/ziki", label: "Ziki", icon: MessageSquare },
+  { href: "/opportunities", label: "Moves", icon: Sparkles },
+  { href: "/catalogue", label: "Catalogue", icon: Library },
 ];
 
 const studio: NavItem[] = [
   { href: "/release-simulator", label: "Release", icon: Rocket },
   { href: "/content", label: "Content", icon: Film },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/analytics", label: "Progress", icon: BarChart3 },
 ];
 
 const org: NavItem[] = [
@@ -232,12 +226,6 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
         pathname={pathname}
         onNavigate={onNavigate}
         defaultOpen
-      />
-      <NavDropdown
-        label="Growth"
-        items={growth}
-        pathname={pathname}
-        onNavigate={onNavigate}
       />
       <NavDropdown
         label="Studio"
