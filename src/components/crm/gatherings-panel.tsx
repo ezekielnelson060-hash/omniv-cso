@@ -28,6 +28,17 @@ type Gathering = {
   notes: string | null;
 };
 
+function appOrigin() {
+  const envBase = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
+  if (envBase) return envBase;
+  if (typeof window !== "undefined") {
+    if (!window.location.hostname.includes("vercel.app")) {
+      return window.location.origin;
+    }
+  }
+  return "https://omniv.media";
+}
+
 export function GatheringsPanel({
   seedCity,
   seedReady,
@@ -171,8 +182,7 @@ export function GatheringsPanel({
   }
 
   function roomUrl(id: string) {
-    if (typeof window === "undefined") return `/g/${id}`;
-    return `${window.location.origin}/g/${id}`;
+    return `${appOrigin()}/g/${id}`;
   }
 
   async function copyLink(id: string) {
@@ -375,7 +385,7 @@ export function GatheringsPanel({
                       <Copy className="h-3 w-3" />
                       Copy
                     </Button>
-                    <a href={`/g/${g.id}`} target="_blank" rel="noreferrer">
+                    <a href={roomUrl(g.id)} target="_blank" rel="noreferrer">
                       <Button
                         size="sm"
                         variant="outline"
