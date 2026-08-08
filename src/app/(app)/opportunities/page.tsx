@@ -30,7 +30,7 @@ export default function OpportunitiesPage() {
     const dream = b?.bigDream?.trim() || b?.goals?.[0] || "";
     setSubtitle(
       dream
-        ? `Ranked for ${name}${genre ? ` · ${genre}` : ""} against “${dream.slice(0, 60)}${dream.length > 60 ? "…" : "”"}`
+        ? `Ranked for ${name}${genre ? ` · ${genre}` : ""} against “${dream.slice(0, 60)}${dream.length > 60 ? "…" : ""}”`
         : genre
           ? `Ranked for ${name} · ${genre}`
           : "Finish Artist Brain so ranking stops being generic"
