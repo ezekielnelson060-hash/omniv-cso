@@ -17,7 +17,7 @@ export async function GET(
   const { data, error } = await admin
     .from("gatherings")
     .select(
-      "id, title, city, capacity, ticket_price_cents, status, venue, starts_at"
+      "id, title, city, capacity, ticket_price_cents, status, venue, starts_at, room_type, now_playing_url, now_playing_title, industry_guest_name, industry_guest_role, industry_guest_active, host_notes"
     )
     .eq("id", id)
     .maybeSingle();
