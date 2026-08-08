@@ -1,5 +1,12 @@
-import type { ArtistBrain, ArtistScore, AIRecommendation } from "@/types";
+import type {
+  ArtistBrain,
+  ArtistScore,
+  AIRecommendation,
+  CatalogueRelease,
+  CatalogueTrack,
+} from "@/types";
 import { dreamRecommendation } from "@/lib/strategy/dream-rec";
+import { worldOpportunitiesFromCatalogue } from "@/lib/strategy/world-signals";
 
 function clamp(n: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, Math.round(n)));
@@ -151,11 +158,11 @@ export function buildRecommendationsFromBrain(
   brain: ArtistBrain | null,
   platforms: string[] = [],
   interests: string[] = [],
-  completedIds: string[] = []
+  completedIds: string[] = [],
+  catalogue?: { releases?: CatalogueRelease[]; tracks?: CatalogueTrack[] }
 ): AIRecommendation[] {
   const name = brain?.stageName || brain?.name || "your project";
   const rawGenre = brain?.genre?.filter((g) => g && g !== "TBD").join(" / ");
-  const genre = rawGenre || "core";
   const genreLabel = rawGenre || "";
   const style = brain?.musicStyle?.trim() || "";
   const voice = brain?.brandVoice?.trim() || "";
@@ -271,6 +278,16 @@ export function buildRecommendationsFromBrain(
       timing: "Today",
       nextActions: ["Open Settings → Integrations", "Connect primary surfaces"],
     });
+  }
+
+  const world = worldOpportunitiesFromCatalogue(
+    brain,
+    catalogue?.releases || [],
+    catalogue?.tracks || [],
+    completedIds
+  );
+  for (const w of world) {
+    if (!recs.some((r) => r.id === w.id)) recs.push(w);
   }
 
   const preferred = new Set<string>();
