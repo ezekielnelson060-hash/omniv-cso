@@ -12,13 +12,14 @@ export default function CrmPage() {
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-data text-[10px] uppercase tracking-[0.14em] text-omniv-gold">
-            Growth
+            Home
           </p>
           <h1 className="text-lg font-semibold tracking-tight md:text-xl">
-            Audience
+            Command Center
           </h1>
           <p className="text-[11px] text-omniv-text-muted">
-            Fans, rooms, earnings, roster CRM
+            Fans, rooms, city heat, gatherings — what you own, not what the
+            algorithm rents.
           </p>
         </div>
         <Link href="/label">

@@ -11,7 +11,8 @@ export type AgentActionType =
   | "OPEN_RELEASE"
   | "DRAFT_OUTREACH"
   | "OPEN_DISCOVER"
-  | "OPEN_REPORTS";
+  | "OPEN_REPORTS"
+  | "OPEN_SETTINGS";
 
 export type AgentProposal = {
   id: string;
