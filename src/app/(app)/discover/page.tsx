@@ -57,6 +57,7 @@ export default function DiscoverPage() {
   const [q, setQ] = useState("");
   const [source, setSource] = useState<"all" | "spotify" | "youtube">("all");
   const [minPeak, setMinPeak] = useState(0);
+  const [genreFilter, setGenreFilter] = useState("");
   const [watch, setWatch] = useState<string[]>([]);
 
   useEffect(() => {
@@ -95,15 +96,17 @@ export default function DiscoverPage() {
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
+    const g = genreFilter.trim().toLowerCase();
     return audits.filter((a) => {
       if (source !== "all" && a.source_type !== source) return false;
       if (a.peak_score < minPeak) return false;
+      if (g && !(a.genres || "").toLowerCase().includes(g)) return false;
       if (!query) return true;
       const hay =
         `${a.artist_name || ""} ${a.headline || ""} ${a.genres || ""}`.toLowerCase();
       return hay.includes(query);
     });
-  }, [audits, q, source, minPeak]);
+  }, [audits, q, source, minPeak, genreFilter]);
 
   const rising = useMemo(
     () =>
@@ -121,7 +124,7 @@ export default function DiscoverPage() {
       <PageChrome eyebrow="A&R" title="Discover">
         <p className="text-[11px] text-omniv-text-muted">
           Peak blends audit, Spotify popularity/followers when present, and
-          recency.
+          recency. Watchlist stays on this device.
         </p>
       </PageChrome>
 
@@ -148,6 +151,12 @@ export default function DiscoverPage() {
           </div>
           {tab !== "cities" && tab !== "roster" && (
             <>
+              <Input
+                value={genreFilter}
+                onChange={(e) => setGenreFilter(e.target.value)}
+                placeholder="Genre"
+                className="h-7 w-[100px] text-[11px]"
+              />
               <select
                 value={source}
                 onChange={(e) => setSource(e.target.value as typeof source)}
