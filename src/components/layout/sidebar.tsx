@@ -29,9 +29,9 @@ import { getProfile } from "@/lib/db/profile";
 
 type NavItem = { href: string; label: string; icon: typeof Users };
 
-/** Home is Audience — owned fans, rooms, density. */
+/** Home = Command Center (fans, rooms, heat). */
 const primary: NavItem[] = [
-  { href: "/crm", label: "Audience", icon: Users },
+  { href: "/crm", label: "Command Center", icon: Users },
   { href: "/ziki", label: "Ziki", icon: MessageSquare },
   { href: "/opportunities", label: "Moves", icon: Sparkles },
   { href: "/catalogue", label: "Catalogue", icon: Library },
