@@ -1,125 +1,319 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { mockNotifications, type AppNotification } from "@/data/phase6";
 import { cn } from "@/lib/utils";
+import type { AgentProposal } from "@/lib/agent/types";
 import {
-  Bell,
-  CheckCheck,
-  Sparkles,
-  CreditCard,
-  Users,
-  Info,
-} from "lucide-react";
-
-const typeIcon = {
-  opportunity: Sparkles,
-  system: Info,
-  billing: CreditCard,
-  team: Users,
-};
+  loadProposals,
+  markProposal,
+  upsertProposals,
+} from "@/lib/agent/store";
+import { runAgentScan } from "@/lib/agent/scan";
+import { getArtistBrain, getProfile } from "@/lib/db/profile";
+import { listCatalogueReleases } from "@/lib/catalogue/db";
+import { listCatalogueTracks } from "@/lib/catalogue/tracks";
+import { completedIds } from "@/lib/opportunity-progress";
+import { stashAct } from "@/lib/ziki-memory";
+import { Bell, Loader2, Sparkles, Zap, X } from "lucide-react";
 
 export function NotificationsPanel() {
-  const [items, setItems] = useState(mockNotifications);
+  const router = useRouter();
+  const [items, setItems] = useState<AgentProposal[]>([]);
+  const [narrative, setNarrative] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const unread = items.filter((n) => !n.read).length;
+  const refresh = useCallback(() => {
+    setItems(loadProposals());
+  }, []);
 
-  function markAll() {
-    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+  useEffect(() => {
+    refresh();
+    const on = () => refresh();
+    window.addEventListener("omniv-agent", on);
+    return () => window.removeEventListener("omniv-agent", on);
+  }, [refresh]);
+
+  async function scan() {
+    setScanning(true);
+    try {
+      const res = await fetch("/api/agent/scan", { method: "POST" });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          proposals?: AgentProposal[];
+          narrative?: string;
+        };
+        if (data.proposals?.length) {
+          upsertProposals(data.proposals);
+          setNarrative(data.narrative || "");
+          refresh();
+          return;
+        }
+      }
+      const [brain, profile, releases, tracks] = await Promise.all([
+        getArtistBrain(),
+        getProfile(),
+        listCatalogueReleases(),
+        listCatalogueTracks(),
+      ]);
+      const result = runAgentScan({
+        brain,
+        releases,
+        tracks,
+        platforms: profile?.platforms || [],
+        completedOppIds: completedIds(),
+      });
+      upsertProposals(result.proposals);
+      setNarrative(result.narrative);
+      refresh();
+    } finally {
+      setScanning(false);
+    }
   }
 
-  function toggle(id: string) {
-    setItems((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n))
-    );
+  useEffect(() => {
+    if (loadProposals().filter((p) => p.status === "pending").length === 0) {
+      void scan();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function execute(p: AgentProposal) {
+    setBusyId(p.id);
+    try {
+      const t = p.action.type;
+      const payload = p.action.payload || {};
+
+      if (t === "CREATE_TASK") {
+        await fetch("/api/agent/execute", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: t, title: p.title, payload }),
+        });
+      }
+
+      if (t === "OPEN_ZIKI" || t === "DRAFT_OUTREACH") {
+        stashAct({
+          title: p.title,
+          summary: p.body,
+          why: "Agent proposal",
+          expectedOutcome: "Confirmed execution",
+          category: "Agent",
+        });
+        if (payload.q) {
+          router.push(`/ziki?q=${encodeURIComponent(payload.q)}`);
+        } else {
+          router.push("/ziki");
+        }
+      } else if (t === "CREATE_ROOM") {
+        router.push(
+          payload.city
+            ? `/crm?city=${encodeURIComponent(payload.city)}`
+            : "/crm"
+        );
+      } else if (t === "OPEN_CATALOGUE") {
+        router.push("/catalogue");
+      } else if (t === "OPEN_OPPORTUNITIES") {
+        router.push("/opportunities");
+      } else if (t === "OPEN_CRM") {
+        router.push("/crm");
+      } else if (t === "OPEN_RELEASE") {
+        router.push("/release-simulator");
+      } else if (t === "MARK_OPP_DONE" && payload.id) {
+        const { markOpportunityDone } = await import(
+          "@/lib/opportunity-progress"
+        );
+        markOpportunityDone(payload.id);
+      }
+
+      markProposal(p.id, "done");
+      refresh();
+    } finally {
+      setBusyId(null);
+    }
   }
+
+  function dismiss(id: string) {
+    markProposal(id, "dismissed");
+    refresh();
+  }
+
+  const pending = items.filter((p) => p.status === "pending");
+  const done = items.filter((p) => p.status === "done").slice(0, 5);
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Badge variant="gold">{unread} unread</Badge>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="font-data text-[10px] uppercase tracking-[0.14em] text-omniv-gold">
+            Agent
+          </p>
+          <h1 className="text-lg font-semibold tracking-tight md:text-xl">
+            Inbox
+          </h1>
+          <p className="mt-0.5 max-w-lg text-[11px] text-omniv-text-muted">
+            Sense → rank → draft. You confirm. One confirmed move beats ten
+            unread tips.
+          </p>
         </div>
-        <Button size="sm" variant="outline" onClick={markAll} className="gap-1.5">
-          <CheckCheck className="h-3.5 w-3.5" />
-          Mark all read
-        </Button>
+        <div className="flex items-center gap-2">
+          <Badge variant="gold">{pending.length} pending</Badge>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
+            disabled={scanning}
+            onClick={() => void scan()}
+          >
+            {scanning ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )}
+            Scan now
+          </Button>
+        </div>
       </div>
 
+      {narrative && (
+        <Card className="border-omniv-gold/20 bg-omniv-gold/5 p-3">
+          <p className="text-[12px] leading-relaxed text-omniv-text-secondary">
+            {narrative}
+          </p>
+        </Card>
+      )}
+
       <div className="space-y-2">
-        {items.map((n) => (
-          <NotificationRow key={n.id} n={n} onToggle={() => toggle(n.id)} />
+        {pending.map((p) => (
+          <ProposalCard
+            key={p.id}
+            p={p}
+            busy={busyId === p.id}
+            onExecute={() => void execute(p)}
+            onDismiss={() => dismiss(p.id)}
+          />
         ))}
       </div>
 
-      {items.length === 0 && (
+      {pending.length === 0 && !scanning && (
         <Card className="flex flex-col items-center gap-2 p-10 text-center">
           <Bell className="h-8 w-8 text-omniv-text-muted" />
           <p className="text-sm text-omniv-text-secondary">
-            You&apos;re caught up. High-impact moves will land here.
+            No pending agent moves. Scan after you upload a track or update
+            Artist Brain.
           </p>
+          <Button size="sm" onClick={() => void scan()} className="mt-1">
+            Run agent scan
+          </Button>
         </Card>
+      )}
+
+      {done.length > 0 && (
+        <div className="pt-2">
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
+            Confirmed
+          </p>
+          {done.map((p) => (
+            <div
+              key={p.id}
+              className="mb-1 rounded-lg border border-omniv-border/60 px-3 py-2 text-[12px] text-omniv-text-muted line-through opacity-70"
+            >
+              {p.title}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
-function NotificationRow({
-  n,
-  onToggle,
+function ProposalCard({
+  p,
+  busy,
+  onExecute,
+  onDismiss,
 }: {
-  n: AppNotification;
-  onToggle: () => void;
+  p: AgentProposal;
+  busy: boolean;
+  onExecute: () => void;
+  onDismiss: () => void;
 }) {
-  const Icon = typeIcon[n.type];
+  const urgencyTone =
+    p.urgency === "now"
+      ? "text-rose-400 border-rose-500/30"
+      : p.urgency === "today"
+        ? "text-amber-400 border-amber-500/30"
+        : "text-omniv-text-muted border-omniv-border";
+
   return (
-    <button
-      type="button"
-      onClick={onToggle}
+    <Card
       className={cn(
-        "flex w-full gap-3 rounded-[var(--radius-lg)] border px-4 py-3 text-left transition-all",
-        n.read
-          ? "border-omniv-border bg-omniv-card/50"
-          : "border-omniv-gold/20 bg-omniv-gold/5"
+        "p-3 transition",
+        p.impact === "high" && "border-omniv-gold/30"
       )}
     >
-      <div
-        className={cn(
-          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-          n.read ? "bg-white/5" : "bg-omniv-gold/15"
-        )}
-      >
-        <Icon
-          className={cn(
-            "h-4 w-4",
-            n.read ? "text-omniv-text-muted" : "text-omniv-gold"
-          )}
-        />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <p
-            className={cn(
-              "text-sm font-medium",
-              n.read ? "text-omniv-text-secondary" : "text-omniv-text"
-            )}
-          >
-            {n.title}
+      <div className="flex flex-wrap items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex flex-wrap items-center gap-1.5">
+            <span
+              className={cn(
+                "rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                urgencyTone
+              )}
+            >
+              {p.urgency}
+            </span>
+            <Badge variant="outline" className="text-[9px]">
+              {p.source}
+            </Badge>
+            <Badge variant="outline" className="text-[9px]">
+              {p.impact} impact
+            </Badge>
+          </div>
+          <h3 className="text-sm font-semibold tracking-tight text-omniv-text">
+            {p.title}
+          </h3>
+          <p className="mt-1 whitespace-pre-line text-[12px] leading-snug text-omniv-text-muted">
+            {p.body.slice(0, 320)}
+            {p.body.length > 320 ? "…" : ""}
           </p>
-          <span className="shrink-0 text-[11px] text-omniv-text-muted">
-            {n.time}
-          </span>
         </div>
-        <p className="mt-0.5 text-xs leading-relaxed text-omniv-text-muted">
-          {n.body}
-        </p>
+        <button
+          type="button"
+          aria-label="Dismiss"
+          className="text-omniv-text-muted hover:text-omniv-text"
+          onClick={onDismiss}
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
-      {!n.read && (
-        <span className="mt-2 size-1.5 shrink-0 rounded-full bg-omniv-gold" />
-      )}
-    </button>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          className="h-8 gap-1.5 text-[11px]"
+          disabled={busy}
+          onClick={onExecute}
+        >
+          {busy ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Zap className="h-3.5 w-3.5" />
+          )}
+          {p.action.label}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 text-[11px]"
+          onClick={onDismiss}
+        >
+          Not now
+        </Button>
+      </div>
+    </Card>
   );
 }
