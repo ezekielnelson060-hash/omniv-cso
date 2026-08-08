@@ -1,14 +1,21 @@
-import { worldOpportunitiesFromCatalogue } from "@/lib/strategy/world-opportunities";
-import { uid } from "@/lib/utils";
+import type { ArtistBrain } from "@/types";
+import type { CatalogueRelease, CatalogueTrack } from "@/types";
 import type { AgentProposal, AgentScanResult } from "@/lib/agent/types";
-import type { ArtistBrain, CatalogueRelease, CatalogueTrack } from "@/types";
+import { worldOpportunitiesFromCatalogue } from "@/lib/strategy/world-signals";
 
+function uid(prefix: string) {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
+type FanCity = { city: string; count: number };
+
+/** Sense → Rank → Draft. Core loop is deterministic; LLM can polish later. */
 export function runAgentScan(input: {
   brain: ArtistBrain | null;
-  releases?: CatalogueRelease[];
-  tracks?: CatalogueTrack[];
+  releases: CatalogueRelease[];
+  tracks: CatalogueTrack[];
   platforms?: string[];
-  fanCities?: { city: string; count: number }[];
+  fanCities?: FanCity[];
   completedOppIds?: string[];
 }): AgentScanResult {
   const now = Date.now();
@@ -80,7 +87,7 @@ export function runAgentScan(input: {
     proposals.push({
       id: uid("dream"),
       title: "Name the Big Dream before more tactics",
-      body: "Without a held image, every opportunity is noise. Write one sentence in Settings → Artist Brain that a manager would refuse to dilute.",
+      body: "Without a held image, every opportunity is noise. Write one sentence in Settings (Artist Brain) that a manager would refuse to dilute.",
       urgency: "now",
       impact: "high",
       source: "brain",
@@ -116,8 +123,8 @@ export function runAgentScan(input: {
     });
   }
 
-  const hasTrack = (input.tracks || []).length > 0;
-  if (!hasTrack) {
+  const hasAudio = (input.tracks || []).some((t) => t.audioPath || t.analysis);
+  if (!hasAudio) {
     proposals.push({
       id: uid("cat"),
       title: "Upload one track so the agent can work inventory",
@@ -135,15 +142,21 @@ export function runAgentScan(input: {
     });
   }
 
-  const unique = proposals
-    .filter(
-      (p, i, arr) => arr.findIndex((x) => x.title === p.title) === i
-    )
-    .slice(0, 8);
+  const seen = new Set<string>();
+  const unique = proposals.filter((p) => {
+    const k = p.title.slice(0, 40);
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 
   const narrative = dream
-    ? `${name}: agent ranked ${unique.length} moves against “${dream.slice(0, 60)}${dream.length > 60 ? "…" : "”"}. Confirm one. Dismiss the rest.`
+    ? `${name}: agent ranked ${unique.length} moves against “${dream.slice(0, 60)}${dream.length > 60 ? "…" : ""}”. Confirm one. Dismiss the rest.`
     : `${name}: agent found ${unique.length} moves. Lock Big Dream so ranking tightens.`;
 
-  return { proposals: unique, scannedAt: now, narrative };
+  return {
+    proposals: unique.slice(0, 8),
+    scannedAt: now,
+    narrative,
+  };
 }
