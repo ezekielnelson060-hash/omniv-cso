@@ -150,41 +150,65 @@ const INTEREST_CATEGORY: Record<string, string[]> = {
 export function buildRecommendationsFromBrain(
   brain: ArtistBrain | null,
   platforms: string[] = [],
-  interests: string[] = []
+  interests: string[] = [],
+  completedIds: string[] = []
 ): AIRecommendation[] {
   const name = brain?.stageName || brain?.name || "your project";
   const rawGenre = brain?.genre?.filter((g) => g && g !== "TBD").join(" / ");
   const genre = rawGenre || "core";
   const genreLabel = rawGenre || "";
-  const recs: AIRecommendation[] = [];
-  const dreamRec = dreamRecommendation(brain);
-  if (dreamRec) recs.push(dreamRec);
+  const style = brain?.musicStyle?.trim() || "";
+  const voice = brain?.brandVoice?.trim() || "";
+  const dream = brain?.bigDream?.trim() || brain?.goals?.[0] || "";
   const scores = computeScoresFromBrain(brain, { platforms, interests });
+  const done = new Set(completedIds);
+  const recs: AIRecommendation[] = [];
+  const dreamRec = dreamRecommendation(brain, scores);
+  if (dreamRec && !done.has(dreamRec.id)) recs.push(dreamRec);
 
-  if (interests.includes("content") || interests.length === 0) {
+  if ((interests.includes("content") || interests.length === 0) && !done.has("content-system")) {
+    const styleHint = style
+      ? `Sound/style locked as “${style.slice(0, 60)}”.`
+      : "Style still soft in Artist Brain — fill Music Style so posts stop sounding generic.";
     recs.push({
       id: "content-system",
-      title: `Build ${genreLabel ? genreLabel + " " : ""}content system this week`,
-      summary: `Ship 4 short-form pieces aligned to ${name}'s stated style. Hooks in the first 1.5s.`,
-      why: "Content focus was selected in onboarding; cadence compounds faster than one-off posts.",
+      title: style
+        ? `4 posts in the ${style.slice(0, 28)} lane this week`
+        : `Build ${genreLabel ? genreLabel + " " : ""}content system this week`,
+      summary: `${name}: ship 4 short-form pieces. Hooks in first 1.5s. ${styleHint}${
+        dream ? ` Every post must point at “${dream.slice(0, 50)}”.` : ""
+      }`,
+      why: voice
+        ? `Brand voice is “${voice.slice(0, 80)}”. Cadence compounds faster than one-off posts.`
+        : "Cadence compounds faster than one-off posts. Confidence rises when style + voice are filled.",
       impact: "High",
       difficulty: "Moderate",
-      confidence: clamp(70 + scores.contentHealth * 0.25),
-      expectedOutcome: "Measurable reach test within 14 days",
+      confidence: clamp(
+        50 +
+          scores.contentHealth * 0.25 +
+          (style ? 10 : 0) +
+          (voice ? 8 : 0) +
+          (platforms.length ? 5 : 0)
+      ),
+      expectedOutcome: "Measurable reach test within 14 days + clearer brand signal",
       priority: 2,
       category: "Content",
       platforms: platforms.slice(0, 3),
       timing: "This week",
       strategicFrame: "Cadence over virality",
       nextActions: [
-        "Lock 4 hooks from catalogue or writing",
+        style
+          ? `Lock 4 hooks that only fit ${style.slice(0, 40)}`
+          : "Lock 4 hooks from catalogue or writing",
         "Film in one session",
-        "Post on the two strongest platforms",
+        platforms.length
+          ? `Post on ${platforms.slice(0, 2).join(" + ")}`
+          : "Post on the two strongest platforms",
       ],
     });
   }
 
-  if (interests.includes("release") || interests.includes("playlist")) {
+  if ((interests.includes("release") || interests.includes("playlist")) && !done.has("release-window")) {
     recs.push({
       id: "release-window",
       title: "Stress-test the next release window",
@@ -206,11 +230,13 @@ export function buildRecommendationsFromBrain(
     });
   }
 
-  if (scores.audienceHealth < 50 || interests.includes("audience")) {
+  if ((scores.audienceHealth < 50 || interests.includes("audience")) && !done.has("owned-audience")) {
     recs.push({
       id: "owned-audience",
       title: "Grow owned audience, not rented reach",
-      summary: "Move attention from algorithmic feeds into a list you control.",
+      summary: dream
+        ? `“${dream.slice(0, 70)}” needs a list, not rented views. Move attention into Fan Gate.`
+        : "Move attention from algorithmic feeds into a list you control.",
       why: "Platform reach can vanish overnight. Owned audience compounds toward the Big Dream.",
       impact: "High",
       difficulty: "Moderate",
@@ -229,7 +255,7 @@ export function buildRecommendationsFromBrain(
     });
   }
 
-  if (platforms.length < 2) {
+  if (platforms.length < 2 && !done.has("connect-platforms")) {
     recs.push({
       id: "connect-platforms",
       title: "Connect the platforms that feed the model",
@@ -238,7 +264,8 @@ export function buildRecommendationsFromBrain(
       impact: "Medium",
       difficulty: "Easy",
       confidence: 90,
-      expectedOutcome: "Personalised scores and tighter opportunity ranking",
+      expectedOutcome:
+        "Personalised scores and tighter opportunity ranking — confidence is high because the gap is observable",
       priority: 4,
       category: "Platform",
       timing: "Today",
