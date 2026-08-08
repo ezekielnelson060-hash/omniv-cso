@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -11,11 +11,23 @@ import {
   listCatalogueReleases,
   syncLocalCatalogueToCloud,
 } from "@/lib/catalogue/db";
-import type { CatalogueRelease, ReleaseStatus, ReleaseType } from "@/types";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import {
+  addCatalogueTrack,
+  listCatalogueTracks,
+  passportToAnalysis,
+} from "@/lib/catalogue/tracks";
+import { analyzeAudioFile } from "@/lib/audio-passport";
+import type {
+  CatalogueRelease,
+  CatalogueTrack,
+  ReleaseStatus,
+  ReleaseType,
+} from "@/types";
+import { Plus, Trash2, Loader2, Upload, Music2 } from "lucide-react";
 
 export function CataloguePanel() {
   const [rows, setRows] = useState<CatalogueRelease[]>([]);
+  const [tracks, setTracks] = useState<CatalogueTrack[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [type, setType] = useState<ReleaseType>("single");
@@ -23,10 +35,16 @@ export function CataloguePanel() {
   const [spotify, setSpotify] = useState("");
   const [genre, setGenre] = useState("");
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState<string | null>(null);
 
   async function refresh() {
-    const list = await listCatalogueReleases();
+    const [list, tr] = await Promise.all([
+      listCatalogueReleases(),
+      listCatalogueTracks(),
+    ]);
     setRows(list);
+    setTracks(tr);
   }
 
   useEffect(() => {
@@ -58,6 +76,38 @@ export function CataloguePanel() {
     }
   }
 
+  async function onAudio(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 40 * 1024 * 1024) {
+      setUploadMsg("Max 40MB per file");
+      return;
+    }
+    setUploading(true);
+    setUploadMsg("Analysing audio…");
+    try {
+      const passport = await analyzeAudioFile(file);
+      const analysis = passport ? passportToAnalysis(passport) : null;
+      await addCatalogueTrack({
+        title: file.name.replace(/\.[^.]+$/, "").slice(0, 120) || "Untitled",
+        durationSec: analysis?.durationSec ?? null,
+        analysis,
+        notes: "Uploaded from Catalogue",
+      });
+      setUploadMsg(
+        passport
+          ? `Saved · ${passport.bpm ? `~${passport.bpm} BPM` : "BPM n/a"} · ${passport.energy}`
+          : "Saved (analysis soft)"
+      );
+      await refresh();
+    } catch {
+      setUploadMsg("Could not analyse — try mp3/wav under 40MB");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   return (
     <div className="space-y-3">
       <div>
@@ -68,9 +118,66 @@ export function CataloguePanel() {
           Catalogue
         </h1>
         <p className="mt-0.5 max-w-xl text-[11px] text-omniv-text-muted">
-          Releases you own. Ziki and audits reference this list.
+          Releases + audio. Uploads feed Ziki, Opportunities, and release
+          decisions — not a dead file dump.
         </p>
       </div>
+
+      <Card className="p-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
+          Upload song for AI
+        </p>
+        <p className="mt-1 text-[11px] text-omniv-text-muted">
+          Omniv analyses BPM, energy, duration on-device, stores the passport,
+          and ranks moves off it. Attach the same file in Ziki for a full listen.
+        </p>
+        <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-omniv-gold/40 bg-omniv-gold/5 px-3 py-4 text-xs text-omniv-gold hover:bg-omniv-gold/10">
+          {uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="h-4 w-4" />
+          )}
+          {uploading ? "Analysing…" : "Choose mp3 / wav / m4a"}
+          <input
+            type="file"
+            className="hidden"
+            accept="audio/*,.mp3,.wav,.m4a,.flac,.aac,.ogg"
+            disabled={uploading}
+            onChange={(e) => void onAudio(e)}
+          />
+        </label>
+        {uploadMsg && (
+          <p className="mt-1.5 text-[10px] text-omniv-text-muted">{uploadMsg}</p>
+        )}
+      </Card>
+
+      {tracks.length > 0 && (
+        <div className="overflow-hidden rounded-lg border border-omniv-border">
+          <p className="border-b border-omniv-border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-omniv-text-muted">
+            Audio in brain ({tracks.length})
+          </p>
+          {tracks.map((t) => (
+            <div
+              key={t.id}
+              className="flex items-center gap-2 border-b border-omniv-border px-2.5 py-2 last:border-0"
+            >
+              <Music2 className="h-3.5 w-3.5 shrink-0 text-omniv-gold" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-medium">{t.title}</p>
+                <p className="text-[10px] text-omniv-text-muted">
+                  {[
+                    t.analysis?.bpm ? `~${t.analysis.bpm} BPM` : null,
+                    t.analysis?.energy,
+                    t.durationSec ? `${Math.round(t.durationSec)}s` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "Passport pending"}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <Card className="p-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
