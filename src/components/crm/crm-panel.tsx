@@ -10,6 +10,7 @@ import { FanGateMetrics } from "@/components/crm/fan-gate-metrics";
 import { RosterSwitcher } from "@/components/crm/roster-switcher";
 import { ContractsPanel } from "@/components/crm/contracts-panel";
 import { AudienceMap } from "@/components/crm/audience-map";
+import { CityHeatMap } from "@/components/crm/city-heat-map";
 import { GatheringsPanel } from "@/components/crm/gatherings-panel";
 import { isPlaceholderStageName } from "@/lib/crm-priority";
 import {
@@ -163,14 +164,20 @@ export function CrmPanel() {
       <RosterSwitcher />
 
       <div className="grid gap-4 lg:grid-cols-2">
+        <CityHeatMap
+          onCreateGathering={(city, ready) => {
+            setGatherCity(city);
+            setGatherReady(ready);
+          }}
+        />
         <AudienceMap
           onCreateGathering={(city, ready) => {
             setGatherCity(city);
             setGatherReady(ready);
           }}
         />
-        <GatheringsPanel seedCity={gatherCity} seedReady={gatherReady} />
       </div>
+      <GatheringsPanel seedCity={gatherCity} seedReady={gatherReady} />
 
       <ContractsPanel />
 
