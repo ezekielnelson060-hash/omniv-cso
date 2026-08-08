@@ -13,9 +13,9 @@ import {
   Check,
   MessageSquare,
   Target,
-  Compass,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrainJourney } from "@/components/artist-brain/brain-journey";
 
 const STAGES: { id: CareerStage; label: string }[] = [
   { id: "emerging", label: "Emerging" },
@@ -150,13 +150,18 @@ export function BrainView() {
     <div className="mx-auto max-w-3xl space-y-6 pb-16">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
+          <p className="font-data text-[10px] uppercase tracking-[0.14em] text-omniv-gold">
+            Strategy
+          </p>
+          <div className="mt-1 flex items-center gap-2">
             <Brain className="h-4 w-4 text-omniv-gold" />
-            <h1 className="text-lg font-semibold tracking-tight">Artist Brain</h1>
+            <h1 className="text-lg font-semibold tracking-tight md:text-xl">
+              Artist Brain
+            </h1>
           </div>
-          <p className="mt-1 max-w-md text-sm text-omniv-text-secondary">
-            The operating picture Ziki and Command Center use. Vague brain,
-            vague moves. Sharp brain, sharp week.
+          <p className="mt-1 max-w-md text-[12px] text-omniv-text-secondary">
+            Operating picture for Ziki and Command Center. Vague brain, vague
+            moves.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -194,12 +199,6 @@ export function BrainView() {
         <p className="mt-3 text-[15px] font-medium leading-relaxed tracking-tight text-omniv-text">
           {dream}
         </p>
-        <p className="mt-3 text-xs leading-relaxed text-omniv-text-muted">
-          Managers hold one picture of the artist&apos;s career and refuse
-          weekly noise that does not serve it. Every opportunity, score, and
-          Ziki plan is measured against this image. Change it only when the
-          career strategy changes.
-        </p>
         <textarea
           className={cn(inputClass, "mt-4 min-h-[88px] resize-y")}
           value={brain.bigDream || ""}
@@ -208,37 +207,7 @@ export function BrainView() {
         />
       </Card>
 
-      <Card className="p-5">
-        <div className="flex items-center gap-2 text-omniv-text">
-          <Compass className="h-4 w-4 text-omniv-gold" />
-          <h2 className="text-sm font-semibold tracking-tight">
-            How Omniv walks you there
-          </h2>
-        </div>
-        <ul className="mt-3 space-y-2 text-xs leading-relaxed text-omniv-text-secondary">
-          <li>
-            <span className="font-medium text-omniv-text">Daily.</span> One
-            priority on Command Center. Execute or lose the week to noise.
-          </li>
-          <li>
-            <span className="font-medium text-omniv-text">Weekly.</span>{" "}
-            Opportunity Feed ranks moves that compound toward the Big Dream,
-            not random industry tips.
-          </li>
-          <li>
-            <span className="font-medium text-omniv-text">Progress.</span>{" "}
-            Analytics is execution against this dream, not vanity charts.
-          </li>
-        </ul>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/dashboard">
-            <Button size="sm">Open Command Center</Button>
-          </Link>
-          <Link href="/opportunities">
-            <Button size="sm" variant="outline">See ranked moves</Button>
-          </Link>
-        </div>
-      </Card>
+      <BrainJourney brain={brain} dream={dream} />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="Stage name">
