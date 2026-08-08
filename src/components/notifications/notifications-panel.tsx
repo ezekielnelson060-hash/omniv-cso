@@ -60,11 +60,16 @@ export function NotificationsPanel() {
         listCatalogueReleases(),
         listCatalogueTracks(),
       ]);
+      const links = profile?.social_links || {};
+      const linkedSurfaces =
+        Object.values(links).filter((u) => (u || "").trim().length > 8).length ||
+        (profile?.platforms || []).length;
       const result = runAgentScan({
         brain,
         releases,
         tracks,
         platforms: profile?.platforms || [],
+        linkedSurfaces,
         completedOppIds: completedIds(),
       });
       upsertProposals(result.proposals);
@@ -109,20 +114,24 @@ export function NotificationsPanel() {
         } else {
           router.push("/ziki");
         }
-      } else if (t === "CREATE_ROOM") {
+      } else if (t === "CREATE_ROOM" || t === "OPEN_CRM") {
         router.push(
           payload.city
             ? `/crm?city=${encodeURIComponent(payload.city)}`
             : "/crm"
         );
+      } else if (t === "OPEN_SETTINGS") {
+        router.push("/settings");
       } else if (t === "OPEN_CATALOGUE") {
         router.push("/catalogue");
       } else if (t === "OPEN_OPPORTUNITIES") {
         router.push("/opportunities");
-      } else if (t === "OPEN_CRM") {
-        router.push("/crm");
       } else if (t === "OPEN_RELEASE") {
         router.push("/release-simulator");
+      } else if (t === "OPEN_DISCOVER") {
+        router.push("/discover");
+      } else if (t === "OPEN_REPORTS") {
+        router.push("/reports");
       } else if (t === "MARK_OPP_DONE" && payload.id) {
         const { markOpportunityDone } = await import(
           "@/lib/opportunity-progress"
@@ -203,8 +212,8 @@ export function NotificationsPanel() {
         <Card className="flex flex-col items-center gap-2 p-10 text-center">
           <Bell className="h-8 w-8 text-omniv-text-muted" />
           <p className="text-sm text-omniv-text-secondary">
-            No pending agent moves. Scan after you upload a track or update
-            Artist Brain.
+            No pending agent moves. Scan after catalogue upload or Settings
+            update.
           </p>
           <Button size="sm" onClick={() => void scan()} className="mt-1">
             Run agent scan
@@ -278,8 +287,8 @@ function ProposalCard({
             {p.title}
           </h3>
           <p className="mt-1 whitespace-pre-line text-[12px] leading-snug text-omniv-text-muted">
-            {p.body.slice(0, 320)}
-            {p.body.length > 320 ? "…" : ""}
+            {p.body.slice(0, 280)}
+            {p.body.length > 280 ? "…" : ""}
           </p>
         </div>
         <button
