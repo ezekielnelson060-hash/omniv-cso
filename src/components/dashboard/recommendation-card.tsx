@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,16 +8,24 @@ import { cn } from "@/lib/utils";
 import type { AIRecommendation } from "@/types";
 import {
   ArrowRight,
+  Check,
   ChevronDown,
   Clock,
-  Target,
+  Compass,
   Layers,
   Link2,
-  Compass,
   ListChecks,
+  RotateCcw,
+  Target,
   type LucideIcon,
 } from "lucide-react";
 import { stashAct } from "@/lib/ziki-memory";
+import {
+  isOpportunityDone,
+  markOpportunityDone,
+  reopenOpportunity,
+} from "@/lib/opportunity-progress";
+import { addTask } from "@/lib/execution-tasks";
 
 export function RecommendationCard({
   recommendation: r,
@@ -30,6 +38,11 @@ export function RecommendationCard({
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(defaultOpen ?? index === 0);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    setDone(isOpportunityDone(r.id));
+  }, [r.id]);
 
   function actOnThis() {
     stashAct({
@@ -40,6 +53,19 @@ export function RecommendationCard({
       category: String(r.category),
     });
     router.push("/ziki");
+  }
+
+  function markDone() {
+    markOpportunityDone(r.id);
+    for (const a of (r.nextActions || []).slice(0, 3)) {
+      addTask(a, "opportunity");
+    }
+    setDone(true);
+  }
+
+  function undoDone() {
+    reopenOpportunity(r.id);
+    setDone(false);
   }
 
   const impactTone =
@@ -53,7 +79,8 @@ export function RecommendationCard({
     <article
       className={cn(
         "overflow-hidden rounded-lg border border-omniv-border bg-omniv-card transition",
-        open && "border-omniv-gold/30 shadow-[0_0_0_1px_rgba(212,175,55,0.08)]"
+        open && "border-omniv-gold/30 shadow-[0_0_0_1px_rgba(212,175,55,0.08)]",
+        done && "opacity-60"
       )}
     >
       <button
@@ -80,8 +107,11 @@ export function RecommendationCard({
             <span className="rounded-full border border-omniv-border px-2 py-0.5 text-[10px] text-omniv-text-muted">
               {r.difficulty}
             </span>
-            <span className="ml-auto text-[11px] tabular-nums text-omniv-gold/90">
-              {r.confidence}% confidence
+            <span
+              className="ml-auto text-[11px] tabular-nums text-omniv-gold/90"
+              title="Confidence = how complete your Artist Brain + platforms are for this call. Not a market guarantee."
+            >
+              {r.confidence}% conf
             </span>
           </div>
           <h3 className="text-sm font-semibold tracking-tight text-omniv-text">
@@ -178,20 +208,49 @@ export function RecommendationCard({
             )}
             <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
               <p className="text-[10px] text-omniv-text-muted">
-                Priority #{r.priority}
+                {done ? "Done · " : ""}Priority #{r.priority}
                 {r.detectedAt ? ` · ${r.detectedAt}` : ""}
               </p>
-              <Button
-                size="sm"
-                className="h-7 gap-1 text-[11px]"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  actOnThis();
-                }}
-              >
-                Execute in Ziki
-                <ArrowRight className="h-3 w-3" />
-              </Button>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {done ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1 text-[11px]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      undoDone();
+                    }}
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    Reopen
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1 text-[11px]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markDone();
+                    }}
+                  >
+                    <Check className="h-3 w-3" />
+                    Mark done
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  className="h-7 gap-1 text-[11px]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    actOnThis();
+                  }}
+                >
+                  Execute in Ziki
+                  <ArrowRight className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
           </div>
         </div>
