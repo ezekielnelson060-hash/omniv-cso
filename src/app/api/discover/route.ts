@@ -92,36 +92,61 @@ export async function GET() {
 
     enriched.sort((a, b) => b.peak_score - a.peak_score);
 
-    const { data: fans } = await svc
-      .from("fans")
-      .select("city, would_attend")
-      .not("city", "is", null)
-      .limit(5000);
-
-    const map = new Map<string, { fans: number; ready: number }>();
-    for (const f of fans || []) {
-      const city = String(f.city || "").trim();
-      if (!city) continue;
-      const cur = map.get(city) || { fans: 0, ready: 0 };
-      cur.fans += 1;
-      if (f.would_attend) cur.ready += 1;
-      map.set(city, cur);
+    let userId: string | null = null;
+    try {
+      const { createClient } = await import("@/lib/supabase/server");
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      userId = user?.id ?? null;
+    } catch {
+      userId = null;
     }
-    const cities = [...map.entries()]
-      .map(([city, v]) => ({ city, ...v }))
-      .sort((a, b) => b.ready - a.ready || b.fans - a.fans)
-      .slice(0, 25);
 
-    const { data: roster } = await svc
-      .from("roster_artists")
-      .select("id, stage_name, slug, genre, created_at")
-      .order("created_at", { ascending: false })
-      .limit(40);
+    let cities: { city: string; fans: number; ready: number }[] = [];
+    let roster: {
+      id: string;
+      stage_name: string;
+      slug: string;
+      genre: string | null;
+    }[] = [];
+
+    if (userId) {
+      const { data: fans } = await svc
+        .from("fans")
+        .select("city, would_attend")
+        .eq("user_id", userId)
+        .not("city", "is", null)
+        .limit(5000);
+
+      const map = new Map<string, { fans: number; ready: number }>();
+      for (const f of fans || []) {
+        const city = String(f.city || "").trim();
+        if (!city) continue;
+        const cur = map.get(city) || { fans: 0, ready: 0 };
+        cur.fans += 1;
+        if (f.would_attend) cur.ready += 1;
+        map.set(city, cur);
+      }
+      cities = [...map.entries()]
+        .map(([city, v]) => ({ city, ...v }))
+        .sort((a, b) => b.ready - a.ready || b.fans - a.fans)
+        .slice(0, 25);
+
+      const { data: rosterRows } = await svc
+        .from("roster_artists")
+        .select("id, stage_name, slug, genre, created_at")
+        .eq("owner_user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(40);
+      roster = rosterRows || [];
+    }
 
     return NextResponse.json({
       audits: enriched,
       cities,
-      roster: roster || [],
+      roster,
     });
   } catch (e) {
     return NextResponse.json(
