@@ -22,7 +22,10 @@ export type OpportunityCategory =
   | "Festival"
   | "Platform"
   | "Market"
-  | "Trend";
+  | "Trend"
+  | "Strategy"
+  | "Growth"
+  | "Brand";
 
 export interface AIRecommendation {
   id: string;
@@ -206,6 +209,18 @@ export interface CatalogueTrack {
   durationSec?: number | null;
   spotifyUrl?: string | null;
   youtubeUrl?: string | null;
+  audioPath?: string | null;
+  analysis?: {
+    bpm?: number | null;
+    bpmConfidence?: number;
+    peakDb?: number;
+    rmsDb?: number;
+    energy?: string;
+    durationSec?: number;
+    analyzedAt?: number;
+  } | null;
+  notes?: string | null;
+  createdAt?: string;
 }
 
 export type AuditSourceType = "spotify" | "youtube" | "unknown";
