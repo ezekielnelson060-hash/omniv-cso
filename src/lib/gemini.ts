@@ -3,16 +3,17 @@
  * Multimodal audio/image/video analysis is Gemini-only.
  *
  * Env:
- *   GROQ_API_KEY       – free fast text (recommended no-cash path)
- *   GROQ_MODEL         – default llama-3.3-70b-versatile
- *   GEMINI_API_KEY     – Gemini (text + audio; free quota limited)
- *   GEMINI_MODEL       – optional pin
- *   ANTHROPIC_API_KEY  – Claude (paid credits)
- *   CLAUDE_MODEL       – preferred Claude model
- *   ZIKI_PROVIDER      – auto | groq | gemini | claude  (default auto)
+ *   GROQ_API_KEY, GROQ_MODEL
+ *   GEMINI_API_KEY, GEMINI_MODEL
+ *   ANTHROPIC_API_KEY, CLAUDE_MODEL
+ *   XAI_API_KEY, XAI_MODEL (default grok-2-latest)
+ *   ZIKI_PROVIDER = auto | xai | groq | gemini | claude
  *
- * No cash: ZIKI_PROVIDER=groq + GROQ_API_KEY from console.groq.com
+ * Grok: ZIKI_PROVIDER=xai + XAI_API_KEY → Redeploy
+ * No cash: ZIKI_PROVIDER=groq + GROQ_API_KEY
  */
+
+import { isXaiConfigured, tryXai as tryXaiCall } from "@/lib/xai";
 
 export function isGeminiConfigured(): boolean {
   return Boolean(process.env.GEMINI_API_KEY?.trim());
@@ -27,7 +28,12 @@ export function isGroqConfigured(): boolean {
 }
 
 export function isZikiModelConfigured(): boolean {
-  return isClaudeConfigured() || isGeminiConfigured() || isGroqConfigured();
+  return (
+    isXaiConfigured() ||
+    isClaudeConfigured() ||
+    isGeminiConfigured() ||
+    isGroqConfigured()
+  );
 }
 
 export type ZikiAttachment = {
@@ -42,7 +48,7 @@ const DEFAULT_SYSTEM = `You are Ziki — the strategist inside Omniv for indepen
 Talk like a sharp manager on WhatsApp: direct, specific, human. No corporate titles. Never say "as your CSO", "as an AI", or "Chief Strategy Officer".
 
 You know this product and you route people to the right place:
-- Audience (/crm): fan list, cities, rooms, tips, gatherings
+- Command Center (/crm): fan list, cities, rooms, tips, gatherings
 - Moves (/opportunities): ranked next actions tied to their Big Dream
 - Catalogue: upload tracks so Omniv can rank real inventory
 - Release: stress-test timing before a drop
@@ -63,11 +69,12 @@ Rules:
 
 Forbidden: generic hustle slogans, invented metrics as fact, empty cheerleading, repeating CSO framing.`;
 
-type Provider = "auto" | "claude" | "gemini" | "groq";
+type Provider = "auto" | "claude" | "gemini" | "groq" | "xai";
 
 function providerMode(): Provider {
   const p = (process.env.ZIKI_PROVIDER || "auto").trim().toLowerCase();
-  if (p === "claude" || p === "gemini" || p === "groq") return p;
+  if (p === "claude" || p === "gemini" || p === "groq" || p === "xai") return p;
+  if (p === "grok") return "xai";
   return "auto";
 }
 
@@ -296,6 +303,19 @@ async function callGemini(
 
 let lastProviderDetail = "";
 
+async function tryXai(
+  system: string,
+  userMessage: string
+): Promise<{ text: string; model: string } | null> {
+  const r = await tryXaiCall(system, userMessage);
+  if (!r) return null;
+  if (!r.text) {
+    if (r.detail) lastProviderDetail = r.detail;
+    return null;
+  }
+  return { text: r.text, model: r.model };
+}
+
 async function tryGroq(
   system: string,
   userMessage: string
@@ -360,7 +380,8 @@ async function tryClaude(
         result.status === 400 &&
         /credit balance|billing|purchase credits|too low/i.test(snippet)
       ) {
-        lastProviderDetail = "Anthropic has no credits. Using Gemini/Groq if configured.";
+        lastProviderDetail =
+          "Anthropic has no credits. Using Gemini/Groq if configured.";
         break;
       }
       if (result.status !== 404 && result.status !== 400) break;
@@ -383,11 +404,22 @@ async function tryGemini(
   let lastBody = "";
   for (const model of GEMINI_CANDIDATES) {
     try {
-      const result = await callGemini(key, model, system, userMessage, attachments);
+      const result = await callGemini(
+        key,
+        model,
+        system,
+        userMessage,
+        attachments
+      );
       if (result.ok) return { text: result.text, model: result.model };
       lastStatus = result.status;
       lastBody = result.body;
-      console.error("Gemini error", model, result.status, result.body.slice(0, 300));
+      console.error(
+        "Gemini error",
+        model,
+        result.status,
+        result.body.slice(0, 300)
+      );
       if (result.status === 404 || result.status === 429) continue;
       break;
     } catch (e) {
@@ -403,7 +435,7 @@ async function tryGemini(
   return null;
 }
 
-export type ZikiSource = "claude" | "gemini" | "groq" | "local";
+export type ZikiSource = "claude" | "gemini" | "groq" | "xai" | "local";
 
 export async function zikiComplete(
   userMessage: string,
@@ -417,23 +449,39 @@ export async function zikiComplete(
 
   if (multimodal) {
     const gemini = await tryGemini(system, userMessage, attachments);
-    if (gemini) return { text: gemini.text, source: "gemini", model: gemini.model };
+    if (gemini)
+      return { text: gemini.text, source: "gemini", model: gemini.model };
     if (!isGeminiConfigured()) {
       return {
-        text: `**Audio analysis needs Gemini**\n\nText chat can use Groq (free). For demos, set **GEMINI_API_KEY** when quota resets.`,
+        text: `**Audio analysis needs Gemini**\n\nText chat can use Groq or xAI. Set **GEMINI_API_KEY** for demos.`,
         source: "local",
       };
     }
     return {
-      text: `**Could not analyse the attachment**\n\nGemini may be rate-limited. Text chat still works with Groq.`,
+      text: `**Could not analyse the attachment**\n\nGemini may be rate-limited. Text chat still works with xAI/Groq.`,
       source: "local",
     };
+  }
+
+  if (mode === "xai") {
+    if (!isXaiConfigured()) {
+      return {
+        text: `**xAI not configured**\n\n1. Key from console.x.ai\n2. Vercel: **XAI_API_KEY**\n3. **XAI_MODEL**=grok-2-latest\n4. **ZIKI_PROVIDER**=xai\n5. Redeploy Production`,
+        source: "local",
+      };
+    }
+    const xai = await tryXai(system, userMessage);
+    if (xai) return { text: xai.text, source: "xai", model: xai.model };
+    const detail = lastProviderDetail
+      ? `\n\nDetail: ${lastProviderDetail.slice(0, 400)}`
+      : "";
+    return { text: `**xAI failed**${detail}`, source: "local" };
   }
 
   if (mode === "groq") {
     if (!isGroqConfigured()) {
       return {
-        text: `**Groq not configured**\n\n1. Free key: console.groq.com\n2. Vercel Production: **GROQ_API_KEY**=gsk_...\n3. **ZIKI_PROVIDER**=groq\n4. Redeploy`,
+        text: `**Groq not configured**\n\n1. Free key: console.groq.com\n2. Vercel: **GROQ_API_KEY**\n3. **ZIKI_PROVIDER**=groq\n4. Redeploy`,
         source: "local",
       };
     }
@@ -443,7 +491,7 @@ export async function zikiComplete(
       ? `\n\nDetail: ${lastProviderDetail.slice(0, 400)}`
       : "";
     return {
-      text: `**Groq rejected the request**${detail}\n\nCheck GROQ_API_KEY and Redeploy Production.`,
+      text: `**Groq rejected the request**${detail}`,
       source: "local",
     };
   }
@@ -451,50 +499,52 @@ export async function zikiComplete(
   if (mode === "gemini") {
     if (!isGeminiConfigured()) {
       return {
-        text: `**Gemini not configured**\n\nSet **GEMINI_API_KEY** or switch to **ZIKI_PROVIDER**=groq for free text.`,
+        text: `**Gemini not configured**\n\nSet **GEMINI_API_KEY** or **ZIKI_PROVIDER**=xai / groq.`,
         source: "local",
       };
     }
     const gemini = await tryGemini(system, userMessage);
-    if (gemini) return { text: gemini.text, source: "gemini", model: gemini.model };
+    if (gemini)
+      return { text: gemini.text, source: "gemini", model: gemini.model };
+    const xai = await tryXai(system, userMessage);
+    if (xai) return { text: xai.text, source: "xai", model: xai.model };
     const groq = await tryGroq(system, userMessage);
     if (groq) return { text: groq.text, source: "groq", model: groq.model };
     const detail = lastProviderDetail
       ? `\n\nDetail: ${lastProviderDetail.slice(0, 400)}`
       : "";
-    if (/429|quota/i.test(lastProviderDetail + detail)) {
-      return {
-        text: `**Gemini quota used (429)**\n\nSet **ZIKI_PROVIDER**=groq + **GROQ_API_KEY** (free at console.groq.com), then Redeploy.`,
-        source: "local",
-      };
-    }
-    return {
-      text: `**Gemini rejected the request**${detail}`,
-      source: "local",
-    };
+    return { text: `**Gemini rejected the request**${detail}`, source: "local" };
   }
 
   if (mode === "auto") {
+    const xai = await tryXai(system, userMessage);
+    if (xai) return { text: xai.text, source: "xai", model: xai.model };
     const groq = await tryGroq(system, userMessage);
     if (groq) return { text: groq.text, source: "groq", model: groq.model };
     const gemini = await tryGemini(system, userMessage);
-    if (gemini) return { text: gemini.text, source: "gemini", model: gemini.model };
+    if (gemini)
+      return { text: gemini.text, source: "gemini", model: gemini.model };
     const claude = await tryClaude(system, userMessage);
-    if (claude) return { text: claude.text, source: "claude", model: claude.model };
+    if (claude)
+      return { text: claude.text, source: "claude", model: claude.model };
   }
 
   if (mode === "claude") {
     const claude = await tryClaude(system, userMessage);
-    if (claude) return { text: claude.text, source: "claude", model: claude.model };
+    if (claude)
+      return { text: claude.text, source: "claude", model: claude.model };
+    const xai = await tryXai(system, userMessage);
+    if (xai) return { text: xai.text, source: "xai", model: xai.model };
     const groq = await tryGroq(system, userMessage);
     if (groq) return { text: groq.text, source: "groq", model: groq.model };
     const gemini = await tryGemini(system, userMessage);
-    if (gemini) return { text: gemini.text, source: "gemini", model: gemini.model };
+    if (gemini)
+      return { text: gemini.text, source: "gemini", model: gemini.model };
   }
 
   if (!isZikiModelConfigured()) {
     return {
-      text: `**Model offline**\n\nNo cash path: **GROQ_API_KEY** from console.groq.com + **ZIKI_PROVIDER**=groq → Redeploy Production.`,
+      text: `**Model offline**\n\nSet **XAI_API_KEY** + **ZIKI_PROVIDER**=xai, or **GROQ_API_KEY** + **ZIKI_PROVIDER**=groq → Redeploy.`,
       source: "local",
     };
   }
@@ -503,7 +553,7 @@ export async function zikiComplete(
     ? `\n\nDetail: ${lastProviderDetail.slice(0, 400)}`
     : "";
   return {
-    text: `**Provider error**${detail}\n\nTry **ZIKI_PROVIDER**=groq + **GROQ_API_KEY** (free), then Redeploy.`,
+    text: `**Provider error**${detail}\n\nTry **ZIKI_PROVIDER**=xai or groq, then Redeploy.`,
     source: "local",
   };
 }
