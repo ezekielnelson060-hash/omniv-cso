@@ -56,7 +56,7 @@ const org: NavItem[] = [
 ];
 
 const bottom: NavItem[] = [
-  { href: "/notifications", label: "Alerts", icon: Bell },
+  { href: "/notifications", label: "Agent", icon: Bell },
   { href: "/help", label: "Help", icon: HelpCircle },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
