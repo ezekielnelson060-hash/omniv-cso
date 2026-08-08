@@ -1,21 +1,14 @@
-import type { ArtistBrain } from "@/types";
-import type { CatalogueRelease, CatalogueTrack } from "@/types";
+import { worldOpportunitiesFromCatalogue } from "@/lib/strategy/world-opportunities";
+import { uid } from "@/lib/utils";
 import type { AgentProposal, AgentScanResult } from "@/lib/agent/types";
-import { worldOpportunitiesFromCatalogue } from "@/lib/strategy/world-signals";
+import type { ArtistBrain, CatalogueRelease, CatalogueTrack } from "@/types";
 
-function uid(prefix: string) {
-  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-}
-
-type FanCity = { city: string; count: number };
-
-/** Sense → Rank → Draft. Core loop is deterministic; LLM can polish later. */
 export function runAgentScan(input: {
   brain: ArtistBrain | null;
-  releases: CatalogueRelease[];
-  tracks: CatalogueTrack[];
+  releases?: CatalogueRelease[];
+  tracks?: CatalogueTrack[];
   platforms?: string[];
-  fanCities?: FanCity[];
+  fanCities?: { city: string; count: number }[];
   completedOppIds?: string[];
 }): AgentScanResult {
   const now = Date.now();
@@ -87,7 +80,7 @@ export function runAgentScan(input: {
     proposals.push({
       id: uid("dream"),
       title: "Name the Big Dream before more tactics",
-      body: "Without a held image, every opportunity is noise. Write one sentence in Artist Brain that a manager would refuse to dilute.",
+      body: "Without a held image, every opportunity is noise. Write one sentence in Settings → Artist Brain that a manager would refuse to dilute.",
       urgency: "now",
       impact: "high",
       source: "brain",
@@ -107,23 +100,26 @@ export function runAgentScan(input: {
     proposals.push({
       id: uid("plat"),
       title: "Connect surfaces so the agent can see the world",
-      body: "Fewer than two platforms linked. Scores and opportunity ranking stay soft until signal exists.",
+      body: "Fewer than two platforms linked. Scores and ranking stay soft until signal exists. Add links in Settings.",
       urgency: "today",
       impact: "medium",
       source: "market",
       action: {
-        type: "OPEN_OPPORTUNITIES",
-        label: "See ranked moves",
-        payload: {},
+        type: "OPEN_ZIKI",
+        label: "Add links in Settings",
+        payload: {
+          q: "Help me decide which two platforms to link first so Omniv can scan real signal.",
+        },
       },
       status: "pending",
       createdAt: now,
     });
   }
 
-  if (input.tracks.length === 0) {
+  const hasTrack = (input.tracks || []).length > 0;
+  if (!hasTrack) {
     proposals.push({
-      id: uid("audio"),
+      id: uid("cat"),
       title: "Upload one track so the agent can work inventory",
       body: "No catalogue audio yet. Upload a cut — Omniv reads BPM/energy and ranks ship plans off real inventory.",
       urgency: "today",
@@ -139,21 +135,15 @@ export function runAgentScan(input: {
     });
   }
 
-  const seen = new Set<string>();
-  const unique = proposals.filter((p) => {
-    const k = p.title.slice(0, 40);
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
+  const unique = proposals
+    .filter(
+      (p, i, arr) => arr.findIndex((x) => x.title === p.title) === i
+    )
+    .slice(0, 8);
 
   const narrative = dream
-    ? `${name}: agent ranked ${unique.length} moves against “${dream.slice(0, 60)}${dream.length > 60 ? "…" : ""}”. Confirm one. Dismiss the rest.`
+    ? `${name}: agent ranked ${unique.length} moves against “${dream.slice(0, 60)}${dream.length > 60 ? "…" : "”"}. Confirm one. Dismiss the rest.`
     : `${name}: agent found ${unique.length} moves. Lock Big Dream so ranking tightens.`;
 
-  return {
-    proposals: unique.slice(0, 8),
-    scannedAt: now,
-    narrative,
-  };
+  return { proposals: unique, scannedAt: now, narrative };
 }
