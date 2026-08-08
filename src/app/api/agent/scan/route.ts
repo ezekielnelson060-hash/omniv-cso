@@ -17,12 +17,41 @@ export async function POST() {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, platforms, interests, artist_brain")
+      .select("full_name, platforms, interests, social_links")
       .eq("id", user.id)
       .maybeSingle();
 
-    const brain = (profile?.artist_brain as ArtistBrain) || null;
+    let brain: ArtistBrain | null = null;
+    try {
+      const { data: brainRow } = await supabase
+        .from("artist_brains")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (brainRow) {
+        brain = {
+          name: (brainRow.name as string) || profile?.full_name || "Artist",
+          stageName: (brainRow.stage_name as string) || undefined,
+          genre: (brainRow.genre as string[]) || [],
+          musicStyle: (brainRow.music_style as string) || undefined,
+          brandVoice: (brainRow.brand_voice as string) || undefined,
+          careerStage: (brainRow.career_stage as string) || undefined,
+          goals: (brainRow.goals as string[]) || [],
+          bigDream: (brainRow.big_dream as string) || undefined,
+          strengths: (brainRow.strengths as string[]) || [],
+          weaknesses: (brainRow.weaknesses as string[]) || [],
+          notes: (brainRow.notes as string) || undefined,
+        } as ArtistBrain;
+      }
+    } catch {
+      /* optional */
+    }
+
     const platforms = (profile?.platforms as string[]) || [];
+    const socialLinks = (profile?.social_links as Record<string, string>) || {};
+    const linkedCount =
+      Object.values(socialLinks).filter((u) => (u || "").trim().length > 8)
+        .length || platforms.length;
 
     let releases: CatalogueRelease[] = [];
     let tracks: CatalogueTrack[] = [];
@@ -104,8 +133,26 @@ export async function POST() {
       releases,
       tracks,
       platforms,
+      linkedSurfaces: linkedCount,
       fanCities,
     });
+
+    // Persist inbox so Agent UI stays in sync after Scan now
+    try {
+      await supabase
+        .from("profiles")
+        .update({
+          agent_inbox: {
+            proposals: result.proposals,
+            scannedAt: result.scannedAt,
+            narrative: result.narrative,
+          },
+          agent_scanned_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+    } catch {
+      /* optional columns */
+    }
 
     return NextResponse.json(result);
   } catch (e) {

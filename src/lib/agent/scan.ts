@@ -9,12 +9,13 @@ function uid(prefix: string) {
 
 type FanCity = { city: string; count: number };
 
-/** Sense → Rank → Draft. Core loop is deterministic; LLM can polish later. */
+/** Sense → Rank → Draft. Deterministic core; LLM can polish later. */
 export function runAgentScan(input: {
   brain: ArtistBrain | null;
   releases: CatalogueRelease[];
   tracks: CatalogueTrack[];
   platforms?: string[];
+  linkedSurfaces?: number;
   fanCities?: FanCity[];
   completedOppIds?: string[];
 }): AgentScanResult {
@@ -54,9 +55,9 @@ export function runAgentScan(input: {
           : "market",
       action: {
         type: "OPEN_ZIKI",
-        label: "Execute in Ziki",
+        label: "Plan in Ziki",
         payload: {
-          q: `Execute this agent move:\n${w.title}\n${w.summary}\nNext: ${(w.nextActions || []).join("; ")}`,
+          q: `My next move is: ${w.title}. ${w.summary} Give me the exact first action today.`,
         },
       },
       status: "pending",
@@ -68,14 +69,14 @@ export function runAgentScan(input: {
   if (topCity && topCity.count >= 3) {
     proposals.push({
       id: uid("room"),
-      title: `Open a room where density is real: ${topCity.city}`,
-      body: `${topCity.count} fans tagged ${topCity.city}. Owned list beats algorithmic hope. Draft a micro-gathering or tip room and invite that city first.`,
+      title: `Open a room in ${topCity.city}`,
+      body: `${topCity.count} fans tagged this city. Invite the list before you spend on ads.`,
       urgency: "this_week",
       impact: "high",
       source: "audience",
       action: {
-        type: "CREATE_ROOM",
-        label: "Open rooms",
+        type: "OPEN_CRM",
+        label: "Open Command Center",
         payload: { city: topCity.city },
       },
       status: "pending",
@@ -86,37 +87,34 @@ export function runAgentScan(input: {
   if (!dream) {
     proposals.push({
       id: uid("dream"),
-      title: "Name the Big Dream before more tactics",
-      body: "Without a held image, every opportunity is noise. Write one sentence in Settings (Artist Brain) that a manager would refuse to dilute.",
+      title: "Write your Big Dream",
+      body: "One sentence in Settings. Without it, ranking is noise.",
       urgency: "now",
       impact: "high",
       source: "brain",
       action: {
-        type: "OPEN_ZIKI",
-        label: "Lock dream with Ziki",
-        payload: {
-          q: "Help me write one clear Big Dream sentence and the single weekly move that serves it.",
-        },
+        type: "OPEN_SETTINGS",
+        label: "Open Settings",
+        payload: { tab: "brain" },
       },
       status: "pending",
       createdAt: now,
     });
   }
 
-  if ((input.platforms || []).length < 2) {
+  const surfaceCount = input.linkedSurfaces ?? (input.platforms || []).length;
+  if (surfaceCount < 2) {
     proposals.push({
       id: uid("plat"),
-      title: "Connect surfaces so the agent can see the world",
-      body: "Fewer than two platforms linked. Scores and ranking stay soft until signal exists. Add links in Settings.",
+      title: "Add at least two profile links",
+      body: "Spotify, TikTok, Instagram, or YouTube. Settings → links.",
       urgency: "today",
       impact: "medium",
       source: "market",
       action: {
-        type: "OPEN_ZIKI",
-        label: "Add links in Settings",
-        payload: {
-          q: "Help me decide which two platforms to link first so Omniv can scan real signal.",
-        },
+        type: "OPEN_SETTINGS",
+        label: "Open Settings",
+        payload: { tab: "links" },
       },
       status: "pending",
       createdAt: now,
@@ -127,14 +125,14 @@ export function runAgentScan(input: {
   if (!hasAudio) {
     proposals.push({
       id: uid("cat"),
-      title: "Upload one track so the agent can work inventory",
-      body: "No catalogue audio yet. Upload a cut — Omniv reads BPM/energy and ranks ship plans off real inventory.",
+      title: "Upload one track",
+      body: "Catalogue needs audio so ranking uses real inventory, not guesses.",
       urgency: "today",
       impact: "high",
       source: "catalogue",
       action: {
         type: "OPEN_CATALOGUE",
-        label: "Upload in Catalogue",
+        label: "Open Catalogue",
         payload: {},
       },
       status: "pending",
@@ -151,8 +149,8 @@ export function runAgentScan(input: {
   });
 
   const narrative = dream
-    ? `${name}: agent ranked ${unique.length} moves against “${dream.slice(0, 60)}${dream.length > 60 ? "…" : ""}”. Confirm one. Dismiss the rest.`
-    : `${name}: agent found ${unique.length} moves. Lock Big Dream so ranking tightens.`;
+    ? `${name}: ${unique.length} moves ranked against “${dream.slice(0, 60)}${dream.length > 60 ? "…" : ""}”. Confirm one.`
+    : `${name}: ${unique.length} setup moves. Lock Big Dream in Settings so ranking tightens.`;
 
   return {
     proposals: unique.slice(0, 8),
