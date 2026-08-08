@@ -6,6 +6,8 @@ import { RecommendationCard } from "@/components/dashboard/recommendation-card";
 import { getArtistBrain, getProfile } from "@/lib/db/profile";
 import { buildRecommendationsFromBrain } from "@/lib/strategy/scores";
 import { completedIds } from "@/lib/opportunity-progress";
+import { listCatalogueReleases } from "@/lib/catalogue/db";
+import { listCatalogueTracks } from "@/lib/catalogue/tracks";
 import type { AIRecommendation } from "@/types";
 import { Loader2 } from "lucide-react";
 
@@ -16,24 +18,40 @@ export default function OpportunitiesPage() {
   const [subtitle, setSubtitle] = useState("");
 
   const reload = useCallback(async () => {
-    const [b, p] = await Promise.all([getArtistBrain(), getProfile()]);
+    const [b, p, releases, tracks] = await Promise.all([
+      getArtistBrain(),
+      getProfile(),
+      listCatalogueReleases(),
+      listCatalogueTracks(),
+    ]);
     const interests = p?.interests || [];
     const platforms = p?.platforms || [];
     const done = completedIds();
-    const all = buildRecommendationsFromBrain(b, platforms, interests, []);
-    const active = buildRecommendationsFromBrain(b, platforms, interests, done);
+    const cat = { releases, tracks };
+    const all = buildRecommendationsFromBrain(b, platforms, interests, [], cat);
+    const active = buildRecommendationsFromBrain(
+      b,
+      platforms,
+      interests,
+      done,
+      cat
+    );
     const doneSet = new Set(done);
     setRecs(active);
     setDoneRecs(all.filter((r) => doneSet.has(r.id)));
     const name = b?.stageName || b?.name || p?.full_name || "you";
     const genre = b?.genre?.filter((g) => g !== "TBD").join(" / ");
     const dream = b?.bigDream?.trim() || b?.goals?.[0] || "";
+    const inv =
+      tracks.length || releases.length
+        ? ` · ${tracks.length} track(s), ${releases.length} release(s)`
+        : "";
     setSubtitle(
       dream
-        ? `Ranked for ${name}${genre ? ` · ${genre}` : ""} against “${dream.slice(0, 60)}${dream.length > 60 ? "…" : ""}”`
+        ? `Ranked for ${name}${genre ? ` · ${genre}` : ""}${inv} against “${dream.slice(0, 50)}${dream.length > 50 ? "…" : ""}”`
         : genre
-          ? `Ranked for ${name} · ${genre}`
-          : "Finish Artist Brain so ranking stops being generic"
+          ? `Ranked for ${name} · ${genre}${inv}`
+          : "Finish Artist Brain + upload a track so ranking stops being generic"
     );
   }, []);
 
@@ -69,8 +87,8 @@ export default function OpportunitiesPage() {
         </h1>
         <p className="mt-0.5 text-[11px] text-omniv-text-muted">{subtitle}</p>
         <p className="mt-1 text-[10px] text-omniv-text-muted">
-          Confidence % = how complete your brain + platforms are for that call —
-          not a market guarantee. Mark done when you execute; ranking updates.
+          Confidence % = brain + platforms + catalogue completeness for that
+          call — not a market guarantee. Mark done when you execute.
         </p>
       </div>
 
@@ -81,7 +99,7 @@ export default function OpportunitiesPage() {
         </div>
       ) : recs.length === 0 && doneRecs.length === 0 ? (
         <p className="text-xs text-omniv-text-muted">
-          Finish onboarding and Artist Brain. We cannot rank an empty profile.
+          Finish onboarding, Artist Brain, or upload a track in Catalogue.
         </p>
       ) : (
         <div className="space-y-2">

@@ -8,6 +8,8 @@ ACTIONABLE CONTENT: When advising posts or campaigns, specify exact structure â€
 PERSONALISATION: Use the Artist Brain (genre, stage, Big Dream, scores). One clear Next Move they can do in 24â€“48 hours.
 
 LIVE KNOWLEDGE: Use live context when present; mark what is inferred vs confirmed.
+
+CATALOGUE: When catalogue tracks are listed, treat them as inventory the artist already owns. Prefer ship plans for those cuts over inventing new songs. If energy is hot/clipping, say so. After they confirm a task is finished, you may end with MARK_OPP_DONE:opportunity-id so the product closes that opportunity.
 `.trim();
 
 export function scrubZikiMarkdown(text: string): string {
