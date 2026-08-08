@@ -9,7 +9,9 @@ export type AgentActionType =
   | "OPEN_OPPORTUNITIES"
   | "OPEN_CRM"
   | "OPEN_RELEASE"
-  | "DRAFT_OUTREACH";
+  | "DRAFT_OUTREACH"
+  | "OPEN_DISCOVER"
+  | "OPEN_REPORTS";
 
 export type AgentProposal = {
   id: string;
@@ -17,7 +19,7 @@ export type AgentProposal = {
   body: string;
   urgency: "now" | "today" | "this_week";
   impact: "high" | "medium" | "low";
-  source: "catalogue" | "audience" | "brain" | "calendar" | "market";
+  source: "catalogue" | "audience" | "brain" | "calendar" | "market" | "webhook";
   action: {
     type: AgentActionType;
     label: string;
