@@ -33,6 +33,12 @@ function brainCompleteness(brain: ArtistBrain): number {
 export type ScoreInputs = {
   platforms?: string[];
   interests?: string[];
+  linkedSurfaces?: number;
+  fanCount?: number;
+  fans7d?: number;
+  trackCount?: number;
+  releaseCount?: number;
+  unreleasedCount?: number;
 };
 
 export function computeScoresFromBrain(
@@ -44,6 +50,15 @@ export function computeScoresFromBrain(
     : platformsOrInputs || {};
   const platforms = inputs.platforms || [];
   const interests = inputs.interests || [];
+  const linkedSurfaces = Math.max(
+    inputs.linkedSurfaces ?? 0,
+    platforms.length
+  );
+  const fanCount = inputs.fanCount ?? 0;
+  const fans7d = inputs.fans7d ?? 0;
+  const trackCount = inputs.trackCount ?? 0;
+  const releaseCount = inputs.releaseCount ?? 0;
+  const unreleasedCount = inputs.unreleasedCount ?? 0;
 
   if (!brain) {
     return {
@@ -61,7 +76,7 @@ export function computeScoresFromBrain(
   }
 
   const completeness = brainCompleteness(brain);
-  const platformCount = platforms.length;
+  const platformCount = Math.max(platforms.length, linkedSurfaces);
   const goalCount = brain.goals.length;
   const hasDream = Boolean(brain.bigDream?.trim() || goalCount > 0);
 
@@ -69,6 +84,12 @@ export function computeScoresFromBrain(
   const platformBoost = Math.min(platformCount * 8, 32);
   const completeBoost = Math.round(completeness * 35);
   const dreamBoost = hasDream ? 8 : 0;
+  const fanBoost = Math.min(
+    28,
+    Math.round(Math.log10(fanCount + 1) * 14) + Math.min(fans7d * 2, 12)
+  );
+  const catalogBoost = Math.min(22, trackCount * 6 + releaseCount * 3);
+  const shipBoost = Math.min(12, unreleasedCount * 4);
 
   const stageBoost =
     (
@@ -82,24 +103,58 @@ export function computeScoresFromBrain(
     )[brain.careerStage] ?? 0;
 
   const contentHealth = clamp(
-    28 + completeBoost * 0.4 + interestBoost + (interests.includes("content") ? 6 : 0)
+    28 +
+      completeBoost * 0.4 +
+      interestBoost +
+      (interests.includes("content") ? 6 : 0) +
+      Math.min(trackCount * 3, 12)
   );
   const audienceHealth = clamp(
-    22 + platformBoost * 0.5 + completeBoost * 0.25 + (interests.includes("audience") ? 5 : 0)
+    18 +
+      platformBoost * 0.35 +
+      completeBoost * 0.2 +
+      fanBoost * 0.55 +
+      (interests.includes("audience") ? 5 : 0)
   );
   const releaseReadiness = clamp(
-    20 +
-      completeBoost * 0.35 +
+    16 +
+      completeBoost * 0.3 +
       stageBoost +
+      catalogBoost * 0.7 +
+      shipBoost +
       (interests.includes("release") || interests.includes("playlist") ? 8 : 0) +
       dreamBoost
   );
-  const growth = clamp(25 + platformBoost * 0.4 + interestBoost + dreamBoost * 0.5);
-  const momentum = clamp(24 + completeBoost * 0.3 + platformBoost * 0.35 + stageBoost);
-  const opportunity = clamp(30 + interestBoost + platformBoost * 0.25 + dreamBoost);
-  const fanGrowth = clamp(audienceHealth * 0.85 + platformBoost * 0.15);
-  const streamingTrend = clamp(releaseReadiness * 0.7 + growth * 0.3);
-  const socialGrowth = clamp(contentHealth * 0.6 + audienceHealth * 0.4);
+  const growth = clamp(
+    22 +
+      platformBoost * 0.35 +
+      interestBoost +
+      dreamBoost * 0.5 +
+      fanBoost * 0.25
+  );
+  const momentum = clamp(
+    20 +
+      completeBoost * 0.25 +
+      platformBoost * 0.3 +
+      stageBoost +
+      fans7d * 2 +
+      Math.min(trackCount * 2, 8)
+  );
+  const opportunity = clamp(
+    28 +
+      interestBoost +
+      platformBoost * 0.2 +
+      dreamBoost +
+      catalogBoost * 0.3 +
+      fanBoost * 0.15
+  );
+  const fanGrowth = clamp(12 + fanBoost + platformBoost * 0.15);
+  const streamingTrend = clamp(
+    releaseReadiness * 0.55 + catalogBoost * 0.25 + growth * 0.2
+  );
+  const socialGrowth = clamp(
+    contentHealth * 0.45 + audienceHealth * 0.35 + platformBoost * 0.2
+  );
   const overall = clamp(
     overallFromParts({
       growth,
@@ -173,7 +228,10 @@ export function buildRecommendationsFromBrain(
   const dreamRec = dreamRecommendation(brain, scores);
   if (dreamRec && !done.has(dreamRec.id)) recs.push(dreamRec);
 
-  if ((interests.includes("content") || interests.length === 0) && !done.has("content-system")) {
+  if (
+    (interests.includes("content") || interests.length === 0) &&
+    !done.has("content-system")
+  ) {
     const styleHint = style
       ? `Sound/style locked as “${style.slice(0, 60)}”.`
       : "Style still soft in Artist Brain — fill Music Style so posts stop sounding generic.";
@@ -197,7 +255,8 @@ export function buildRecommendationsFromBrain(
           (voice ? 8 : 0) +
           (platforms.length ? 5 : 0)
       ),
-      expectedOutcome: "Measurable reach test within 14 days + clearer brand signal",
+      expectedOutcome:
+        "Measurable reach test within 14 days + clearer brand signal",
       priority: 2,
       category: "Content",
       platforms: platforms.slice(0, 3),
@@ -215,7 +274,10 @@ export function buildRecommendationsFromBrain(
     });
   }
 
-  if ((interests.includes("release") || interests.includes("playlist")) && !done.has("release-window")) {
+  if (
+    (interests.includes("release") || interests.includes("playlist")) &&
+    !done.has("release-window")
+  ) {
     recs.push({
       id: "release-window",
       title: "Stress-test the next release window",
@@ -237,7 +299,10 @@ export function buildRecommendationsFromBrain(
     });
   }
 
-  if ((scores.audienceHealth < 50 || interests.includes("audience")) && !done.has("owned-audience")) {
+  if (
+    (scores.audienceHealth < 50 || interests.includes("audience")) &&
+    !done.has("owned-audience")
+  ) {
     recs.push({
       id: "owned-audience",
       title: "Grow owned audience, not rented reach",
@@ -248,7 +313,8 @@ export function buildRecommendationsFromBrain(
       impact: "High",
       difficulty: "Moderate",
       confidence: 78,
-      expectedOutcome: "Weekly list growth and higher conversion on the next drop",
+      expectedOutcome:
+        "Weekly list growth and higher conversion on the next drop",
       priority: 3,
       category: "Audience",
       supportingData: (brain?.goals || []).slice(0, 2).join(" · "),
@@ -266,7 +332,8 @@ export function buildRecommendationsFromBrain(
     recs.push({
       id: "connect-platforms",
       title: "Connect the platforms that feed the model",
-      summary: "Scores and opportunities stay soft until live surfaces are linked.",
+      summary:
+        "Scores and opportunities stay soft until live surfaces are linked.",
       why: "Empty inputs produce empty strategy. Managers need signal, not guesses.",
       impact: "Medium",
       difficulty: "Easy",
@@ -276,7 +343,10 @@ export function buildRecommendationsFromBrain(
       priority: 4,
       category: "Platform",
       timing: "Today",
-      nextActions: ["Open Settings → Integrations", "Connect primary surfaces"],
+      nextActions: [
+        "Open Settings → Integrations",
+        "Connect primary surfaces",
+      ],
     });
   }
 
@@ -284,7 +354,8 @@ export function buildRecommendationsFromBrain(
     brain,
     catalogue?.releases || [],
     catalogue?.tracks || [],
-    completedIds
+    completedIds,
+    platforms
   );
   for (const w of world) {
     if (!recs.some((r) => r.id === w.id)) recs.push(w);
@@ -325,5 +396,5 @@ export function overallNarrative(
   if (scores.contentHealth < 45) {
     return `${name}: content health is the softest lever right now: a 14-day cadence will move scores more than new tools.`;
   }
-  return `${name}: scores update from your profile, Big Dream, and platforms. Sharper data → sharper next moves.`;
+  return `${name}: scores update from your profile, Big Dream, platforms, fans, and catalogue. Sharper data → sharper next moves.`;
 }
