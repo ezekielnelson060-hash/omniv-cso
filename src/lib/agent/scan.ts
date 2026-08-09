@@ -29,7 +29,8 @@ export function runAgentScan(input: {
     input.brain,
     input.releases,
     input.tracks,
-    input.completedOppIds || []
+    input.completedOppIds || [],
+    input.platforms || []
   );
 
   for (const w of world.slice(0, 5)) {
