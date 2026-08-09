@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Command Center retired — Audience is home. */
+/** After onboarding / legacy /dashboard links → Activate research, then user goes to CRM. */
 export default function DashboardRedirect() {
-  redirect("/crm");
+  redirect("/activate");
 }
