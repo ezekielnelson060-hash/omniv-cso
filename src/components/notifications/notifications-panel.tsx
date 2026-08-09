@@ -20,12 +20,15 @@ import { completedIds } from "@/lib/opportunity-progress";
 import { stashAct } from "@/lib/ziki-memory";
 import { Bell, Loader2, Sparkles, Zap, X } from "lucide-react";
 
+type InboxFilter = "all" | "outside" | "internal";
+
 export function NotificationsPanel() {
   const router = useRouter();
   const [items, setItems] = useState<AgentProposal[]>([]);
   const [narrative, setNarrative] = useState("");
   const [scanning, setScanning] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<InboxFilter>("all");
 
   const refresh = useCallback(() => {
     setItems(loadProposals());
@@ -206,8 +209,22 @@ export function NotificationsPanel() {
     }
   }
 
-  const pending = items.filter((p) => p.status === "pending");
+  const pendingAll = items.filter((p) => p.status === "pending");
+  const outsideCount = pendingAll.filter((p) => p.source === "webhook").length;
+  const internalCount = pendingAll.length - outsideCount;
+  const pending = pendingAll.filter((p) => {
+    if (filter === "outside") return p.source === "webhook";
+    if (filter === "internal") return p.source !== "webhook";
+    return true;
+  });
   const done = items.filter((p) => p.status === "done").slice(0, 5);
+
+  const emptyCopy =
+    filter === "outside"
+      ? "No outside signals yet. Partner webhooks (distro, playlist, sync) land here."
+      : filter === "internal"
+        ? "No internal moves pending. Scan after catalogue upload or Settings update."
+        : "No pending agent moves. Scan after catalogue upload or Settings update.";
 
   return (
     <div className="space-y-4">
@@ -225,7 +242,7 @@ export function NotificationsPanel() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="gold">{pending.length} pending</Badge>
+          <Badge variant="gold">{pendingAll.length} pending</Badge>
           <Button
             size="sm"
             variant="outline"
@@ -243,7 +260,32 @@ export function NotificationsPanel() {
         </div>
       </div>
 
-      {narrative && (
+      <div className="flex flex-wrap gap-1.5">
+        {(
+          [
+            { id: "all" as const, label: "All", n: pendingAll.length },
+            { id: "outside" as const, label: "Outside", n: outsideCount },
+            { id: "internal" as const, label: "Internal", n: internalCount },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setFilter(tab.id)}
+            className={cn(
+              "rounded-full border px-2.5 py-1 text-[11px] font-medium transition",
+              filter === tab.id
+                ? "border-omniv-gold/50 bg-omniv-gold/15 text-omniv-gold"
+                : "border-omniv-border text-omniv-text-muted hover:border-omniv-gold/30 hover:text-omniv-text"
+            )}
+          >
+            {tab.label}
+            <span className="ml-1 opacity-70">{tab.n}</span>
+          </button>
+        ))}
+      </div>
+
+      {narrative && filter !== "outside" && (
         <Card className="border-omniv-gold/20 bg-omniv-gold/5 p-3">
           <p className="text-[12px] leading-relaxed text-omniv-text-secondary">
             {narrative}
@@ -266,13 +308,12 @@ export function NotificationsPanel() {
       {pending.length === 0 && !scanning && (
         <Card className="flex flex-col items-center gap-2 p-10 text-center">
           <Bell className="h-8 w-8 text-omniv-text-muted" />
-          <p className="text-sm text-omniv-text-secondary">
-            No pending agent moves. Scan after catalogue upload or Settings
-            update.
-          </p>
-          <Button size="sm" onClick={() => void scan()} className="mt-1">
-            Run agent scan
-          </Button>
+          <p className="text-sm text-omniv-text-secondary">{emptyCopy}</p>
+          {filter !== "outside" && (
+            <Button size="sm" onClick={() => void scan()} className="mt-1">
+              Run agent scan
+            </Button>
+          )}
         </Card>
       )}
 
