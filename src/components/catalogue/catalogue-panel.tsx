@@ -60,6 +60,7 @@ export function CataloguePanel() {
     if (!title.trim()) return;
     setBusy(true);
     try {
+      const hasSpotify = Boolean((spotify || "").trim());
       await createCatalogueRelease({
         title,
         releaseType: type,
@@ -67,6 +68,23 @@ export function CataloguePanel() {
         spotifyUrl: spotify || undefined,
         primaryGenre: genre || undefined,
       });
+      try {
+        const { track } = await import("@/lib/analytics");
+        track("catalogue_release_add", {
+          release_type: type,
+          status,
+          has_spotify: hasSpotify,
+        });
+      } catch {
+        /* soft */
+      }
+      if (hasSpotify) {
+        try {
+          void fetch("/api/platform-metrics/refresh", { method: "POST" });
+        } catch {
+          /* soft — cron will catch */
+        }
+      }
       setTitle("");
       setSpotify("");
       setGenre("");
@@ -89,12 +107,24 @@ export function CataloguePanel() {
     try {
       const passport = await analyzeAudioFile(file);
       const analysis = passport ? passportToAnalysis(passport) : null;
+      const title =
+        file.name.replace(/\.[^.]+$/, "").slice(0, 120) || "Untitled";
       await addCatalogueTrack({
-        title: file.name.replace(/\.[^.]+$/, "").slice(0, 120) || "Untitled",
+        title,
         durationSec: analysis?.durationSec ?? null,
         analysis,
         notes: "Uploaded from Catalogue",
       });
+      try {
+        const { track } = await import("@/lib/analytics");
+        track("catalogue_upload", {
+          has_passport: Boolean(passport),
+          bpm: passport?.bpm ?? null,
+          energy: passport?.energy ?? null,
+        });
+      } catch {
+        /* soft */
+      }
       setUploadMsg(
         passport
           ? `Saved · ${passport.bpm ? `~${passport.bpm} BPM` : "BPM n/a"} · ${passport.energy}`
