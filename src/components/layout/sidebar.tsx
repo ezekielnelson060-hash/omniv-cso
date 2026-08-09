@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import {
   BarChart3,
   Sparkles,
+  Radio,
   Rocket,
   Film,
   MessageSquare,
@@ -38,6 +39,7 @@ const primary: NavItem[] = [
   { href: "/crm", label: "Command Center", icon: Users },
   { href: "/ziki", label: "Ziki", icon: MessageSquare },
   { href: "/opportunities", label: "Moves", icon: Sparkles },
+  { href: "/activate", label: "Activate", icon: Radio },
   { href: "/catalogue", label: "Catalogue", icon: Library },
 ];
 
