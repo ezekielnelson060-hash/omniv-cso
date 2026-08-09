@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
+import { AgentLiveSignals } from "@/components/notifications/agent-toast";
 import { cn } from "@/lib/utils";
 
 export function AppShell({
@@ -29,6 +30,7 @@ export function AppShell({
           <div className="mx-auto max-w-6xl">{children}</div>
         )}
       </main>
+      <AgentLiveSignals />
     </div>
   );
 }
