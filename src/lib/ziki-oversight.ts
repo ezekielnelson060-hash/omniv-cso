@@ -165,12 +165,25 @@ export async function buildOperatingBrief(
     const ranSim = names.includes("release_simulate");
     const touchedFans = names.some((n) => n.includes("fan"));
     const checkout = names.some((n) => n.startsWith("checkout"));
+    const uploads = names.filter((n) => n === "catalogue_upload").length;
+    const releaseAdds = names.filter(
+      (n) => n === "catalogue_release_add"
+    ).length;
+    const oppDones = names.filter((n) => n === "opp_done").length;
+    const agentConfirms = names.filter((n) => n === "agent_confirm").length;
+    const dspRefresh = names.includes("dsp_metrics_refresh");
 
     const behaviour: string[] = [];
     if (usedZiki) behaviour.push(`Opened Ziki ${usedZiki}× recently`);
     if (ranSim) behaviour.push("Ran release simulator");
     if (touchedFans) behaviour.push("Worked fan gate / capture");
     if (checkout) behaviour.push("Touched checkout");
+    if (uploads) behaviour.push(`Uploaded ${uploads} track(s) for AI`);
+    if (releaseAdds) behaviour.push(`Added ${releaseAdds} release(s)`);
+    if (oppDones) behaviour.push(`Marked ${oppDones} opportunity(ies) done`);
+    if (agentConfirms)
+      behaviour.push(`Confirmed ${agentConfirms} Agent move(s)`);
+    if (dspRefresh) behaviour.push("Refreshed DSP popularity snapshots");
     if (pending.length)
       behaviour.push(`${pending.length} Agent proposal(s) waiting confirm`);
     if (trackCount && !releaseCount)
