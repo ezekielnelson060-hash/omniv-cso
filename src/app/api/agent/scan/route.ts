@@ -137,13 +137,34 @@ export async function POST() {
       fanCities,
     });
 
-    // Persist inbox so Agent UI stays in sync after Scan now
     try {
+      const { data: prev } = await supabase
+        .from("profiles")
+        .select("agent_inbox")
+        .eq("id", user.id)
+        .maybeSingle();
+      const prevInbox = (prev?.agent_inbox || {}) as {
+        proposals?: { id: string; status?: string; createdAt?: number }[];
+      };
+      const livePending = (prevInbox.proposals || []).filter(
+        (x) =>
+          x.status === "pending" &&
+          typeof x.id === "string" &&
+          (x.id.startsWith("room-") || x.id.startsWith("webhook-"))
+      );
+      const byId = new Map<string, (typeof result.proposals)[0]>();
+      for (const x of result.proposals) byId.set(x.id, x);
+      for (const x of livePending) {
+        if (!byId.has(x.id)) byId.set(x.id, x as (typeof result.proposals)[0]);
+      }
+      const merged = Array.from(byId.values()).sort(
+        (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+      );
       await supabase
         .from("profiles")
         .update({
           agent_inbox: {
-            proposals: result.proposals,
+            proposals: merged.slice(0, 40),
             scannedAt: result.scannedAt,
             narrative: result.narrative,
           },
