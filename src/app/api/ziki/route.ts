@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { zikiComplete, type ZikiAttachment } from "@/lib/gemini";
-import { ZIKI_MANAGER_RULES, scrubZikiMarkdown } from "@/lib/ziki-voice";
+import { ZIKI_MANAGER_RULES, scrubZikiMarkdown, parseZikiActions } from "@/lib/ziki-voice";
 import { trackServer } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/server";
 import { checkAndIncrementZikiUsage } from "@/lib/ziki-usage";
@@ -161,9 +161,12 @@ export async function POST(req: Request) {
       system,
       attachments.length ? attachments : undefined
     );
+    const rawText = result.text || "";
+    const actions = parseZikiActions(rawText);
     return NextResponse.json({
       ...result,
-      text: scrubZikiMarkdown(result.text || ""),
+      text: scrubZikiMarkdown(rawText),
+      actions,
       usage: usageMeta,
       plan,
       multimodal: attachments.length > 0,
