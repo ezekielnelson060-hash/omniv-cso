@@ -73,13 +73,29 @@ export async function POST() {
       label: "reading Artist Brain…",
       status: "active",
     });
-    const { data: brain } = await sb
-      .from("artist_brains")
-      .select(
-        "name, stage_name, genre, music_style, brand_voice, career_stage, big_dream, goals, strengths"
-      )
-      .eq("user_id", user.id)
-      .maybeSingle();
+    // big_dream may be missing until 015_big_dream.sql is applied
+    let brain: Record<string, unknown> | null = null;
+    {
+      const full = await sb
+        .from("artist_brains")
+        .select(
+          "name, stage_name, genre, music_style, brand_voice, career_stage, big_dream, goals, strengths"
+        )
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (full.error) {
+        const soft = await sb
+          .from("artist_brains")
+          .select(
+            "name, stage_name, genre, music_style, brand_voice, career_stage, goals, strengths"
+          )
+          .eq("user_id", user.id)
+          .maybeSingle();
+        brain = (soft.data as Record<string, unknown>) || null;
+      } else {
+        brain = (full.data as Record<string, unknown>) || null;
+      }
+    }
 
     const genres = (brain?.genre as string[]) || [];
     const dream = (brain?.big_dream as string) || "";
@@ -89,7 +105,7 @@ export async function POST() {
       label: "reading Artist Brain…",
       status: brain ? "done" : "warn",
       detail: brain
-        ? `${brain.stage_name || brain.name || "Artist"} · ${brain.career_stage || "stage n/a"}`
+        ? `${(brain.stage_name as string) || (brain.name as string) || "Artist"} · ${(brain.career_stage as string) || "stage n/a"}`
         : "Brain empty — fill Artist Brain next",
     };
     if (genres.length) findings.push(`Genre: ${genres.join(", ")}`);
