@@ -167,6 +167,7 @@ export function NotificationsPanel() {
       }
 
       markProposal(p.id, "done");
+      void persistStatus(p.id, "done");
       refresh();
     } finally {
       setBusyId(null);
@@ -175,7 +176,24 @@ export function NotificationsPanel() {
 
   function dismiss(id: string) {
     markProposal(id, "dismissed");
+    void persistStatus(id, "dismissed");
     refresh();
+  }
+
+  /** Keep server agent_inbox in sync so confirms survive localStorage clears. */
+  async function persistStatus(
+    id: string,
+    status: "done" | "dismissed" | "pending"
+  ) {
+    try {
+      await fetch("/api/agent/inbox", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
+    } catch {
+      /* optimistic local already applied */
+    }
   }
 
   const pending = items.filter((p) => p.status === "pending");
@@ -303,8 +321,14 @@ function ProposalCard({
             >
               {p.urgency}
             </span>
-            <Badge variant="outline" className="text-[9px]">
-              {p.source}
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[9px]",
+                p.source === "webhook" && "border-omniv-gold/40 text-omniv-gold"
+              )}
+            >
+              {p.source === "webhook" ? "outside" : p.source}
             </Badge>
             <Badge variant="outline" className="text-[9px]">
               {p.impact} impact
