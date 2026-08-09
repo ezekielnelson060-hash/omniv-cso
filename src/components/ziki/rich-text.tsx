@@ -6,7 +6,9 @@ export function RichText({ text, dark }: { text: string; dark?: boolean }) {
   const cleaned = text
     .replace(/\r\n/g, "\n")
     .replace(/^#{1,6}\s+/gm, "")
-    .replace(/\n#{1,6}\s+/g, "\n");
+    .replace(/\n#{1,6}\s+/g, "\n")
+    .replace(/\n?OMNIV_ACTIONS:\s*\[[\s\S]*?\]\s*/m, "\n")
+    .replace(/\n?MARK_OPP_DONE:[a-zA-Z0-9_-]+\s*/g, "\n");
   const lines = cleaned.split("\n");
   return (
     <div className="space-y-1.5">
