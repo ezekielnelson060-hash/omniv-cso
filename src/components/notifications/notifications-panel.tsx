@@ -168,6 +168,16 @@ export function NotificationsPanel() {
 
       markProposal(p.id, "done");
       void persistStatus(p.id, "done");
+      try {
+        const { track } = await import("@/lib/analytics");
+        track("agent_confirm", {
+          action: p.action.type,
+          source: p.source,
+          proposal_id: p.id,
+        });
+      } catch {
+        /* soft */
+      }
       refresh();
     } finally {
       setBusyId(null);
