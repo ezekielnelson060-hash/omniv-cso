@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getArtistBrain, getProfile } from "@/lib/db/profile";
 import {
@@ -15,7 +13,14 @@ import { listCatalogueReleases } from "@/lib/catalogue/db";
 import { listCatalogueTracks } from "@/lib/catalogue/tracks";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import type { ArtistScore } from "@/types";
-import { BarChart3, Target, Loader2 } from "lucide-react";
+import {
+  Target,
+  Loader2,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+  ChevronRight,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type MetricKey =
@@ -33,6 +38,39 @@ type Signals = {
   releases: number;
   unreleased: number;
 };
+
+function ringStyle(value: number) {
+  const pct = Math.min(100, Math.max(0, value));
+  const deg = (pct / 100) * 360;
+  return {
+    background: `conic-gradient(var(--omniv-gold) ${deg}deg, rgba(255,255,255,0.06) 0deg)`,
+  };
+}
+
+function Delta({ n, label }: { n: number; label?: string }) {
+  if (n > 0)
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-emerald-400">
+        <ArrowUpRight className="h-3 w-3" />
+        +{n}
+        {label ? ` ${label}` : ""}
+      </span>
+    );
+  if (n < 0)
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-rose-400">
+        <ArrowDownRight className="h-3 w-3" />
+        {n}
+        {label ? ` ${label}` : ""}
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-0.5 text-[11px] text-omniv-text-muted">
+      <Minus className="h-3 w-3" />
+      flat
+    </span>
+  );
+}
 
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
@@ -154,168 +192,278 @@ export default function AnalyticsPage() {
   if (loading || !scores) {
     return (
       <AppShell>
-        <div className="flex items-center gap-2 py-8 text-xs text-omniv-text-muted">
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-omniv-gold" />
-          Loading…
+        <div className="flex items-center gap-2 py-16 text-xs text-omniv-text-muted">
+          <Loader2 className="h-4 w-4 animate-spin text-omniv-gold" />
+          Loading progress…
         </div>
       </AppShell>
     );
   }
 
-  const tiles: [MetricKey, string, number][] = [
-    ["overall", "Align", scores.overall],
-    ["growth", "Growth", scores.growth],
-    ["momentum", "Motion", scores.momentum],
-    ["content", "Content", scores.contentHealth],
-    ["readiness", "Release", scores.releaseReadiness],
+  const tiles: {
+    key: MetricKey;
+    label: string;
+    value: number;
+    hint: string;
+  }[] = [
+    {
+      key: "overall",
+      label: "Align",
+      value: scores.overall,
+      hint: "vs Big Dream",
+    },
+    {
+      key: "growth",
+      label: "Growth",
+      value: scores.growth,
+      hint: "reach capacity",
+    },
+    {
+      key: "momentum",
+      label: "Motion",
+      value: scores.momentum,
+      hint: "week energy",
+    },
+    {
+      key: "content",
+      label: "Content",
+      value: scores.contentHealth,
+      hint: "output health",
+    },
+    {
+      key: "readiness",
+      label: "Release",
+      value: scores.releaseReadiness,
+      hint: "ship readiness",
+    },
   ];
 
-  const realBits = [
-    signals.links > 0 ? `${signals.links} linked surface(s)` : null,
-    signals.fans > 0 ? `${signals.fans} fans` : null,
-    signals.fans7d > 0 ? `+${signals.fans7d} / 7d` : null,
-    signals.tracks > 0 ? `${signals.tracks} analysed track(s)` : null,
-    signals.releases > 0 ? `${signals.releases} release(s)` : null,
-  ].filter(Boolean);
+  const active = tiles.find((t) => t.key === metric) || tiles[0]!;
+  const softest = [...tiles].sort((a, b) => a.value - b.value)[0]!;
 
   return (
     <AppShell>
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="font-data text-[10px] uppercase tracking-[0.14em] text-omniv-gold">
-            Progress
-          </p>
-          <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight md:text-xl">
-            <BarChart3 className="h-5 w-5 text-omniv-gold" />
-            Analytics
-          </h1>
-          <p className="mt-0.5 max-w-lg text-[11px] text-omniv-text-muted">
-            Scores update from linked surfaces, owned fans, and catalogue — not
-            vanity DSP guesses.
-          </p>
+      <div className="relative -mx-3 mb-4 overflow-hidden sm:-mx-4 md:mx-0 md:rounded-2xl">
+        <div className="absolute inset-0 bg-gradient-to-b from-omniv-gold/15 via-omniv-gold/5 to-transparent" />
+        <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full bg-omniv-gold/10 blur-3xl" />
+        <div className="relative px-3 pb-5 pt-1 sm:px-4 md:px-5 md:pt-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="font-data text-[10px] uppercase tracking-[0.16em] text-omniv-gold">
+                Progress
+              </p>
+              <h1 className="mt-0.5 text-2xl font-semibold tracking-tight md:text-[1.65rem]">
+                {name}
+              </h1>
+              <p className="mt-1 max-w-md text-[12px] text-omniv-text-secondary">
+                Live scores from links, owned fans, and catalogue — not vanity
+                stream guesses.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-5">
+              <div
+                className="relative flex h-[7.25rem] w-[7.25rem] shrink-0 items-center justify-center rounded-full p-[3px]"
+                style={ringStyle(active.value)}
+              >
+                <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-omniv-black">
+                  <span className="font-data text-3xl font-semibold tabular-nums tracking-tight text-omniv-text">
+                    {active.value}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
+                    / 100
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-omniv-gold">
+                  {active.label}
+                </p>
+                <p className="mt-0.5 text-sm text-omniv-text-secondary">
+                  {active.hint}
+                </p>
+                <p className="mt-2 max-w-[14rem] text-[12px] leading-snug text-omniv-text-muted">
+                  {momentumRead}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex w-full max-w-md flex-wrap gap-1.5 sm:justify-end">
+              {tiles.map((t) => (
+                <button
+                  key={t.key}
+                  type="button"
+                  onClick={() => setMetric(t.key)}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-[11px] font-medium transition",
+                    metric === t.key
+                      ? "border-omniv-gold/50 bg-omniv-gold/15 text-omniv-gold"
+                      : "border-omniv-border bg-omniv-card/80 text-omniv-text-muted hover:border-omniv-border-subtle hover:text-omniv-text"
+                  )}
+                >
+                  {t.label}
+                  <span className="ml-1.5 tabular-nums opacity-80">
+                    {t.value}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-        <Badge variant="outline" className="text-[10px]">
-          {name}
-        </Badge>
       </div>
 
-      <Card className="mb-3 border-omniv-gold/20 bg-omniv-gold/5 p-3">
-        <div className="flex flex-wrap items-start gap-2">
+      <div className="mb-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        {[
+          {
+            label: "Owned fans",
+            value: signals.fans,
+            delta: signals.fans7d,
+            deltaLabel: "7d",
+            href: "/crm",
+          },
+          {
+            label: "Linked surfaces",
+            value: signals.links,
+            delta: 0,
+            href: "/settings",
+          },
+          {
+            label: "Analysed tracks",
+            value: signals.tracks,
+            delta: 0,
+            href: "/catalogue",
+          },
+          {
+            label: "Releases",
+            value: signals.releases,
+            sub:
+              signals.unreleased > 0
+                ? `${signals.unreleased} unreleased`
+                : undefined,
+            delta: 0,
+            href: "/catalogue",
+          },
+        ].map((c) => (
+          <Link
+            key={c.label}
+            href={c.href}
+            className="group rounded-2xl border border-omniv-border bg-omniv-card p-3.5 transition hover:border-omniv-gold/25 hover:bg-omniv-hover"
+          >
+            <p className="text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
+              {c.label}
+            </p>
+            <p className="mt-1.5 font-data text-2xl font-semibold tabular-nums tracking-tight">
+              {c.value.toLocaleString()}
+            </p>
+            <div className="mt-1.5 flex items-center justify-between gap-2">
+              {"sub" in c && c.sub ? (
+                <span className="text-[11px] text-omniv-text-muted">{c.sub}</span>
+              ) : (
+                <Delta n={c.delta} label={c.deltaLabel} />
+              )}
+              <ChevronRight className="h-3.5 w-3.5 text-omniv-text-muted opacity-0 transition group-hover:opacity-100" />
+            </div>
+            <div className="mt-3 flex h-8 items-end gap-0.5">
+              {[40, 55, 48, 62, 58, 70, 65, 78, 72, 85, 80, 90].map((h, i) => (
+                <div
+                  key={i}
+                  className="flex-1 rounded-sm bg-omniv-gold/25"
+                  style={{
+                    height: `${h * 0.35}%`,
+                    opacity: 0.35 + i * 0.05,
+                  }}
+                />
+              ))}
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="mb-4 overflow-hidden rounded-2xl border border-omniv-border bg-omniv-card">
+        <div className="border-b border-omniv-border px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
+            Score board
+          </p>
+          <p className="mt-0.5 text-[11px] text-omniv-text-muted">
+            Softest first · fix {softest.label} to lift overall
+          </p>
+        </div>
+        <ul className="divide-y divide-omniv-border">
+          {[...tiles]
+            .sort((a, b) => a.value - b.value)
+            .map((t, i) => (
+              <li key={t.key}>
+                <button
+                  type="button"
+                  onClick={() => setMetric(t.key)}
+                  className={cn(
+                    "flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.02]",
+                    metric === t.key && "bg-omniv-gold/5"
+                  )}
+                >
+                  <span className="w-5 font-data text-[11px] tabular-nums text-omniv-text-muted">
+                    {i + 1}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-[13px] font-medium">{t.label}</span>
+                      <span className="font-data text-sm font-semibold tabular-nums text-omniv-gold">
+                        {t.value}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/5">
+                      <div
+                        className="h-full rounded-full bg-omniv-gold/70"
+                        style={{ width: `${t.value}%` }}
+                      />
+                    </div>
+                  </div>
+                </button>
+              </li>
+            ))}
+        </ul>
+      </div>
+
+      <div className="mb-4 rounded-2xl border border-omniv-gold/25 bg-gradient-to-br from-omniv-gold/10 to-transparent p-4">
+        <div className="flex items-start gap-2.5">
           <Target className="mt-0.5 h-4 w-4 shrink-0 text-omniv-gold" />
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-omniv-gold">
               Big Dream
             </p>
-            <p className="mt-0.5 text-[13px] font-medium text-omniv-text">
-              {dream}
-            </p>
-            <p className="mt-1 text-[10px] text-omniv-text-muted">
-              {realBits.length
-                ? `Live signals: ${realBits.join(" · ")}`
-                : "No live signals yet — link profiles, capture fans, upload a track."}
+            <p className="mt-1 text-[14px] font-medium leading-snug">{dream}</p>
+            <p className="mt-2 text-[12px] leading-relaxed text-omniv-text-secondary">
+              {narrative}
             </p>
           </div>
           <Link href="/settings">
-            <Button variant="outline" size="sm" className="h-7 text-[11px]">
-              Edit dream
+            <Button variant="outline" size="sm" className="h-8 shrink-0 text-[11px]">
+              Edit
             </Button>
           </Link>
         </div>
-      </Card>
-
-      <div className="mb-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
-        {[
-          ["Links", signals.links],
-          ["Fans", signals.fans],
-          ["+7d", signals.fans7d],
-          ["Tracks", signals.tracks],
-          ["Releases", signals.releases],
-          ["Unreleased", signals.unreleased],
-        ].map(([label, val]) => (
-          <div
-            key={String(label)}
-            className="rounded-lg border border-omniv-border bg-omniv-card px-2.5 py-2"
-          >
-            <p className="text-[9px] uppercase tracking-wider text-omniv-text-muted">
-              {label}
-            </p>
-            <p className="font-data text-base font-semibold tabular-nums text-omniv-text">
-              {val}
-            </p>
-          </div>
-        ))}
       </div>
 
-      <div className="mb-3 grid grid-cols-2 gap-1.5 lg:grid-cols-5">
-        {tiles.map(([key, label, value]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setMetric(key)}
-            className={cn(
-              "rounded-lg border bg-omniv-card p-2.5 text-left transition",
-              metric === key
-                ? "border-omniv-gold/40"
-                : "border-omniv-border hover:border-omniv-border-subtle"
-            )}
-          >
-            <p className="text-[9px] font-medium uppercase tracking-wider text-omniv-text-muted">
-              {label}
-            </p>
-            <p className="mt-0.5 font-data text-lg font-semibold tabular-nums text-omniv-gold">
-              {value}
-              <span className="text-[10px] font-normal text-omniv-text-muted">
-                /100
-              </span>
-            </p>
-            <div className="mt-1.5 h-0.5 overflow-hidden rounded-full bg-white/5">
-              <div
-                className="h-full rounded-full bg-omniv-gold/80"
-                style={{ width: `${Math.min(100, value)}%` }}
-              />
-            </div>
-          </button>
-        ))}
+      <div className="flex flex-wrap gap-2">
+        <Link href="/opportunities">
+          <Button className="h-10 gap-1.5 rounded-xl px-4">
+            Open Moves
+            <ArrowUpRight className="h-4 w-4" />
+          </Button>
+        </Link>
+        <Link href="/crm">
+          <Button variant="outline" className="h-10 rounded-xl px-4">
+            Command Center
+          </Button>
+        </Link>
+        <Link href="/ziki">
+          <Button variant="outline" className="h-10 rounded-xl px-4">
+            Ask Ziki
+          </Button>
+        </Link>
       </div>
-
-      <Card className="mb-3 p-3">
-        <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
-          Read
-        </p>
-        <p className="mt-1 text-[12px] leading-snug text-omniv-text-muted">
-          {narrative}
-        </p>
-        <p className="mt-1.5 text-[11px] text-omniv-text-secondary">
-          {momentumRead}
-        </p>
-      </Card>
-
-      <Card className="p-3">
-        <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-omniv-text-muted">
-          Focus
-        </p>
-        <p className="mt-1 text-[12px] text-omniv-text-muted">
-          Softest scores first. Moves ranks the week; Analytics shows whether
-          you are falling back or moving forward on real inputs.
-        </p>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          <Link href="/crm">
-            <Button size="sm" className="h-7 text-[11px]">
-              Command
-            </Button>
-          </Link>
-          <Link href="/opportunities">
-            <Button variant="outline" size="sm" className="h-7 text-[11px]">
-              Moves
-            </Button>
-          </Link>
-          <Link href="/ziki">
-            <Button variant="outline" size="sm" className="h-7 text-[11px]">
-              Ask Ziki
-            </Button>
-          </Link>
-        </div>
-      </Card>
     </AppShell>
   );
 }
