@@ -111,13 +111,27 @@ export function AgentLiveSignals() {
           <p className="text-[13px] font-medium leading-snug text-omniv-text">
             {toast}
           </p>
-          <Link
-            href="/notifications"
-            className="mt-1 inline-block text-[11px] text-omniv-gold hover:underline"
-            onClick={() => setToast(null)}
-          >
-            Open inbox →
-          </Link>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <Link
+              href="/notifications"
+              className="text-[11px] text-omniv-gold hover:underline"
+              onClick={() => setToast(null)}
+            >
+              Open inbox →
+            </Link>
+            {typeof Notification !== "undefined" &&
+              Notification.permission === "default" && (
+                <button
+                  type="button"
+                  className="text-[11px] text-omniv-text-muted hover:text-omniv-gold"
+                  onClick={() => {
+                    void Notification.requestPermission();
+                  }}
+                >
+                  Enable alerts
+                </button>
+              )}
+          </div>
         </div>
         <button
           type="button"
