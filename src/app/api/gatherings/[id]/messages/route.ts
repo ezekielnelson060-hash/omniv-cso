@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { pushAgentProposal } from "@/lib/agent/push-proposal";
+import type { AgentProposal } from "@/lib/agent/types";
 
 function admin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -53,7 +55,7 @@ export async function POST(
 
   const { data: g } = await sb
     .from("gatherings")
-    .select("id, status")
+    .select("id, status, title, city, user_id")
     .eq("id", id)
     .maybeSingle();
   if (!g || g.status === "cancelled") {
@@ -74,5 +76,38 @@ export async function POST(
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // One Agent card for join or tip only — never for chat lines
+  if ((kind === "join" || kind === "tip") && g.user_id) {
+    try {
+      const now = Date.now();
+      const isTip = kind === "tip";
+      const proposal: AgentProposal = {
+        id: isTip
+          ? `room-tip-${id}-${now}`
+          : `room-join-${id}-${name.toLowerCase().replace(/\s+/g, "-").slice(0, 24)}-${Math.floor(now / 60000)}`,
+        title: isTip
+          ? `Tip in “${g.title}”`
+          : `${name} joined “${g.title}”`,
+        body: isTip
+          ? `${name}: ${text}. Open Command Center → earnings / room to follow up.`
+          : `${name} is in the room${g.city ? ` (${g.city})` : ""}. Reply in the room or invite their city list next.`,
+        urgency: "now",
+        impact: isTip ? "high" : "medium",
+        source: "audience",
+        action: {
+          type: "OPEN_CRM",
+          label: "Open Command Center",
+          payload: {},
+        },
+        status: "pending",
+        createdAt: now,
+      };
+      await pushAgentProposal(sb, String(g.user_id), proposal);
+    } catch (e) {
+      console.error("agent join/tip notify", e);
+    }
+  }
+
   return NextResponse.json({ message: data });
 }
