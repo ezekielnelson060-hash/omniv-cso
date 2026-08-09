@@ -151,34 +151,6 @@ export function CataloguePanel() {
         )}
       </Card>
 
-      {tracks.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-omniv-border">
-          <p className="border-b border-omniv-border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-omniv-text-muted">
-            Audio in brain ({tracks.length})
-          </p>
-          {tracks.map((t) => (
-            <div
-              key={t.id}
-              className="flex items-center gap-2 border-b border-omniv-border px-2.5 py-2 last:border-0"
-            >
-              <Music2 className="h-3.5 w-3.5 shrink-0 text-omniv-gold" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-medium">{t.title}</p>
-                <p className="text-[10px] text-omniv-text-muted">
-                  {[
-                    t.analysis?.bpm ? `~${t.analysis.bpm} BPM` : null,
-                    t.analysis?.energy,
-                    t.durationSec ? `${Math.round(t.durationSec)}s` : null,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ") || "Passport pending"}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       <Card className="p-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
           Add release
@@ -286,6 +258,34 @@ export function CataloguePanel() {
           </div>
         ))}
       </div>
+
+      {tracks.length > 0 && (
+        <div className="overflow-hidden rounded-lg border border-omniv-border">
+          <p className="border-b border-omniv-border px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-omniv-text-muted">
+            Audio in brain ({tracks.length})
+          </p>
+          {tracks.map((t) => (
+            <div
+              key={t.id}
+              className="flex items-center gap-2 border-b border-omniv-border px-2.5 py-2 last:border-0"
+            >
+              <Music2 className="h-3.5 w-3.5 shrink-0 text-omniv-gold" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-medium">{t.title}</p>
+                <p className="text-[10px] text-omniv-text-muted">
+                  {[
+                    t.analysis?.bpm ? `~${t.analysis.bpm} BPM` : null,
+                    t.analysis?.energy,
+                    t.durationSec ? `${Math.round(t.durationSec)}s` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "Passport pending"}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
