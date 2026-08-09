@@ -21,11 +21,11 @@ Max 2 actions. Only when clearly useful — never spam.
 `.trim();
 
 export function scrubZikiMarkdown(text: string): string {
+  // Keep OMNIV_ACTIONS / MARK_OPP_DONE for client-side confirm chips.
+  // RichText hides them from display.
   return text
     .replace(/^#{1,6}\s+/gm, "")
     .replace(/\n#{1,6}\s+/g, "\n")
-    .replace(/\n?OMNIV_ACTIONS:\s*\[[\s\S]*?\]\s*$/m, "")
-    .replace(/\n?MARK_OPP_DONE:[a-zA-Z0-9_-]+\s*$/m, "")
     .trim();
 }
 
