@@ -9,17 +9,20 @@ function clamp(n: number, min = 0, max = 100) {
   return Math.max(min, Math.min(max, Math.round(n)));
 }
 
-/** Opportunities from catalogue + calendar reality. */
+/** Opportunities from catalogue + calendar reality + linked platforms. */
 export function worldOpportunitiesFromCatalogue(
   brain: ArtistBrain | null,
   releases: CatalogueRelease[],
   tracks: CatalogueTrack[],
-  completedIds: string[] = []
+  completedIds: string[] = [],
+  platforms: string[] = []
 ): AIRecommendation[] {
   const done = new Set(completedIds);
   const name = brain?.stageName || brain?.name || "your project";
   const dream = brain?.bigDream?.trim() || brain?.goals?.[0] || "";
   const style = brain?.musicStyle?.trim() || "";
+  const platLabel = platforms.filter(Boolean).slice(0, 2).join(" + ") || "";
+
   const recs: AIRecommendation[] = [];
   const day = new Date().getDay();
 
@@ -66,45 +69,43 @@ export function worldOpportunitiesFromCatalogue(
     const r = unreleased[0];
     recs.push({
       id: "catalog-finish-draft",
-      title: `Finish draft: ${r.title.slice(0, 48)}`,
-      summary: `Status is ${r.status}. ${r.spotifyUrl ? "Link exists — lock date and content spine." : "No streaming link yet — soft launch vs hold."}`,
-      why: "Drafts without dates clog the system. Managers clear inventory weekly.",
+      title: `Finish draft release: ${r.title.slice(0, 40)}`,
+      summary: `Status is ${r.status}. Close the loop before opening a new idea.`,
+      why: "Open drafts dilute focus. One released cut compounds harder than five unfinished ones.",
       impact: "High",
       difficulty: "Moderate",
-      confidence: 82,
-      expectedOutcome: "Scheduled date or explicit Hold",
-      priority: 3,
+      confidence: clamp(60 + (r.spotifyUrl ? 10 : 0) + (withAudio.length ? 10 : 0)),
+      expectedOutcome: "Scheduled or released within 14 days",
+      priority: 2,
       category: "Release",
-      timing: "Before next weekend",
+      timing: "This fortnight",
       nextActions: [
-        "Set release date or archive as idea",
-        "List 3 content pieces tied to the title",
-        "Run Release Simulator for that week",
+        "Lock artwork and metadata",
+        r.spotifyUrl ? "Confirm smart link CTA" : "Add distribution / Spotify URL when live",
+        "Plan 3 clips before release day",
       ],
     });
   }
 
-  if (releasedNoSpotify.length && !done.has("catalog-link-spotify")) {
+  if (releasedNoSpotify.length && !done.has("catalog-spotify-link")) {
+    const r = releasedNoSpotify[0];
     recs.push({
-      id: "catalog-link-spotify",
-      title: "Link Spotify on released titles",
-      summary: `${releasedNoSpotify.length} released item(s) missing Spotify URL. Discovery stays blind without the link.`,
-      why: "Real-world ranking needs a surface URL.",
+      id: "catalog-spotify-link",
+      title: `Add Spotify URL for “${r.title.slice(0, 36)}”`,
+      summary: "Marked released without a listening link. Fans cannot complete the loop.",
+      why: "Released without a destination wastes the campaign.",
       impact: "Medium",
       difficulty: "Easy",
-      confidence: 90,
-      expectedOutcome: "Catalogue URLs complete → tighter opportunities",
+      confidence: 88,
+      expectedOutcome: "Smart link + Fan Gate CTA live",
       priority: 4,
-      category: "Platform",
+      category: "Release",
       timing: "Today",
-      nextActions: [
-        "Edit release → paste Spotify URL",
-        "Re-run free audit on the link",
-      ],
+      nextActions: ["Paste Spotify URL in Catalogue", "Update Fan Gate primary CTA"],
     });
   }
 
-  if (!done.has("world-timing-window")) {
+  if ((day === 4 || day === 5 || day === 1 || day === 2) && !done.has("world-timing-window")) {
     const isWeekendPrep = day === 4 || day === 5;
     const isWeekStart = day === 1 || day === 2;
     if (isWeekendPrep || isWeekStart) {
@@ -156,6 +157,33 @@ export function worldOpportunitiesFromCatalogue(
         "Re-export with true-peak limit",
         "Compare to a genre reference",
         "Ask Ziki after re-upload",
+      ],
+    });
+  }
+
+  if (platforms.length >= 1 && withAudio.length && !done.has("world-platform-push")) {
+    recs.push({
+      id: "world-platform-push",
+      title: platLabel
+        ? `Ship one clip on ${platLabel} for the strongest cut`
+        : "Ship one clip on your strongest platform",
+      summary: `${name} has analysed audio${platLabel ? ` and surfaces on ${platLabel}` : ""}. One platform-native clip beats a generic post.`,
+      why: dream
+        ? `Dream: “${dream.slice(0, 70)}”. Platform-native execution compounds faster than cross-posting the same asset.`
+        : "Platform-native execution compounds faster than cross-posting the same asset.",
+      impact: "High",
+      difficulty: "Moderate",
+      confidence: clamp(58 + (platforms.length >= 2 ? 12 : 0) + (style ? 8 : 0)),
+      expectedOutcome: "One public clip with CTA to Fan Gate within 72 hours",
+      priority: 3,
+      category: "Content",
+      platforms: platforms.slice(0, 3),
+      timing: "This week",
+      strategicFrame: "Native > mirrored",
+      nextActions: [
+        platLabel ? `Cut a 15s hook for ${platforms[0]}` : "Cut a 15s hook",
+        "CTA every post → Fan Gate",
+        "Log the post in Content after publish",
       ],
     });
   }
