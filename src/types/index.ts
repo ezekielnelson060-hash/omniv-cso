@@ -113,6 +113,14 @@ export interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
   createdAt: number;
+  /** Confirmable product actions proposed by Ziki */
+  actions?: {
+    type: string;
+    label: string;
+    city?: string;
+    title?: string;
+    id?: string;
+  }[];
 }
 
 export interface ReleaseSimulation {
