@@ -8,7 +8,7 @@
 | Live A&R Rooms | **Foundation** — room_type `a_r` | Same |
 | City Heat Maps | **Shipped** | Audience → City heat |
 | Rooms 2.0 shell | Chat, presence, tip flash | `/g/[id]` |
-| Supabase Realtime multi-device | Queued | Next |
+| Supabase Realtime multi-device | **Shipped** — Presence + postgres_changes | `/g/[id]` · docs/rooms-realtime.md |
 
 ## Intelligence layer
 | Feature | Status | Surface |
@@ -26,6 +26,7 @@
 | Nav badge | Shipped |
 | Confirm/dismiss server persist | Shipped |
 | Outside webhook + partner docs | Shipped |
+| Outside / Internal filter | Shipped |
 | Tool-calling execute | Partial (chips execute) |
 
 ## Oversight / events
@@ -35,6 +36,7 @@
 | catalogue_upload, catalogue_release_add | Shipped |
 | opp_done / opp_dismissed / opp_reopen | Shipped |
 | dsp_metrics_refresh (user + cron) | Shipped |
+| room_presence | Shipped |
 | Partner onboarding (distro/playlist) | Docs shipped |
 
 ## DSP
