@@ -39,6 +39,9 @@ export type ScoreInputs = {
   trackCount?: number;
   releaseCount?: number;
   unreleasedCount?: number;
+  /** Avg public Spotify popularity 0–100 from platform_metrics */
+  avgPopularity?: number;
+  metricsCount?: number;
 };
 
 export function computeScoresFromBrain(
@@ -59,6 +62,12 @@ export function computeScoresFromBrain(
   const trackCount = inputs.trackCount ?? 0;
   const releaseCount = inputs.releaseCount ?? 0;
   const unreleasedCount = inputs.unreleasedCount ?? 0;
+  const avgPopularity = inputs.avgPopularity ?? 0;
+  const metricsCount = inputs.metricsCount ?? 0;
+  const dspBoost = Math.min(
+    18,
+    Math.round(avgPopularity * 0.12) + (metricsCount > 0 ? 4 : 0)
+  );
 
   if (!brain) {
     return {
@@ -150,7 +159,10 @@ export function computeScoresFromBrain(
   );
   const fanGrowth = clamp(12 + fanBoost + platformBoost * 0.15);
   const streamingTrend = clamp(
-    releaseReadiness * 0.55 + catalogBoost * 0.25 + growth * 0.2
+    releaseReadiness * 0.5 +
+      catalogBoost * 0.2 +
+      growth * 0.15 +
+      dspBoost
   );
   const socialGrowth = clamp(
     contentHealth * 0.45 + audienceHealth * 0.35 + platformBoost * 0.2
@@ -222,6 +234,8 @@ export function buildRecommendationsFromBrain(
     trackCount?: number;
     releaseCount?: number;
     unreleasedCount?: number;
+    avgPopularity?: number;
+    metricsCount?: number;
   }
 ): AIRecommendation[] {
   const name = brain?.stageName || brain?.name || "your project";
@@ -243,6 +257,8 @@ export function buildRecommendationsFromBrain(
     trackCount,
     releaseCount: live?.releaseCount ?? (catalogue?.releases || []).length,
     unreleasedCount: live?.unreleasedCount ?? 0,
+    avgPopularity: live?.avgPopularity ?? 0,
+    metricsCount: live?.metricsCount ?? 0,
   });
   const done = new Set(completedIds);
   const recs: AIRecommendation[] = [];
