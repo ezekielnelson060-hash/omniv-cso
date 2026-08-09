@@ -47,7 +47,7 @@ export async function GET() {
       serviceRoleLooksLong: service.length > 40,
       recommendedClaudeModel: "claude-sonnet-4-20250514",
       recommendedGeminiModel: "gemini-2.5-flash",
-      recommendedXaiModel: "grok-2-latest",
+      recommendedXaiModel: "grok-4.5",
       zikiOrder:
         "auto = xAI when XAI_API_KEY set, else Groq, Gemini, Claude",
     },
