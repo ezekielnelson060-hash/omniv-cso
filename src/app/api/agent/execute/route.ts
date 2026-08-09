@@ -45,6 +45,57 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, taskId: data?.id });
     }
 
+    if (body.type === "CREATE_ROOM") {
+      const city = (body.payload?.city || "").trim();
+      const title =
+        (body.title || body.payload?.title || "").trim() ||
+        (city ? `Room · ${city}` : "Drop party");
+      const { data, error } = await supabase
+        .from("gatherings")
+        .insert({
+          user_id: user.id,
+          title: title.slice(0, 120),
+          city: city || null,
+          status: "draft",
+          room_type: body.payload?.room_type || "drop_party",
+        })
+        .select("id")
+        .maybeSingle();
+      if (error) {
+        const { data: d2, error: e2 } = await supabase
+          .from("gatherings")
+          .insert({
+            user_id: user.id,
+            title: title.slice(0, 120),
+            city: city || null,
+          })
+          .select("id")
+          .maybeSingle();
+        if (e2) {
+          return NextResponse.json({ error: e2.message }, { status: 500 });
+        }
+        return NextResponse.json({
+          ok: true,
+          gatheringId: d2?.id,
+          route: d2?.id ? `/g/${d2.id}` : "/crm",
+        });
+      }
+      return NextResponse.json({
+        ok: true,
+        gatheringId: data?.id,
+        route: data?.id ? `/g/${data.id}` : "/crm",
+      });
+    }
+
+    if (body.type === "MARK_OPP_DONE") {
+      const oppId = body.payload?.oppId || body.payload?.id;
+      return NextResponse.json({
+        ok: true,
+        marked: oppId || true,
+        client: "use opportunity-progress local + refresh",
+      });
+    }
+
     return NextResponse.json({ ok: true, routed: body.type });
   } catch (e) {
     console.error("agent execute", e);
