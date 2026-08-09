@@ -4,6 +4,7 @@ import { ZIKI_MANAGER_RULES, scrubZikiMarkdown, parseZikiActions } from "@/lib/z
 import { trackServer } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/server";
 import { checkAndIncrementZikiUsage } from "@/lib/ziki-usage";
+import { buildOperatingBrief } from "@/lib/ziki-oversight";
 
 async function liveContext(query: string): Promise<string> {
   const q = query.slice(0, 180).trim();
@@ -146,10 +147,24 @@ export async function POST(req: Request) {
       },
     });
 
+    let operatingBrief = "";
+    if (userId) {
+      try {
+        const supabase = await createClient();
+        const brief = await buildOperatingBrief(supabase, userId);
+        operatingBrief = brief.text;
+      } catch {
+        /* soft */
+      }
+    }
+
     const system = [
       body.context || "You are Ziki, Omniv CSO. Never invent demo artists.",
+      operatingBrief,
       ZIKI_MANAGER_RULES,
-    ].join("\n\n");
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const live = await liveContext(message || "");
     const userPayload = body.history

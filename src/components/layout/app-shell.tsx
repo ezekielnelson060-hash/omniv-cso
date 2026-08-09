@@ -1,9 +1,21 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { AgentLiveSignals } from "@/components/notifications/agent-toast";
+import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+
+/** Soft page views so Ziki operating brief sees where the artist spends time. */
+function PathTracker() {
+  const path = usePathname();
+  useEffect(() => {
+    if (!path) return;
+    track("page_view", { section: path.split("/")[1] || "root" }, path);
+  }, [path]);
+  return null;
+}
 
 export function AppShell({
   children,
@@ -15,6 +27,7 @@ export function AppShell({
 }) {
   return (
     <div className="min-h-dvh bg-omniv-black text-omniv-text">
+      <PathTracker />
       <Sidebar />
       <main
         className={cn(
