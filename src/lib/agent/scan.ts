@@ -75,9 +75,9 @@ export function runAgentScan(input: {
       impact: "high",
       source: "audience",
       action: {
-        type: "OPEN_CRM",
-        label: "Open Command Center",
-        payload: { city: topCity.city },
+        type: "CREATE_ROOM",
+        label: "Draft room",
+        payload: { city: topCity.city, title: `Room · ${topCity.city}` },
       },
       status: "pending",
       createdAt: now,
