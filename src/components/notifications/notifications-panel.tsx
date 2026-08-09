@@ -114,7 +114,34 @@ export function NotificationsPanel() {
         } else {
           router.push("/ziki");
         }
-      } else if (t === "CREATE_ROOM" || t === "OPEN_CRM") {
+      } else if (t === "CREATE_ROOM") {
+        try {
+          const res = await fetch("/api/agent/execute", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "CREATE_ROOM",
+              title: p.title,
+              payload,
+            }),
+          });
+          const data = (await res.json()) as {
+            route?: string;
+            gatheringId?: string;
+          };
+          if (data.route) {
+            router.push(data.route);
+          } else {
+            router.push(
+              payload.city
+                ? `/crm?city=${encodeURIComponent(payload.city)}`
+                : "/crm"
+            );
+          }
+        } catch {
+          router.push("/crm");
+        }
+      } else if (t === "OPEN_CRM") {
         router.push(
           payload.city
             ? `/crm?city=${encodeURIComponent(payload.city)}`
