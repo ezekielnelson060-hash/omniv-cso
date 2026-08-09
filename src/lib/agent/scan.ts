@@ -30,7 +30,10 @@ export function runAgentScan(input: {
     input.releases,
     input.tracks,
     input.completedOppIds || [],
-    input.platforms || []
+    {
+      platforms: input.platforms || [],
+      fanCities: input.fanCities || [],
+    }
   );
 
   for (const w of world.slice(0, 5)) {
@@ -51,7 +54,7 @@ export function runAgentScan(input: {
             : "low",
       source: w.id.startsWith("catalog")
         ? "catalogue"
-        : w.id.startsWith("world")
+        : w.id.startsWith("world") || w.id.startsWith("unreleased")
           ? "calendar"
           : "market",
       action: {
@@ -67,11 +70,18 @@ export function runAgentScan(input: {
   }
 
   const topCity = (input.fanCities || []).sort((a, b) => b.count - a.count)[0];
-  if (topCity && topCity.count >= 3) {
+  const hasUnreleasedAudio = (input.tracks || []).some(
+    (tr) => tr.analysis || tr.audioPath
+  );
+  if (topCity && topCity.count >= 2) {
     proposals.push({
       id: uid("room"),
-      title: `Open a room in ${topCity.city}`,
-      body: `${topCity.count} fans tagged this city. Invite the list before you spend on ads.`,
+      title: hasUnreleasedAudio
+        ? `Warm ${topCity.city} before the unreleased drop`
+        : `Open a room in ${topCity.city}`,
+      body: hasUnreleasedAudio
+        ? `${topCity.count} fans tagged ${topCity.city}. Preview one hook from catalogue in-room before you spend on ads.`
+        : `${topCity.count} fans tagged this city. Invite the list before you spend on ads.`,
       urgency: "this_week",
       impact: "high",
       source: "audience",
