@@ -1,5 +1,7 @@
 /** Client-side opportunity progress — completed IDs reshape ranking + Ziki context */
 
+import { track } from "@/lib/analytics";
+
 export type OppProgress = {
   completed: Record<string, number>;
   dismissed: Record<string, number>;
@@ -35,6 +37,7 @@ export function markOpportunityDone(id: string) {
   p.completed[id] = Date.now();
   delete p.dismissed[id];
   save(p);
+  track("opp_done", { opportunity_id: id });
   return p;
 }
 
@@ -42,6 +45,7 @@ export function markOpportunityDismissed(id: string) {
   const p = loadOppProgress();
   p.dismissed[id] = Date.now();
   save(p);
+  track("opp_dismissed", { opportunity_id: id });
   return p;
 }
 
@@ -50,6 +54,7 @@ export function reopenOpportunity(id: string) {
   delete p.completed[id];
   delete p.dismissed[id];
   save(p);
+  track("opp_reopen", { opportunity_id: id });
   return p;
 }
 

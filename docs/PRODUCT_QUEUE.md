@@ -23,8 +23,27 @@
 |---------|--------|
 | Agent Inbox + one-tap | Shipped |
 | Daily cron agent-scan | Shipped |
-| Nav badge | Deploy |
-| Tool-calling execute | Queued |
+| Nav badge | Shipped |
+| Confirm/dismiss server persist | Shipped |
+| Outside webhook + partner docs | Shipped |
+| Tool-calling execute | Partial (chips execute) |
+
+## Oversight / events
+| Event | Status |
+|-------|--------|
+| page_view, ziki_message, agent_confirm | Shipped |
+| catalogue_upload, catalogue_release_add | Shipped |
+| opp_done / opp_dismissed / opp_reopen | Shipped |
+| dsp_metrics_refresh (user + cron) | Shipped |
+| Partner onboarding (distro/playlist) | Docs shipped |
+
+## DSP
+| Feature | Status |
+|---------|--------|
+| platform_metrics table + cron | Shipped |
+| User refresh after DSP link | Shipped |
+| Public popularity in Opportunities | Shipped |
+| S4A full charts | Partner / licensed only |
 
 ## Phase 3–4 (queued)
 Artist Guilds · Fan Equity · Omniv Radio · Cross-platform Ghost · Self-Releasing Agent · Negotiation Bot
