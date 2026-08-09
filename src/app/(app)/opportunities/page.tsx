@@ -61,20 +61,6 @@ export default function OpportunitiesPage() {
     }
     const trackCount = tracks.filter((t) => t.audioPath || t.analysis).length;
     const releaseCount = releases.length;
-    const unreleasedCount = releases.filter(
-      (r) =>
-        r.status === "draft" ||
-        r.status === "idea" ||
-        r.status === "scheduled"
-    ).length;
-    const live = {
-      linkedSurfaces,
-      fanCount,
-      fans7d,
-      trackCount,
-      releaseCount,
-      unreleasedCount,
-    };
     const done = completedIds();
     const cat = { releases, tracks };
     const all = buildRecommendationsFromBrain(
@@ -82,16 +68,14 @@ export default function OpportunitiesPage() {
       platforms,
       interests,
       [],
-      cat,
-      live
+      cat
     );
     const active = buildRecommendationsFromBrain(
       b,
       platforms,
       interests,
       done,
-      cat,
-      live
+      cat
     );
     const doneSet = new Set(done);
     setRecs(active);
