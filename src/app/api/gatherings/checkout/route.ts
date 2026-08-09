@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { pushAgentProposal } from "@/lib/agent/push-proposal";
+import type { AgentProposal } from "@/lib/agent/types";
 
 /** Flutterwave checkout for gathering ticket, tip, or free RSVP. */
 export async function POST(req: Request) {
@@ -73,6 +75,30 @@ export async function POST(req: Request) {
         },
         { onConflict: "gathering_id,email" }
       );
+      if (g.user_id) {
+        try {
+          const now = Date.now();
+          const fan = (body.name || email.split("@")[0] || "Fan").slice(0, 40);
+          const proposal: AgentProposal = {
+            id: `room-rsvp-${gatheringId}-${email.slice(0, 32)}`,
+            title: `${fan} RSVP’d to “${g.title}”`,
+            body: `Free list: ${email}${g.city ? ` · ${g.city}` : ""}. They are on the room list — open the room or follow up from Command Center.`,
+            urgency: "now",
+            impact: "medium",
+            source: "audience",
+            action: {
+              type: "OPEN_CRM",
+              label: "Open Command Center",
+              payload: {},
+            },
+            status: "pending",
+            createdAt: now,
+          };
+          await pushAgentProposal(admin, String(g.user_id), proposal);
+        } catch (e) {
+          console.error("agent free rsvp notify", e);
+        }
+      }
       return NextResponse.json({
         ok: true,
         free: true,
