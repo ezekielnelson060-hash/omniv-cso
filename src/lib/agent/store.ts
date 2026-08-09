@@ -30,6 +30,12 @@ export function upsertProposals(incoming: AgentProposal[]) {
   const byId = new Map(existing.map((p) => [p.id, p]));
   for (const p of incoming) {
     const prev = byId.get(p.id);
+    // Server closed status always wins (survives localStorage clears)
+    if (p.status === "done" || p.status === "dismissed") {
+      byId.set(p.id, p);
+      continue;
+    }
+    // Don't resurrect a locally confirmed/dismissed item as pending
     if (prev?.status === "done" || prev?.status === "dismissed") continue;
     byId.set(p.id, p);
   }

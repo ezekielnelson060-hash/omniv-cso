@@ -1,10 +1,11 @@
 # Outside opportunity graph — partner webhooks
 
-Push real-world signals (gigs, syncs, collabs, playlist adds, radio, brand briefs) into the artist Agent inbox. Omniv ranks them with catalogue + fan signals so Moves stay non-generic.
+Push real-world signals (gigs, syncs, collabs, playlist adds, radio, brand briefs, distro) into the artist Agent inbox. Omniv ranks them with catalogue + fan + DSP signals so Moves stay non-generic.
 
 ## Endpoint
 
-`POST https://omniv.media/api/agent/webhook`
+`POST https://omniv.media/api/agent/webhook`  
+(or your deployed host)
 
 Headers:
 - `Authorization: Bearer <AGENT_WEBHOOK_SECRET>`
@@ -35,29 +36,92 @@ Headers:
 | `body` | no | Context for Agent + Ziki |
 | `urgency` | no | `now` \| `today` \| `this_week` |
 | `impact` | no | `high` \| `medium` \| `low` |
-| `actionType` | no | `OPEN_ZIKI` \| `CREATE_ROOM` \| `CREATE_TASK` \| `OPEN_CRM` \| `OPEN_CATALOGUE` \| `OPEN_SETTINGS` |
+| `actionType` | no | `OPEN_ZIKI` \| `CREATE_ROOM` \| `CREATE_TASK` \| `OPEN_CRM` \| `OPEN_CATALOGUE` \| `OPEN_SETTINGS` \| `OPEN_OPPORTUNITIES` \| `OPEN_RELEASE` |
 | `actionLabel` | no | Button label in Agent |
 | `payload` | no | Passed through to the action |
 | `externalId` | no | **Dedupes** — same id will not re-spam the inbox |
 
-## Example payloads
+---
 
-### Playlist add
+## Production shapes (copy these)
+
+### 1. Distro — pre-save live
 
 ```json
 {
   "userId": "…",
-  "title": "Indie playlist add: Late Night Drive (12.4k followers)",
-  "body": "Track: Bank On It. Curator accepts similar Afrobeats/alt-R&B.",
+  "title": "Distro: pre-save live · lead single",
+  "body": "Smart link is live. First 48h window. Push owned fans + 15s platform hooks now.",
+  "urgency": "now",
+  "impact": "high",
+  "actionType": "OPEN_CATALOGUE",
+  "actionLabel": "Open catalogue · ship plan",
+  "payload": {
+    "phase": "presave",
+    "windowHours": "48"
+  },
+  "externalId": "distro-presave-{ISRC_or_release_id}"
+}
+```
+
+### 2. Distro — release live on DSPs
+
+```json
+{
+  "userId": "…",
+  "title": "Distro: release live on Spotify / Apple / Boomplay",
+  "body": "Track is live. Confirm DSP links in Catalogue, then run platform-native 15s hooks + fan city rooms.",
+  "urgency": "now",
+  "impact": "high",
+  "actionType": "OPEN_CATALOGUE",
+  "actionLabel": "Paste DSP links + lock plan",
+  "payload": {
+    "phase": "live",
+    "platforms": "spotify,apple,boomplay"
+  },
+  "externalId": "distro-live-{ISRC_or_release_id}"
+}
+```
+
+### 3. Playlist / curator — pitch window open
+
+```json
+{
+  "userId": "…",
+  "title": "Playlist window: Afrobeats Late Drive · 12.4k followers",
+  "body": "Curator open this week. Prefers 15–30s hook. Target unreleased or lead single.",
+  "urgency": "this_week",
+  "impact": "high",
+  "actionType": "CREATE_TASK",
+  "actionLabel": "Prep 15s hook + pitch note",
+  "payload": {
+    "title": "Prep 15s hook for Late Drive playlist",
+    "platform": "spotify",
+    "playlist": "Late Drive"
+  },
+  "externalId": "playlist-late-drive-{date}"
+}
+```
+
+### 4. Playlist — track added
+
+```json
+{
+  "userId": "…",
+  "title": "Playlist add: Late Night Drive (12.4k)",
+  "body": "Track: Bank On It. Thank curator + queue similar pitches this week.",
   "urgency": "today",
   "impact": "medium",
   "actionType": "OPEN_ZIKI",
   "actionLabel": "Thank + next pitch",
-  "externalId": "playlist-late-night-884"
+  "payload": {
+    "q": "Draft a short thank-you to the Late Night Drive curator and suggest 2 similar playlists to pitch next."
+  },
+  "externalId": "playlist-add-late-night-{track_id}"
 }
 ```
 
-### Sync / brand brief
+### 5. Sync / brand brief
 
 ```json
 {
@@ -67,12 +131,15 @@ Headers:
   "urgency": "this_week",
   "impact": "high",
   "actionType": "OPEN_ZIKI",
-  "payload": { "q": "Match this brief to my catalogue BPM and draft a pitch" },
-  "externalId": "sync-sports-9981"
+  "actionLabel": "Draft pitch in Ziki",
+  "payload": {
+    "q": "Match this brief to my catalogue BPM and draft a pitch"
+  },
+  "externalId": "sync-sports-{brief_id}"
 }
 ```
 
-### Gig / city pull
+### 6. Gig / city pull
 
 ```json
 {
@@ -83,32 +150,26 @@ Headers:
   "impact": "high",
   "actionType": "CREATE_ROOM",
   "actionLabel": "Open city room",
-  "payload": { "city": "Lagos", "title": "Room · Lagos" },
-  "externalId": "gig-los-2026-09"
+  "payload": {
+    "city": "Lagos",
+    "title": "Room · Lagos"
+  },
+  "externalId": "gig-los-{date}"
 }
 ```
 
-### Distro / release signal
+---
 
-```json
-{
-  "userId": "…",
-  "title": "Distro: pre-save live on lead single",
-  "body": "Smart link active. First 48h push window.",
-  "urgency": "now",
-  "impact": "medium",
-  "actionType": "OPEN_CATALOGUE",
-  "externalId": "distro-presave-441"
-}
-```
-
-## Notes
+## Behaviour
 
 - Proposals land in Agent (`/notifications`) with badge + toast.
-- Distro, merch, playlist, radio, and booking tools can all share this shape.
-- Omniv still ranks internal Moves from catalogue + fans + platforms; webhooks add the **outside** graph.
-- `GET /api/agent/webhook` returns the schema when authenticated infra is up.
+- Confirm chips execute: `OPEN_ZIKI` → Ziki with context, `CREATE_TASK` → execution_tasks, `CREATE_ROOM` → gatherings, `OPEN_CATALOGUE` → Catalogue, etc.
+- Confirm / dismiss is persisted server-side (survives device switch).
+- `externalId` dedupes — re-sending the same id returns `{ ok: true, deduped: true }`.
+- Omniv still ranks internal Moves from catalogue + fans + platform_metrics; webhooks add the **outside** graph.
 
 ## Auth
 
 Set `AGENT_WEBHOOK_SECRET` in the deployment environment. Rotate if a partner key leaks.
+
+`GET /api/agent/webhook` returns the schema.
