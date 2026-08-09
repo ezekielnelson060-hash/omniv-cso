@@ -1,14 +1,20 @@
 /**
  * xAI Grok client for Ziki text chat.
- * Env: XAI_API_KEY, XAI_MODEL (default grok-2-latest)
+ * Env: XAI_API_KEY, XAI_MODEL (default grok-4.5)
+ *
+ * grok-2-* and many grok-3 IDs were retired. Prefer current aliases.
+ * Docs: https://docs.x.ai/docs/models
  */
 
 const XAI_CANDIDATES = [
   process.env.XAI_MODEL?.trim(),
-  "grok-2-latest",
-  "grok-2-1212",
-  "grok-3",
+  "grok-4.5",
+  "grok-4.3",
+  "grok-4.3-latest",
+  "grok-4.20-non-reasoning",
+  "grok-4.20-0309-non-reasoning",
   "grok-3-mini",
+  "grok-3",
 ].filter((m, i, arr): m is string => Boolean(m) && arr.indexOf(m) === i);
 
 export function isXaiConfigured(): boolean {
@@ -45,7 +51,15 @@ export async function tryXai(
         lastDetail = `xAI ${model} → HTTP ${res.status}: ${body.slice(0, 280)}`;
         console.error("xAI error", model, res.status, body.slice(0, 300));
         if (res.status === 401 || res.status === 403) break;
-        if (res.status === 404 || res.status === 429) continue;
+        // Invalid / retired model → try next candidate
+        if (
+          res.status === 400 ||
+          res.status === 404 ||
+          res.status === 422 ||
+          res.status === 429
+        ) {
+          continue;
+        }
         break;
       }
       const data = (await res.json()) as {
