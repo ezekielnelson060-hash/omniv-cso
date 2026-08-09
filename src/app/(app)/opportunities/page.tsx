@@ -33,6 +33,8 @@ export default function OpportunitiesPage() {
     const linkedSurfaces = Math.max(links, platforms.length);
     let fanCount = 0;
     let fans7d = 0;
+    let avgPopularity = 0;
+    let metricsCount = 0;
     if (isSupabaseConfigured()) {
       try {
         const sb = createClient();
@@ -54,6 +56,25 @@ export default function OpportunitiesPage() {
             .eq("user_id", user.id)
             .gte("created_at", weekAgo);
           fans7d = c7 || 0;
+
+          // Live DSP snapshots (public popularity from platform_metrics cron)
+          const { data: metrics } = await sb
+            .from("platform_metrics")
+            .select("popularity, platform, entity_type")
+            .eq("user_id", user.id)
+            .order("fetched_at", { ascending: false })
+            .limit(40);
+          if (metrics?.length) {
+            metricsCount = metrics.length;
+            const pops = metrics
+              .map((m) => m.popularity)
+              .filter((n): n is number => typeof n === "number");
+            if (pops.length) {
+              avgPopularity = Math.round(
+                pops.reduce((a, b) => a + b, 0) / pops.length
+              );
+            }
+          }
         }
       } catch {
         /* optional */
@@ -61,21 +82,43 @@ export default function OpportunitiesPage() {
     }
     const trackCount = tracks.filter((t) => t.audioPath || t.analysis).length;
     const releaseCount = releases.length;
+    const unreleasedCount = tracks.filter(
+      (t) =>
+        (t.audioPath || t.analysis) &&
+        !(releases || []).some(
+          (r) =>
+            r.title &&
+            t.title &&
+            r.title.toLowerCase().includes(t.title.toLowerCase().slice(0, 12))
+        )
+    ).length;
     const done = completedIds();
     const cat = { releases, tracks };
+    const live = {
+      linkedSurfaces,
+      fanCount,
+      fans7d,
+      trackCount,
+      releaseCount,
+      unreleasedCount,
+      avgPopularity,
+      metricsCount,
+    };
     const all = buildRecommendationsFromBrain(
       b,
       platforms,
       interests,
       [],
-      cat
+      cat,
+      live
     );
     const active = buildRecommendationsFromBrain(
       b,
       platforms,
       interests,
       done,
-      cat
+      cat,
+      live
     );
     const doneSet = new Set(done);
     setRecs(active);
@@ -88,11 +131,14 @@ export default function OpportunitiesPage() {
       releaseCount ? `${releaseCount} release(s)` : null,
       fanCount ? `${fanCount} fans` : null,
       linkedSurfaces ? `${linkedSurfaces} surface(s)` : null,
+      metricsCount
+        ? `DSP pop ${avgPopularity}${metricsCount > 1 ? ` · ${metricsCount} snaps` : ""}`
+        : null,
     ].filter(Boolean);
     const inv = invParts.length ? ` · ${invParts.join(", ")}` : "";
     setSubtitle(
       dream
-        ? `Ranked for ${name}${genre ? ` · ${genre}` : ""}${inv} against “${dream.slice(0, 50)}${dream.length > 50 ? "…" : ""}”`
+        ? `Ranked for ${name}${genre ? ` · ${genre}` : ""}${inv} against “${dream.slice(0, 50)}${dream.length > 50 ? "…" : "”"}`
         : genre
           ? `Ranked for ${name} · ${genre}${inv}`
           : "Finish Artist Brain + upload a track so ranking stops being generic"
@@ -131,8 +177,8 @@ export default function OpportunitiesPage() {
         </h1>
         <p className="mt-0.5 text-[11px] text-omniv-text-muted">{subtitle}</p>
         <p className="mt-1 text-[10px] text-omniv-text-muted">
-          Confidence % = brain + platforms + catalogue completeness for that
-          call — not a market guarantee. Mark done when you execute.
+          Confidence % = brain + platforms + catalogue + live DSP snapshots —
+          not a market guarantee. Mark done when you execute.
         </p>
       </div>
 
@@ -148,18 +194,23 @@ export default function OpportunitiesPage() {
       ) : (
         <div className="space-y-2">
           {recs.map((r, i) => (
-            <RecommendationCard key={r.id} recommendation={r} index={i} />
+            <RecommendationCard
+              key={r.id}
+              recommendation={r}
+              index={i}
+              defaultOpen={i === 0}
+            />
           ))}
           {doneRecs.length > 0 && (
             <div className="pt-4">
               <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
-                Done this cycle · reopen if still active
+                Done this cycle
               </p>
               {doneRecs.map((r, i) => (
                 <RecommendationCard
                   key={`done-${r.id}`}
-                  recommendation={{ ...r, priority: i + 1 }}
-                  index={99}
+                  recommendation={r}
+                  index={i + 100}
                 />
               ))}
             </div>
