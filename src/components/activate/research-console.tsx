@@ -84,7 +84,11 @@ export function ResearchConsole({
       window.clearInterval(tick);
       if (!res.ok) {
         const d = (await res.json().catch(() => ({}))) as { error?: string };
-        setError(d.error || "Research failed — sign in and try again");
+        setError(
+          res.status === 401
+            ? "Sign in required — open /login then retry Activate"
+            : d.error || "Research failed — try again"
+        );
         setPhase("error");
         return;
       }
