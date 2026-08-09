@@ -214,7 +214,15 @@ export function buildRecommendationsFromBrain(
   platforms: string[] = [],
   interests: string[] = [],
   completedIds: string[] = [],
-  catalogue?: { releases?: CatalogueRelease[]; tracks?: CatalogueTrack[] }
+  catalogue?: { releases?: CatalogueRelease[]; tracks?: CatalogueTrack[] },
+  live?: {
+    linkedSurfaces?: number;
+    fanCount?: number;
+    fans7d?: number;
+    trackCount?: number;
+    releaseCount?: number;
+    unreleasedCount?: number;
+  }
 ): AIRecommendation[] {
   const name = brain?.stageName || brain?.name || "your project";
   const rawGenre = brain?.genre?.filter((g) => g && g !== "TBD").join(" / ");
@@ -222,7 +230,20 @@ export function buildRecommendationsFromBrain(
   const style = brain?.musicStyle?.trim() || "";
   const voice = brain?.brandVoice?.trim() || "";
   const dream = brain?.bigDream?.trim() || brain?.goals?.[0] || "";
-  const scores = computeScoresFromBrain(brain, { platforms, interests });
+  const fanCount = live?.fanCount ?? 0;
+  const trackCount =
+    live?.trackCount ??
+    (catalogue?.tracks || []).filter((t) => t.audioPath || t.analysis).length;
+  const scores = computeScoresFromBrain(brain, {
+    platforms,
+    interests,
+    linkedSurfaces: live?.linkedSurfaces ?? platforms.length,
+    fanCount,
+    fans7d: live?.fans7d ?? 0,
+    trackCount,
+    releaseCount: live?.releaseCount ?? (catalogue?.releases || []).length,
+    unreleasedCount: live?.unreleasedCount ?? 0,
+  });
   const done = new Set(completedIds);
   const recs: AIRecommendation[] = [];
   const dreamRec = dreamRecommendation(brain, scores);
@@ -300,12 +321,17 @@ export function buildRecommendationsFromBrain(
   }
 
   if (
-    (scores.audienceHealth < 50 || interests.includes("audience")) &&
+    (scores.audienceHealth < 50 ||
+      interests.includes("audience") ||
+      fanCount > 0) &&
     !done.has("owned-audience")
   ) {
     recs.push({
       id: "owned-audience",
-      title: "Grow owned audience, not rented reach",
+      title:
+        fanCount > 0
+          ? `Activate ${fanCount} owned fans this week`
+          : "Grow owned audience, not rented reach",
       summary: dream
         ? `“${dream.slice(0, 70)}” needs a list, not rented views. Move attention into Fan Gate.`
         : "Move attention from algorithmic feeds into a list you control.",
