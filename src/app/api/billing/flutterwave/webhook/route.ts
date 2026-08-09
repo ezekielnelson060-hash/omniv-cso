@@ -54,7 +54,6 @@ export async function POST(req: Request) {
   const rawBody = await req.text();
 
   if (secretHash && !verifySignature(rawBody, req.headers, secretHash)) {
-    // Still accept if FLW_SECRET_HASH not set (dev) — verify transaction below
     if (process.env.FLW_SECRET_HASH) {
       return NextResponse.json({ error: "invalid signature" }, { status: 401 });
     }
@@ -74,79 +73,47 @@ export async function POST(req: Request) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !service) {
-    return NextResponse.json({ error: "supabase missing" }, { status: 503 });
+    return NextResponse.json({ error: "server misconfigured" }, { status: 500 });
   }
 
-  if (body.event && body.event !== "charge.completed") {
-    return NextResponse.json({ ok: true, ignored: true });
-  }
-  if (data.status && data.status !== "successful") {
-    return NextResponse.json({ ok: true, ignored: true });
+  const status = String(data.status || "").toLowerCase();
+  if (status && status !== "successful" && status !== "success") {
+    return NextResponse.json({ ok: true, skipped: "not_successful" });
   }
 
-  let verified = data;
-  if (data.id != null) {
-    const v = await verifyTransaction(data.id as string | number);
-    if (!v || v.status !== "successful") {
-      return NextResponse.json({ error: "verify failed" }, { status: 400 });
-    }
-    verified = v;
+  const txId = data.id as number | string | undefined;
+  const txRef = String(data.tx_ref || data.txRef || "");
+  const meta = (data.meta || {}) as Record<string, unknown>;
+
+  let verified: Record<string, unknown> = data;
+  if (txId != null) {
+    const v = await verifyTransaction(txId);
+    if (v) verified = v as Record<string, unknown>;
   }
 
-  const txRef = String(verified.tx_ref || data.tx_ref || "");
-  const meta = (verified.meta || data.meta || {}) as {
-    plan?: string;
-    user_id?: string;
-    type?: string;
-    gathering_id?: string;
-    email?: string;
-    is_tip?: boolean;
-  };
+  const gatheringId =
+    (meta.gathering_id as string) ||
+    (meta.gatheringId as string) ||
+    (txRef.match(/^gath[_-]([a-f0-9-]+)/i)?.[1] ?? null);
 
-  // Gathering ticket — confirm RSVP, do not change SaaS plan
-  if (meta.type === "gathering" || txRef.startsWith("omniv_gath_")) {
+  if (gatheringId || /tip/i.test(txRef) || meta.is_tip) {
     const adminG = createClient(url, service, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    const fanEmail = (
-      (verified.customer as { email?: string } | undefined)?.email ||
-      (data.customer as { email?: string } | undefined)?.email ||
-      meta.email ||
-      ""
-    ).toLowerCase();
-    const gid = meta.gathering_id || null;
-    if (gid && fanEmail) {
-      await adminG.from("gathering_rsvps").upsert(
-        {
-          gathering_id: gid,
-          email: fanEmail,
-          status: "going",
-        },
-        { onConflict: "gathering_id,email" }
-      );
-      await adminG.from("payments").upsert(
-        {
-          provider: "flutterwave",
-          provider_payment_id: String(verified.id ?? data.id ?? txRef),
-          user_id: null,
-          email: fanEmail,
-          plan: "gathering",
-          amount: Number(verified.amount ?? data.amount ?? 0),
-          currency: String(verified.currency ?? data.currency ?? "USD"),
-          status: "successful",
-          tx_ref: txRef,
-          raw: verified,
-        },
-        { onConflict: "provider,provider_payment_id" }
-      );
-
+    if (gatheringId) {
       try {
         const { data: gRow } = await adminG
           .from("gatherings")
-          .select("user_id, title, city")
-          .eq("id", gid)
+          .select("id, user_id, title, city")
+          .eq("id", gatheringId)
           .maybeSingle();
         if (gRow?.user_id) {
+          const fanEmail =
+            (
+              (verified.customer as { email?: string } | undefined)?.email ||
+              (data.customer as { email?: string } | undefined)?.email ||
+              "A fan"
+            ).toString();
           const amt = Number(verified.amount ?? data.amount ?? 0);
           const cur = String(verified.currency ?? data.currency ?? "USD");
           const isTip = Boolean(meta.is_tip) || /tip/i.test(txRef);
@@ -182,7 +149,7 @@ export async function POST(req: Request) {
   const planRaw = parsed.plan || metaPlan || "starter";
   const plan = PLAN_IDS.has(planRaw) ? planRaw : "starter";
 
-  let userId = parsed.userId || meta.user_id || null;
+  let userId = parsed.userId || (meta.user_id as string) || null;
   const email = (
     (verified.customer as { email?: string } | undefined)?.email ||
     (data.customer as { email?: string } | undefined)?.email ||
@@ -238,7 +205,11 @@ export async function POST(req: Request) {
     .eq("id", userId);
 
   try {
-    await trackServer("payment_success", { plan, amount, currency }, userId);
+    await trackServer({
+      name: "payment_success",
+      userId,
+      meta: { plan, amount, currency },
+    });
   } catch {
     /* ignore */
   }
