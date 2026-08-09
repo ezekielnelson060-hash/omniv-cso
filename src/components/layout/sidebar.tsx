@@ -26,6 +26,10 @@ import {
 import { cn } from "@/lib/utils";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { getProfile } from "@/lib/db/profile";
+import {
+  AgentNavBadge,
+  useAgentPending,
+} from "@/components/notifications/agent-nav-badge";
 
 type NavItem = { href: string; label: string; icon: typeof Users };
 
@@ -131,10 +135,12 @@ function NavItemLink({
   item,
   pathname,
   onNavigate,
+  badge,
 }: {
   item: NavItem;
   pathname: string;
   onNavigate?: () => void;
+  badge?: number;
 }) {
   const active =
     pathname === item.href || pathname.startsWith(item.href + "/");
@@ -152,6 +158,7 @@ function NavItemLink({
     >
       <Icon className="h-4 w-4 shrink-0 opacity-80" />
       <span className="truncate">{item.label}</span>
+      {typeof badge === "number" ? <AgentNavBadge count={badge} /> : null}
     </Link>
   );
 }
@@ -218,6 +225,7 @@ function NavDropdown({
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const agentPending = useAgentPending();
   return (
     <nav className="flex flex-1 flex-col overflow-y-auto px-2 py-2">
       <NavDropdown
@@ -246,6 +254,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           item={item}
           pathname={pathname}
           onNavigate={onNavigate}
+          badge={item.href === "/notifications" ? agentPending : undefined}
         />
       ))}
     </nav>
