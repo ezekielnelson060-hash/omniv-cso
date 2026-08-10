@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PARTNERS, partnerWebhookUrl, type PartnerDef } from "@/lib/partners";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import {
   Cable,
   Copy,
@@ -16,15 +17,45 @@ import {
 
 export function PartnersPanel() {
   const [origin, setOrigin] = useState("https://www.omniv.media");
+  const [userId, setUserId] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [step, setStep] = useState(0);
 
   useEffect(() => {
     if (typeof window !== "undefined") setOrigin(window.location.origin);
+    if (!isSupabaseConfigured()) return;
+    void (async () => {
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user?.id) setUserId(user.id);
+      } catch {
+        /* soft */
+      }
+    })();
   }, []);
 
   const webhook = partnerWebhookUrl(origin);
+
+  function samplePayload(p: PartnerDef) {
+    return {
+      userId: userId || "<sign-in-for-uuid>",
+      title: p.sampleTitle,
+      body: p.sampleBody,
+      urgency: "today",
+      impact: "high",
+      externalId: `${p.id}-${Date.now()}`,
+    };
+  }
+
+  function sampleCurl(p: PartnerDef) {
+    const body = JSON.stringify(samplePayload(p));
+    return `curl -X POST '${webhook}' \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer $AGENT_WEBHOOK_SECRET' \\\n  -d '${body}'`;
+  }
 
   function copy(text: string, key: string) {
     void navigator.clipboard.writeText(text);
@@ -62,12 +93,20 @@ export function PartnersPanel() {
       setMsg(
         `Signal landed in Agent (${data.actionType || "action"}). Open inbox to confirm.`
       );
+      setStep(3);
     } catch {
       setMsg("Network error");
     } finally {
       setBusyId(null);
     }
   }
+
+  const steps = [
+    "Copy webhook URL",
+    "Copy your user id",
+    "Test a partner signal",
+    "Confirm in Agent",
+  ];
 
   return (
     <Card className="mt-5 space-y-4 p-5">
@@ -76,33 +115,53 @@ export function PartnersPanel() {
         <div>
           <h2 className="text-sm font-semibold tracking-tight">Partners</h2>
           <p className="mt-0.5 text-[12px] text-omniv-text-muted">
-            Distro, playlist, curator, sync, radio → Agent inbox. DSP and
-            payments connect in Settings. One webhook for outside signals.
+            Distro, playlist, curator, sync, radio → one webhook → Agent
+            confirm chips. DSP and payments connect below in Settings.
           </p>
         </div>
       </div>
 
-      <div className="rounded-xl border border-omniv-gold/25 bg-omniv-gold/5 px-3 py-2.5">
+      <div className="flex flex-wrap gap-1.5">
+        {steps.map((label, i) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => setStep(i)}
+            className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${
+              step === i
+                ? "border-omniv-gold bg-omniv-gold/15 text-omniv-gold"
+                : i < step
+                  ? "border-emerald-500/40 text-emerald-400"
+                  : "border-omniv-border text-omniv-text-muted"
+            }`}
+          >
+            {i + 1}. {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-2 rounded-xl border border-omniv-gold/25 bg-omniv-gold/5 px-3 py-2.5">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-omniv-gold">
           Agent webhook
         </p>
-        <p className="mt-1 break-all font-mono text-[11px] text-omniv-text-secondary">
+        <p className="break-all font-mono text-[11px] text-omniv-text-secondary">
           {webhook}
         </p>
-        <p className="mt-1 text-[10px] text-omniv-text-muted">
+        <p className="text-[10px] text-omniv-text-muted">
           Auth:{" "}
           <code className="text-omniv-gold">
             Authorization: Bearer AGENT_WEBHOOK_SECRET
-          </code>{" "}
-          or header{" "}
-          <code className="text-omniv-gold">x-omniv-webhook-secret</code>
+          </code>
         </p>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             size="sm"
             variant="outline"
             className="h-8 gap-1 text-[11px]"
-            onClick={() => copy(webhook, "url")}
+            onClick={() => {
+              copy(webhook, "url");
+              setStep(Math.max(step, 1));
+            }}
           >
             {copied === "url" ? (
               <Check className="h-3 w-3" />
@@ -111,12 +170,36 @@ export function PartnersPanel() {
             )}
             Copy URL
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1 text-[11px]"
+            disabled={!userId}
+            onClick={() => {
+              if (userId) {
+                copy(userId, "uid");
+                setStep(Math.max(step, 2));
+              }
+            }}
+          >
+            {copied === "uid" ? (
+              <Check className="h-3 w-3" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+            {userId ? "Copy user id" : "Sign in for user id"}
+          </Button>
           <Link href="/notifications">
             <Button size="sm" variant="outline" className="h-8 text-[11px]">
               Open Agent inbox
             </Button>
           </Link>
         </div>
+        {userId && (
+          <p className="break-all font-mono text-[10px] text-omniv-text-muted">
+            userId: {userId}
+          </p>
+        )}
       </div>
 
       {msg && (
@@ -187,28 +270,26 @@ export function PartnersPanel() {
                   </Link>
                 )}
                 {p.path === "webhook" && (
-                  <button
-                    type="button"
-                    className="text-[10px] text-omniv-gold hover:underline"
-                    onClick={() =>
-                      copy(
-                        JSON.stringify(
-                          {
-                            userId: "<your-user-uuid>",
-                            title: p.sampleTitle,
-                            body: p.sampleBody,
-                            urgency: "today",
-                            impact: "high",
-                          },
-                          null,
-                          2
-                        ),
-                        p.id
-                      )
-                    }
-                  >
-                    {copied === p.id ? "Copied payload" : "Copy sample JSON"}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="text-[10px] text-omniv-gold hover:underline"
+                      onClick={() =>
+                        copy(JSON.stringify(samplePayload(p), null, 2), p.id)
+                      }
+                    >
+                      {copied === p.id
+                        ? "Copied JSON"
+                        : "Copy JSON (your userId)"}
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[10px] text-omniv-text-muted hover:text-omniv-gold"
+                      onClick={() => copy(sampleCurl(p), `curl-${p.id}`)}
+                    >
+                      {copied === `curl-${p.id}` ? "Copied curl" : "Copy curl"}
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -217,9 +298,8 @@ export function PartnersPanel() {
       </ul>
 
       <p className="text-[10px] text-omniv-text-muted">
-        Partners post to the webhook with your user id. Omniv infers the action
-        (outreach, catalogue, room, Ziki). Confirm chips in Agent execute the
-        real move — that is the integration loop.
+        Real tools (distro, playlist, sync) POST the same JSON with your user
+        id. Omniv infers the action. Confirm in Agent executes it.
       </p>
     </Card>
   );
