@@ -77,6 +77,7 @@ export function CrmPanel({
   const [eventDate, setEventDate] = useState("");
   const [gatherCity, setGatherCity] = useState<string | null>(initialCity);
   const [gatherReady, setGatherReady] = useState<number | null>(initialReady);
+  const [gatherVenue, setGatherVenue] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialCity) setGatherCity(initialCity);
@@ -241,9 +242,19 @@ export function CrmPanel({
         />
       </div>
       <div id="room-form">
-        <GatheringsPanel seedCity={gatherCity} seedReady={gatherReady} />
+        <GatheringsPanel
+          seedCity={gatherCity}
+          seedReady={gatherReady}
+          seedVenue={gatherVenue}
+        />
       </div>
-      <VenueFinder city={gatherCity} />
+      <VenueFinder
+        city={gatherCity}
+        onPick={(v) => {
+          setGatherCity(v.city);
+          setGatherVenue(v.name);
+        }}
+      />
 
       <ContractsPanel />
 
