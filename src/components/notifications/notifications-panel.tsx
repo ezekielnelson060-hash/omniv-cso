@@ -18,7 +18,7 @@ import { listCatalogueReleases } from "@/lib/catalogue/db";
 import { listCatalogueTracks } from "@/lib/catalogue/tracks";
 import { completedIds } from "@/lib/opportunity-progress";
 import { stashAct } from "@/lib/ziki-memory";
-import { Bell, Loader2, Sparkles, Zap, X } from "lucide-react";
+import { Loader2, Sparkles, Zap, X } from "lucide-react";
 
 type InboxFilter = "all" | "outside" | "internal";
 
@@ -29,6 +29,7 @@ export function NotificationsPanel() {
   const [scanning, setScanning] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [filter, setFilter] = useState<InboxFilter>("all");
+  const [lastMsg, setLastMsg] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     setItems(loadProposals());
@@ -83,73 +84,72 @@ export function NotificationsPanel() {
     }
   }
 
-  useEffect(() => {
-    if (loadProposals().filter((p) => p.status === "pending").length === 0) {
-      void scan();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   async function execute(p: AgentProposal) {
     setBusyId(p.id);
+    setLastMsg(null);
     try {
       const t = p.action.type;
       const payload = p.action.payload || {};
+      let serverMsg: string | null = null;
 
-      if (t === "CREATE_TASK") {
-        await fetch("/api/agent/execute", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: t, title: p.title, payload }),
-        });
-      }
-
-      if (t === "OPEN_ZIKI" || t === "DRAFT_OUTREACH") {
+      if (t === "OPEN_ZIKI") {
         stashAct({
           title: p.title,
-          summary: p.body,
-          why: "Agent proposal",
-          expectedOutcome: "Confirmed execution",
-          category: "Agent",
+          summary: p.body.slice(0, 280),
+          why: "Agent confirmed this move",
+          expectedOutcome: "Clear next action",
+          category: p.source,
         });
         if (payload.q) {
-          router.push(`/ziki?q=${encodeURIComponent(payload.q)}`);
-        } else {
-          router.push("/ziki");
-        }
-      } else if (t === "CREATE_ROOM") {
-        try {
-          const res = await fetch("/api/agent/execute", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              type: "CREATE_ROOM",
-              title: p.title,
-              payload,
-            }),
-          });
-          const data = (await res.json()) as {
-            route?: string;
-            gatheringId?: string;
-          };
-          if (data.route) {
-            router.push(data.route);
-          } else {
-            router.push(
-              payload.city
-                ? `/crm?city=${encodeURIComponent(payload.city)}`
-                : "/crm"
-            );
+          try {
+            sessionStorage.setItem("omniv-ziki-seed", payload.q);
+          } catch {
+            /* soft */
           }
-        } catch {
-          router.push("/crm");
         }
+        router.push("/ziki");
+      } else if (
+        t === "CREATE_TASK" ||
+        t === "CREATE_ROOM" ||
+        t === "DRAFT_OUTREACH" ||
+        t === "REFRESH_METRICS"
+      ) {
+        const res = await fetch("/api/agent/execute", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: t,
+            title: p.title,
+            payload,
+          }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          route?: string;
+          message?: string;
+          draft?: string;
+          stash?: {
+            title: string;
+            summary: string;
+            why: string;
+            expectedOutcome: string;
+            category: string;
+          };
+        };
+        serverMsg = data.message || null;
+        if (data.stash) {
+          stashAct(data.stash);
+        } else if (data.draft) {
+          stashAct({
+            title: p.title,
+            summary: data.draft.slice(0, 280),
+            why: "Outreach draft from Agent",
+            expectedOutcome: "Send a note that earns a reply",
+            category: "outreach",
+          });
+        }
+        if (data.route) router.push(data.route);
       } else if (t === "OPEN_CRM") {
-        router.push(
-          payload.city
-            ? `/crm?city=${encodeURIComponent(payload.city)}`
-            : "/crm"
-        );
+        router.push("/crm");
       } else if (t === "OPEN_SETTINGS") {
         router.push("/settings");
       } else if (t === "OPEN_CATALOGUE") {
@@ -167,10 +167,26 @@ export function NotificationsPanel() {
           "@/lib/opportunity-progress"
         );
         markOpportunityDone(payload.id);
+        serverMsg = "Opportunity marked done";
+      } else {
+        try {
+          const res = await fetch("/api/agent/execute", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: t, title: p.title, payload }),
+          });
+          const data = (await res.json().catch(() => ({}))) as {
+            message?: string;
+          };
+          serverMsg = data.message || null;
+        } catch {
+          /* soft */
+        }
       }
 
       markProposal(p.id, "done");
       void persistStatus(p.id, "done");
+      setLastMsg(serverMsg || `Confirmed: ${p.action.label}`);
       try {
         const { track } = await import("@/lib/analytics");
         track("agent_confirm", {
@@ -193,7 +209,6 @@ export function NotificationsPanel() {
     refresh();
   }
 
-  /** Keep server agent_inbox in sync so confirms survive localStorage clears. */
   async function persistStatus(
     id: string,
     status: "done" | "dismissed" | "pending"
@@ -228,37 +243,45 @@ export function NotificationsPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="font-data text-[10px] uppercase tracking-[0.14em] text-omniv-gold">
-            Agent
-          </p>
-          <h1 className="text-lg font-semibold tracking-tight md:text-xl">
-            Inbox
-          </h1>
-          <p className="mt-0.5 max-w-lg text-[11px] text-omniv-text-muted">
-            Sense → rank → draft. You confirm. One confirmed move beats ten
-            unread tips.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="gold">{pendingAll.length} pending</Badge>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5"
-            disabled={scanning}
-            onClick={() => void scan()}
-          >
-            {scanning ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="h-3.5 w-3.5" />
-            )}
-            Scan now
-          </Button>
+      <div className="relative -mx-3 overflow-hidden sm:-mx-4 md:mx-0 md:rounded-2xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/12 via-omniv-gold/8 to-transparent" />
+        <div className="relative flex flex-wrap items-end justify-between gap-3 px-3 pb-4 pt-1 sm:px-4 md:px-5 md:pt-4">
+          <div>
+            <p className="font-data text-[10px] uppercase tracking-[0.16em] text-omniv-gold">
+              Agent
+            </p>
+            <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
+              Inbox
+            </h1>
+            <p className="mt-1 max-w-lg text-[12px] text-omniv-text-secondary">
+              Sense → rank → draft. You confirm. One confirmed move beats ten
+              unread tips.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="gold">{pendingAll.length} pending</Badge>
+            <Button
+              className="h-10 gap-1.5 rounded-xl"
+              variant="outline"
+              disabled={scanning}
+              onClick={() => void scan()}
+            >
+              {scanning ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              Scan now
+            </Button>
+          </div>
         </div>
       </div>
+
+      {lastMsg && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[12px] text-emerald-300">
+          {lastMsg}
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-1.5">
         {(
@@ -303,19 +326,12 @@ export function NotificationsPanel() {
             onDismiss={() => dismiss(p.id)}
           />
         ))}
+        {!pending.length && (
+          <p className="rounded-2xl border border-dashed border-omniv-border px-4 py-8 text-center text-[12px] text-omniv-text-muted">
+            {emptyCopy}
+          </p>
+        )}
       </div>
-
-      {pending.length === 0 && !scanning && (
-        <Card className="flex flex-col items-center gap-2 p-10 text-center">
-          <Bell className="h-8 w-8 text-omniv-text-muted" />
-          <p className="text-sm text-omniv-text-secondary">{emptyCopy}</p>
-          {filter !== "outside" && (
-            <Button size="sm" onClick={() => void scan()} className="mt-1">
-              Run agent scan
-            </Button>
-          )}
-        </Card>
-      )}
 
       {done.length > 0 && (
         <div className="pt-2">
@@ -357,8 +373,9 @@ function ProposalCard({
   return (
     <Card
       className={cn(
-        "p-3 transition",
-        p.impact === "high" && "border-omniv-gold/30"
+        "rounded-2xl p-3.5 transition",
+        p.impact === "high" &&
+          "border-omniv-gold/30 shadow-[0_8px_24px_-16px_rgba(212,175,55,0.35)]"
       )}
     >
       <div className="flex flex-wrap items-start gap-2">
@@ -381,16 +398,12 @@ function ProposalCard({
             >
               {p.source === "webhook" ? "outside" : p.source}
             </Badge>
-            <Badge variant="outline" className="text-[9px]">
-              {p.impact} impact
-            </Badge>
+            <span className="text-[10px] text-omniv-text-muted">{p.impact}</span>
           </div>
-          <h3 className="text-sm font-semibold tracking-tight text-omniv-text">
-            {p.title}
-          </h3>
-          <p className="mt-1 whitespace-pre-line text-[12px] leading-snug text-omniv-text-muted">
-            {p.body.slice(0, 280)}
-            {p.body.length > 280 ? "…" : ""}
+          <p className="text-[14px] font-semibold tracking-tight">{p.title}</p>
+          <p className="mt-1 whitespace-pre-wrap text-[12px] leading-snug text-omniv-text-muted">
+            {p.body.slice(0, 320)}
+            {p.body.length > 320 ? "…" : ""}
           </p>
         </div>
         <button
@@ -405,7 +418,7 @@ function ProposalCard({
       <div className="mt-3 flex flex-wrap gap-2">
         <Button
           size="sm"
-          className="h-8 gap-1.5 text-[11px]"
+          className="h-9 gap-1.5 rounded-xl"
           disabled={busy}
           onClick={onExecute}
         >
@@ -415,14 +428,6 @@ function ProposalCard({
             <Zap className="h-3.5 w-3.5" />
           )}
           {p.action.label}
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 text-[11px]"
-          onClick={onDismiss}
-        >
-          Not now
         </Button>
       </div>
     </Card>
