@@ -4,24 +4,72 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PARTNERS, partnerWebhookUrl, type PartnerDef } from "@/lib/partners";
+import { PARTNERS, type PartnerDef } from "@/lib/partners";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import {
-  Cable,
-  Copy,
+  Bell,
   Check,
   Loader2,
-  Radio,
-  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
 } from "lucide-react";
 
+const ARTIST_COPY: Record<
+  string,
+  { title: string; meaning: string; when: string }
+> = {
+  distro: {
+    title: "Your distributor",
+    meaning:
+      "When a release goes live or pre-save opens, Omniv can ping you so you don't miss the day-one plan.",
+    when: "Release is live · pre-save is open",
+  },
+  playlist: {
+    title: "Playlists",
+    meaning:
+      "If you get added (or held) on a playlist, it shows up as a move — usually say thanks or follow up.",
+    when: "Track added · pitch status changes",
+  },
+  curator: {
+    title: "Curators & hosts",
+    meaning:
+      "Independent people who play or post your music. A yes becomes a clear next step in Moves.",
+    when: "Someone accepts a pitch or books you",
+  },
+  sync: {
+    title: "Sync & briefs",
+    meaning:
+      "Film, ads, games looking for music. Omniv drops the brief in Moves so you (or Ziki) can pitch the right track.",
+    when: "A brief matches your sound",
+  },
+  spotify: {
+    title: "Spotify",
+    meaning:
+      "Connect so Omniv can see popularity trends — better ranking on Opportunities, less guesswork.",
+    when: "Once, in Settings",
+  },
+  flutterwave: {
+    title: "Getting paid",
+    meaning:
+      "Tickets and tips go to your payout account. Set this once so money doesn't sit on the platform.",
+    when: "Before your first paid room or tip link",
+  },
+  radio: {
+    title: "Radio & press",
+    meaning:
+      "Airplay or a press hit can land as an alert so you reply while it's hot.",
+    when: "Spin · interview · feature",
+  },
+};
+
 export function PartnersPanel() {
-  const [origin, setOrigin] = useState("https://www.omniv.media");
-  const [userId, setUserId] = useState<string | null>(null);
-  const [copied, setCopied] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
-  const [step, setStep] = useState(0);
+  const [showTech, setShowTech] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [origin, setOrigin] = useState("https://www.omniv.media");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") setOrigin(window.location.origin);
@@ -39,36 +87,12 @@ export function PartnersPanel() {
     })();
   }, []);
 
-  const webhook = partnerWebhookUrl(origin);
-
-  function samplePayload(p: PartnerDef) {
-    return {
-      userId: userId || "<sign-in-for-uuid>",
-      title: p.sampleTitle,
-      body: p.sampleBody,
-      urgency: "today",
-      impact: "high",
-      externalId: `${p.id}-${Date.now()}`,
-    };
-  }
-
-  function sampleCurl(p: PartnerDef) {
-    const body = JSON.stringify(samplePayload(p));
-    return `curl -X POST '${webhook}' \\\n  -H 'Content-Type: application/json' \\\n  -H 'Authorization: Bearer $AGENT_WEBHOOK_SECRET' \\\n  -d '${body}'`;
-  }
-
-  function copy(text: string, key: string) {
-    void navigator.clipboard.writeText(text);
-    setCopied(key);
-    window.setTimeout(() => setCopied(null), 1600);
-  }
-
-  async function testPartner(p: PartnerDef) {
+  async function tryExample(p: PartnerDef) {
     if (p.path !== "webhook") {
       setMsg(
         p.path === "oauth"
-          ? "Connect Spotify in Settings (OAuth) — not a webhook test."
-          : "Configure this partner in Settings / payout — not a webhook test."
+          ? "Open Settings and connect Spotify — one tap, then you're done."
+          : "Open Settings and add your payout details so tips and tickets reach you."
       );
       return;
     }
@@ -87,220 +111,172 @@ export function PartnersPanel() {
         hint?: string;
       };
       if (!res.ok) {
-        setMsg(data.error || data.hint || "Test failed");
+        setMsg(
+          data.error?.includes("SECRET")
+            ? "Example alerts aren't switched on for this server yet. Your team can turn them on — you don't need to fix this yourself."
+            : data.error || data.hint || "Couldn't send the example. Try again."
+        );
         return;
       }
       setMsg(
-        `Signal landed in Agent (${data.actionType || "action"}). Open inbox to confirm.`
+        "Example alert sent. Open Moves — you'll see a card you can confirm or dismiss. That's how real news will feel too."
       );
-      setStep(3);
     } catch {
-      setMsg("Network error");
+      setMsg("Network glitch. Try once more.");
     } finally {
       setBusyId(null);
     }
   }
 
-  const steps = [
-    "Copy webhook URL",
-    "Copy your user id",
-    "Test a partner signal",
-    "Confirm in Agent",
-  ];
-
   return (
     <Card className="mt-5 space-y-4 p-5">
-      <div className="flex items-start gap-2">
-        <Cable className="mt-0.5 h-4 w-4 text-omniv-gold" />
+      <div className="flex items-start gap-2.5">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-omniv-gold/15">
+          <Bell className="h-4 w-4 text-omniv-gold" />
+        </div>
         <div>
-          <h2 className="text-sm font-semibold tracking-tight">Partners</h2>
-          <p className="mt-0.5 text-[12px] text-omniv-text-muted">
-            Distro, playlist, curator, sync, radio → one webhook → Agent
-            confirm chips. DSP and payments connect below in Settings.
+          <h2 className="text-sm font-semibold tracking-tight">
+            Industry alerts
+          </h2>
+          <p className="mt-1 text-[13px] leading-snug text-omniv-text-secondary">
+            When something happens outside Omniv — release live, playlist add,
+            sync brief — it can show up in{" "}
+            <Link href="/notifications" className="font-medium text-omniv-gold">
+              Moves
+            </Link>{" "}
+            as a card. You confirm what to do next. No spreadsheet. No waiting
+            until you notice three days late.
           </p>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {steps.map((label, i) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => setStep(i)}
-            className={`rounded-full border px-2.5 py-1 text-[10px] font-medium ${
-              step === i
-                ? "border-omniv-gold bg-omniv-gold/15 text-omniv-gold"
-                : i < step
-                  ? "border-emerald-500/40 text-emerald-400"
-                  : "border-omniv-border text-omniv-text-muted"
-            }`}
-          >
-            {i + 1}. {label}
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-2 rounded-xl border border-omniv-gold/25 bg-omniv-gold/5 px-3 py-2.5">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-omniv-gold">
-          Agent webhook
-        </p>
-        <p className="break-all font-mono text-[11px] text-omniv-text-secondary">
-          {webhook}
-        </p>
-        <p className="text-[10px] text-omniv-text-muted">
-          Auth:{" "}
-          <code className="text-omniv-gold">
-            Authorization: Bearer AGENT_WEBHOOK_SECRET
-          </code>
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1 text-[11px]"
-            onClick={() => {
-              copy(webhook, "url");
-              setStep(Math.max(step, 1));
-            }}
-          >
-            {copied === "url" ? (
-              <Check className="h-3 w-3" />
-            ) : (
-              <Copy className="h-3 w-3" />
-            )}
-            Copy URL
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 gap-1 text-[11px]"
-            disabled={!userId}
-            onClick={() => {
-              if (userId) {
-                copy(userId, "uid");
-                setStep(Math.max(step, 2));
-              }
-            }}
-          >
-            {copied === "uid" ? (
-              <Check className="h-3 w-3" />
-            ) : (
-              <Copy className="h-3 w-3" />
-            )}
-            {userId ? "Copy user id" : "Sign in for user id"}
-          </Button>
-          <Link href="/notifications">
-            <Button size="sm" variant="outline" className="h-8 text-[11px]">
-              Open Agent inbox
-            </Button>
-          </Link>
-        </div>
-        {userId && (
-          <p className="break-all font-mono text-[10px] text-omniv-text-muted">
-            userId: {userId}
+      <div className="rounded-2xl border border-omniv-gold/25 bg-omniv-gold/5 px-3.5 py-3">
+        <div className="flex items-center gap-1.5 text-omniv-gold">
+          <Sparkles className="h-3.5 w-3.5" />
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em]">
+            How it works for you
           </p>
-        )}
+        </div>
+        <ol className="mt-2 space-y-1.5 text-[12px] text-omniv-text-secondary">
+          <li>
+            <span className="font-medium text-omniv-text">1.</span> News arrives
+            (live release, playlist, brief…)
+          </li>
+          <li>
+            <span className="font-medium text-omniv-text">2.</span> You get a
+            card in Moves — one clear action
+          </li>
+          <li>
+            <span className="font-medium text-omniv-text">3.</span> Tap confirm —
+            draft the thank-you, open the room, update the catalogue
+          </li>
+        </ol>
+        <Link href="/notifications" className="mt-3 inline-block">
+          <Button size="sm" className="h-9 rounded-xl text-[12px]">
+            Open Moves
+          </Button>
+        </Link>
       </div>
 
       {msg && (
-        <p className="text-[12px] text-omniv-text-secondary">
-          {msg}{" "}
-          {msg.includes("Agent") && (
-            <Link href="/notifications" className="text-omniv-gold underline">
-              Inbox
-            </Link>
-          )}
+        <p className="rounded-xl border border-omniv-border bg-omniv-card px-3 py-2 text-[12px] leading-snug text-omniv-text-secondary">
+          {msg}
         </p>
       )}
 
       <ul className="space-y-2.5">
-        {PARTNERS.map((p) => (
-          <li
-            key={p.id}
-            className="rounded-xl border border-omniv-border bg-omniv-black/30 px-3.5 py-3"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <Radio className="h-3.5 w-3.5 text-omniv-gold" />
-                  <p className="text-[13px] font-medium">{p.name}</p>
-                  <span className="rounded-full border border-omniv-border px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-omniv-text-muted">
-                    {p.path}
-                  </span>
-                </div>
-                <p className="mt-1 text-[11px] text-omniv-text-muted">{p.blurb}</p>
-                <p className="mt-1 text-[10px] text-omniv-text-muted">
-                  {p.docsHint}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-col gap-1.5 sm:items-end">
-                {p.path === "webhook" && (
+        {PARTNERS.map((p) => {
+          const copy = ARTIST_COPY[p.id] || {
+            title: p.name,
+            meaning: p.blurb,
+            when: p.docsHint,
+          };
+          return (
+            <li
+              key={p.id}
+              className="rounded-2xl border border-omniv-border bg-omniv-black/20 px-3.5 py-3"
+            >
+              <p className="text-[13px] font-semibold tracking-tight">
+                {copy.title}
+              </p>
+              <p className="mt-1 text-[12px] leading-snug text-omniv-text-secondary">
+                {copy.meaning}
+              </p>
+              <p className="mt-1.5 text-[10px] text-omniv-text-muted">
+                Shows up when: {copy.when}
+              </p>
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                {p.path === "webhook" ? (
                   <Button
                     size="sm"
-                    className="h-8 gap-1 text-[11px]"
+                    className="h-9 gap-1.5 rounded-xl text-[12px]"
                     disabled={busyId === p.id}
-                    onClick={() => void testPartner(p)}
+                    onClick={() => void tryExample(p)}
                   >
                     {busyId === p.id ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : null}
-                    Test signal
+                    See example in Moves
                   </Button>
-                )}
-                {p.path === "oauth" && (
+                ) : (
                   <Link href="/settings">
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 gap-1 text-[11px]"
+                      className="h-9 rounded-xl text-[12px]"
                     >
-                      Connect <ExternalLink className="h-3 w-3" />
+                      {p.path === "oauth" ? "Connect Spotify" : "Set up payout"}
                     </Button>
                   </Link>
-                )}
-                {p.path === "settings" && (
-                  <Link href="/settings">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 text-[11px]"
-                    >
-                      Payout settings
-                    </Button>
-                  </Link>
-                )}
-                {p.path === "webhook" && (
-                  <>
-                    <button
-                      type="button"
-                      className="text-[10px] text-omniv-gold hover:underline"
-                      onClick={() =>
-                        copy(JSON.stringify(samplePayload(p), null, 2), p.id)
-                      }
-                    >
-                      {copied === p.id
-                        ? "Copied JSON"
-                        : "Copy JSON (your userId)"}
-                    </button>
-                    <button
-                      type="button"
-                      className="text-[10px] text-omniv-text-muted hover:text-omniv-gold"
-                      onClick={() => copy(sampleCurl(p), `curl-${p.id}`)}
-                    >
-                      {copied === `curl-${p.id}` ? "Copied curl" : "Copy curl"}
-                    </button>
-                  </>
                 )}
               </div>
-            </div>
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
 
-      <p className="text-[10px] text-omniv-text-muted">
-        Real tools (distro, playlist, sync) POST the same JSON with your user
-        id. Omniv infers the action. Confirm in Agent executes it.
-      </p>
+      <button
+        type="button"
+        className="flex w-full items-center justify-between rounded-xl border border-omniv-border/80 px-3 py-2 text-left text-[11px] text-omniv-text-muted"
+        onClick={() => setShowTech((v) => !v)}
+      >
+        <span>For your manager / developer (optional)</span>
+        {showTech ? (
+          <ChevronUp className="h-3.5 w-3.5" />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5" />
+        )}
+      </button>
+      {showTech && (
+        <div className="space-y-2 rounded-xl border border-omniv-border bg-omniv-elevated/50 px-3 py-2.5 text-[11px] text-omniv-text-muted">
+          <p>
+            Hook for tools that send events:{" "}
+            <span className="break-all font-mono text-omniv-text-secondary">
+              {origin}/api/agent/webhook
+            </span>
+          </p>
+          {userId && (
+            <p className="break-all font-mono">
+              userId: {userId}{" "}
+              <button
+                type="button"
+                className="text-omniv-gold"
+                onClick={() => {
+                  void navigator.clipboard.writeText(userId);
+                  setCopied(true);
+                  window.setTimeout(() => setCopied(false), 1200);
+                }}
+              >
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </p>
+          )}
+          <p>
+            You never need this day to day. Only if a distributor or playlist
+            tool is wiring alerts for you.
+          </p>
+        </div>
+      )}
     </Card>
   );
 }
