@@ -78,18 +78,30 @@ export function RecommendationCard({
   return (
     <article
       className={cn(
-        "overflow-hidden rounded-lg border border-omniv-border bg-omniv-card transition",
-        open && "border-omniv-gold/30 shadow-[0_0_0_1px_rgba(212,175,55,0.08)]",
-        done && "opacity-60"
+        "overflow-hidden rounded-2xl border border-omniv-border bg-omniv-card transition",
+        open &&
+          "border-omniv-gold/35 shadow-[0_8px_32px_-12px_rgba(212,175,55,0.25)]",
+        done && "opacity-60",
+        index === 0 && !done && "border-omniv-gold/25"
       )}
     >
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-start gap-2.5 p-2.5 text-left md:p-3"
+        className="flex w-full items-start gap-3 p-3.5 text-left md:p-4"
       >
-        <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-omniv-gold/25 bg-omniv-gold/10 font-data text-[10px] font-semibold text-omniv-gold">
-          {r.priority}
+        <span
+          className={cn(
+            "mt-0.5 flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-xl border font-data text-[12px] font-semibold",
+            index === 0
+              ? "border-omniv-gold/40 bg-omniv-gold/15 text-omniv-gold"
+              : "border-omniv-border bg-omniv-elevated text-omniv-text-secondary"
+          )}
+        >
+          {index === 0 ? (
+            <span className="text-[9px] leading-none text-emerald-400">▲</span>
+          ) : null}
+          #{r.priority}
         </span>
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-1">
@@ -114,7 +126,7 @@ export function RecommendationCard({
               {r.confidence}% conf
             </span>
           </div>
-          <h3 className="text-sm font-semibold tracking-tight text-omniv-text">
+          <h3 className="text-[15px] font-semibold tracking-tight text-omniv-text">
             {r.title}
           </h3>
           <p className="mt-1 text-[12px] leading-snug text-omniv-text-muted">
@@ -150,7 +162,7 @@ export function RecommendationCard({
         )}
       >
         <div className="overflow-hidden">
-          <div className="space-y-2 border-t border-omniv-border/80 px-2.5 pb-2.5 pt-2 md:px-3">
+          <div className="space-y-2.5 border-t border-omniv-border/80 px-3.5 pb-3.5 pt-3 md:px-4">
             <ContextRow icon={Target} label="Why this matters" body={r.why} />
             <ContextRow
               icon={Compass}
@@ -162,7 +174,11 @@ export function RecommendationCard({
               }
             />
             {r.positioning && (
-              <ContextRow icon={Compass} label="Positioning" body={r.positioning} />
+              <ContextRow
+                icon={Compass}
+                label="Positioning"
+                body={r.positioning}
+              />
             )}
             {r.timing && (
               <ContextRow icon={Clock} label="Timing" body={r.timing} />
@@ -175,7 +191,11 @@ export function RecommendationCard({
               />
             )}
             {r.connections && (
-              <ContextRow icon={Link2} label="Connections" body={r.connections} />
+              <ContextRow
+                icon={Link2}
+                label="Connections"
+                body={r.connections}
+              />
             )}
             <ContextRow
               icon={Target}
@@ -183,7 +203,7 @@ export function RecommendationCard({
               body={r.expectedOutcome}
             />
             {r.nextActions && r.nextActions.length > 0 && (
-              <div className="rounded-lg border border-omniv-border/60 bg-omniv-elevated/50 p-2.5">
+              <div className="rounded-xl border border-omniv-border/60 bg-omniv-elevated/50 p-3">
                 <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-omniv-text-muted">
                   <ListChecks className="h-3 w-3 text-omniv-gold" />
                   Next actions
@@ -199,7 +219,11 @@ export function RecommendationCard({
               </div>
             )}
             {r.alternative && (
-              <ContextRow icon={Compass} label="Alternative" body={r.alternative} />
+              <ContextRow
+                icon={Compass}
+                label="Alternative"
+                body={r.alternative}
+              />
             )}
             {r.supportingData && (
               <p className="text-[11px] leading-snug text-omniv-text-muted">
@@ -216,7 +240,7 @@ export function RecommendationCard({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-7 gap-1 text-[11px]"
+                    className="h-9 gap-1.5 rounded-xl text-[12px]"
                     onClick={(e) => {
                       e.stopPropagation();
                       undoDone();
@@ -229,7 +253,7 @@ export function RecommendationCard({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="h-7 gap-1 text-[11px]"
+                    className="h-9 gap-1.5 rounded-xl text-[12px]"
                     onClick={(e) => {
                       e.stopPropagation();
                       markDone();
@@ -241,7 +265,7 @@ export function RecommendationCard({
                 )}
                 <Button
                   size="sm"
-                  className="h-7 gap-1 text-[11px]"
+                  className="h-9 gap-1.5 rounded-xl text-[12px]"
                   onClick={(e) => {
                     e.stopPropagation();
                     actOnThis();
