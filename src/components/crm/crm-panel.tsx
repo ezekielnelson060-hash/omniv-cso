@@ -12,6 +12,7 @@ import { ContractsPanel } from "@/components/crm/contracts-panel";
 import { AudienceMap } from "@/components/crm/audience-map";
 import { CityHeatMap } from "@/components/crm/city-heat-map";
 import { GatheringsPanel } from "@/components/crm/gatherings-panel";
+import { VenueFinder } from "@/components/crm/venue-finder";
 import { isPlaceholderStageName } from "@/lib/crm-priority";
 import {
   addArtist,
@@ -242,6 +243,7 @@ export function CrmPanel({
       <div id="room-form">
         <GatheringsPanel seedCity={gatherCity} seedReady={gatherReady} />
       </div>
+      <VenueFinder city={gatherCity} />
 
       <ContractsPanel />
 
