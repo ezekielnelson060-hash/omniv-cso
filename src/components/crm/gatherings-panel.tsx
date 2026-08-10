@@ -42,13 +42,16 @@ function appOrigin() {
 export function GatheringsPanel({
   seedCity,
   seedReady,
+  seedVenue,
 }: {
   seedCity?: string | null;
   seedReady?: number | null;
+  seedVenue?: string | null;
 }) {
   const [rows, setRows] = useState<Gathering[]>([]);
   const [title, setTitle] = useState("");
   const [city, setCity] = useState(seedCity || "");
+  const [venue, setVenue] = useState(seedVenue || "");
   const [capacity, setCapacity] = useState(
     seedReady ? String(Math.min(seedReady, 40)) : "20"
   );
@@ -70,7 +73,8 @@ export function GatheringsPanel({
   useEffect(() => {
     if (seedCity) setCity(seedCity);
     if (seedReady) setCapacity(String(Math.min(seedReady, 40)));
-  }, [seedCity, seedReady]);
+    if (seedVenue) setVenue(seedVenue);
+  }, [seedCity, seedReady, seedVenue]);
 
   async function load() {
     if (!isSupabaseConfigured()) return;
@@ -112,6 +116,7 @@ export function GatheringsPanel({
         user_id: user.id,
         title: title.trim(),
         city: city.trim() || null,
+        venue: venue.trim() || null,
         capacity: Number(capacity) || 20,
         ticket_price_cents: cents,
         status: "open",
@@ -224,6 +229,11 @@ export function GatheringsPanel({
           placeholder="City"
           value={city}
           onChange={(e) => setCity(e.target.value)}
+        />
+        <Input
+          placeholder="Venue (from map search)"
+          value={venue}
+          onChange={(e) => setVenue(e.target.value)}
         />
         <Input
           placeholder="Capacity"
