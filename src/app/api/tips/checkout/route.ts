@@ -64,7 +64,7 @@ export async function POST(req: Request) {
 
     const { data: profile } = await admin
       .from("profiles")
-      .select("full_name, flw_subaccount_id")
+      .select("full_name, payout_subaccount_id, flw_subaccount_id")
       .eq("id", userId)
       .maybeSingle();
 
@@ -79,7 +79,7 @@ export async function POST(req: Request) {
     const payload: Record<string, unknown> = {
       tx_ref: txRef,
       amount,
-      currency: "USD",
+      currency: process.env.FLW_CURRENCY || "USD",
       redirect_url: `${origin}/tip/${body.slug || "thanks"}?paid=1`,
       customer: {
         email,
@@ -96,12 +96,17 @@ export async function POST(req: Request) {
       },
     };
 
-    if (profile?.flw_subaccount_id) {
+    const subId =
+      (profile as { payout_subaccount_id?: string } | null)
+        ?.payout_subaccount_id ||
+      (profile as { flw_subaccount_id?: string } | null)?.flw_subaccount_id;
+    if (subId) {
       payload.subaccounts = [
         {
-          id: profile.flw_subaccount_id,
+          id: subId,
+          transaction_split_ratio: 9,
           transaction_charge_type: "percentage",
-          transaction_charge: 90,
+          transaction_charge: 10,
         },
       ];
     }
