@@ -1,14 +1,22 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { CrmPanel } from "@/components/crm/crm-panel";
 import { Button } from "@/components/ui/button";
 import { Building2 } from "lucide-react";
 
-export default function CrmPage() {
+function CrmInner() {
+  const sp = useSearchParams();
+  const city = sp.get("city");
+  const readyRaw = sp.get("ready");
+  const ready = readyRaw ? Number(readyRaw) : null;
+  const focus = sp.get("focus");
+
   return (
-    <AppShell>
+    <>
       <div className="relative -mx-3 mb-4 overflow-hidden sm:-mx-4 md:mx-0 md:rounded-2xl">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/12 via-omniv-gold/8 to-transparent" />
         <div className="absolute -left-10 top-0 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" />
@@ -21,8 +29,11 @@ export default function CrmPage() {
               Command Center
             </h1>
             <p className="mt-1 max-w-lg text-[12px] text-omniv-text-secondary">
-              Fans, rooms, city heat, gatherings — what you own, not what the
-              algorithm rents.
+              {city
+                ? `Scan pointed here: draft a room in ${city}${
+                    ready ? ` · ${ready} fans marked ready` : ""
+                  }.`
+                : "Fans, rooms, city heat, gatherings — what you own, not what the algorithm rents."}
             </p>
           </div>
           <Link href="/label">
@@ -36,7 +47,25 @@ export default function CrmPage() {
           </Link>
         </div>
       </div>
-      <CrmPanel />
+      <CrmPanel
+        initialCity={city}
+        initialReady={ready && !Number.isNaN(ready) ? ready : null}
+        focusRoom={focus === "room"}
+      />
+    </>
+  );
+}
+
+export default function CrmPage() {
+  return (
+    <AppShell>
+      <Suspense
+        fallback={
+          <p className="text-sm text-omniv-text-muted">Loading Command Center…</p>
+        }
+      >
+        <CrmInner />
+      </Suspense>
     </AppShell>
   );
 }
