@@ -18,8 +18,9 @@ PRODUCT TOOLS: When the right next step is something Omniv can execute (open a f
 Format exactly:
 OMNIV_ACTIONS:[{"type":"CREATE_ROOM","label":"Draft room in Lagos","city":"Lagos"},{"type":"CREATE_TASK","label":"Film 15s hook","title":"Film 15s hook from chorus"}]
 
-Allowed types: CREATE_ROOM, CREATE_TASK, OPEN_CATALOGUE, OPEN_CRM, OPEN_SETTINGS, OPEN_OPPORTUNITIES, MARK_OPP_DONE.
+Allowed types: CREATE_ROOM, CREATE_TASK, DRAFT_OUTREACH, REFRESH_METRICS, OPEN_CATALOGUE, OPEN_CRM, OPEN_SETTINGS, OPEN_OPPORTUNITIES, OPEN_RELEASE, MARK_OPP_DONE.
 Max 2 actions. Only when clearly useful — never spam.
+For playlist/curator follow-ups prefer DRAFT_OUTREACH with "to" and "topic" fields.
 `.trim();
 
 export function scrubZikiMarkdown(text: string): string {
@@ -37,9 +38,10 @@ export type ZikiParsedAction = {
   city?: string;
   title?: string;
   id?: string;
+  to?: string;
+  topic?: string;
 };
 
-/** Extract confirmable actions from raw model text (before scrub). */
 export function parseZikiActions(raw: string): ZikiParsedAction[] {
   const out: ZikiParsedAction[] = [];
   const m = raw.match(/OMNIV_ACTIONS:\s*(\[[\s\S]*?\])/);
@@ -65,6 +67,12 @@ export function parseZikiActions(raw: string): ZikiParsedAction[] {
               : undefined,
             id: (item as { id?: string }).id
               ? String((item as { id?: string }).id).slice(0, 80)
+              : undefined,
+            to: (item as { to?: string }).to
+              ? String((item as { to?: string }).to).slice(0, 80)
+              : undefined,
+            topic: (item as { topic?: string }).topic
+              ? String((item as { topic?: string }).topic).slice(0, 120)
               : undefined,
           });
         }
