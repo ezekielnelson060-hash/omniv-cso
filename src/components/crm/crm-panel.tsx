@@ -11,6 +11,9 @@ import { AudienceMap } from "@/components/crm/audience-map";
 import { CityHeatMap } from "@/components/crm/city-heat-map";
 import { GatheringsPanel } from "@/components/crm/gatherings-panel";
 import { VenueFinder } from "@/components/crm/venue-finder";
+import { RoomChallenge } from "@/components/crm/room-challenge";
+import { RosterPayouts } from "@/components/crm/roster-payouts";
+import { StorySlides } from "@/components/onboarding/story-slides";
 import { isPlaceholderStageName } from "@/lib/crm-priority";
 import {
   loadTasks,
@@ -204,6 +207,7 @@ export function CrmPanel({
             ))}
           </div>
           <RosterSwitcher />
+          <RoomChallenge onOpenRooms={() => setTab("rooms")} />
           <div className="grid gap-4 lg:grid-cols-2">
             <CityHeatMap
               onCreateGathering={(city, ready) => {
@@ -262,9 +266,16 @@ export function CrmPanel({
         <div className="space-y-4">
           <p className="text-[13px] leading-snug text-omniv-text-secondary">
             Tickets from rooms. Tips from your tip links. Copy a link per artist
-            on your roster.
+            on your roster. Labels set payout per act below.
           </p>
+          <div className="rounded-2xl border border-omniv-gold/20 bg-omniv-gold/5 px-3.5 py-2.5 text-[12px] text-omniv-text-secondary">
+            <span className="font-semibold text-omniv-gold">~90% to you</span>
+            {" · "}
+            Omniv 10%. Africa: auto-pay when bank is linked. US / EU / Asia: payout
+            on schedule to the account you save.
+          </div>
           <EarningsPanel />
+          <RosterPayouts />
           <ContractsPanel />
         </div>
       )}
@@ -284,6 +295,8 @@ export function CrmPanel({
           <FanDirectory />
         </div>
       )}
+
+      <StorySlides />
     </div>
   );
 }
