@@ -105,22 +105,45 @@ export async function POST() {
       /* optional */
     }
 
-    const fanCities: { city: string; count: number }[] = [];
+    let fanCities: { city: string; count: number }[] = [];
+    let fanCount = 0;
     try {
-      const { data: fans } = await supabase
-        .from("fans")
-        .select("city")
-        .eq("user_id", user.id)
-        .limit(500);
-      const map = new Map<string, number>();
-      for (const f of fans || []) {
-        const c = (f.city || "").trim();
-        if (!c) continue;
-        map.set(c, (map.get(c) || 0) + 1);
+      const { data: roster } = await supabase
+        .from("roster_artists")
+        .select("id")
+        .eq("user_id", user.id);
+      const ids = (roster || []).map((r) => r.id as string);
+      if (ids.length) {
+        const { data: fans } = await supabase
+          .from("fans")
+          .select("city")
+          .in("artist_id", ids);
+        const list = fans || [];
+        fanCount = list.length;
+        const map = new Map<string, number>();
+        for (const f of list) {
+          const c = String(f.city || "").trim();
+          if (!c) continue;
+          map.set(c, (map.get(c) || 0) + 1);
+        }
+        fanCities = [...map.entries()]
+          .map(([city, count]) => ({ city, count }))
+          .sort((a, b) => b.count - a.count);
       }
-      for (const [city, count] of map) fanCities.push({ city, count });
     } catch {
-      /* optional */
+      /* soft */
+    }
+
+    let hasPayout = false;
+    try {
+      const { data: pay } = await supabase
+        .from("profiles")
+        .select("payout_subaccount_id")
+        .eq("id", user.id)
+        .maybeSingle();
+      hasPayout = Boolean(pay?.payout_subaccount_id);
+    } catch {
+      /* soft */
     }
 
     const result = runAgentScan({
@@ -135,6 +158,8 @@ export async function POST() {
       platforms,
       linkedSurfaces: linkedCount,
       fanCities,
+      fanCount,
+      hasPayout,
     });
 
     try {
