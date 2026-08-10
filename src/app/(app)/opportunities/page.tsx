@@ -137,7 +137,7 @@ export default function OpportunitiesPage() {
     const inv = invParts.length ? ` · ${invParts.join(", ")}` : "";
     setSubtitle(
       dream
-        ? `Ranked for ${name}${genre ? ` · ${genre}` : ""}${inv} against “${dream.slice(0, 50)}${dream.length > 50 ? "…" : "”"}`
+        ? `Ranked for ${name}${genre ? ` · ${genre}` : ""}${inv} against “${dream.slice(0, 50)}${dream.length > 50 ? "…" : ""}”`
         : genre
           ? `Ranked for ${name} · ${genre}${inv}`
           : "Finish Artist Brain + upload a track so ranking stops being generic"
