@@ -1,9 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { FanDirectory } from "@/components/crm/fan-directory";
 import { CrmNextSteps } from "@/components/crm/crm-next-steps";
 import { FanGateMetrics } from "@/components/crm/fan-gate-metrics";
@@ -16,30 +13,14 @@ import { GatheringsPanel } from "@/components/crm/gatherings-panel";
 import { VenueFinder } from "@/components/crm/venue-finder";
 import { isPlaceholderStageName } from "@/lib/crm-priority";
 import {
-  addArtist,
-  addEvent,
-  addNote,
-  addTask,
-  loadArtists,
-  loadEvents,
-  loadNotes,
   loadTasks,
-  toggleEvent,
-  toggleTask,
-  type ManagedArtist,
-  type ManagerEvent,
-  type ManagerNote,
+  loadEvents,
   type ManagerTask,
+  type ManagerEvent,
 } from "@/lib/workspace-store";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
-import {
-  Users,
-  CheckSquare,
-  StickyNote,
-  Calendar,
-  Plus,
-} from "lucide-react";
+
+type TabId = "home" | "rooms" | "money" | "fans";
 
 export function CrmPanel({
   initialCity = null,
@@ -50,11 +31,8 @@ export function CrmPanel({
   initialReady?: number | null;
   focusRoom?: boolean;
 } = {}) {
-  const [artists, setArtists] = useState<ManagedArtist[]>([]);
   const [tasks, setTasks] = useState<ManagerTask[]>([]);
-  const [notes, setNotes] = useState<ManagerNote[]>([]);
   const [events, setEvents] = useState<ManagerEvent[]>([]);
-
   const [rosterCount, setRosterCount] = useState(0);
   const [fanCount, setFanCount] = useState(0);
   const [fans7d, setFans7d] = useState(0);
@@ -68,17 +46,10 @@ export function CrmPanel({
   const [primaryArtistName, setPrimaryArtistName] = useState<string | null>(
     null
   );
-
-  const [name, setName] = useState("");
-  const [genre, setGenre] = useState("");
-  const [listeners, setListeners] = useState("");
-  const [taskTitle, setTaskTitle] = useState("");
-  const [noteBody, setNoteBody] = useState("");
-  const [eventTitle, setEventTitle] = useState("");
-  const [eventDate, setEventDate] = useState("");
   const [gatherCity, setGatherCity] = useState<string | null>(initialCity);
   const [gatherReady, setGatherReady] = useState<number | null>(initialReady);
   const [gatherVenue, setGatherVenue] = useState<string | null>(null);
+  const [tab, setTab] = useState<TabId>(focusRoom ? "rooms" : "home");
 
   useEffect(() => {
     if (initialCity) setGatherCity(initialCity);
@@ -86,20 +57,11 @@ export function CrmPanel({
   }, [initialCity, initialReady]);
 
   useEffect(() => {
-    if (!focusRoom) return;
-    const t = window.setTimeout(() => {
-      document.getElementById("room-form")?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 200);
-    return () => window.clearTimeout(t);
+    if (focusRoom) setTab("rooms");
   }, [focusRoom]);
 
   useEffect(() => {
-    setArtists(loadArtists());
     setTasks(loadTasks());
-    setNotes(loadNotes());
     setEvents(loadEvents());
   }, []);
 
@@ -153,263 +115,175 @@ export function CrmPanel({
   const openTasks = tasks.filter((t) => !t.done).length;
   const openEvents = events.filter((e) => !e.done).length;
 
-  function handleAddArtist() {
-    if (!name.trim()) return;
-    setArtists(
-      addArtist({
-        name: name.trim(),
-        genre: genre.trim() || "",
-        monthlyListeners: listeners ? Number(listeners) : undefined,
-      })
-    );
-    setName("");
-    setGenre("");
-    setListeners("");
-  }
-
-  function handleAddTask() {
-    if (!taskTitle.trim()) return;
-    setTasks(addTask(taskTitle.trim()));
-    setTaskTitle("");
-  }
-
-  function handleAddNote() {
-    if (!noteBody.trim()) return;
-    setNotes(addNote(noteBody.trim()));
-    setNoteBody("");
-  }
-
-  function handleAddEvent() {
-    if (!eventTitle.trim() || !eventDate) return;
-    setEvents(addEvent(eventTitle.trim(), eventDate));
-    setEventTitle("");
-    setEventDate("");
-  }
-
   return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-        {[
-          {
-            label: "Owned fans",
-            value: fanCount,
-            delta: fans7d,
-            deltaLabel: "7d",
-          },
-          { label: "Superfans", value: superfanCount, delta: 0 },
-          { label: "Cold", value: coldCount, delta: 0 },
-          { label: "Open tasks", value: openTasks, delta: 0 },
-          { label: "Events", value: openEvents, delta: 0 },
-        ].map((c) => (
-          <div
-            key={c.label}
-            className="rounded-2xl border border-omniv-border bg-omniv-card p-3.5"
-          >
+    <div className="space-y-4">
+      <div className="sticky top-0 z-20 -mx-3 border-b border-omniv-border/80 bg-omniv-black/95 px-3 py-2.5 backdrop-blur-md sm:-mx-4 sm:px-4 md:mx-0 md:rounded-2xl md:border">
+        <div className="flex items-center justify-between gap-3">
+          <div>
             <p className="text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
-              {c.label}
+              Your list
             </p>
-            <p className="mt-1.5 font-data text-2xl font-semibold tabular-nums tracking-tight">
-              {c.value.toLocaleString()}
+            <p className="font-data text-xl font-semibold tabular-nums tracking-tight">
+              {fanCount.toLocaleString()}
+              <span className="ml-1 text-[12px] font-normal text-omniv-text-muted">
+                fans
+              </span>
             </p>
-            {c.delta > 0 ? (
-              <p className="mt-1 text-[11px] font-medium text-emerald-400">
-                +{c.delta} {c.deltaLabel || ""}
-              </p>
-            ) : (
-              <p className="mt-1 text-[11px] text-omniv-text-muted">
-                {topSource && c.label === "Owned fans"
-                  ? `Top: ${topSource}`
-                  : "—"}
-              </p>
-            )}
           </div>
-        ))}
-      </div>
-
-      <RosterSwitcher />
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <CityHeatMap
-          onCreateGathering={(city, ready) => {
-            setGatherCity(city);
-            setGatherReady(ready);
-          }}
-        />
-        <AudienceMap
-          onCreateGathering={(city, ready) => {
-            setGatherCity(city);
-            setGatherReady(ready);
-          }}
-        />
-      </div>
-      <div id="room-form">
-        <GatheringsPanel
-          seedCity={gatherCity}
-          seedReady={gatherReady}
-          seedVenue={gatherVenue}
-        />
-      </div>
-      <VenueFinder
-        city={gatherCity}
-        onPick={(v) => {
-          setGatherCity(v.city);
-          setGatherVenue(v.name);
-        }}
-      />
-
-      <EarningsPanel />
-      <ContractsPanel />
-
-      <CrmNextSteps
-        rosterCount={rosterCount}
-        fanCount={fanCount}
-        fans7d={fans7d}
-        superfanCount={superfanCount}
-        coldCount={coldCount}
-        topSource={topSource}
-        openTasks={openTasks}
-        openEvents={openEvents}
-        gateSlug={gateSlug}
-        primaryArtistName={primaryArtistName}
-      />
-
-      <FanGateMetrics
-        fanCount={fanCount}
-        fans7d={fans7d}
-        superfanCount={superfanCount}
-        coldCount={coldCount}
-        topSource={topSource}
-        sources={sources}
-        gateSlug={gateSlug}
-        artistName={primaryArtistName}
-      />
-
-      <FanDirectory />
-
-      <Card className="p-5">
-        <div className="mb-3 flex items-center gap-2">
-          <Users className="h-4 w-4 text-omniv-gold" />
-          <h2 className="text-sm font-semibold">Local roster notes</h2>
+          <div className="text-right">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
+              Superfans
+            </p>
+            <p className="font-data text-lg font-semibold tabular-nums text-omniv-gold">
+              {superfanCount}
+            </p>
+          </div>
         </div>
-        <div className="grid gap-2 sm:grid-cols-3">
-          <Input
-            placeholder="Artist name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <Input
-            placeholder="Genre"
-            value={genre}
-            onChange={(e) => setGenre(e.target.value)}
-          />
-          <Input
-            placeholder="Monthly listeners"
-            value={listeners}
-            onChange={(e) => setListeners(e.target.value)}
-          />
-        </div>
-        <Button size="sm" className="mt-3 gap-1" onClick={handleAddArtist}>
-          <Plus className="h-3.5 w-3.5" />
-          Add
-        </Button>
-        <ul className="mt-3 space-y-1 text-sm">
-          {artists.map((a) => (
-            <li key={a.id} className="text-omniv-text-secondary">
-              {a.name}
-              {a.genre ? ` · ${a.genre}` : ""}
-            </li>
+        <div className="mt-2.5 flex gap-1 overflow-x-auto pb-0.5">
+          {(
+            [
+              { id: "home" as const, label: "Home" },
+              { id: "rooms" as const, label: "Rooms" },
+              { id: "money" as const, label: "Money" },
+              { id: "fans" as const, label: "Fans" },
+            ] as const
+          ).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setTab(item.id)}
+              className={
+                tab === item.id
+                  ? "shrink-0 rounded-full bg-omniv-gold px-3.5 py-1.5 text-[12px] font-semibold text-omniv-black"
+                  : "shrink-0 rounded-full border border-omniv-border bg-omniv-card/50 px-3.5 py-1.5 text-[12px] text-omniv-text-muted"
+              }
+            >
+              {item.label}
+            </button>
           ))}
-        </ul>
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="p-4">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-            <CheckSquare className="h-4 w-4 text-omniv-gold" />
-            Tasks
-          </div>
-          <div className="flex gap-2">
-            <Input
-              placeholder="New task"
-              value={taskTitle}
-              onChange={(e) => setTaskTitle(e.target.value)}
-            />
-            <Button size="sm" onClick={handleAddTask}>
-              Add
-            </Button>
-          </div>
-          <ul className="mt-2 space-y-1 text-xs">
-            {tasks.map((t) => (
-              <li key={t.id} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={t.done}
-                  onChange={() => setTasks(toggleTask(t.id))}
-                />
-                <span className={cn(t.done && "line-through opacity-50")}>
-                  {t.title}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-        <Card className="p-4">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-            <StickyNote className="h-4 w-4 text-omniv-gold" />
-            Notes
-          </div>
-          <div className="flex gap-2">
-            <Input
-              placeholder="Note"
-              value={noteBody}
-              onChange={(e) => setNoteBody(e.target.value)}
-            />
-            <Button size="sm" onClick={handleAddNote}>
-              Add
-            </Button>
-          </div>
-          <ul className="mt-2 space-y-1 text-xs text-omniv-text-secondary">
-            {notes.map((n) => (
-              <li key={n.id}>{n.body}</li>
-            ))}
-          </ul>
-        </Card>
-        <Card className="p-4">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-            <Calendar className="h-4 w-4 text-omniv-gold" />
-            Calendar
-          </div>
-          <div className="flex flex-col gap-2">
-            <Input
-              placeholder="Event"
-              value={eventTitle}
-              onChange={(e) => setEventTitle(e.target.value)}
-            />
-            <Input
-              type="date"
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
-            />
-            <Button size="sm" onClick={handleAddEvent}>
-              Add
-            </Button>
-          </div>
-          <ul className="mt-2 space-y-1 text-xs">
-            {events.map((ev) => (
-              <li key={ev.id} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={ev.done}
-                  onChange={() => setEvents(toggleEvent(ev.id))}
-                />
-                <span className={cn(ev.done && "line-through opacity-50")}>
-                  {ev.title} · {ev.eventDate}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
+        </div>
       </div>
+
+      {tab === "home" && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-2.5">
+            {[
+              {
+                label: "Owned fans",
+                value: fanCount,
+                sub: fans7d > 0 ? `+${fans7d} this week` : "Build the list",
+              },
+              {
+                label: "Superfans",
+                value: superfanCount,
+                sub: "Would show up",
+              },
+              {
+                label: "Cold",
+                value: coldCount,
+                sub: "Need a nudge",
+              },
+              {
+                label: "Open tasks",
+                value: openTasks,
+                sub: openTasks ? "In your notes" : "Clear",
+              },
+            ].map((c) => (
+              <div
+                key={c.label}
+                className="rounded-2xl border border-omniv-border bg-omniv-card p-3.5"
+              >
+                <p className="text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
+                  {c.label}
+                </p>
+                <p className="mt-1.5 font-data text-2xl font-semibold tabular-nums tracking-tight">
+                  {c.value.toLocaleString()}
+                </p>
+                <p className="mt-1 text-[11px] text-omniv-text-muted">{c.sub}</p>
+              </div>
+            ))}
+          </div>
+          <RosterSwitcher />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <CityHeatMap
+              onCreateGathering={(city, ready) => {
+                setGatherCity(city);
+                setGatherReady(ready);
+                setTab("rooms");
+              }}
+            />
+            <AudienceMap
+              onCreateGathering={(city, ready) => {
+                setGatherCity(city);
+                setGatherReady(ready);
+                setTab("rooms");
+              }}
+            />
+          </div>
+          <CrmNextSteps
+            rosterCount={rosterCount}
+            fanCount={fanCount}
+            fans7d={fans7d}
+            superfanCount={superfanCount}
+            coldCount={coldCount}
+            topSource={topSource}
+            openTasks={openTasks}
+            openEvents={openEvents}
+            gateSlug={gateSlug}
+            primaryArtistName={primaryArtistName}
+          />
+        </div>
+      )}
+
+      {tab === "rooms" && (
+        <div className="space-y-4">
+          <p className="text-[13px] leading-snug text-omniv-text-secondary">
+            City where fans said they would come. Find a place. Open a room.
+            Share the link.
+          </p>
+          <div id="room-form">
+            <GatheringsPanel
+              seedCity={gatherCity}
+              seedReady={gatherReady}
+              seedVenue={gatherVenue}
+            />
+          </div>
+          <VenueFinder
+            city={gatherCity}
+            onPick={(v) => {
+              setGatherCity(v.city);
+              setGatherVenue(v.name);
+            }}
+          />
+        </div>
+      )}
+
+      {tab === "money" && (
+        <div className="space-y-4">
+          <p className="text-[13px] leading-snug text-omniv-text-secondary">
+            Tickets from rooms. Tips from your tip links. Copy a link per artist
+            on your roster.
+          </p>
+          <EarningsPanel />
+          <ContractsPanel />
+        </div>
+      )}
+
+      {tab === "fans" && (
+        <div className="space-y-4">
+          <FanGateMetrics
+            fanCount={fanCount}
+            fans7d={fans7d}
+            superfanCount={superfanCount}
+            coldCount={coldCount}
+            topSource={topSource}
+            sources={sources}
+            gateSlug={gateSlug}
+            artistName={primaryArtistName}
+          />
+          <FanDirectory />
+        </div>
+      )}
     </div>
   );
 }
