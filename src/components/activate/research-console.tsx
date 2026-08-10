@@ -37,8 +37,8 @@ const FALLBACK_LABELS = [
 ];
 
 /**
- * Explee-style progressive research console.
- * Runs real /api/activate/research, then reveals next move.
+ * Progressive free artist scan.
+ * Runs real /api/activate/research, then reveals one next move + room CTA.
  */
 export function ResearchConsole({
   onDone,
@@ -83,23 +83,23 @@ export function ResearchConsole({
       const res = await fetch("/api/activate/research", { method: "POST" });
       window.clearInterval(tick);
       if (!res.ok) {
-        const d = (await res.json().catch(() => ({}))) as { error?: string };
+        const j = (await res.json().catch(() => ({}))) as { error?: string };
         setError(
           res.status === 401
-            ? "Sign in required — open /login then retry Activate"
-            : d.error || "Research failed — try again"
+            ? "Sign in required"
+            : j.error || "Scan failed — retry"
         );
         setPhase("error");
+        setVisible([]);
         return;
       }
       const data = (await res.json()) as {
-        steps: Step[];
-        summary: Summary;
+        steps?: Step[];
+        summary?: Summary;
       };
-
       setVisible([]);
       for (let n = 0; n < (data.steps || []).length; n++) {
-        const slice: Step[] = data.steps.slice(0, n + 1).map((s, idx, arr) => ({
+        const slice: Step[] = data.steps!.slice(0, n + 1).map((s, idx, arr) => ({
           ...s,
           status: (idx < arr.length - 1
             ? s.status === "warn"
@@ -118,7 +118,7 @@ export function ResearchConsole({
           status: (s.status === "warn" ? "warn" : "done") as Step["status"],
         }))
       );
-      setSummary(data.summary);
+      setSummary(data.summary || null);
       setPhase("done");
       onDone?.();
     } catch {
@@ -137,14 +137,14 @@ export function ResearchConsole({
     <div className="mx-auto w-full max-w-lg space-y-6">
       <div>
         <p className="font-data text-[10px] uppercase tracking-[0.14em] text-omniv-gold">
-          Activate
+          Free artist scan
         </p>
         <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
-          1 · Research your project
+          What Omniv sees — then one move
         </h1>
         <p className="mt-1 text-[12px] text-omniv-text-muted">
-          Omniv reads what you already put in — brain, catalogue, fans, DSP —
-          then names the next confirmable move.
+          Not fifty tips. We read your brain, catalogue, owned fans, and DSP
+          snapshots, then name the single highest-impact action for this week.
         </p>
       </div>
 
@@ -169,9 +169,9 @@ export function ResearchConsole({
               <p
                 className={cn(
                   s.status === "active" && "text-omniv-text",
-                  s.status === "done" && "text-omniv-text-muted",
-                  s.status === "warn" && "text-amber-400/90",
-                  s.status === "pending" && "text-omniv-text-muted/50"
+                  s.status === "done" && "text-omniv-text-secondary",
+                  s.status === "pending" && "text-omniv-text-muted",
+                  s.status === "warn" && "text-amber-200"
                 )}
               >
                 {s.label}
@@ -204,7 +204,7 @@ export function ResearchConsole({
         <div className="space-y-4 rounded-2xl border border-omniv-gold/30 bg-omniv-gold/5 p-4">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wider text-omniv-gold">
-              Operating brief
+              Your scan
             </p>
             <p className="mt-1 text-sm font-medium">{summary.artistName}</p>
             {summary.bigDream && (
@@ -212,47 +212,65 @@ export function ResearchConsole({
                 Dream: {summary.bigDream}
               </p>
             )}
+            <p className="mt-2 text-[11px] text-omniv-text-muted">
+              {summary.fans} owned fans · {summary.tracks} tracks ·{" "}
+              {summary.releases} releases
+              {summary.avgPopularity != null
+                ? ` · DSP pop ~${summary.avgPopularity}`
+                : ""}
+            </p>
           </div>
           <ul className="space-y-1 text-[12px] text-omniv-text-muted">
-            {summary.findings.slice(0, 6).map((f) => (
+            {summary.findings.slice(0, 5).map((f) => (
               <li key={f}>· {f}</li>
             ))}
           </ul>
-          <div className="rounded-xl border border-omniv-border bg-omniv-black/40 px-3 py-2">
-            <p className="text-[10px] uppercase tracking-wider text-omniv-text-muted">
-              Next move
+          <div className="rounded-xl border border-omniv-gold/25 bg-omniv-black/50 px-3.5 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-omniv-gold">
+              One move this week
             </p>
-            <p className="mt-0.5 text-sm font-medium text-omniv-gold">
+            <p className="mt-1 text-[15px] font-semibold leading-snug text-omniv-text">
               {summary.nextMove}
+            </p>
+            <p className="mt-1.5 text-[11px] text-omniv-text-muted">
+              Confirm it in Agent or open a room and take tickets — don&apos;t
+              rent another week of algorithm reach.
             </p>
           </div>
           {summary.gaps.length > 0 && (
             <p className="text-[11px] text-omniv-text-muted">
-              Gaps: {summary.gaps.join(" · ")}
+              Still open: {summary.gaps.join(" · ")}
             </p>
           )}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Button
-              className="gap-1.5"
-              onClick={() => router.push("/opportunities")}
+              className="h-11 gap-1.5 rounded-xl"
+              onClick={() => router.push("/crm")}
             >
-              Open Opportunities <ArrowRight className="h-4 w-4" />
+              Open your first room <ArrowRight className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
-              onClick={() => router.push("/crm")}
+              className="h-11 rounded-xl"
+              onClick={() => router.push("/notifications")}
             >
-              Command Center
+              Confirm in Agent
             </Button>
-            <Button variant="outline" onClick={() => router.push("/ziki")}>
-              Talk to Ziki
+            <Button
+              variant="outline"
+              className="h-11 rounded-xl"
+              onClick={() => router.push("/ziki")}
+            >
+              Ask Ziki why
             </Button>
           </div>
         </div>
       )}
 
       {phase === "idle" && (
-        <Button onClick={() => void run()}>Start research</Button>
+        <Button className="h-11 rounded-xl" onClick={() => void run()}>
+          Start free scan
+        </Button>
       )}
     </div>
   );
