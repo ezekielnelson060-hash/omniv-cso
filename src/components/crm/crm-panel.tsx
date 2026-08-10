@@ -161,6 +161,44 @@ export function CrmPanel() {
 
   return (
     <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+        {[
+          {
+            label: "Owned fans",
+            value: fanCount,
+            delta: fans7d,
+            deltaLabel: "7d",
+          },
+          { label: "Superfans", value: superfanCount, delta: 0 },
+          { label: "Cold", value: coldCount, delta: 0 },
+          { label: "Open tasks", value: openTasks, delta: 0 },
+          { label: "Events", value: openEvents, delta: 0 },
+        ].map((c) => (
+          <div
+            key={c.label}
+            className="rounded-2xl border border-omniv-border bg-omniv-card p-3.5"
+          >
+            <p className="text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
+              {c.label}
+            </p>
+            <p className="mt-1.5 font-data text-2xl font-semibold tabular-nums tracking-tight">
+              {c.value.toLocaleString()}
+            </p>
+            {c.delta > 0 ? (
+              <p className="mt-1 text-[11px] font-medium text-emerald-400">
+                +{c.delta} {c.deltaLabel || ""}
+              </p>
+            ) : (
+              <p className="mt-1 text-[11px] text-omniv-text-muted">
+                {topSource && c.label === "Owned fans"
+                  ? `Top: ${topSource}`
+                  : "—"}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
       <RosterSwitcher />
 
       <div className="grid gap-4 lg:grid-cols-2">
