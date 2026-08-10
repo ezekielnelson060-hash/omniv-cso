@@ -36,10 +36,20 @@ Headers:
 | `body` | no | Context for Agent + Ziki |
 | `urgency` | no | `now` \| `today` \| `this_week` |
 | `impact` | no | `high` \| `medium` \| `low` |
-| `actionType` | no | `OPEN_ZIKI` \| `CREATE_ROOM` \| `CREATE_TASK` \| `OPEN_CRM` \| `OPEN_CATALOGUE` \| `OPEN_SETTINGS` \| `OPEN_OPPORTUNITIES` \| `OPEN_RELEASE` |
+| `actionType` | no | `OPEN_ZIKI` \| `CREATE_ROOM` \| `CREATE_TASK` \| `DRAFT_OUTREACH` \| `REFRESH_METRICS` \| `OPEN_CRM` \| `OPEN_CATALOGUE` \| `OPEN_SETTINGS` \| `OPEN_OPPORTUNITIES` \| `OPEN_RELEASE` — if omitted, **inferred** from title/body |
 | `actionLabel` | no | Button label in Agent |
 | `payload` | no | Passed through to the action |
 | `externalId` | no | **Dedupes** — same id will not re-spam the inbox |
+
+### Inference (when `actionType` omitted)
+
+| Signal in title/body | Confirm action |
+|----------------------|----------------|
+| playlist / curator / editorial / added to | `DRAFT_OUTREACH` |
+| sync / brief / licensing | `OPEN_ZIKI` |
+| distro / pre-save / release live / DSP | `OPEN_CATALOGUE` |
+| city / room / drop party | `CREATE_ROOM` |
+| else | `OPEN_ZIKI` |
 
 ---
 
@@ -56,10 +66,7 @@ Headers:
   "impact": "high",
   "actionType": "OPEN_CATALOGUE",
   "actionLabel": "Open catalogue · ship plan",
-  "payload": {
-    "phase": "presave",
-    "windowHours": "48"
-  },
+  "payload": { "phase": "presave", "windowHours": "48" },
   "externalId": "distro-presave-{ISRC_or_release_id}"
 }
 ```
@@ -75,66 +82,54 @@ Headers:
   "impact": "high",
   "actionType": "OPEN_CATALOGUE",
   "actionLabel": "Paste DSP links + lock plan",
-  "payload": {
-    "phase": "live",
-    "platforms": "spotify,apple,boomplay"
-  },
-  "externalId": "distro-live-{ISRC_or_release_id}"
+  "payload": { "phase": "live", "platforms": "spotify,apple,boomplay" },
+  "externalId": "distro-live-{ISRC}"
 }
 ```
 
-### 3. Playlist / curator — pitch window open
+### 3. Playlist / curator add (auto → DRAFT_OUTREACH if actionType omitted)
 
 ```json
 {
   "userId": "…",
-  "title": "Playlist window: Afrobeats Late Drive · 12.4k followers",
-  "body": "Curator open this week. Prefers 15–30s hook. Target unreleased or lead single.",
-  "urgency": "this_week",
-  "impact": "high",
-  "actionType": "CREATE_TASK",
-  "actionLabel": "Prep 15s hook + pitch note",
-  "payload": {
-    "title": "Prep 15s hook for Late Drive playlist",
-    "platform": "spotify",
-    "playlist": "Late Drive"
-  },
-  "externalId": "playlist-late-drive-{date}"
-}
-```
-
-### 4. Playlist — track added
-
-```json
-{
-  "userId": "…",
-  "title": "Playlist add: Late Night Drive (12.4k)",
-  "body": "Track: Bank On It. Thank curator + queue similar pitches this week.",
+  "title": "Playlist: added to Afro Heat · 42k followers",
+  "body": "Curator: @heat.list. Track live on the list. Relationship window is now.",
   "urgency": "today",
-  "impact": "medium",
-  "actionType": "OPEN_ZIKI",
-  "actionLabel": "Thank + next pitch",
-  "payload": {
-    "q": "Draft a short thank-you to the Late Night Drive curator and suggest 2 similar playlists to pitch next."
-  },
-  "externalId": "playlist-add-late-night-{track_id}"
+  "impact": "high",
+  "externalId": "playlist-afroheat-{ISRC}"
 }
 ```
 
-### 5. Sync / brand brief
+Omniv infers `DRAFT_OUTREACH` and pre-fills a thank-you draft task + Ziki stash on confirm.
+
+### 4. Explicit outreach
 
 ```json
 {
   "userId": "…",
-  "title": "Sync brief: sports brand · 95–110 BPM",
-  "body": "Non-exclusive. Deadline Friday. Budget $2–5k.",
+  "title": "Thank curator · Afro Heat",
+  "body": "Personal note within 24h of the add.",
+  "urgency": "now",
+  "impact": "high",
+  "actionType": "DRAFT_OUTREACH",
+  "actionLabel": "Draft outreach",
+  "payload": { "to": "@heat.list", "topic": "Afro Heat add" },
+  "externalId": "outreach-afroheat-{ISRC}"
+}
+```
+
+### 5. Sync brief
+
+```json
+{
+  "userId": "…",
+  "title": "Sync brief: sports brand needs Afrobeat 95–110 BPM",
+  "body": "Deadline Friday. Non-exclusive. Budget band $2–5k.",
   "urgency": "this_week",
   "impact": "high",
   "actionType": "OPEN_ZIKI",
   "actionLabel": "Draft pitch in Ziki",
-  "payload": {
-    "q": "Match this brief to my catalogue BPM and draft a pitch"
-  },
+  "payload": { "q": "Match this brief to my catalogue BPM and draft a pitch" },
   "externalId": "sync-sports-{brief_id}"
 }
 ```
@@ -150,10 +145,7 @@ Headers:
   "impact": "high",
   "actionType": "CREATE_ROOM",
   "actionLabel": "Open city room",
-  "payload": {
-    "city": "Lagos",
-    "title": "Room · Lagos"
-  },
+  "payload": { "city": "Lagos", "title": "Room · Lagos" },
   "externalId": "gig-los-{date}"
 }
 ```
@@ -163,7 +155,7 @@ Headers:
 ## Behaviour
 
 - Proposals land in Agent (`/notifications`) with badge + toast.
-- Confirm chips execute: `OPEN_ZIKI` → Ziki with context, `CREATE_TASK` → execution_tasks, `CREATE_ROOM` → gatherings, `OPEN_CATALOGUE` → Catalogue, etc.
+- Confirm chips execute: `OPEN_ZIKI` → Ziki with context, `CREATE_TASK` → execution_tasks, `CREATE_ROOM` → gatherings, `DRAFT_OUTREACH` → task + Ziki stash, `OPEN_CATALOGUE` → Catalogue, etc.
 - Confirm / dismiss is persisted server-side (survives device switch).
 - `externalId` dedupes — re-sending the same id returns `{ ok: true, deduped: true }`.
 - Omniv still ranks internal Moves from catalogue + fans + platform_metrics; webhooks add the **outside** graph.
