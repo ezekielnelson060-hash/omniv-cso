@@ -17,10 +17,10 @@ function CrmInner() {
 
   return (
     <>
-      <div className="relative -mx-3 mb-4 overflow-hidden sm:-mx-4 md:mx-0 md:rounded-2xl">
+      <div className="relative -mx-3 mb-3 overflow-hidden sm:-mx-4 md:mx-0 md:rounded-2xl">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/12 via-omniv-gold/8 to-transparent" />
         <div className="absolute -left-10 top-0 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" />
-        <div className="relative flex flex-col gap-3 px-3 pb-4 pt-1 sm:flex-row sm:items-end sm:justify-between sm:px-4 md:px-5 md:pt-4">
+        <div className="relative flex flex-col gap-3 px-3 pb-3 pt-1 sm:flex-row sm:items-end sm:justify-between sm:px-4 md:px-5 md:pt-4">
           <div>
             <p className="font-data text-[10px] uppercase tracking-[0.16em] text-omniv-gold">
               Home
@@ -33,7 +33,7 @@ function CrmInner() {
                 ? `Scan pointed here: draft a room in ${city}${
                     ready ? ` · ${ready} fans marked ready` : ""
                   }.`
-                : "Fans, rooms, city heat, gatherings — what you own, not what the algorithm rents."}
+                : "Your fans, rooms, and money — in one place. Switch tabs. Don't scroll forever."}
             </p>
           </div>
           <Link href="/label">
