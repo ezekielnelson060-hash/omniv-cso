@@ -13,8 +13,7 @@ type ResearchStep = {
 
 /**
  * POST /api/activate/research
- * Real career research for the signed-in artist — not theatre-only.
- * Returns ordered steps + findings for the Explee-style activate console.
+ * Real career research + seeds Agent with one confirmable move.
  */
 export async function POST() {
   try {
@@ -73,7 +72,6 @@ export async function POST() {
       label: "reading Artist Brain…",
       status: "active",
     });
-    // big_dream may be missing until 015_big_dream.sql is applied
     let brain: Record<string, unknown> | null = null;
     {
       const full = await sb
@@ -156,17 +154,24 @@ export async function POST() {
       label: "checking owned fans + DSP snapshots…",
       status: "active",
     });
-    const [{ count: fanCount }, { data: metrics }] = await Promise.all([
-      sb
-        .from("fans")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id),
-      sb
-        .from("platform_metrics")
-        .select("popularity, platform, title")
-        .eq("user_id", user.id)
-        .limit(20),
-    ]);
+    const [{ count: fanCount }, { data: metrics }, { data: fanRows }] =
+      await Promise.all([
+        sb
+          .from("fans")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id),
+        sb
+          .from("platform_metrics")
+          .select("popularity, platform, title")
+          .eq("user_id", user.id)
+          .limit(20),
+        sb
+          .from("fans")
+          .select("city")
+          .eq("user_id", user.id)
+          .not("city", "is", null)
+          .limit(500),
+      ]);
     const fans = fanCount || 0;
     const pops = (metrics || [])
       .map((m) => m.popularity)
@@ -193,7 +198,7 @@ export async function POST() {
       status: "active",
     });
     const inbox = (profile?.agent_inbox || {}) as {
-      proposals?: { status?: string; title?: string }[];
+      proposals?: { id?: string; status?: string; title?: string }[];
     };
     const pending = (inbox.proposals || []).filter(
       (p) => !p.status || p.status === "pending"
@@ -205,7 +210,7 @@ export async function POST() {
       detail:
         pending.length > 0
           ? `${pending.length} pending confirm(s)`
-          : "Inbox clear — scan after catalogue/Settings",
+          : "Inbox clear — scan will seed one move",
     };
     if (pending[0]?.title)
       findings.push(`Top Agent: ${pending[0].title}`);
@@ -216,12 +221,98 @@ export async function POST() {
     if (!linked.length) gaps.push("Link Spotify / socials in Settings");
     if (!fans) gaps.push("Open Fan Gate");
 
+    const cityMap = new Map<string, number>();
+    for (const f of fanRows || []) {
+      const c = String((f as { city?: string }).city || "").trim();
+      if (!c) continue;
+      cityMap.set(c, (cityMap.get(c) || 0) + 1);
+    }
+    const topCityEntry = [...cityMap.entries()].sort((a, b) => b[1] - a[1])[0];
+    const topCity = topCityEntry?.[0] || null;
+    const topCityCount = topCityEntry?.[1] || 0;
+    const topCityReady = topCityCount;
+    if (topCity) {
+      findings.push(`Hot city: ${topCity} (${topCityCount} fans tagged)`);
+    }
+
     let nextMove =
       pending[0]?.title ||
+      (topCity && topCityCount >= 1 ? `Open a room in ${topCity}` : null) ||
       (tracks && !rels
         ? "Lock a release date (or Hold) for your analysed track"
         : null) ||
       (gaps[0] ? gaps[0] : "Open Opportunities — confirm the #1 card");
+
+    type SeedAction =
+      | "CREATE_ROOM"
+      | "OPEN_CATALOGUE"
+      | "OPEN_SETTINGS"
+      | "OPEN_OPPORTUNITIES"
+      | "OPEN_CRM";
+    let seedAction: SeedAction = "OPEN_OPPORTUNITIES";
+    let seedLabel = "Open Moves";
+    const seedPayload: Record<string, string> = {};
+    if (topCity && nextMove.toLowerCase().includes("room")) {
+      seedAction = "CREATE_ROOM";
+      seedLabel = `Draft room · ${topCity}`;
+      seedPayload.city = topCity;
+      seedPayload.title = `Room · ${topCity}`;
+    } else if (
+      /catalogue|release|upload/.test(nextMove.toLowerCase())
+    ) {
+      seedAction = "OPEN_CATALOGUE";
+      seedLabel = "Open Catalogue";
+    } else if (/brain|settings|link/.test(nextMove.toLowerCase())) {
+      seedAction = "OPEN_SETTINGS";
+      seedLabel = "Open Settings";
+    } else if (/fan/.test(nextMove.toLowerCase())) {
+      seedAction = "OPEN_CRM";
+      seedLabel = "Command Center";
+    }
+
+    const proposalId = `scan-${user.id.slice(0, 8)}-${Date.now().toString(36)}`;
+    const seedProposal = {
+      id: proposalId,
+      title: nextMove,
+      body: topCity
+        ? `From your free scan: ${topCityCount} fans in ${topCity}. Confirm to draft the room and take tickets.`
+        : "From your free scan. Confirm this move — one action beats ten tips.",
+      urgency: "today" as const,
+      impact: "high" as const,
+      source: "brain" as const,
+      action: {
+        type: seedAction,
+        label: seedLabel,
+        payload: seedPayload,
+      },
+      status: "pending" as const,
+      createdAt: Date.now(),
+    };
+
+    try {
+      const existing = (inbox.proposals || []) as {
+        id?: string;
+        status?: string;
+      }[];
+      const kept = existing.filter(
+        (p) =>
+          p.status === "pending" &&
+          p.id &&
+          !String(p.id).startsWith(`scan-${user.id.slice(0, 8)}`)
+      );
+      await sb
+        .from("profiles")
+        .update({
+          agent_inbox: {
+            proposals: [seedProposal, ...kept].slice(0, 40),
+            scannedAt: Date.now(),
+            narrative: `Scan: ${nextMove}`,
+          },
+        })
+        .eq("id", user.id);
+    } catch {
+      /* soft */
+    }
 
     steps.push({
       id: "seal",
@@ -242,10 +333,16 @@ export async function POST() {
       releases: rels,
       fans,
       avgPopularity: avgPop,
-      pendingAgent: pending.length,
+      pendingAgent: pending.length + 1,
       gaps,
       nextMove,
       findings,
+      topCity,
+      topCityCount,
+      topCityReady,
+      proposalId,
+      seedAction,
+      seedLabel,
     };
 
     return NextResponse.json({ ok: true, steps, summary });
