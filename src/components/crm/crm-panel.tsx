@@ -39,7 +39,15 @@ import {
   Plus,
 } from "lucide-react";
 
-export function CrmPanel() {
+export function CrmPanel({
+  initialCity = null,
+  initialReady = null,
+  focusRoom = false,
+}: {
+  initialCity?: string | null;
+  initialReady?: number | null;
+  focusRoom?: boolean;
+} = {}) {
   const [artists, setArtists] = useState<ManagedArtist[]>([]);
   const [tasks, setTasks] = useState<ManagerTask[]>([]);
   const [notes, setNotes] = useState<ManagerNote[]>([]);
@@ -66,8 +74,24 @@ export function CrmPanel() {
   const [noteBody, setNoteBody] = useState("");
   const [eventTitle, setEventTitle] = useState("");
   const [eventDate, setEventDate] = useState("");
-  const [gatherCity, setGatherCity] = useState<string | null>(null);
-  const [gatherReady, setGatherReady] = useState<number | null>(null);
+  const [gatherCity, setGatherCity] = useState<string | null>(initialCity);
+  const [gatherReady, setGatherReady] = useState<number | null>(initialReady);
+
+  useEffect(() => {
+    if (initialCity) setGatherCity(initialCity);
+    if (initialReady != null) setGatherReady(initialReady);
+  }, [initialCity, initialReady]);
+
+  useEffect(() => {
+    if (!focusRoom) return;
+    const t = window.setTimeout(() => {
+      document.getElementById("room-form")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 200);
+    return () => window.clearTimeout(t);
+  }, [focusRoom]);
 
   useEffect(() => {
     setArtists(loadArtists());
@@ -215,7 +239,9 @@ export function CrmPanel() {
           }}
         />
       </div>
-      <GatheringsPanel seedCity={gatherCity} seedReady={gatherReady} />
+      <div id="room-form">
+        <GatheringsPanel seedCity={gatherCity} seedReady={gatherReady} />
+      </div>
 
       <ContractsPanel />
 
