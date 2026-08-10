@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { zikiComplete, type ZikiAttachment } from "@/lib/gemini";
-import { ZIKI_MANAGER_RULES, scrubZikiMarkdown, parseZikiActions } from "@/lib/ziki-voice";
+import {
+  ZIKI_MANAGER_RULES,
+  scrubZikiMarkdown,
+  parseZikiActions,
+  zikiQuotaBlockMessage,
+} from "@/lib/ziki-voice";
 import { trackServer } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/server";
 import { checkAndIncrementZikiUsage } from "@/lib/ziki-usage";
@@ -120,10 +125,21 @@ export async function POST(req: Request) {
           return NextResponse.json(
             {
               error: "quota_exceeded",
-              text: `**Ziki limit reached**\n\nYour **${plan}** plan allows **${usageMeta.label || usageMeta.limit}**. You have used ${usageMeta.used}.\n\nUpgrade for more depth.`,
+              text: zikiQuotaBlockMessage({
+                plan,
+                used: usageMeta.used,
+                limit: usageMeta.limit,
+                label: usageMeta.label,
+              }),
               source: "local",
               usage: usageMeta,
               plan,
+              upgrade:
+                plan === "free"
+                  ? "starter"
+                  : plan === "starter"
+                    ? "pro"
+                    : "label",
             },
             { status: 429 }
           );
@@ -158,9 +174,29 @@ export async function POST(req: Request) {
       }
     }
 
+    let quotaNote = "";
+    if (
+      usageMeta &&
+      typeof usageMeta.limit === "number" &&
+      usageMeta.limit > 0
+    ) {
+      const left = usageMeta.limit - usageMeta.used;
+      if (left <= 2 && left >= 0) {
+        const next =
+          plan === "free"
+            ? "Starter for more Ziki/day; Pro for unlimited."
+            : plan === "starter"
+              ? "Pro for unlimited Ziki."
+              : "Check Billing for higher tiers.";
+        quotaNote = `QUOTA: ${usageMeta.used}/${usageMeta.limit} used this ${usageMeta.period || "period"} (${left} left). Keep replies tight. If they ask about limits: ${next}`;
+      }
+    }
+
     const system = [
-      body.context || "You are Ziki, Omniv CSO. Never invent demo artists.",
+      body.context ||
+        "You are Ziki, Omniv CSO. Tight replies. Never invent demo artists.",
       operatingBrief,
+      quotaNote,
       ZIKI_MANAGER_RULES,
     ]
       .filter(Boolean)
