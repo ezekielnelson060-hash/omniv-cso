@@ -233,7 +233,7 @@ export function CrmPanel({
           onCreateGathering={(city, ready) => {
             setGatherCity(city);
             setGatherReady(ready);
-          }
+          }}
         />
         <AudienceMap
           onCreateGathering={(city, ready) => {
