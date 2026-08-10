@@ -3,15 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PageChrome, Toolbar, Segmented } from "@/components/ui/page-chrome";
 import {
   ExternalLink,
   Loader2,
   TrendingUp,
-  Filter,
   Star,
+  MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,11 +39,69 @@ type Roster = {
 
 type Tab = "rising" | "audits" | "cities" | "roster";
 
+const GENRE_CHIPS = [
+  "all",
+  "afrobeats",
+  "hip-hop",
+  "rap",
+  "r&b",
+  "pop",
+  "electronic",
+  "amapiano",
+  "gospel",
+  "rock",
+  "alternative",
+] as const;
+
 function signalOf(a: Audit) {
   if (a.peak_score >= 75 && (a.spotify_popularity ?? 0) >= 40) return "Peaking";
   if (a.peak_score >= 60) return "Rising";
   if (a.overall_score >= 40) return "Steady";
   return "Early";
+}
+
+function ChipRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className="px-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-omniv-text-muted">
+        {label}
+      </p>
+      <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-medium transition",
+        active
+          ? "border-omniv-gold/50 bg-omniv-gold/15 text-omniv-gold"
+          : "border-omniv-border bg-omniv-card text-omniv-text-muted hover:border-omniv-border-subtle hover:text-omniv-text"
+      )}
+    >
+      {children}
+    </button>
+  );
 }
 
 export default function DiscoverPage() {
@@ -57,7 +113,8 @@ export default function DiscoverPage() {
   const [q, setQ] = useState("");
   const [source, setSource] = useState<"all" | "spotify" | "youtube">("all");
   const [minPeak, setMinPeak] = useState(0);
-  const [genreFilter, setGenreFilter] = useState("");
+  const [genreFilter, setGenreFilter] = useState("all");
+  const [cityFilter, setCityFilter] = useState("all");
   const [watch, setWatch] = useState<string[]>([]);
 
   useEffect(() => {
@@ -94,9 +151,14 @@ export default function DiscoverPage() {
     });
   }
 
+  const cityChips = useMemo(() => {
+    const top = cities.slice(0, 12).map((c) => c.city);
+    return ["all", ...top];
+  }, [cities]);
+
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
-    const g = genreFilter.trim().toLowerCase();
+    const g = genreFilter === "all" ? "" : genreFilter.toLowerCase();
     return audits.filter((a) => {
       if (source !== "all" && a.source_type !== source) return false;
       if (a.peak_score < minPeak) return false;
@@ -119,86 +181,144 @@ export default function DiscoverPage() {
 
   const list = tab === "rising" ? rising : tab === "audits" ? filtered : [];
 
+  const filteredCities = useMemo(() => {
+    return cities.filter((c) => {
+      if (cityFilter !== "all" && c.city !== cityFilter) return false;
+      if (q && !c.city.toLowerCase().includes(q.toLowerCase())) return false;
+      return true;
+    });
+  }, [cities, cityFilter, q]);
+
   return (
     <AppShell>
-      <PageChrome eyebrow="A&R" title="Discover">
-        <p className="text-[11px] text-omniv-text-muted">
-          Peak blends audit, Spotify popularity/followers when present, and
-          recency. Watchlist stays on this device.
-        </p>
-      </PageChrome>
-
-      <Toolbar>
-        <Segmented
-          value={tab}
-          onChange={(id) => setTab(id as Tab)}
-          options={[
-            { id: "rising", label: "Rising" },
-            { id: "audits", label: "All" },
-            { id: "cities", label: "Cities" },
-            { id: "roster", label: "Roster" },
-          ]}
-        />
-        <div className="ml-auto flex flex-wrap items-center gap-1.5">
-          <div className="relative">
-            <Filter className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-omniv-text-muted" />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Filter…"
-              className="h-7 w-[120px] pl-7 text-[11px] sm:w-[160px]"
-            />
+      <div className="relative -mx-3 mb-4 overflow-hidden sm:-mx-4 md:mx-0 md:rounded-2xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/15 via-omniv-gold/8 to-transparent" />
+        <div className="absolute -right-8 top-0 h-36 w-36 rounded-full bg-rose-400/10 blur-3xl" />
+        <div className="relative px-3 pb-4 pt-1 sm:px-4 md:px-5 md:pt-4">
+          <p className="font-data text-[10px] uppercase tracking-[0.16em] text-omniv-gold">
+            A&R
+          </p>
+          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
+            Discover
+          </h1>
+          <p className="mt-1 max-w-lg text-[12px] text-omniv-text-secondary">
+            Rising signals from audits, city heat, and roster — peak blends
+            score, DSP pop, and recency.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {(
+              [
+                ["rising", "Rising"],
+                ["audits", "All"],
+                ["cities", "Cities"],
+                ["roster", "Roster"],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id)}
+                className={cn(
+                  "rounded-full border px-3.5 py-1.5 text-[11px] font-medium transition",
+                  tab === id
+                    ? "border-omniv-gold/50 bg-omniv-gold/15 text-omniv-gold"
+                    : "border-omniv-border text-omniv-text-muted hover:text-omniv-text"
+                )}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-          {tab !== "cities" && tab !== "roster" && (
-            <>
-              <Input
-                value={genreFilter}
-                onChange={(e) => setGenreFilter(e.target.value)}
-                placeholder="Genre"
-                className="h-7 w-[100px] text-[11px]"
-              />
-              <select
-                value={source}
-                onChange={(e) => setSource(e.target.value as typeof source)}
-                className="h-7 rounded-md border border-omniv-border bg-omniv-card px-1.5 text-[11px]"
-              >
-                <option value="all">Source</option>
-                <option value="spotify">Spotify</option>
-                <option value="youtube">YouTube</option>
-              </select>
-              <select
-                value={minPeak}
-                onChange={(e) => setMinPeak(Number(e.target.value))}
-                className="h-7 rounded-md border border-omniv-border bg-omniv-card px-1.5 text-[11px]"
-              >
-                <option value={0}>Peak any</option>
-                <option value={50}>Peak 50+</option>
-                <option value={65}>Peak 65+</option>
-                <option value={75}>Peak 75+</option>
-              </select>
-            </>
-          )}
         </div>
-      </Toolbar>
+      </div>
+
+      {(tab === "rising" || tab === "audits") && (
+        <div className="mb-4 space-y-3 rounded-2xl border border-omniv-border bg-omniv-card/60 p-3">
+          <ChipRow label="Genre">
+            {GENRE_CHIPS.map((g) => (
+              <Chip
+                key={g}
+                active={genreFilter === g}
+                onClick={() => setGenreFilter(g)}
+              >
+                {g === "all" ? "All genres" : g}
+              </Chip>
+            ))}
+          </ChipRow>
+          <ChipRow label="Source">
+            {(
+              [
+                ["all", "Any source"],
+                ["spotify", "Spotify"],
+                ["youtube", "YouTube"],
+              ] as const
+            ).map(([id, label]) => (
+              <Chip
+                key={id}
+                active={source === id}
+                onClick={() => setSource(id)}
+              >
+                {label}
+              </Chip>
+            ))}
+          </ChipRow>
+          <ChipRow label="Peak">
+            {[
+              [0, "Any peak"],
+              [50, "50+"],
+              [65, "65+"],
+              [75, "75+"],
+            ].map(([v, label]) => (
+              <Chip
+                key={String(v)}
+                active={minPeak === v}
+                onClick={() => setMinPeak(Number(v))}
+              >
+                {label}
+              </Chip>
+            ))}
+          </ChipRow>
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search artist or headline…"
+            className="h-10 rounded-xl text-sm"
+          />
+        </div>
+      )}
+
+      {tab === "cities" && (
+        <div className="mb-4 space-y-3 rounded-2xl border border-omniv-border bg-omniv-card/60 p-3">
+          <ChipRow label="City">
+            {cityChips.map((c) => (
+              <Chip
+                key={c}
+                active={cityFilter === c}
+                onClick={() => setCityFilter(c)}
+              >
+                {c === "all" ? "All cities" : c}
+              </Chip>
+            ))}
+          </ChipRow>
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search city…"
+            className="h-10 rounded-xl text-sm"
+          />
+        </div>
+      )}
 
       {loading && (
-        <div className="flex items-center gap-2 py-6 text-xs text-omniv-text-muted">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+        <div className="flex items-center gap-2 py-10 text-xs text-omniv-text-muted">
+          <Loader2 className="h-4 w-4 animate-spin text-omniv-gold" /> Loading…
         </div>
       )}
 
       {!loading && (tab === "rising" || tab === "audits") && (
-        <div className="mt-2 overflow-hidden rounded-lg border border-omniv-border">
-          <div className="grid grid-cols-[1fr_48px_48px_auto] gap-1 border-b border-omniv-border bg-omniv-elevated/60 px-2.5 py-1.5 text-[9px] font-semibold uppercase tracking-wider text-omniv-text-muted sm:grid-cols-[1fr_56px_64px_72px_56px_auto]">
-            <span>Artist</span>
-            <span className="text-right">Peak</span>
-            <span className="hidden text-right sm:block">Pop</span>
-            <span className="hidden text-right sm:block">Followers</span>
-            <span className="text-right">Signal</span>
-            <span />
-          </div>
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {list.length === 0 && (
-            <p className="px-3 py-6 text-center text-xs text-omniv-text-muted">
+            <p className="col-span-full rounded-2xl border border-dashed border-omniv-border px-4 py-10 text-center text-[12px] text-omniv-text-muted">
               No matches. Run Spotify audits for live pop/followers.
             </p>
           )}
@@ -208,68 +328,80 @@ export default function DiscoverPage() {
             return (
               <div
                 key={a.id}
-                className="grid grid-cols-[1fr_48px_48px_auto] items-center gap-1 border-b border-omniv-border px-2.5 py-2 last:border-0 hover:bg-omniv-hover/50 sm:grid-cols-[1fr_56px_64px_72px_56px_auto]"
+                className="group flex flex-col overflow-hidden rounded-2xl border border-omniv-border bg-omniv-card transition hover:border-omniv-gold/25"
               >
-                <div className="min-w-0">
-                  <p className="truncate text-[13px] font-medium">
-                    {a.artist_name || "Unknown"}
-                  </p>
-                  <p className="truncate text-[10px] text-omniv-text-muted">
-                    {a.genres || a.source_type}
-                    {a.momentum != null ? ` · mom ${a.momentum}` : ""}
-                  </p>
+                <div className="flex gap-3 p-3.5">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500/20 to-omniv-gold/10 text-lg font-semibold text-omniv-gold">
+                    {(a.artist_name || "?")[0]?.toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="truncate text-[14px] font-semibold tracking-tight">
+                        {a.artist_name || "Unknown"}
+                      </p>
+                      <span className="font-data text-sm font-semibold tabular-nums text-omniv-gold">
+                        {a.peak_score}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-[11px] text-omniv-text-muted">
+                      {a.genres || a.source_type}
+                      {a.spotify_popularity != null
+                        ? ` · pop ${a.spotify_popularity}`
+                        : ""}
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-medium",
+                          signal === "Peaking" &&
+                            "bg-omniv-gold/15 text-omniv-gold",
+                          signal === "Rising" &&
+                            "bg-emerald-500/15 text-emerald-400",
+                          signal === "Steady" &&
+                            "bg-white/5 text-omniv-text-secondary",
+                          signal === "Early" &&
+                            "bg-white/5 text-omniv-text-muted"
+                        )}
+                      >
+                        {(signal === "Peaking" || signal === "Rising") && (
+                          <TrendingUp className="h-3 w-3" />
+                        )}
+                        {signal}
+                      </span>
+                      {a.spotify_followers != null && (
+                        <span className="text-[10px] text-omniv-text-muted">
+                          {a.spotify_followers >= 1000
+                            ? `${(a.spotify_followers / 1000).toFixed(1)}k`
+                            : a.spotify_followers}{" "}
+                          followers
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <span className="text-right font-data text-[13px] text-omniv-gold">
-                  {a.peak_score}
-                </span>
-                <span className="hidden text-right font-data text-[12px] sm:block">
-                  {a.spotify_popularity ?? "—"}
-                </span>
-                <span className="hidden text-right font-data text-[11px] text-omniv-text-muted sm:block">
-                  {a.spotify_followers != null
-                    ? a.spotify_followers >= 1000
-                      ? `${(a.spotify_followers / 1000).toFixed(1)}k`
-                      : a.spotify_followers
-                    : "—"}
-                </span>
-                <span
-                  className={cn(
-                    "inline-flex items-center justify-end gap-0.5 text-[10px] font-medium",
-                    signal === "Peaking" && "text-omniv-gold",
-                    signal === "Rising" && "text-omniv-success",
-                    signal === "Steady" && "text-omniv-text-secondary",
-                    signal === "Early" && "text-omniv-text-muted"
-                  )}
-                >
-                  {(signal === "Peaking" || signal === "Rising") && (
-                    <TrendingUp className="h-3 w-3" />
-                  )}
-                  {signal}
-                </span>
-                <div className="flex items-center justify-end gap-0.5">
+                <div className="mt-auto flex border-t border-omniv-border">
                   <button
                     type="button"
-                    aria-label="Watchlist"
                     onClick={() => toggleWatch(a.id)}
                     className={cn(
-                      "rounded p-1",
+                      "flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[12px] font-medium transition hover:bg-white/[0.03]",
                       watched
                         ? "text-omniv-gold"
-                        : "text-omniv-text-muted hover:text-omniv-text"
+                        : "text-omniv-text-secondary hover:text-omniv-gold"
                     )}
                   >
                     <Star
                       className={cn("h-3.5 w-3.5", watched && "fill-current")}
                     />
+                    {watched ? "Watching" : "Watch"}
                   </button>
-                  <Link href={`/audit/${a.share_slug}`}>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 px-1.5 text-[10px]"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                    </Button>
+                  <div className="w-px bg-omniv-border" />
+                  <Link
+                    href={`/audit/${a.share_slug}`}
+                    className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[12px] font-medium text-omniv-text-secondary transition hover:bg-white/[0.03] hover:text-omniv-gold"
+                  >
+                    Open
+                    <ExternalLink className="h-3.5 w-3.5" />
                   </Link>
                 </div>
               </div>
@@ -279,30 +411,38 @@ export default function DiscoverPage() {
       )}
 
       {!loading && tab === "cities" && (
-        <div className="mt-2 overflow-hidden rounded-lg border border-omniv-border">
-          {cities
-            .filter((c) =>
-              q ? c.city.toLowerCase().includes(q.toLowerCase()) : true
-            )
-            .map((c) => (
-              <div
-                key={c.city}
-                className="flex items-center justify-between border-b border-omniv-border px-2.5 py-2 last:border-0 hover:bg-omniv-hover/50"
-              >
-                <span className="text-[13px]">{c.city}</span>
-                <span className="font-data text-[12px] text-omniv-text-muted">
-                  {c.fans} ·{" "}
-                  <span className="text-omniv-gold">{c.ready} ready</span>
-                </span>
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredCities.length === 0 && (
+            <p className="col-span-full rounded-2xl border border-dashed border-omniv-border px-4 py-10 text-center text-[12px] text-omniv-text-muted">
+              No city heat yet — capture fans with city on the gate.
+            </p>
+          )}
+          {filteredCities.map((c) => (
+            <div
+              key={c.city}
+              className="flex items-center gap-3 rounded-2xl border border-omniv-border bg-omniv-card p-3.5 transition hover:border-omniv-gold/25"
+            >
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-omniv-gold/10">
+                <MapPin className="h-5 w-5 text-omniv-gold" />
               </div>
-            ))}
+              <div className="min-w-0 flex-1">
+                <p className="text-[14px] font-semibold tracking-tight">
+                  {c.city}
+                </p>
+                <p className="text-[11px] text-omniv-text-muted">
+                  {c.fans} fans ·{" "}
+                  <span className="text-omniv-gold">{c.ready} ready</span>
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       {!loading && tab === "roster" && (
-        <div className="mt-2 overflow-hidden rounded-lg border border-omniv-border">
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {roster.length === 0 && (
-            <p className="px-3 py-6 text-center text-xs text-omniv-text-muted">
+            <p className="col-span-full rounded-2xl border border-dashed border-omniv-border px-4 py-10 text-center text-[12px] text-omniv-text-muted">
               No roster artists yet. Add them from Label workspace.
             </p>
           )}
@@ -317,14 +457,12 @@ export default function DiscoverPage() {
             .map((r) => (
               <div
                 key={r.id}
-                className="flex items-center justify-between border-b border-omniv-border px-2.5 py-2 last:border-0"
+                className="rounded-2xl border border-omniv-border bg-omniv-card p-3.5"
               >
-                <div>
-                  <p className="text-[13px] font-medium">{r.stage_name}</p>
-                  <p className="text-[10px] text-omniv-text-muted">
-                    {r.genre || "—"} · {r.slug}
-                  </p>
-                </div>
+                <p className="text-[14px] font-semibold">{r.stage_name}</p>
+                <p className="mt-0.5 text-[11px] text-omniv-text-muted">
+                  {r.genre || "—"} · {r.slug}
+                </p>
               </div>
             ))}
         </div>
