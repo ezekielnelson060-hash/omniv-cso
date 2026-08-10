@@ -15,24 +15,30 @@ type Row = {
 };
 
 function TipLinkBlock() {
-  const [slug, setSlug] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [artists, setArtists] = useState<{ slug: string; name: string }[]>([]);
+  const [copied, setCopied] = useState<string | null>(null);
   useEffect(() => {
     void (async () => {
       try {
         const res = await fetch("/api/roster");
         if (!res.ok) return;
         const data = (await res.json()) as {
-          artists?: { slug?: string }[];
+          artists?: { slug?: string; stage_name?: string; name?: string }[];
         };
-        const s = data.artists?.[0]?.slug;
-        if (s) setSlug(s);
+        setArtists(
+          (data.artists || [])
+            .filter((a) => a.slug)
+            .map((a) => ({
+              slug: String(a.slug),
+              name: String(a.stage_name || a.name || a.slug),
+            }))
+        );
       } catch {
         /* soft */
       }
     })();
   }, []);
-  if (!slug) {
+  if (!artists.length) {
     return (
       <p className="mt-3 text-[11px] text-omniv-text-muted">
         Add a roster artist to get a public tip link (/tip/your-slug).
@@ -43,24 +49,34 @@ function TipLinkBlock() {
     typeof window !== "undefined"
       ? window.location.origin
       : "https://www.omniv.media";
-  const url = `${origin}/tip/${slug}`;
   return (
-    <div className="mt-3 rounded-xl border border-omniv-gold/25 bg-omniv-gold/5 px-3 py-2">
+    <div className="mt-3 space-y-2 rounded-xl border border-omniv-gold/25 bg-omniv-gold/5 px-3 py-2">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-omniv-gold">
-        Standalone tip link
+        Tip links (per account)
       </p>
-      <p className="mt-1 break-all text-[11px] text-omniv-text-secondary">{url}</p>
-      <button
-        type="button"
-        className="mt-1.5 text-[11px] font-medium text-omniv-gold hover:underline"
-        onClick={() => {
-          void navigator.clipboard.writeText(url);
-          setCopied(true);
-          window.setTimeout(() => setCopied(false), 1500);
-        }}
-      >
-        {copied ? "Copied" : "Copy tip link"}
-      </button>
+      {artists.map((a) => {
+        const url = `${origin}/tip/${a.slug}`;
+        return (
+          <div
+            key={a.slug}
+            className="border-t border-omniv-border/40 pt-2 first:border-0 first:pt-0"
+          >
+            <p className="text-[11px] font-medium">{a.name}</p>
+            <p className="break-all text-[10px] text-omniv-text-muted">{url}</p>
+            <button
+              type="button"
+              className="mt-1 text-[11px] font-medium text-omniv-gold hover:underline"
+              onClick={() => {
+                void navigator.clipboard.writeText(url);
+                setCopied(a.slug);
+                window.setTimeout(() => setCopied(null), 1500);
+              }}
+            >
+              {copied === a.slug ? "Copied" : "Copy tip link"}
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }

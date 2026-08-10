@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { SettingsPanel } from "@/components/settings/settings-panel";
 import { PayoutAndPhoto } from "@/components/settings/payout-and-photo";
 import { ThemeToggleCard } from "@/components/settings/theme-toggle";
+import { PartnersPanel } from "@/components/settings/partners-panel";
 
 export default function SettingsPage() {
   return (
@@ -20,12 +21,14 @@ export default function SettingsPage() {
             Settings
           </h1>
           <p className="mt-1 max-w-lg text-[12px] text-omniv-text-secondary">
-            Appearance, photo, payout, profile, linked surfaces, and billing.
+            Appearance, photo, payout, partners (distro / playlist / sync),
+            profile, billing.
           </p>
         </div>
       </div>
       <ThemeToggleCard />
       <PayoutAndPhoto />
+      <PartnersPanel />
       <Suspense
         fallback={
           <p className="text-sm text-omniv-text-muted">Loading settings…</p>
