@@ -1,4 +1,6 @@
-/** Client-side opportunity progress — completed IDs reshape ranking + Ziki context */
+/** Client-side opportunity progress — completed IDs reshape ranking + Ziki context.
+ *  Also mirrors to server via /api/opportunity-progress when signed in.
+ */
 
 import { track } from "@/lib/analytics";
 
@@ -32,12 +34,29 @@ function save(p: OppProgress) {
   }
 }
 
+function mirrorServer(
+  opportunityId: string,
+  action: "done" | "dismiss" | "reopen"
+) {
+  if (typeof window === "undefined") return;
+  try {
+    void fetch("/api/opportunity-progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ opportunityId, action }),
+    });
+  } catch {
+    /* soft — local is source of truth for ranking this session */
+  }
+}
+
 export function markOpportunityDone(id: string) {
   const p = loadOppProgress();
   p.completed[id] = Date.now();
   delete p.dismissed[id];
   save(p);
   track("opp_done", { opportunity_id: id });
+  mirrorServer(id, "done");
   return p;
 }
 
@@ -46,6 +65,7 @@ export function markOpportunityDismissed(id: string) {
   p.dismissed[id] = Date.now();
   save(p);
   track("opp_dismissed", { opportunity_id: id });
+  mirrorServer(id, "dismiss");
   return p;
 }
 
@@ -55,6 +75,7 @@ export function reopenOpportunity(id: string) {
   delete p.dismissed[id];
   save(p);
   track("opp_reopen", { opportunity_id: id });
+  mirrorServer(id, "reopen");
   return p;
 }
 
