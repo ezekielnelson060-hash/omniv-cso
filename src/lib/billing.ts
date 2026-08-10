@@ -1,24 +1,8 @@
-export type PlanId = "free" | "starter" | "pro" | "label";
+import type { PlanId, FeatureId } from "@/types";
 
-export type FeatureId =
-  | "command_center"
-  | "opportunity_feed"
-  | "artist_brain"
-  | "ziki_limited"
-  | "ziki_unlimited"
-  | "analytics"
-  | "release_simulator"
-  | "content_intelligence"
-  | "reports_basic"
-  | "reports_full"
-  | "crm"
-  | "label_dashboard"
-  | "team_seats"
-  | "api_keys"
-  | "fan_gate"
-  | "audience_basic";
+export type { PlanId, FeatureId };
 
-export interface PlanDef {
+export type PlanDef = {
   id: PlanId;
   name: string;
   priceMonthly: number;
@@ -26,14 +10,14 @@ export interface PlanDef {
   currency: string;
   blurb: string;
   cta: string;
-  highlighted?: boolean;
   features: string[];
   limits: {
     zikiMessagesPerDay: number | "unlimited";
     artists: number | "unlimited";
     teamSeats: number;
   };
-}
+  highlighted?: boolean;
+};
 
 export const PLANS: PlanDef[] = [
   {
@@ -42,7 +26,7 @@ export const PLANS: PlanDef[] = [
     priceMonthly: 0,
     priceAnnual: 0,
     currency: "USD",
-    blurb: "Taste the system. List, rooms, limited Ziki",
+    blurb: "Taste the system — 5 Ziki messages/month. Hit the wall, upgrade.",
     cta: "Enter free",
     features: [
       "Command Center",
@@ -60,7 +44,7 @@ export const PLANS: PlanDef[] = [
     priceMonthly: 29,
     priceAnnual: 23,
     currency: "USD",
-    blurb: "Solo operators. Full feed, deeper Ziki, analytics",
+    blurb: "20 Ziki/day + full opportunity feed. Step up when Free runs out.",
     cta: "Claim Starter",
     features: [
       "Everything in Free",
@@ -78,7 +62,7 @@ export const PLANS: PlanDef[] = [
     priceMonthly: 59,
     priceAnnual: 47,
     currency: "USD",
-    blurb: "Lean managers. Roster clarity, simulator, unlimited Ziki",
+    blurb: "Unlimited Ziki. Ranked moves, pitches, rooms — no message ceiling.",
     cta: "Claim Pro",
     highlighted: true,
     features: [
@@ -118,69 +102,29 @@ export const FEATURE_GATES: Record<FeatureId, PlanId> = {
   command_center: "free",
   opportunity_feed: "starter",
   artist_brain: "free",
-  ziki_limited: "free",
-  ziki_unlimited: "pro",
-  analytics: "starter",
+  historical_analytics: "starter",
   release_simulator: "pro",
   content_intelligence: "pro",
-  reports_basic: "pro",
-  reports_full: "label",
-  crm: "pro",
+  manager_crm: "pro",
   label_dashboard: "label",
-  team_seats: "pro",
+  reports: "pro",
   api_keys: "label",
-  fan_gate: "free",
-  audience_basic: "free",
 };
 
-export const PLAN_ORDER: PlanId[] = ["free", "starter", "pro", "label"];
-
-export function planRank(id: PlanId): number {
-  return PLAN_ORDER.indexOf(id);
+export function planById(id: PlanId | string): PlanDef {
+  return PLANS.find((p) => p.id === id) || PLANS[0]!;
 }
 
-export function hasFeature(current: PlanId, feature: FeatureId): boolean {
+export function planRank(id: PlanId | string): number {
+  const order: PlanId[] = ["free", "starter", "pro", "label"];
+  const i = order.indexOf(id as PlanId);
+  return i >= 0 ? i : 0;
+}
+
+export function canAccessFeature(
+  plan: PlanId | string,
+  feature: FeatureId
+): boolean {
   const required = FEATURE_GATES[feature];
-  return planRank(current) >= planRank(required);
+  return planRank(plan) >= planRank(required);
 }
-
-export function minPlanFor(feature: FeatureId): PlanDef {
-  const id = FEATURE_GATES[feature];
-  return PLANS.find((p) => p.id === id)!;
-}
-
-export function planById(id: PlanId): PlanDef {
-  return PLANS.find((p) => p.id === id) ?? PLANS[0]!;
-}
-
-export const FEATURE_LABELS: Record<FeatureId, string> = {
-  command_center: "Command Center",
-  opportunity_feed: "Opportunity Feed",
-  artist_brain: "Artist Brain",
-  ziki_limited: "Ziki (limited)",
-  ziki_unlimited: "Unlimited Ziki",
-  analytics: "Historical Analytics",
-  release_simulator: "Release Simulator",
-  content_intelligence: "Content Intelligence",
-  reports_basic: "PDF reports",
-  reports_full: "Full report suite",
-  crm: "Manager CRM",
-  label_dashboard: "Label Dashboard",
-  team_seats: "Team seats",
-  api_keys: "API keys",
-  fan_gate: "Fan Gate",
-  audience_basic: "Audience (basic)",
-};
-
-export const ROUTE_GATES: Record<string, FeatureId> = {
-  "/opportunities": "opportunity_feed",
-  "/analytics": "analytics",
-  "/release-simulator": "release_simulator",
-  "/content": "content_intelligence",
-  "/reports": "reports_basic",
-  "/crm": "audience_basic",
-  "/label": "label_dashboard",
-};
-
-/** Paid access only after Flutterwave webhook confirms payment */
-export const DEFAULT_PLAN: PlanId = "free";
