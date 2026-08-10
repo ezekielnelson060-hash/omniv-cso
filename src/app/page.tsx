@@ -125,7 +125,7 @@ export default function LandingPage() {
             </Link>
             <Link href="/signup">
               <Button size="sm" className="h-9 text-[13px]">
-                Start free
+                Free scan
               </Button>
             </Link>
           </div>
@@ -142,24 +142,24 @@ export default function LandingPage() {
             variants={heroItem}
             className="mb-4 font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold"
           >
-            Career OS for independent artists
+            For artists who stopped waiting for a label
           </motion.p>
           <motion.h1
             variants={heroItem}
             className="text-balance text-[2.35rem] font-semibold leading-[1.08] tracking-tight md:text-5xl lg:text-[3.25rem]"
           >
-            From zero budget
+            Stop renting your audience.
             <br />
-            to <GoldShimmer>first cash and clarity</GoldShimmer>
+            <GoldShimmer>Own the list. Open the room.</GoldShimmer>
           </motion.h1>
           <motion.p
             variants={heroItem}
             className="mx-auto mt-5 max-w-2xl text-[15px] leading-relaxed text-omniv-text-secondary md:text-[17px]"
           >
-            Omniv is not another analytics dashboard. It builds your list, maps
-            who is in which city, opens a small room, takes tickets and tips,
-            and tells you the next strategic move — even if you have never been
-            signed and have nothing to spend.
+            The algorithm doesn't care about your talent. Omniv helps you
+            build fans you own, map who shows up in which city, take tickets and
+            tips on your link, and get one ranked move from Ziki — your AI
+            manager who never sleeps.
           </motion.p>
           <motion.div
             variants={heroItem}
@@ -167,7 +167,7 @@ export default function LandingPage() {
           >
             <Link href="/signup">
               <Button size="lg" className="h-12 min-w-[200px] gap-2 text-sm">
-                Start building
+                Free artist scan
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -181,7 +181,7 @@ export default function LandingPage() {
             variants={heroItem}
             className="mt-5 text-[12px] text-omniv-text-muted"
           >
-            Free scan · Fan list · Rooms · Ziki strategist
+            Free scan · Owned fans · Rooms that take money · One move from Ziki
           </motion.p>
         </motion.div>
       </section>
@@ -190,16 +190,16 @@ export default function LandingPage() {
         <div className="mx-auto grid max-w-5xl gap-6 px-5 py-10 md:grid-cols-3 md:px-8">
           {[
             {
-              t: "No money to record or promote",
-              d: "You still need fans in a room and a path to cash. Omniv starts there.",
+              t: "Broke but talented",
+              d: "No label advance. No manager at $3k/month. You still need a room, a link, and the next move.",
             },
             {
-              t: "Followers are not a list",
-              d: "Algorithm reach dies overnight. Email, city, and intent to attend does not.",
+              t: "Invisible on Instagram",
+              d: "500 followers. 12 likes. 0 bookings. Stop renting reach — own the list who would show up.",
             },
             {
-              t: "Guessing every week",
-              d: "Wrong release week, wrong platform. One ranked move beats ten random posts.",
+              t: "Exhausted from guessing",
+              d: "Release day, caption, city — ranked once. Highest impact. Lowest effort.",
             },
           ].map((c) => (
             <FadeUp key={c.t}>
@@ -302,24 +302,24 @@ export default function LandingPage() {
         <div className="mx-auto max-w-3xl px-5 py-16 text-center md:px-8">
           <FadeUp>
             <h2 className="text-2xl font-semibold tracking-tight md:text-3xl">
-              Stop guessing. Build the list. Open the room.
+              Your music deserves more than a like. It deserves a room.
             </h2>
             <p className="mx-auto mt-3 max-w-lg text-sm text-omniv-text-secondary">
-              Omniv is the career operating system independents did not have —
-              intelligence, audience, and a path to cash in one place.
+              Free scan. Own the list. Open a room that takes tickets and tips.
+              Ziki ranks the one move that matters this week.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link href="/signup">
                 <Button size="lg" className="h-12 min-w-[200px] gap-2">
-                  Create your account
+                  Free artist scan
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/audit">
+              <a href="#how">
                 <Button variant="outline" size="lg" className="h-12 min-w-[200px]">
-                  Free relevance audit
+                  See how it works
                 </Button>
-              </Link>
+              </a>
             </div>
           </FadeUp>
         </div>
