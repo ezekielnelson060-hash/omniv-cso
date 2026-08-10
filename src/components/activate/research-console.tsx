@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
+import { upsertProposals } from "@/lib/agent/store";
+import type { AgentProposal } from "@/lib/agent/types";
 
 type Step = {
   id: string;
@@ -25,6 +27,12 @@ type Summary = {
   gaps: string[];
   nextMove: string;
   findings: string[];
+  topCity?: string | null;
+  topCityCount?: number;
+  topCityReady?: number;
+  proposalId?: string;
+  seedAction?: string;
+  seedLabel?: string;
 };
 
 const FALLBACK_LABELS = [
@@ -38,7 +46,7 @@ const FALLBACK_LABELS = [
 
 /**
  * Progressive free artist scan.
- * Runs real /api/activate/research, then reveals one next move + room CTA.
+ * Seeds Agent with one move + deep-links Open room with city.
  */
 export function ResearchConsole({
   onDone,
@@ -118,7 +126,38 @@ export function ResearchConsole({
           status: (s.status === "warn" ? "warn" : "done") as Step["status"],
         }))
       );
-      setSummary(data.summary || null);
+      const sum = data.summary || null;
+      setSummary(sum);
+      if (sum?.nextMove) {
+        try {
+          const proposal: AgentProposal = {
+            id: sum.proposalId || `scan-local-${Date.now()}`,
+            title: sum.nextMove,
+            body: sum.topCity
+              ? `From your free scan: ${sum.topCityCount || 0} fans in ${sum.topCity}. Confirm to draft the room.`
+              : "From your free scan. Confirm this one move.",
+            urgency: "today",
+            impact: "high",
+            source: "brain",
+            action: {
+              type:
+                (sum.seedAction as AgentProposal["action"]["type"]) ||
+                (sum.topCity ? "CREATE_ROOM" : "OPEN_OPPORTUNITIES"),
+              label:
+                sum.seedLabel ||
+                (sum.topCity ? `Draft room · ${sum.topCity}` : "Open Moves"),
+              payload: sum.topCity
+                ? { city: sum.topCity, title: `Room · ${sum.topCity}` }
+                : {},
+            },
+            status: "pending",
+            createdAt: Date.now(),
+          };
+          upsertProposals([proposal]);
+        } catch {
+          /* soft */
+        }
+      }
       setPhase("done");
       onDone?.();
     } catch {
@@ -218,6 +257,9 @@ export function ResearchConsole({
               {summary.avgPopularity != null
                 ? ` · DSP pop ~${summary.avgPopularity}`
                 : ""}
+              {summary.topCity
+                ? ` · hot city ${summary.topCity}`
+                : ""}
             </p>
           </div>
           <ul className="space-y-1 text-[12px] text-omniv-text-muted">
@@ -233,7 +275,7 @@ export function ResearchConsole({
               {summary.nextMove}
             </p>
             <p className="mt-1.5 text-[11px] text-omniv-text-muted">
-              Confirm it in Agent or open a room and take tickets — don&apos;t
+              Confirm it in Agent or open a room and take tickets — don't
               rent another week of algorithm reach.
             </p>
           </div>
@@ -245,9 +287,19 @@ export function ResearchConsole({
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Button
               className="h-11 gap-1.5 rounded-xl"
-              onClick={() => router.push("/crm")}
+              onClick={() => {
+                const q = new URLSearchParams();
+                if (summary.topCity) q.set("city", summary.topCity);
+                if (summary.topCityReady)
+                  q.set("ready", String(summary.topCityReady));
+                q.set("focus", "room");
+                router.push(`/crm?${q.toString()}`);
+              }}
             >
-              Open your first room <ArrowRight className="h-4 w-4" />
+              {summary.topCity
+                ? `Open room in ${summary.topCity}`
+                : "Open your first room"}{" "}
+              <ArrowRight className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
