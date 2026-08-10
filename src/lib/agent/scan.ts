@@ -151,6 +151,24 @@ export function runAgentScan(input: {
     });
   }
 
+  if ((input.linkedSurfaces || 0) >= 1) {
+    proposals.push({
+      id: uid("metrics"),
+      title: "Refresh DSP popularity snapshots",
+      body: "Pull public Spotify popularity into platform_metrics so Moves and Progress stop relying on pure heuristics.",
+      urgency: "today",
+      impact: "medium",
+      source: "market",
+      action: {
+        type: "REFRESH_METRICS",
+        label: "Refresh metrics",
+        payload: {},
+      },
+      status: "pending",
+      createdAt: now,
+    });
+  }
+
   const seen = new Set<string>();
   const unique = proposals.filter((p) => {
     const k = p.title.slice(0, 40);
