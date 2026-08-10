@@ -9,25 +9,32 @@ import { Building2 } from "lucide-react";
 export default function CrmPage() {
   return (
     <AppShell>
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="font-data text-[10px] uppercase tracking-[0.14em] text-omniv-gold">
-            Home
-          </p>
-          <h1 className="text-lg font-semibold tracking-tight md:text-xl">
-            Command Center
-          </h1>
-          <p className="text-[11px] text-omniv-text-muted">
-            Fans, rooms, city heat, gatherings — what you own, not what the
-            algorithm rents.
-          </p>
+      <div className="relative -mx-3 mb-4 overflow-hidden sm:-mx-4 md:mx-0 md:rounded-2xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/12 via-omniv-gold/8 to-transparent" />
+        <div className="absolute -left-10 top-0 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" />
+        <div className="relative flex flex-col gap-3 px-3 pb-4 pt-1 sm:flex-row sm:items-end sm:justify-between sm:px-4 md:px-5 md:pt-4">
+          <div>
+            <p className="font-data text-[10px] uppercase tracking-[0.16em] text-omniv-gold">
+              Home
+            </p>
+            <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
+              Command Center
+            </h1>
+            <p className="mt-1 max-w-lg text-[12px] text-omniv-text-secondary">
+              Fans, rooms, city heat, gatherings — what you own, not what the
+              algorithm rents.
+            </p>
+          </div>
+          <Link href="/label">
+            <Button
+              variant="outline"
+              className="h-10 gap-1.5 rounded-xl px-4 text-[12px]"
+            >
+              <Building2 className="h-4 w-4" />
+              Label
+            </Button>
+          </Link>
         </div>
-        <Link href="/label">
-          <Button variant="outline" size="sm" className="h-7 gap-1 text-[11px]">
-            <Building2 className="h-3 w-3" />
-            Label
-          </Button>
-        </Link>
       </div>
       <CrmPanel />
     </AppShell>
