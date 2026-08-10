@@ -88,6 +88,8 @@ export default function AnalyticsPage() {
     releases: 0,
     unreleased: 0,
   });
+  const [popSeries, setPopSeries] = useState<number[]>([]);
+  const [avgPop, setAvgPop] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -109,6 +111,8 @@ export default function AnalyticsPage() {
 
         let fans = 0;
         let fans7d = 0;
+        let popSeriesLocal: number[] = [];
+        let avgPopLocal: number | null = null;
         if (isSupabaseConfigured()) {
           try {
             const sb = createClient();
@@ -130,6 +134,24 @@ export default function AnalyticsPage() {
                 .eq("user_id", user.id)
                 .gte("created_at", weekAgo);
               fans7d = c7 || 0;
+
+              const { data: metrics } = await sb
+                .from("platform_metrics")
+                .select("popularity, fetched_at")
+                .eq("user_id", user.id)
+                .order("fetched_at", { ascending: true })
+                .limit(24);
+              if (metrics?.length) {
+                const series = metrics
+                  .map((m) => m.popularity)
+                  .filter((n): n is number => typeof n === "number");
+                if (series.length) {
+                  popSeriesLocal = series;
+                  avgPopLocal = Math.round(
+                    series.reduce((a, b) => a + b, 0) / series.length
+                  );
+                }
+              }
             }
           } catch {
             /* optional */
@@ -147,6 +169,8 @@ export default function AnalyticsPage() {
             r.status === "scheduled"
         ).length;
 
+        if (cancelled) return;
+
         const sig: Signals = {
           links: linkedSurfaces,
           fans,
@@ -156,6 +180,8 @@ export default function AnalyticsPage() {
           unreleased: unreleasedCount,
         };
         setSignals(sig);
+        if (popSeriesLocal.length) setPopSeries(popSeriesLocal);
+        if (avgPopLocal != null) setAvgPop(avgPopLocal);
 
         const s = computeScoresFromBrain(b, {
           platforms,
@@ -240,6 +266,14 @@ export default function AnalyticsPage() {
 
   const active = tiles.find((t) => t.key === metric) || tiles[0]!;
   const softest = [...tiles].sort((a, b) => a.value - b.value)[0]!;
+  const spark =
+    popSeries.length >= 2
+      ? popSeries.slice(-12)
+      : [
+          28, 32, 30, 38, 36, 42, 40, 48, 45, 52, 50,
+          Math.max(signals.fans, 12),
+        ];
+  const sparkMax = Math.max(...spark, 1);
 
   return (
     <AppShell>
@@ -324,9 +358,10 @@ export default function AnalyticsPage() {
             href: "/crm",
           },
           {
-            label: "Linked surfaces",
-            value: signals.links,
+            label: "DSP popularity",
+            value: avgPop ?? 0,
             delta: 0,
+            sub: avgPop != null ? "avg snapshot" : "link Spotify",
             href: "/settings",
           },
           {
@@ -361,18 +396,18 @@ export default function AnalyticsPage() {
               {"sub" in c && c.sub ? (
                 <span className="text-[11px] text-omniv-text-muted">{c.sub}</span>
               ) : (
-                <Delta n={c.delta} label={c.deltaLabel} />
+                <Delta n={c.delta} label={"deltaLabel" in c ? c.deltaLabel : undefined} />
               )}
               <ChevronRight className="h-3.5 w-3.5 text-omniv-text-muted opacity-0 transition group-hover:opacity-100" />
             </div>
             <div className="mt-3 flex h-8 items-end gap-0.5">
-              {[40, 55, 48, 62, 58, 70, 65, 78, 72, 85, 80, 90].map((h, i) => (
+              {spark.map((h, i) => (
                 <div
                   key={i}
-                  className="flex-1 rounded-sm bg-omniv-gold/25"
+                  className="flex-1 rounded-sm bg-omniv-gold/30"
                   style={{
-                    height: `${h * 0.35}%`,
-                    opacity: 0.35 + i * 0.05,
+                    height: `${Math.max(12, (h / sparkMax) * 100)}%`,
+                    opacity: 0.4 + (i / spark.length) * 0.55,
                   }}
                 />
               ))}
@@ -439,7 +474,11 @@ export default function AnalyticsPage() {
             </p>
           </div>
           <Link href="/settings">
-            <Button variant="outline" size="sm" className="h-8 shrink-0 text-[11px]">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 shrink-0 text-[11px]"
+            >
               Edit
             </Button>
           </Link>
