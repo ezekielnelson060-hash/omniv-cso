@@ -9,6 +9,7 @@ import { CrmNextSteps } from "@/components/crm/crm-next-steps";
 import { FanGateMetrics } from "@/components/crm/fan-gate-metrics";
 import { RosterSwitcher } from "@/components/crm/roster-switcher";
 import { ContractsPanel } from "@/components/crm/contracts-panel";
+import { EarningsPanel } from "@/components/crm/earnings-panel";
 import { AudienceMap } from "@/components/crm/audience-map";
 import { CityHeatMap } from "@/components/crm/city-heat-map";
 import { GatheringsPanel } from "@/components/crm/gatherings-panel";
@@ -232,7 +233,7 @@ export function CrmPanel({
           onCreateGathering={(city, ready) => {
             setGatherCity(city);
             setGatherReady(ready);
-          }}
+          }
         />
         <AudienceMap
           onCreateGathering={(city, ready) => {
@@ -256,6 +257,7 @@ export function CrmPanel({
         }}
       />
 
+      <EarningsPanel />
       <ContractsPanel />
 
       <CrmNextSteps
