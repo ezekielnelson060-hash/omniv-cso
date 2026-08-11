@@ -1,12 +1,27 @@
 import type { MetadataRoute } from "next";
 
 const baseUrl = (
-  process.env.NEXT_PUBLIC_APP_URL || "https://www.omniv.media"
+  process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
 ).replace(/\/$/, "");
 
 /** Public routes only — auth app surfaces stay out of the index. */
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
+
+  const blogSlugs = [
+    "how-to-make-money-independent-artist",
+    "how-to-find-fans-in-any-city",
+    "sync-licensing-guide",
+    "owned-audience-vs-followers",
+    "ticketed-listening-party-guide",
+  ];
+
+  const blogRoutes = blogSlugs.map((slug) => ({
+    url: `${baseUrl}/blog/${slug}`,
+    lastModified: now,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }));
 
   return [
     {
@@ -14,6 +29,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: "weekly",
       priority: 1,
+    },
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.85,
     },
     {
       url: `${baseUrl}/login`,
@@ -63,5 +84,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "yearly",
       priority: 0.2,
     },
+    {
+      url: `${baseUrl}/data-deletion`,
+      lastModified: now,
+      changeFrequency: "yearly",
+      priority: 0.2,
+    },
+    ...blogRoutes,
   ];
 }
