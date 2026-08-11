@@ -2,6 +2,17 @@ import type { AgentProposal } from "@/lib/agent/types";
 
 const KEY = "omniv_agent_proposals_v1";
 
+/** Partner webhooks + metric rise cards (Agent Outside). */
+export function isOutsideSignal(p: { id?: string; source?: string }): boolean {
+  const id = String(p.id || "");
+  if (p.source === "webhook") return true;
+  return (
+    id.startsWith("webhook-") ||
+    id.startsWith("wh-") ||
+    id.startsWith("metric-")
+  );
+}
+
 export function loadProposals(): AgentProposal[] {
   if (typeof window === "undefined") return [];
   try {
@@ -44,16 +55,14 @@ export function upsertProposals(incoming: AgentProposal[]) {
   return merged;
 }
 
-/** After Scan now: install new set; keep closed history + webhook signals. */
+/** After Scan: install plan cards; keep closed history + outside signals. */
 export function replacePendingFromScan(incoming: AgentProposal[]) {
   const existing = loadProposals();
   const kept = existing.filter(
     (p) =>
       p.status === "done" ||
       p.status === "dismissed" ||
-      (p.status === "pending" &&
-        typeof p.id === "string" &&
-        p.id.startsWith("webhook-"))
+      (p.status === "pending" && isOutsideSignal(p))
   );
   const byId = new Map<string, AgentProposal>();
   for (const p of kept) byId.set(p.id, p);
@@ -84,10 +93,16 @@ export function clearStalePending() {
   const list = loadProposals().filter(
     (p) =>
       p.status !== "pending" ||
+      isOutsideSignal(p) ||
       p.id.startsWith("setup-") ||
       p.id.startsWith("room-") ||
       p.id.startsWith("dream-") ||
-      p.id.startsWith("webhook-")
+      p.id.startsWith("capture-") ||
+      p.id.startsWith("money-") ||
+      p.id.startsWith("release-") ||
+      p.id.startsWith("industry-") ||
+      p.id.startsWith("invite-") ||
+      p.id.startsWith("live-")
   );
   save(list);
   return list;
