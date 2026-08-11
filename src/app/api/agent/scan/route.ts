@@ -229,7 +229,7 @@ export async function POST() {
               : "Outside signal: public popularity snapshot. Paste more DSP links in Catalogue so this updates weekly.",
           urgency: pop >= 50 ? "today" : "this_week",
           impact: pop >= 40 ? "high" : "medium",
-          source: "market",
+          source: "webhook",
           action: {
             type: pop >= 40 ? "OPEN_CRM" : "OPEN_CATALOGUE",
             label: pop >= 40 ? "Open Money · tip link" : "Open Catalogue",
