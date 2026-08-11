@@ -320,8 +320,8 @@ export async function POST() {
       const existing = (inbox.proposals || []) as {
         id?: string;
         status?: string;
+        title?: string;
       }[];
-      // Drop stale scan seeds + keep webhooks only among pending
       const kept = existing.filter((p) => {
         if (!p.id) return false;
         if (String(p.id).startsWith(`scan-${user.id.slice(0, 8)}`)) return false;
