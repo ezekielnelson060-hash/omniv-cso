@@ -8,8 +8,20 @@ export type MarketArticle = {
   publishedAt: string;
 };
 
-const DEFAULT_QUERY =
-  '("sync licensing" OR "music supervisor" OR soundtrack OR "music placement" OR Afrobeats OR "playlist editorial" OR "A&R") AND (music OR artist OR label OR Netflix OR advertising)';
+/**
+ * Global music-market queries (not region-locked).
+ * NewsAPI free tier: keep each query tight; we merge + dedupe.
+ */
+const MARKET_QUERIES = [
+  // Labels / A&R looking at independents
+  '("independent artist" OR "indie artist" OR "unsigned artist" OR "open submissions") AND (label OR "A&R" OR signing OR imprint OR "record deal")',
+  // Sync / supervisors / placements worldwide
+  '("music supervisor" OR "sync licensing" OR soundtrack OR "music placement" OR "needle drop") AND (film OR TV OR advertising OR game OR trailer)',
+  // Playlists / radio / editorial
+  '("playlist" OR editorial OR curator OR "New Music Friday") AND (Spotify OR Apple OR "radio add") AND (music OR artist)',
+  // Global scenes as equal weight (not Afro-only)
+  '(K-pop OR Latin OR Afrobeats OR "UK drill" OR "indie pop" OR "alt-R&B" OR country OR "hip-hop") AND (label OR licensing OR playlist OR tour OR deal)',
+];
 
 /**
  * Fetch music-market headlines from NewsAPI.
@@ -26,8 +38,37 @@ export async function fetchMarketNews(opts?: {
   if (!key) return [];
 
   const pageSize = Math.min(12, Math.max(3, opts?.pageSize ?? 8));
-  const q = opts?.query || DEFAULT_QUERY;
 
+  if (opts?.query) {
+    return fetchOneQuery(key, opts.query, pageSize);
+  }
+
+  const per = Math.max(2, Math.ceil(pageSize / MARKET_QUERIES.length));
+  const batches = await Promise.all(
+    MARKET_QUERIES.map((q) => fetchOneQuery(key, q, per))
+  );
+
+  const byUrl = new Map<string, MarketArticle>();
+  for (const list of batches) {
+    for (const a of list) {
+      const k = a.url || a.title;
+      if (!byUrl.has(k)) byUrl.set(k, a);
+    }
+  }
+
+  return Array.from(byUrl.values())
+    .sort(
+      (a, b) =>
+        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    )
+    .slice(0, pageSize);
+}
+
+async function fetchOneQuery(
+  key: string,
+  q: string,
+  pageSize: number
+): Promise<MarketArticle[]> {
   const url = new URL("https://newsapi.org/v2/everything");
   url.searchParams.set("q", q);
   url.searchParams.set("language", "en");
@@ -87,7 +128,21 @@ function inferPitchAction(
   const hay = `${title} ${body}`.toLowerCase();
 
   if (
-    /sync|supervisor|soundtrack|licensing|placement|brief|netflix|film|tv|ad |advert|commercial|trailer/.test(
+    /label|a&r|signing|record deal|imprint|unsigned|independent artist|indie artist|open submission|roster/.test(
+      hay
+    )
+  ) {
+    return {
+      type: "OPEN_LABEL",
+      label: "Open Label · shortlist",
+      payload: {
+        q: `Industry label / A&R signal (global):\n${title}\n${body}\n\nUsing my Artist Brain + catalogue, list 3 labels or A&R angles that fit me and draft one short intro email.`,
+      },
+    };
+  }
+
+  if (
+    /sync|supervisor|soundtrack|licensing|placement|brief|netflix|film|tv|ad |advert|commercial|trailer|needle drop|game/.test(
       hay
     )
   ) {
@@ -95,12 +150,12 @@ function inferPitchAction(
       type: "OPEN_ZIKI",
       label: "Draft pitch in Ziki",
       payload: {
-        q: `Market signal for a possible pitch:\n${title}\n${body}\n\nUsing my catalogue + Artist Brain, pick the best track (prefer one with clean intro / instrumental if sync). Write a short supervisor-style pitch email: subject + 4 sentences max + what to attach.`,
+        q: `Market signal for a possible pitch (any region):\n${title}\n${body}\n\nUsing my catalogue + Artist Brain, pick the best track (prefer clean intro / instrumental if sync). Write a short supervisor-style pitch: subject + 4 sentences max + what to attach.`,
       },
     };
   }
 
-  if (/playlist|editorial|curator|radio/.test(hay)) {
+  if (/playlist|editorial|curator|radio|new music friday/.test(hay)) {
     return {
       type: "DRAFT_OUTREACH",
       label: "Draft playlist note",
@@ -111,21 +166,11 @@ function inferPitchAction(
     };
   }
 
-  if (/label|a&r|signing|record deal|imprint/.test(hay)) {
-    return {
-      type: "OPEN_LABEL",
-      label: "Open Label hub",
-      payload: {
-        q: `Industry label signal:\n${title}\n${body}\nHow should I position my roster/catalogue?`,
-      },
-    };
-  }
-
   return {
     type: "OPEN_ZIKI",
     label: "Review in Ziki",
     payload: {
-      q: `Music market news:\n${title}\n${body}\nIs there a deal or pitch angle for me this week? One clear move.`,
+      q: `Music market news (global):\n${title}\n${body}\nIs there a deal or pitch angle for me this week? One clear move.`,
     },
   };
 }
@@ -137,23 +182,31 @@ export function articlesToProposals(
 ): AgentProposal[] {
   return articles.map((a, i) => {
     const body = [
-      a.description || "Industry headline — check if your catalogue fits.",
+      a.description ||
+        "Industry headline — check if your catalogue or roster fits (any market).",
       a.source ? `Source: ${a.source}` : "",
       a.url ? `Read: ${a.url}` : "",
     ]
       .filter(Boolean)
       .join("\n");
 
+    const labelish =
+      /label|a&r|signing|unsigned|independent|indie artist|imprint|record deal/i.test(
+        a.title + (a.description || "")
+      );
+
     return {
       id: slugId(a.title, a.publishedAt),
       title: a.title.length > 90 ? `${a.title.slice(0, 87)}…` : a.title,
       body: body.slice(0, 400),
       urgency: i < 2 ? ("today" as const) : ("this_week" as const),
-      impact: /sync|supervisor|licensing|playlist|label|netflix/i.test(
-        a.title + (a.description || "")
-      )
-        ? ("high" as const)
-        : ("medium" as const),
+      impact:
+        labelish ||
+        /sync|supervisor|licensing|playlist|netflix/i.test(
+          a.title + (a.description || "")
+        )
+          ? ("high" as const)
+          : ("medium" as const),
       source: "webhook" as const,
       action: inferPitchAction(a.title, body),
       status: "pending" as const,
