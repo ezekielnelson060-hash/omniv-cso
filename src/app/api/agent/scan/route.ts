@@ -134,6 +134,30 @@ export async function POST() {
       /* soft */
     }
 
+    // Fallback: fans on user_id if no roster
+    if (fanCount === 0) {
+      try {
+        const { data: fans } = await supabase
+          .from("fans")
+          .select("city")
+          .eq("user_id", user.id)
+          .limit(500);
+        const list = fans || [];
+        fanCount = list.length;
+        const map = new Map<string, number>();
+        for (const f of list) {
+          const c = String(f.city || "").trim();
+          if (!c) continue;
+          map.set(c, (map.get(c) || 0) + 1);
+        }
+        fanCities = [...map.entries()]
+          .map(([city, count]) => ({ city, count }))
+          .sort((a, b) => b.count - a.count);
+      } catch {
+        /* soft */
+      }
+    }
+
     let hasPayout = false;
     try {
       const { data: pay } = await supabase
@@ -160,6 +184,7 @@ export async function POST() {
       fanCities,
       fanCount,
       hasPayout,
+      interests: (profile?.interests as string[]) || [],
     });
 
     try {
@@ -171,7 +196,6 @@ export async function POST() {
       const prevInbox = (prev?.agent_inbox || {}) as {
         proposals?: { id: string; status?: string; createdAt?: number }[];
       };
-      // Hard replace: new scan wins. Keep only live partner webhooks + closed history.
       const preserved = (prevInbox.proposals || []).filter((x) => {
         if (!x?.id) return false;
         if (x.status === "done" || x.status === "dismissed") return true;
