@@ -46,12 +46,16 @@ export async function POST(req: Request) {
     if (!userId && body.slug) {
       const { data: roster } = await admin
         .from("roster_artists")
-        .select("user_id, stage_name, slug")
+        .select("owner_user_id, user_id, stage_name, slug")
         .eq("slug", body.slug.trim())
         .maybeSingle();
-      if (roster?.user_id) {
-        userId = roster.user_id as string;
-        artistName = String(roster.stage_name || "Artist");
+      // Roster rows store owner_user_id (not user_id)
+      const owner =
+        (roster as { owner_user_id?: string } | null)?.owner_user_id ||
+        (roster as { user_id?: string } | null)?.user_id;
+      if (owner) {
+        userId = String(owner);
+        artistName = String(roster?.stage_name || "Artist");
       }
     }
 
@@ -73,7 +77,7 @@ export async function POST(req: Request) {
     const origin =
       process.env.NEXT_PUBLIC_APP_URL ||
       req.headers.get("origin") ||
-      "https://www.omniv.media";
+      "https://omniv.media";
 
     const txRef = `tip-${userId.slice(0, 8)}-${Date.now()}`;
     const payload: Record<string, unknown> = {
