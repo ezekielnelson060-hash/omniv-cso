@@ -10,7 +10,8 @@ import type { AgentProposal } from "@/lib/agent/types";
 import {
   loadProposals,
   markProposal,
-  upsertProposals,
+  replacePendingFromScan,
+  clearStalePending,
 } from "@/lib/agent/store";
 import { runAgentScan } from "@/lib/agent/scan";
 import { getArtistBrain, getProfile } from "@/lib/db/profile";
@@ -30,12 +31,14 @@ export function NotificationsPanel() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [lastMsg, setLastMsg] = useState<string | null>(null);
+  const [autoScanned, setAutoScanned] = useState(false);
 
   const refresh = useCallback(() => {
     setItems(loadProposals());
   }, []);
 
   useEffect(() => {
+    clearStalePending();
     refresh();
     const on = () => refresh();
     window.addEventListener("omniv-agent", on);
@@ -51,8 +54,8 @@ export function NotificationsPanel() {
           proposals?: AgentProposal[];
           narrative?: string;
         };
-        if (data.proposals?.length) {
-          upsertProposals(data.proposals);
+        if (Array.isArray(data.proposals)) {
+          replacePendingFromScan(data.proposals);
           setNarrative(data.narrative || "");
           refresh();
           return;
@@ -76,13 +79,20 @@ export function NotificationsPanel() {
         linkedSurfaces,
         completedOppIds: completedIds(),
       });
-      upsertProposals(result.proposals);
+      replacePendingFromScan(result.proposals);
       setNarrative(result.narrative);
       refresh();
     } finally {
       setScanning(false);
     }
   }
+
+  useEffect(() => {
+    if (autoScanned) return;
+    setAutoScanned(true);
+    void scan();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function execute(p: AgentProposal) {
     setBusyId(p.id);
@@ -96,7 +106,7 @@ export function NotificationsPanel() {
         stashAct({
           title: p.title,
           summary: p.body.slice(0, 280),
-          why: "Agent confirmed this move",
+          why: "Confirmed move",
           expectedOutcome: "Clear next action",
           category: p.source,
         });
@@ -136,26 +146,32 @@ export function NotificationsPanel() {
           };
         };
         serverMsg = data.message || null;
-        if (data.stash) {
-          stashAct(data.stash);
-        } else if (data.draft) {
+        if (data.stash) stashAct(data.stash);
+        else if (data.draft) {
           stashAct({
             title: p.title,
             summary: data.draft.slice(0, 280),
-            why: "Outreach draft from Agent",
+            why: "Outreach draft",
             expectedOutcome: "Send a note that earns a reply",
             category: "outreach",
           });
         }
         if (data.route) router.push(data.route);
       } else if (t === "OPEN_CRM") {
-        router.push("/crm");
+        const focus = payload.focus || "";
+        const city = payload.city
+          ? `&city=${encodeURIComponent(payload.city)}`
+          : "";
+        if (focus === "room") router.push(`/crm?focus=room${city}`);
+        else if (focus === "money") router.push("/crm?tab=money");
+        else if (focus === "fans") router.push("/crm?tab=fans");
+        else router.push("/crm");
       } else if (t === "OPEN_SETTINGS") {
         router.push("/settings");
       } else if (t === "OPEN_CATALOGUE") {
         router.push("/catalogue");
       } else if (t === "OPEN_OPPORTUNITIES") {
-        router.push("/opportunities");
+        router.push("/notifications");
       } else if (t === "OPEN_RELEASE") {
         router.push("/release-simulator");
       } else if (t === "OPEN_DISCOVER") {
@@ -167,7 +183,7 @@ export function NotificationsPanel() {
           "@/lib/opportunity-progress"
         );
         markOpportunityDone(payload.id);
-        serverMsg = "Opportunity marked done";
+        serverMsg = "Marked done";
       } else {
         try {
           const res = await fetch("/api/agent/execute", {
@@ -186,17 +202,7 @@ export function NotificationsPanel() {
 
       markProposal(p.id, "done");
       void persistStatus(p.id, "done");
-      setLastMsg(serverMsg || `Confirmed: ${p.action.label}`);
-      try {
-        const { track } = await import("@/lib/analytics");
-        track("agent_confirm", {
-          action: p.action.type,
-          source: p.source,
-          proposal_id: p.id,
-        });
-      } catch {
-        /* soft */
-      }
+      setLastMsg(serverMsg || `Done: ${p.action.label}`);
       refresh();
     } finally {
       setBusyId(null);
@@ -220,7 +226,7 @@ export function NotificationsPanel() {
         body: JSON.stringify({ id, status }),
       });
     } catch {
-      /* optimistic local already applied */
+      /* optimistic */
     }
   }
 
@@ -236,10 +242,8 @@ export function NotificationsPanel() {
 
   const emptyCopy =
     filter === "outside"
-      ? "No outside signals yet. Partner webhooks (distro, playlist, sync) land here."
-      : filter === "internal"
-        ? "No internal moves pending. Scan after catalogue upload or Settings update."
-        : "No pending agent moves. Scan after catalogue upload or Settings update.";
+      ? "No outside signals yet."
+      : "No pending moves. Tap Scan now after you upload a track or update Settings.";
 
   return (
     <div className="space-y-4">
@@ -248,14 +252,13 @@ export function NotificationsPanel() {
         <div className="relative flex flex-wrap items-end justify-between gap-3 px-3 pb-4 pt-1 sm:px-4 md:px-5 md:pt-4">
           <div>
             <p className="font-data text-[10px] uppercase tracking-[0.16em] text-omniv-gold">
-              Agent
+              Moves
             </p>
             <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
-              Inbox
+              Do this next
             </h1>
             <p className="mt-1 max-w-lg text-[12px] text-omniv-text-secondary">
-              Sense → rank → draft. You confirm. One confirmed move beats ten
-              unread tips.
+              One card. One button. Scan now clears old strategy cards.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -299,7 +302,7 @@ export function NotificationsPanel() {
               "rounded-full border px-2.5 py-1 text-[11px] font-medium transition",
               filter === tab.id
                 ? "border-omniv-gold/50 bg-omniv-gold/15 text-omniv-gold"
-                : "border-omniv-border text-omniv-text-muted hover:border-omniv-gold/30 hover:text-omniv-text"
+                : "border-omniv-border text-omniv-text-muted"
             )}
           >
             {tab.label}
@@ -336,7 +339,7 @@ export function NotificationsPanel() {
       {done.length > 0 && (
         <div className="pt-2">
           <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
-            Confirmed
+            Done
           </p>
           {done.map((p) => (
             <div
@@ -389,21 +392,14 @@ function ProposalCard({
             >
               {p.urgency}
             </span>
-            <Badge
-              variant="outline"
-              className={cn(
-                "text-[9px]",
-                p.source === "webhook" && "border-omniv-gold/40 text-omniv-gold"
-              )}
-            >
+            <Badge variant="outline" className="text-[9px]">
               {p.source === "webhook" ? "outside" : p.source}
             </Badge>
-            <span className="text-[10px] text-omniv-text-muted">{p.impact}</span>
           </div>
           <p className="text-[14px] font-semibold tracking-tight">{p.title}</p>
           <p className="mt-1 whitespace-pre-wrap text-[12px] leading-snug text-omniv-text-muted">
-            {p.body.slice(0, 320)}
-            {p.body.length > 320 ? "…" : ""}
+            {p.body.slice(0, 280)}
+            {p.body.length > 280 ? "…" : ""}
           </p>
         </div>
         <button
