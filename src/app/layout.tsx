@@ -18,7 +18,7 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "https://www.omniv.media"
+    process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
   ),
   title: {
     default: "Omniv — AI Career Strategist for Independent Artists",
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
     title: "Omniv — AI Career Strategist for Artists",
     description:
       "Stop guessing. Ranked next moves, owned fans, ticketed rooms, and first cash.",
-    url: "https://www.omniv.media",
+    url: "https://omniv.media",
     siteName: "Omniv",
     locale: "en_US",
     type: "website",
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     description: "The career OS for independent artists.",
   },
   alternates: {
-    canonical: "https://www.omniv.media",
+    canonical: "https://omniv.media",
   },
   robots: {
     index: true,
@@ -85,6 +85,31 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('omniv-theme');if(t==='dark'){document.documentElement.classList.remove('light');}else{document.documentElement.classList.add('light');}}catch(e){document.documentElement.classList.add('light');}})();`,
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "SoftwareApplication",
+              name: "Omniv",
+              applicationCategory: "BusinessApplication",
+              operatingSystem: "Web",
+              url: "https://omniv.media",
+              description:
+                "AI career strategist for independent artists — ranked moves, fan gates, ticketed rooms, and catalogue tools.",
+              offers: {
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "USD",
+              },
+              publisher: {
+                "@type": "Organization",
+                name: "Omniv",
+                url: "https://omniv.media",
+              },
+            }),
           }}
         />
       </head>
