@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { loadMarketProposals } from "@/lib/agent/market-news";
+import { loadXMarketProposals } from "@/lib/agent/x-market";
 import type { AgentProposal } from "@/lib/agent/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * Pull music-market news → Agent Outside cards for every profile.
+ * Pull music-market news + X public opportunities → Agent Outside for every profile.
  * Vercel Cron: GET /api/cron/market-news
  * Auth: Authorization: Bearer CRON_SECRET
  *
- * Env: NEWS_API_KEY (or NEWSAPI_KEY)
+ * Env: NEWS_API_KEY and/or X_BEARER_TOKEN
  */
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
@@ -24,9 +25,11 @@ export async function GET(req: Request) {
     process.env.NEWS_API_KEY ||
     process.env.NEWSAPI_KEY ||
     process.env.NEWS_API_TOKEN;
-  if (!newsKey) {
+  const xToken = process.env.X_BEARER_TOKEN;
+
+  if (!newsKey && !xToken) {
     return NextResponse.json(
-      { error: "NEWS_API_KEY not set", injected: 0 },
+      { error: "NEWS_API_KEY or X_BEARER_TOKEN required", injected: 0 },
       { status: 503 }
     );
   }
@@ -39,7 +42,20 @@ export async function GET(req: Request) {
 
   let proposals: AgentProposal[] = [];
   try {
-    proposals = await loadMarketProposals(8);
+    const [news, xPosts] = await Promise.all([
+      newsKey
+        ? loadMarketProposals(8)
+        : Promise.resolve([] as AgentProposal[]),
+      xToken
+        ? loadXMarketProposals().catch((e) => {
+            console.error("[cron/market-news] x", e);
+            return [] as AgentProposal[];
+          })
+        : Promise.resolve([] as AgentProposal[]),
+    ]);
+    const byId = new Map<string, AgentProposal>();
+    for (const x of [...xPosts, ...news]) byId.set(x.id, x);
+    proposals = Array.from(byId.values()).slice(0, 16);
   } catch (e) {
     console.error("[cron/market-news]", e);
     return NextResponse.json({ error: "news_fetch_failed" }, { status: 502 });
@@ -50,7 +66,7 @@ export async function GET(req: Request) {
       ok: true,
       articles: 0,
       profiles: 0,
-      note: "NewsAPI returned 0 usable articles",
+      note: "No usable NewsAPI or X results this run",
     });
   }
 
@@ -70,9 +86,12 @@ export async function GET(req: Request) {
   let updated = 0;
   for (const p of profiles || []) {
     try {
-      const existing = Array.isArray(p.agent_inbox)
-        ? (p.agent_inbox as AgentProposal[])
-        : [];
+      const raw = p.agent_inbox;
+      const existing: AgentProposal[] = Array.isArray(raw)
+        ? (raw as AgentProposal[])
+        : Array.isArray((raw as { proposals?: AgentProposal[] })?.proposals)
+          ? ((raw as { proposals: AgentProposal[] }).proposals)
+          : [];
       const byId = new Map<string, AgentProposal>();
       for (const x of existing) {
         if (x?.id) byId.set(String(x.id), x);
@@ -84,7 +103,13 @@ export async function GET(req: Request) {
 
       const { error: upErr } = await admin
         .from("profiles")
-        .update({ agent_inbox: merged })
+        .update({
+          agent_inbox: {
+            proposals: merged,
+            scannedAt: Date.now(),
+            narrative: "Outside: market news + X signals",
+          },
+        })
         .eq("id", p.id);
       if (!upErr) updated += 1;
     } catch (e) {
@@ -95,6 +120,8 @@ export async function GET(req: Request) {
   return NextResponse.json({
     ok: true,
     articles: proposals.length,
+    x: proposals.filter((p) => String(p.id).startsWith("x-")).length,
+    news: proposals.filter((p) => String(p.id).startsWith("market-")).length,
     profiles: updated,
     titles: proposals.map((x) => x.title).slice(0, 5),
   });
