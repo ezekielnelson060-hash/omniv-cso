@@ -55,7 +55,10 @@ export function upsertProposals(incoming: AgentProposal[]) {
   return merged;
 }
 
-/** After Scan: install plan cards; keep closed history + outside signals. */
+/**
+ * Agent inbox only stores outside intelligence (webhooks + metric rises).
+ * Precision plan cards belong in Moves — never install them here.
+ */
 export function replacePendingFromScan(incoming: AgentProposal[]) {
   const existing = loadProposals();
   const kept = existing.filter(
@@ -66,9 +69,18 @@ export function replacePendingFromScan(incoming: AgentProposal[]) {
   );
   const byId = new Map<string, AgentProposal>();
   for (const p of kept) byId.set(p.id, p);
-  for (const p of incoming) byId.set(p.id, p);
-  const final = Array.from(byId.values()).sort(
-    (a, b) => b.createdAt - a.createdAt
+  for (const p of incoming.filter(isOutsideSignal)) byId.set(p.id, p);
+  const final = Array.from(byId.values())
+    .filter((p) => p.status !== "pending" || isOutsideSignal(p))
+    .sort((a, b) => b.createdAt - a.createdAt);
+  save(final);
+  return final;
+}
+
+/** One-shot: purge pending internal cards that leaked into Agent. */
+export function purgeInternalPending() {
+  const final = loadProposals().filter(
+    (p) => p.status !== "pending" || isOutsideSignal(p)
   );
   save(final);
   return final;
@@ -90,20 +102,9 @@ export function pendingCount(): number {
 }
 
 export function clearStalePending() {
+  const cutoff = Date.now() - 1000 * 60 * 60 * 24 * 14;
   const list = loadProposals().filter(
-    (p) =>
-      p.status !== "pending" ||
-      isOutsideSignal(p) ||
-      p.id.startsWith("setup-") ||
-      p.id.startsWith("room-") ||
-      p.id.startsWith("dream-") ||
-      p.id.startsWith("capture-") ||
-      p.id.startsWith("money-") ||
-      p.id.startsWith("release-") ||
-      p.id.startsWith("industry-") ||
-      p.id.startsWith("invite-") ||
-      p.id.startsWith("live-")
+    (p) => p.status === "pending" || p.createdAt > cutoff
   );
   save(list);
-  return list;
 }

@@ -14,6 +14,16 @@ function CrmInner() {
   const readyRaw = sp.get("ready");
   const ready = readyRaw ? Number(readyRaw) : null;
   const focus = sp.get("focus");
+  const tabRaw = sp.get("tab");
+  const initialTab =
+    tabRaw === "money" ||
+    tabRaw === "rooms" ||
+    tabRaw === "fans" ||
+    tabRaw === "home"
+      ? tabRaw
+      : focus === "room"
+        ? "rooms"
+        : "home";
 
   return (
     <>
@@ -51,6 +61,7 @@ function CrmInner() {
         initialCity={city}
         initialReady={ready && !Number.isNaN(ready) ? ready : null}
         focusRoom={focus === "room"}
+        initialTab={initialTab}
       />
     </>
   );
