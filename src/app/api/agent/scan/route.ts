@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { runAgentScan } from "@/lib/agent/scan";
 import { loadMarketProposals } from "@/lib/agent/market-news";
+import { loadXMarketProposals } from "@/lib/agent/x-market";
 import type { ArtistBrain, CatalogueRelease, CatalogueTrack } from "@/types";
 
 export const runtime = "nodejs";
@@ -223,7 +224,7 @@ export async function POST() {
           title:
             pop >= 40
               ? `Popularity ${pop} on ${title.slice(0, 36)}`
-              : `Spotify score ${pop} · ${title.slice(0, 36)}`,
+              : `Spotify score ${pop} \u00b7 ${title.slice(0, 36)}`,
           body:
             pop >= 40
               ? "Outside signal: score is moving. Put tip link in bio, lock release date, or pitch one playlist that fits."
@@ -233,7 +234,7 @@ export async function POST() {
           source: "webhook",
           action: {
             type: pop >= 40 ? "OPEN_CRM" : "OPEN_CATALOGUE",
-            label: pop >= 40 ? "Open Money · tip link" : "Open Catalogue",
+            label: pop >= 40 ? "Open Money \u00b7 tip link" : "Open Catalogue",
             payload: pop >= 40 ? { focus: "money" } : { phase: "links" },
           },
           status: "pending",
@@ -245,15 +246,22 @@ export async function POST() {
     }
 
     let marketSignals: typeof result.proposals = [];
+    let xSignals: typeof result.proposals = [];
     try {
       marketSignals = await loadMarketProposals(5);
     } catch {
       /* NewsAPI optional */
     }
+    try {
+      xSignals = await loadXMarketProposals();
+    } catch {
+      /* X optional */
+    }
 
     const proposalsOut = [
-      ...marketSignals.slice(0, 5),
-      ...metricSignals.slice(0, 4),
+      ...xSignals.slice(0, 5),
+      ...marketSignals.slice(0, 4),
+      ...metricSignals.slice(0, 3),
       ...result.proposals,
     ].slice(0, 16);
 
@@ -281,6 +289,7 @@ export async function POST() {
           id.startsWith("wh-") ||
           id.startsWith("metric-") ||
           id.startsWith("market-") ||
+          id.startsWith("x-") ||
           x.source === "webhook"
         );
       });
@@ -309,8 +318,10 @@ export async function POST() {
     return NextResponse.json({
       ...result,
       proposals: proposalsOut,
-      signals: metricSignals.length + marketSignals.length,
+      signals:
+        metricSignals.length + marketSignals.length + xSignals.length,
       market: marketSignals.length,
+      x: xSignals.length,
     });
   } catch (e) {
     console.error("agent scan", e);
