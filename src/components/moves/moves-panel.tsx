@@ -49,7 +49,17 @@ export function MovesPanel() {
           narrative?: string;
         };
         setItems(
-          (data.proposals || []).filter((p) => p.source !== "webhook")
+          (data.proposals || []).filter((p) => {
+            if (p.source === "webhook") return false;
+            const id = String(p.id || "");
+            if (
+              id.startsWith("wh-") ||
+              id.startsWith("webhook-") ||
+              id.startsWith("metric-")
+            )
+              return false;
+            return true;
+          })
         );
         setNarrative(data.narrative || "");
       }
