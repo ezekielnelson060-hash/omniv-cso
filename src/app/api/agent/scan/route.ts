@@ -171,17 +171,15 @@ export async function POST() {
       const prevInbox = (prev?.agent_inbox || {}) as {
         proposals?: { id: string; status?: string; createdAt?: number }[];
       };
-      const livePending = (prevInbox.proposals || []).filter(
-        (x) =>
-          x.status === "pending" &&
-          typeof x.id === "string" &&
-          (x.id.startsWith("room-") || x.id.startsWith("webhook-"))
-      );
+      // Hard replace: new scan wins. Keep only live partner webhooks + closed history.
+      const preserved = (prevInbox.proposals || []).filter((x) => {
+        if (!x?.id) return false;
+        if (x.status === "done" || x.status === "dismissed") return true;
+        return x.status === "pending" && String(x.id).startsWith("webhook-");
+      });
       const byId = new Map<string, (typeof result.proposals)[0]>();
+      for (const x of preserved) byId.set(x.id, x as (typeof result.proposals)[0]);
       for (const x of result.proposals) byId.set(x.id, x);
-      for (const x of livePending) {
-        if (!byId.has(x.id)) byId.set(x.id, x as (typeof result.proposals)[0]);
-      }
       const merged = Array.from(byId.values()).sort(
         (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
       );
