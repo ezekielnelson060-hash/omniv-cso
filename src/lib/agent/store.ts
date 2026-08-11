@@ -2,14 +2,15 @@ import type { AgentProposal } from "@/lib/agent/types";
 
 const KEY = "omniv_agent_proposals_v1";
 
-/** Partner webhooks + metric rise cards (Agent Outside). */
+/** Partner webhooks + metric rise + market news (Agent Outside). */
 export function isOutsideSignal(p: { id?: string; source?: string }): boolean {
   const id = String(p.id || "");
   if (p.source === "webhook") return true;
   return (
     id.startsWith("webhook-") ||
     id.startsWith("wh-") ||
-    id.startsWith("metric-")
+    id.startsWith("metric-") ||
+    id.startsWith("market-")
   );
 }
 
@@ -56,7 +57,7 @@ export function upsertProposals(incoming: AgentProposal[]) {
 }
 
 /**
- * Agent inbox only stores outside intelligence (webhooks + metric rises).
+ * Agent inbox only stores outside intelligence (webhooks + metrics + market news).
  * Precision plan cards belong in Moves — never install them here.
  */
 export function replacePendingFromScan(incoming: AgentProposal[]) {
