@@ -129,6 +129,8 @@ export function MovesPanel() {
         OPEN_SETTINGS: "/settings",
         OPEN_CATALOGUE: "/catalogue",
         OPEN_RELEASE: "/release-simulator",
+        OPEN_CONTENT: "/content",
+        OPEN_LABEL: "/label",
         OPEN_DISCOVER: "/discover",
         OPEN_REPORTS: "/reports",
         OPEN_OPPORTUNITIES: "/opportunities",
