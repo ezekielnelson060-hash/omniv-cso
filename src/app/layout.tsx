@@ -17,9 +17,25 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Omniv | Career OS for independent artists",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "https://www.omniv.media"
+  ),
+  title: {
+    default: "Omniv — AI Career Strategist for Independent Artists",
+    template: "%s | Omniv",
+  },
   description:
-    "List, rooms, first cash, and ranked next moves. Career operating system for independent artists, managers, and labels.",
+    "Omniv ranks your highest-impact career moves, helps you open ticketed rooms, and turns your catalogue into revenue. Career OS for independent artists, managers, and labels.",
+  keywords: [
+    "independent artist",
+    "music career",
+    "AI manager",
+    "fan gate",
+    "ticketed rooms",
+    "music monetization",
+    "afrobeat",
+    "indie music",
+  ],
   icons: { icon: "/logo.svg", apple: "/logo.svg" },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -31,6 +47,27 @@ export const metadata: Metadata = {
     { media: "(prefers-color-scheme: light)", color: "#f7f6f3" },
     { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
   ],
+  openGraph: {
+    title: "Omniv — AI Career Strategist for Artists",
+    description:
+      "Stop guessing. Ranked next moves, owned fans, ticketed rooms, and first cash.",
+    url: "https://www.omniv.media",
+    siteName: "Omniv",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Omniv — AI Career Strategist",
+    description: "The career OS for independent artists.",
+  },
+  alternates: {
+    canonical: "https://www.omniv.media",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({
