@@ -17,6 +17,8 @@ type Row = {
 function TipLinkBlock() {
   const [artists, setArtists] = useState<{ slug: string; name: string }[]>([]);
   const [copied, setCopied] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [createErr, setCreateErr] = useState<string | null>(null);
   useEffect(() => {
     void (async () => {
       try {
@@ -38,17 +40,64 @@ function TipLinkBlock() {
       }
     })();
   }, []);
+
+  async function createMyTipLink() {
+    setCreating(true);
+    setCreateErr(null);
+    try {
+      const res = await fetch("/api/roster", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stageName: "My tip jar" }),
+      });
+      const data = (await res.json()) as {
+        artist?: { slug?: string; stage_name?: string };
+        error?: string;
+      };
+      if (!res.ok) {
+        setCreateErr(data.error || "Could not create tip link");
+        return;
+      }
+      if (data.artist?.slug) {
+        setArtists([
+          {
+            slug: String(data.artist.slug),
+            name: String(data.artist.stage_name || data.artist.slug),
+          },
+        ]);
+      }
+    } catch {
+      setCreateErr("Network error");
+    } finally {
+      setCreating(false);
+    }
+  }
+
   if (!artists.length) {
     return (
-      <p className="mt-3 text-[11px] text-omniv-text-muted">
-        Add a roster artist to get a public tip link (/tip/your-slug).
-      </p>
+      <div className="mt-3 space-y-2 rounded-xl border border-omniv-gold/25 bg-omniv-gold/5 px-3 py-2">
+        <p className="text-[11px] text-omniv-text-muted">
+          No tip link yet. Create one to put in your bio — fans tip without a
+          room.
+        </p>
+        <button
+          type="button"
+          disabled={creating}
+          onClick={() => void createMyTipLink()}
+          className="rounded-lg bg-omniv-gold px-3 py-1.5 text-[12px] font-semibold text-omniv-black disabled:opacity-50"
+        >
+          {creating ? "Creating…" : "Create tip link"}
+        </button>
+        {createErr ? (
+          <p className="text-[11px] text-red-400">{createErr}</p>
+        ) : null}
+      </div>
     );
   }
   const origin =
     typeof window !== "undefined"
       ? window.location.origin
-      : "https://www.omniv.media";
+      : "https://omniv.media";
   return (
     <div className="mt-3 space-y-2 rounded-xl border border-omniv-gold/25 bg-omniv-gold/5 px-3 py-2">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-omniv-gold">
@@ -82,11 +131,11 @@ function TipLinkBlock() {
 }
 
 export function EarningsPanel() {
+  const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [currency, setCurrency] = useState("USD");
-  const [rows, setRows] = useState<Row[]>([]);
-  const [hasSub, setHasSub] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [hasSub, setHasSub] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -94,15 +143,17 @@ export function EarningsPanel() {
         const res = await fetch("/api/earnings");
         if (!res.ok) return;
         const data = (await res.json()) as {
-          total: number;
-          currency: string;
-          rows: Row[];
-          hasSubaccount: boolean;
+          rows?: Row[];
+          total?: number;
+          currency?: string;
+          hasSubaccount?: boolean;
         };
-        setTotal(data.total || 0);
-        setCurrency(data.currency || "USD");
         setRows(data.rows || []);
+        setTotal(Number(data.total || 0));
+        setCurrency(data.currency || "USD");
         setHasSub(Boolean(data.hasSubaccount));
+      } catch {
+        /* soft */
       } finally {
         setLoading(false);
       }
