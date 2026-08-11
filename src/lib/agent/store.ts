@@ -2,7 +2,7 @@ import type { AgentProposal } from "@/lib/agent/types";
 
 const KEY = "omniv_agent_proposals_v1";
 
-/** Partner webhooks + metric rise + market news + X (Agent Outside). */
+/** Partner webhooks + metrics + market + X + trend (Agent Outside). */
 export function isOutsideSignal(p: { id?: string; source?: string }): boolean {
   const id = String(p.id || "");
   if (p.source === "webhook") return true;
@@ -11,7 +11,8 @@ export function isOutsideSignal(p: { id?: string; source?: string }): boolean {
     id.startsWith("wh-") ||
     id.startsWith("metric-") ||
     id.startsWith("market-") ||
-    id.startsWith("x-")
+    id.startsWith("x-") ||
+    id.startsWith("trend-")
   );
 }
 
