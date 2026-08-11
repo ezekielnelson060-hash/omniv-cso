@@ -134,7 +134,6 @@ export async function POST() {
       /* soft */
     }
 
-    // Fallback: fans on user_id if no roster
     if (fanCount === 0) {
       try {
         const { data: fans } = await supabase
@@ -170,6 +169,17 @@ export async function POST() {
       /* soft */
     }
 
+    let hasTipReady = false;
+    try {
+      const { count } = await supabase
+        .from("roster_artists")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      hasTipReady = (count || 0) > 0;
+    } catch {
+      /* soft */
+    }
+
     const result = runAgentScan({
       brain: brain
         ? {
@@ -184,8 +194,59 @@ export async function POST() {
       fanCities,
       fanCount,
       hasPayout,
+      hasTipReady,
       interests: (profile?.interests as string[]) || [],
     });
+
+    const metricSignals: typeof result.proposals = [];
+    try {
+      const { data: metrics } = await supabase
+        .from("platform_metrics")
+        .select(
+          "title, popularity, followers, entity_type, entity_url, fetched_at, platform"
+        )
+        .eq("user_id", user.id)
+        .order("fetched_at", { ascending: false })
+        .limit(12);
+      const now = Date.now();
+      for (const m of metrics || []) {
+        const pop = Number(m.popularity ?? 0);
+        if (!Number.isFinite(pop) || pop <= 0) continue;
+        const title = String(m.title || "Your release");
+        const id = `metric-${String(m.platform || "spotify")}-${title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .slice(0, 32)}`;
+        metricSignals.push({
+          id,
+          title:
+            pop >= 40
+              ? `Popularity ${pop} on ${title.slice(0, 36)}`
+              : `Spotify score ${pop} · ${title.slice(0, 36)}`,
+          body:
+            pop >= 40
+              ? "Outside signal: score is moving. Put tip link in bio, lock release date, or pitch one playlist that fits."
+              : "Outside signal: public popularity snapshot. Paste more DSP links in Catalogue so this updates weekly.",
+          urgency: pop >= 50 ? "today" : "this_week",
+          impact: pop >= 40 ? "high" : "medium",
+          source: "market",
+          action: {
+            type: pop >= 40 ? "OPEN_CRM" : "OPEN_CATALOGUE",
+            label: pop >= 40 ? "Open Money · tip link" : "Open Catalogue",
+            payload: pop >= 40 ? { focus: "money" } : { phase: "links" },
+          },
+          status: "pending",
+          createdAt: now,
+        });
+      }
+    } catch {
+      /* table may be empty */
+    }
+
+    const proposalsOut = [
+      ...metricSignals.slice(0, 4),
+      ...result.proposals,
+    ].slice(0, 16);
 
     try {
       const { data: prev } = await supabase
@@ -194,16 +255,29 @@ export async function POST() {
         .eq("id", user.id)
         .maybeSingle();
       const prevInbox = (prev?.agent_inbox || {}) as {
-        proposals?: { id: string; status?: string; createdAt?: number }[];
+        proposals?: {
+          id: string;
+          status?: string;
+          createdAt?: number;
+          source?: string;
+        }[];
       };
       const preserved = (prevInbox.proposals || []).filter((x) => {
         if (!x?.id) return false;
         if (x.status === "done" || x.status === "dismissed") return true;
-        return x.status === "pending" && String(x.id).startsWith("webhook-");
+        if (x.status !== "pending") return false;
+        const id = String(x.id);
+        return (
+          id.startsWith("webhook-") ||
+          id.startsWith("wh-") ||
+          id.startsWith("metric-") ||
+          x.source === "webhook"
+        );
       });
-      const byId = new Map<string, (typeof result.proposals)[0]>();
-      for (const x of preserved) byId.set(x.id, x as (typeof result.proposals)[0]);
-      for (const x of result.proposals) byId.set(x.id, x);
+      const byId = new Map<string, (typeof proposalsOut)[0]>();
+      for (const x of preserved)
+        byId.set(x.id, x as (typeof proposalsOut)[0]);
+      for (const x of proposalsOut) byId.set(x.id, x);
       const merged = Array.from(byId.values()).sort(
         (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
       );
@@ -222,7 +296,11 @@ export async function POST() {
       /* optional columns */
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ...result,
+      proposals: proposalsOut,
+      signals: metricSignals.length,
+    });
   } catch (e) {
     console.error("agent scan", e);
     return NextResponse.json(
