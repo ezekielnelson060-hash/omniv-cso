@@ -13,6 +13,8 @@ export type AgentActionType =
   | "OPEN_DISCOVER"
   | "OPEN_REPORTS"
   | "OPEN_SETTINGS"
+  | "OPEN_CONTENT"
+  | "OPEN_LABEL"
   | "REFRESH_METRICS";
 
 export type AgentProposal = {
