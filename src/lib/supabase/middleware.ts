@@ -44,15 +44,18 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/signup") ||
     path.startsWith("/forgot-password");
 
-  // Public: marketing, legal, fan gates, live rooms, audits, APIs
+  // Public: marketing, legal, SEO, fan gates, live rooms, audits, APIs
   const isPublic =
     path === "/" ||
     isAuthRoute ||
+    path === "/sitemap.xml" ||
+    path === "/robots.txt" ||
     path.startsWith("/_next") ||
     path.startsWith("/api/") ||
     path.startsWith("/g/") ||
     path === "/g" ||
     path.startsWith("/f/") ||
+    path.startsWith("/tip/") ||
     path.startsWith("/audit") ||
     path.startsWith("/privacy") ||
     path.startsWith("/terms") ||
