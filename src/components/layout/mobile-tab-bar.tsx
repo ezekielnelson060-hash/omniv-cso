@@ -14,7 +14,7 @@ import { useAgentPending } from "@/components/notifications/agent-nav-badge";
 
 const tabs = [
   { href: "/crm", label: "Home", icon: Home },
-  { href: "/notifications", label: "Moves", icon: Sparkles },
+  { href: "/opportunities", label: "Moves", icon: Sparkles },
   { href: "/ziki", label: "Ziki", icon: MessageSquare },
   { href: "/catalogue", label: "Music", icon: Disc3 },
   { href: "/analytics", label: "Progress", icon: BarChart3 },
@@ -32,7 +32,7 @@ export function MobileTabBar() {
             path === href ||
             (href !== "/crm" && path.startsWith(href)) ||
             (href === "/crm" && (path === "/" || path.startsWith("/crm")));
-          const showDot = href === "/notifications" && pending > 0;
+          const showDot = href === "/opportunities" && pending > 0;
           return (
             <Link
               key={href}
