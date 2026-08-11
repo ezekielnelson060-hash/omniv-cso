@@ -106,7 +106,7 @@ export function NotificationsPanel() {
         stashAct({
           title: p.title,
           summary: p.body.slice(0, 280),
-          why: "Confirmed move",
+          why: "Confirmed signal",
           expectedOutcome: "Clear next action",
           category: p.source,
         });
@@ -171,9 +171,13 @@ export function NotificationsPanel() {
       } else if (t === "OPEN_CATALOGUE") {
         router.push("/catalogue");
       } else if (t === "OPEN_OPPORTUNITIES") {
-        router.push("/notifications");
+        router.push("/opportunities");
       } else if (t === "OPEN_RELEASE") {
         router.push("/release-simulator");
+      } else if (t === "OPEN_CONTENT") {
+        router.push("/content");
+      } else if (t === "OPEN_LABEL") {
+        router.push("/label");
       } else if (t === "OPEN_DISCOVER") {
         router.push("/discover");
       } else if (t === "OPEN_REPORTS") {
@@ -243,22 +247,23 @@ export function NotificationsPanel() {
   const emptyCopy =
     filter === "outside"
       ? "No outside signals yet."
-      : "No pending moves. Tap Scan now after you upload a track or update Settings.";
+      : "No signals yet. Scan for internal alerts, or wait for partner webhooks.";
 
   return (
     <div className="space-y-4">
       <div className="relative -mx-3 overflow-hidden sm:-mx-4 md:mx-0 md:rounded-2xl">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/12 via-omniv-gold/8 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-500/10 via-omniv-gold/5 to-transparent" />
         <div className="relative flex flex-wrap items-end justify-between gap-3 px-3 pb-4 pt-1 sm:px-4 md:px-5 md:pt-4">
           <div>
             <p className="font-data text-[10px] uppercase tracking-[0.16em] text-omniv-gold">
-              Moves
+              Agent
             </p>
             <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
-              Do this next
+              Intelligence
             </h1>
             <p className="mt-1 max-w-lg text-[12px] text-omniv-text-secondary">
-              One card. One button. Scan now clears old strategy cards.
+              Signals, partner alerts, confirms. Precision plan is Moves — not
+              here.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -274,7 +279,7 @@ export function NotificationsPanel() {
               ) : (
                 <Sparkles className="h-4 w-4" />
               )}
-              Scan now
+              Scan signals
             </Button>
           </div>
         </div>
@@ -339,7 +344,7 @@ export function NotificationsPanel() {
       {done.length > 0 && (
         <div className="pt-2">
           <p className="mb-2 text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
-            Done
+            Confirmed
           </p>
           {done.map((p) => (
             <div
