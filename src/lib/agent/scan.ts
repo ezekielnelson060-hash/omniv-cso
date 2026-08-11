@@ -4,10 +4,7 @@ import type { AgentProposal, AgentScanResult } from "@/lib/agent/types";
 
 type FanCity = { city: string; count: number };
 
-/**
- * Precision Moves — what to do, in order, with matching CTAs.
- * Based on live inventory + goal + interests. No strategy essays.
- */
+/** Precision plan steps with matching CTAs. */
 export function runAgentScan(input: {
   brain: ArtistBrain | null;
   releases: CatalogueRelease[];
@@ -250,23 +247,47 @@ export function runAgentScan(input: {
       },
     });
     add({
-      id: "release-reel",
-      title: "Draft a non-pushy reel caption + tip CTA",
-      body: "One reel, soft tip line, Fan Gate in bio. Ziki writes the caption only.",
+      id: "release-content",
+      title: "Open Content — make one reel for the drop",
+      body: "Content studio: one 15s hook tied to your release date. Soft tip line, Fan Gate in bio.",
+      urgency: "this_week",
+      impact: "high",
+      source: "catalogue",
+      action: {
+        type: "OPEN_CONTENT",
+        label: "Open Content",
+        payload: {},
+      },
+    });
+    add({
+      id: "release-sim",
+      title: "Run Release simulator before you spend",
+      body: "Release → simulator. Check readiness before ads or playlist pitches.",
       urgency: "this_week",
       impact: "medium",
       source: "catalogue",
       action: {
-        type: "OPEN_ZIKI",
-        label: "Draft caption in Ziki",
-        payload: {
-          q: "Write a short reel caption for my next track. Soft tip CTA, not pushy. Max 40 words.",
-        },
+        type: "OPEN_RELEASE",
+        label: "Open Release",
+        payload: {},
       },
     });
   }
 
   if (wantsIndustry && hasAudio) {
+    add({
+      id: "industry-label-hub",
+      title: "Open Label hub — roster + label tools",
+      body: "Label workspace for multi-act and outreach tracking. Use with your shortlist.",
+      urgency: "this_week",
+      impact: "medium",
+      source: "market",
+      action: {
+        type: "OPEN_LABEL",
+        label: "Open Label",
+        payload: {},
+      },
+    });
     add({
       id: "industry-labels",
       title: "Build a 5-label shortlist that fits your sound",
