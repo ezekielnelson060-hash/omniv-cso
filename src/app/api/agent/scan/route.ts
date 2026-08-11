@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { runAgentScan } from "@/lib/agent/scan";
+import { loadMarketProposals } from "@/lib/agent/market-news";
 import type { ArtistBrain, CatalogueRelease, CatalogueTrack } from "@/types";
 
 export const runtime = "nodejs";
@@ -243,7 +244,15 @@ export async function POST() {
       /* table may be empty */
     }
 
+    let marketSignals: typeof result.proposals = [];
+    try {
+      marketSignals = await loadMarketProposals(5);
+    } catch {
+      /* NewsAPI optional */
+    }
+
     const proposalsOut = [
+      ...marketSignals.slice(0, 5),
       ...metricSignals.slice(0, 4),
       ...result.proposals,
     ].slice(0, 16);
@@ -271,6 +280,7 @@ export async function POST() {
           id.startsWith("webhook-") ||
           id.startsWith("wh-") ||
           id.startsWith("metric-") ||
+          id.startsWith("market-") ||
           x.source === "webhook"
         );
       });
@@ -299,7 +309,8 @@ export async function POST() {
     return NextResponse.json({
       ...result,
       proposals: proposalsOut,
-      signals: metricSignals.length,
+      signals: metricSignals.length + marketSignals.length,
+      market: marketSignals.length,
     });
   } catch (e) {
     console.error("agent scan", e);
