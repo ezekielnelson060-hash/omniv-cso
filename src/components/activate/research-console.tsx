@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
-import { upsertProposals } from "@/lib/agent/store";
+import { replacePendingFromScan } from "@/lib/agent/store";
 import type { AgentProposal } from "@/lib/agent/types";
 
 type Step = {
@@ -44,10 +44,6 @@ const FALLBACK_LABELS = [
   "sealing operating brief…",
 ];
 
-/**
- * Progressive free artist scan.
- * Seeds Agent with one move + deep-links Open room with city.
- */
 export function ResearchConsole({
   onDone,
   autoStart = true,
@@ -133,27 +129,35 @@ export function ResearchConsole({
           const proposal: AgentProposal = {
             id: sum.proposalId || `scan-local-${Date.now()}`,
             title: sum.nextMove,
-            body: sum.topCity
-              ? `From your free scan: ${sum.topCityCount || 0} fans in ${sum.topCity}. Confirm to draft the room.`
-              : "From your free scan. Confirm this one move.",
+            body:
+              sum.seedAction === "OPEN_CRM"
+                ? "Do this one action. Then open Moves for the rest of the plan."
+                : sum.topCity
+                  ? `From your scan: ${sum.topCityCount || 0} fans in ${sum.topCity}.`
+                  : "From your scan. One action this week.",
             urgency: "today",
             impact: "high",
             source: "brain",
             action: {
               type:
                 (sum.seedAction as AgentProposal["action"]["type"]) ||
-                (sum.topCity ? "CREATE_ROOM" : "OPEN_OPPORTUNITIES"),
-              label:
-                sum.seedLabel ||
-                (sum.topCity ? `Draft room · ${sum.topCity}` : "Open Moves"),
-              payload: sum.topCity
-                ? { city: sum.topCity, title: `Room · ${sum.topCity}` }
-                : {},
+                "OPEN_OPPORTUNITIES",
+              label: sum.seedLabel || "Open Moves",
+              payload:
+                sum.seedAction === "CREATE_ROOM" && sum.topCity
+                  ? { city: sum.topCity, title: `Room · ${sum.topCity}` }
+                  : sum.seedAction === "OPEN_CRM"
+                    ? {
+                        focus: sum.seedLabel?.toLowerCase().includes("money")
+                          ? "money"
+                          : "fans",
+                      }
+                    : {},
             },
             status: "pending",
             createdAt: Date.now(),
           };
-          upsertProposals([proposal]);
+          replacePendingFromScan([proposal]);
         } catch {
           /* soft */
         }
@@ -182,8 +186,7 @@ export function ResearchConsole({
           What Omniv sees — then one move
         </h1>
         <p className="mt-1 text-[12px] text-omniv-text-muted">
-          Not fifty tips. We read your brain, catalogue, owned fans, and DSP
-          snapshots, then name the single highest-impact action for this week.
+          One highest-impact action for this week. Full plan lives in Moves.
         </p>
       </div>
 
@@ -257,9 +260,7 @@ export function ResearchConsole({
               {summary.avgPopularity != null
                 ? ` · DSP pop ~${summary.avgPopularity}`
                 : ""}
-              {summary.topCity
-                ? ` · hot city ${summary.topCity}`
-                : ""}
+              {summary.topCity ? ` · hot city ${summary.topCity}` : ""}
             </p>
           </div>
           <ul className="space-y-1 text-[12px] text-omniv-text-muted">
@@ -275,30 +276,50 @@ export function ResearchConsole({
               {summary.nextMove}
             </p>
             <p className="mt-1.5 text-[11px] text-omniv-text-muted">
-              Confirm it in Agent or open a room and take tickets — don't
-              rent another week of algorithm reach.
+              One primary action. Do the gold button first.
             </p>
           </div>
-          {summary.gaps.length > 0 && (
+          {summary.gaps.filter((g) => g !== summary.nextMove).length > 0 && (
             <p className="text-[11px] text-omniv-text-muted">
-              Still open: {summary.gaps.join(" · ")}
+              Later:{" "}
+              {summary.gaps
+                .filter((g) => g !== summary.nextMove)
+                .join(" · ")}
             </p>
           )}
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Button
               className="h-11 gap-1.5 rounded-xl"
               onClick={() => {
-                const q = new URLSearchParams();
-                if (summary.topCity) q.set("city", summary.topCity);
-                if (summary.topCityReady)
-                  q.set("ready", String(summary.topCityReady));
-                q.set("focus", "room");
-                router.push(`/crm?${q.toString()}`);
+                const action = (summary.seedAction || "").toUpperCase();
+                if (action === "CREATE_ROOM") {
+                  const q = new URLSearchParams();
+                  if (summary.topCity) q.set("city", summary.topCity);
+                  q.set("focus", "room");
+                  router.push(`/crm?${q.toString()}`);
+                  return;
+                }
+                if (action === "OPEN_CATALOGUE") {
+                  router.push("/catalogue");
+                  return;
+                }
+                if (action === "OPEN_SETTINGS") {
+                  router.push("/settings");
+                  return;
+                }
+                if (action === "OPEN_CRM") {
+                  const focus = summary.seedLabel
+                    ?.toLowerCase()
+                    .includes("money")
+                    ? "money"
+                    : "fans";
+                  router.push(`/crm?tab=${focus}`);
+                  return;
+                }
+                router.push("/notifications");
               }}
             >
-              {summary.topCity
-                ? `Open room in ${summary.topCity}`
-                : "Open your first room"}{" "}
+              {summary.seedLabel || "Open Moves"}{" "}
               <ArrowRight className="h-4 w-4" />
             </Button>
             <Button
@@ -306,14 +327,7 @@ export function ResearchConsole({
               className="h-11 rounded-xl"
               onClick={() => router.push("/notifications")}
             >
-              Confirm in Agent
-            </Button>
-            <Button
-              variant="outline"
-              className="h-11 rounded-xl"
-              onClick={() => router.push("/ziki")}
-            >
-              Ask Ziki why
+              Full Moves list
             </Button>
           </div>
         </div>
