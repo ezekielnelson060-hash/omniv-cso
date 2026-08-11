@@ -29,10 +29,12 @@ export function CrmPanel({
   initialCity = null,
   initialReady = null,
   focusRoom = false,
+  initialTab = "home",
 }: {
   initialCity?: string | null;
   initialReady?: number | null;
   focusRoom?: boolean;
+  initialTab?: TabId;
 } = {}) {
   const [tasks, setTasks] = useState<ManagerTask[]>([]);
   const [events, setEvents] = useState<ManagerEvent[]>([]);
@@ -52,7 +54,9 @@ export function CrmPanel({
   const [gatherCity, setGatherCity] = useState<string | null>(initialCity);
   const [gatherReady, setGatherReady] = useState<number | null>(initialReady);
   const [gatherVenue, setGatherVenue] = useState<string | null>(null);
-  const [tab, setTab] = useState<TabId>(focusRoom ? "rooms" : "home");
+  const [tab, setTab] = useState<TabId>(
+    focusRoom ? "rooms" : initialTab || "home"
+  );
 
   useEffect(() => {
     if (initialCity) setGatherCity(initialCity);
@@ -61,7 +65,8 @@ export function CrmPanel({
 
   useEffect(() => {
     if (focusRoom) setTab("rooms");
-  }, [focusRoom]);
+    else if (initialTab) setTab(initialTab);
+  }, [focusRoom, initialTab]);
 
   useEffect(() => {
     setTasks(loadTasks());
