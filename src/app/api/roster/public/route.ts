@@ -19,7 +19,7 @@ export async function GET(req: Request) {
   const admin = createClient(url, key, { auth: { persistSession: false } });
   const { data } = await admin
     .from("roster_artists")
-    .select("stage_name, slug, user_id")
+    .select("stage_name, slug, owner_user_id, user_id")
     .eq("slug", slug)
     .maybeSingle();
 
