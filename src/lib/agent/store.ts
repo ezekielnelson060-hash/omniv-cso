@@ -2,7 +2,7 @@ import type { AgentProposal } from "@/lib/agent/types";
 
 const KEY = "omniv_agent_proposals_v1";
 
-/** Partner webhooks + metric rise + market news (Agent Outside). */
+/** Partner webhooks + metric rise + market news + X (Agent Outside). */
 export function isOutsideSignal(p: { id?: string; source?: string }): boolean {
   const id = String(p.id || "");
   if (p.source === "webhook") return true;
@@ -10,7 +10,8 @@ export function isOutsideSignal(p: { id?: string; source?: string }): boolean {
     id.startsWith("webhook-") ||
     id.startsWith("wh-") ||
     id.startsWith("metric-") ||
-    id.startsWith("market-")
+    id.startsWith("market-") ||
+    id.startsWith("x-")
   );
 }
 
@@ -57,7 +58,7 @@ export function upsertProposals(incoming: AgentProposal[]) {
 }
 
 /**
- * Agent inbox only stores outside intelligence (webhooks + metrics + market news).
+ * Agent inbox only stores outside intelligence.
  * Precision plan cards belong in Moves — never install them here.
  */
 export function replacePendingFromScan(incoming: AgentProposal[]) {
@@ -78,7 +79,6 @@ export function replacePendingFromScan(incoming: AgentProposal[]) {
   return final;
 }
 
-/** One-shot: purge pending internal cards that leaked into Agent. */
 export function purgeInternalPending() {
   const final = loadProposals().filter(
     (p) => p.status !== "pending" || isOutsideSignal(p)
