@@ -44,7 +44,6 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/signup") ||
     path.startsWith("/forgot-password");
 
-  // Public: marketing, legal, SEO, fan gates, live rooms, audits, APIs
   const isPublic =
     path === "/" ||
     isAuthRoute ||
@@ -61,7 +60,10 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/terms") ||
     path.startsWith("/contact") ||
     path.startsWith("/cookies") ||
-    path.startsWith("/refund");
+    path.startsWith("/refund") ||
+    path.startsWith("/blog") ||
+    path.startsWith("/data-deletion") ||
+    path === "/policy";
 
   if (!user && !isPublic) {
     const redirect = request.nextUrl.clone();
