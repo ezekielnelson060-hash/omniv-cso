@@ -11,10 +11,7 @@ type ResearchStep = {
   detail?: string;
 };
 
-/**
- * POST /api/activate/research
- * Real career research + seeds Agent with one confirmable move.
- */
+/** POST /api/activate/research — real scan + one confirmable move. */
 export async function POST() {
   try {
     const supabase = await createClient();
@@ -212,14 +209,13 @@ export async function POST() {
           ? `${pending.length} pending confirm(s)`
           : "Inbox clear — scan will seed one move",
     };
-    if (pending[0]?.title)
-      findings.push(`Top Agent: ${pending[0].title}`);
 
     const gaps: string[] = [];
     if (!brain) gaps.push("Fill Artist Brain");
-    if (!tracks && !rels) gaps.push("Upload catalogue");
-    if (!linked.length) gaps.push("Link Spotify / socials in Settings");
-    if (!fans) gaps.push("Open Fan Gate");
+    if (!tracks && !rels) gaps.push("Upload one track");
+    if (!linked.length) gaps.push("Link Spotify / socials");
+    if (!fans) gaps.push("Share Fan Gate to capture emails + cities");
+    if (tracks && !withSpotify) gaps.push("Paste Spotify URL on release");
 
     const cityMap = new Map<string, number>();
     for (const f of fanRows || []) {
@@ -235,13 +231,38 @@ export async function POST() {
       findings.push(`Hot city: ${topCity} (${topCityCount} fans tagged)`);
     }
 
-    let nextMove =
-      pending[0]?.title ||
-      (topCity && topCityCount >= 1 ? `Open a room in ${topCity}` : null) ||
-      (tracks && !rels
-        ? "Lock a release date (or Hold) for your analysed track"
-        : null) ||
-      (gaps[0] ? gaps[0] : "Open Opportunities — confirm the #1 card");
+    function isStaleTitle(title: string | undefined): boolean {
+      if (!title) return true;
+      const t = title.toLowerCase();
+      if (
+        tracks > 0 &&
+        /upload one track|upload catalogue|catalogue empty/.test(t)
+      )
+        return true;
+      if (fans > 0 && /open fan gate|share your fan gate|0 fans/.test(t))
+        return true;
+      if (linked.length >= 2 && /add at least two|add two profile/.test(t))
+        return true;
+      return false;
+    }
+
+    let nextMove: string;
+    if (topCity && topCityCount >= 1) {
+      nextMove = `Open a room in ${topCity} and text the list`;
+    } else if (!fans) {
+      nextMove = "Share Fan Gate — capture email + city on every click";
+    } else if (!tracks && !rels) {
+      nextMove = "Upload one track";
+    } else if (tracks && !withSpotify) {
+      nextMove = "Paste Spotify link on your released title";
+    } else if (tracks && rels) {
+      nextMove =
+        "Copy tip link + Fan Gate into bio — own the next click off-platform";
+    } else {
+      const livePending = pending.find((p) => !isStaleTitle(p.title));
+      nextMove =
+        livePending?.title || gaps[0] || "Open Moves — confirm the top card";
+    }
 
     type SeedAction =
       | "CREATE_ROOM"
@@ -252,31 +273,37 @@ export async function POST() {
     let seedAction: SeedAction = "OPEN_OPPORTUNITIES";
     let seedLabel = "Open Moves";
     const seedPayload: Record<string, string> = {};
-    if (topCity && nextMove.toLowerCase().includes("room")) {
+    const nm = nextMove.toLowerCase();
+    if (topCity && nm.includes("room")) {
       seedAction = "CREATE_ROOM";
-      seedLabel = `Draft room · ${topCity}`;
+      seedLabel = `Create room · ${topCity}`;
       seedPayload.city = topCity;
       seedPayload.title = `Room · ${topCity}`;
-    } else if (
-      /catalogue|release|upload/.test(nextMove.toLowerCase())
-    ) {
+    } else if (/upload|catalogue|spotify link|released title/.test(nm)) {
       seedAction = "OPEN_CATALOGUE";
       seedLabel = "Open Catalogue";
-    } else if (/brain|settings|link/.test(nextMove.toLowerCase())) {
+    } else if (/settings|brain|link spotify \/ socials/.test(nm)) {
       seedAction = "OPEN_SETTINGS";
       seedLabel = "Open Settings";
-    } else if (/fan/.test(nextMove.toLowerCase())) {
+    } else if (/fan gate|tip link|bio/.test(nm)) {
       seedAction = "OPEN_CRM";
-      seedLabel = "Command Center";
+      seedLabel = nm.includes("tip") ? "Open Money" : "Open Fans";
+      seedPayload.focus = nm.includes("tip") ? "money" : "fans";
+    } else {
+      seedAction = "OPEN_OPPORTUNITIES";
+      seedLabel = "Open Moves";
     }
 
     const proposalId = `scan-${user.id.slice(0, 8)}-${Date.now().toString(36)}`;
     const seedProposal = {
       id: proposalId,
       title: nextMove,
-      body: topCity
-        ? `From your free scan: ${topCityCount} fans in ${topCity}. Confirm to draft the room and take tickets.`
-        : "From your free scan. Confirm this move — one action beats ten tips.",
+      body:
+        seedAction === "OPEN_CRM" && seedPayload.focus === "fans"
+          ? "Every Fan Gate join is an email + city you own. Put the link in bio and WhatsApp."
+          : topCity
+            ? `From your scan: ${topCityCount} fans in ${topCity}. Create the room and share the link.`
+            : "One action this week. Confirm in Moves if you want the full list.",
       urgency: "today" as const,
       impact: "high" as const,
       source: "brain" as const,
@@ -294,12 +321,13 @@ export async function POST() {
         id?: string;
         status?: string;
       }[];
-      const kept = existing.filter(
-        (p) =>
-          p.status === "pending" &&
-          p.id &&
-          !String(p.id).startsWith(`scan-${user.id.slice(0, 8)}`)
-      );
+      // Drop stale scan seeds + keep webhooks only among pending
+      const kept = existing.filter((p) => {
+        if (!p.id) return false;
+        if (String(p.id).startsWith(`scan-${user.id.slice(0, 8)}`)) return false;
+        if (p.status === "pending" && isStaleTitle(p.title)) return false;
+        return true;
+      });
       await sb
         .from("profiles")
         .update({
