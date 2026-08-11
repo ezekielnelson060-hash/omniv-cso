@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { runAgentScan } from "@/lib/agent/scan";
 import { loadMarketProposals } from "@/lib/agent/market-news";
 import { loadXMarketProposals } from "@/lib/agent/x-market";
+import { buildTrendProposals } from "@/lib/agent/trend-signals";
 import type { ArtistBrain, CatalogueRelease, CatalogueTrack } from "@/types";
 
 export const runtime = "nodejs";
@@ -224,7 +225,7 @@ export async function POST() {
           title:
             pop >= 40
               ? `Popularity ${pop} on ${title.slice(0, 36)}`
-              : `Spotify score ${pop} \u00b7 ${title.slice(0, 36)}`,
+              : `Spotify score ${pop} · ${title.slice(0, 36)}`,
           body:
             pop >= 40
               ? "Outside signal: score is moving. Put tip link in bio, lock release date, or pitch one playlist that fits."
@@ -234,7 +235,7 @@ export async function POST() {
           source: "webhook",
           action: {
             type: pop >= 40 ? "OPEN_CRM" : "OPEN_CATALOGUE",
-            label: pop >= 40 ? "Open Money \u00b7 tip link" : "Open Catalogue",
+            label: pop >= 40 ? "Open Money · tip link" : "Open Catalogue",
             payload: pop >= 40 ? { focus: "money" } : { phase: "links" },
           },
           status: "pending",
@@ -258,10 +259,17 @@ export async function POST() {
       /* X optional */
     }
 
+    const trendSignals = buildTrendProposals({
+      brain,
+      platforms,
+      hasAudio: tracks.length > 0 || releases.length > 0,
+    });
+
     const proposalsOut = [
-      ...xSignals.slice(0, 5),
+      ...xSignals.slice(0, 4),
       ...marketSignals.slice(0, 4),
-      ...metricSignals.slice(0, 3),
+      ...metricSignals.slice(0, 2),
+      ...trendSignals.slice(0, 3),
       ...result.proposals,
     ].slice(0, 16);
 
@@ -290,6 +298,7 @@ export async function POST() {
           id.startsWith("metric-") ||
           id.startsWith("market-") ||
           id.startsWith("x-") ||
+          id.startsWith("trend-") ||
           x.source === "webhook"
         );
       });
@@ -319,9 +328,13 @@ export async function POST() {
       ...result,
       proposals: proposalsOut,
       signals:
-        metricSignals.length + marketSignals.length + xSignals.length,
+        metricSignals.length +
+        marketSignals.length +
+        xSignals.length +
+        trendSignals.length,
       market: marketSignals.length,
       x: xSignals.length,
+      trends: trendSignals.length,
     });
   } catch (e) {
     console.error("agent scan", e);
