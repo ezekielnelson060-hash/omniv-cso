@@ -162,17 +162,13 @@ export function RoomChallenge({
                   Open
                 </Button>
               ) : (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-[11px]"
-                  asChild
+                <Link
+                  href={s.href}
+                  onClick={() => mark(s.id, s.doneKey)}
+                  className="inline-flex h-7 items-center rounded-md border border-omniv-border px-2.5 text-[11px] font-medium text-omniv-text-secondary hover:border-omniv-gold/40 hover:text-omniv-gold"
                 >
-                  <Link href={s.href} onClick={() => mark(s.id, s.doneKey)}>
-                    Go
-                  </Link>
-                </Button>
+                  Go
+                </Link>
               )}
             </li>
           );
