@@ -198,6 +198,41 @@ export function IntelligencePanel() {
                 <p className="mt-2 text-[11px] font-medium text-omniv-gold">
                   → {s.action}
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 rounded-lg text-[11px]"
+                    onClick={() => {
+                      setTab("studio");
+                      setBrief(
+                        `${s.label} for ${genreLabel || "my genre"} on ${s.platform}. ${s.why} Action: ${s.action}`
+                      );
+                    }}
+                  >
+                    Write scripts
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 rounded-lg text-[11px]"
+                    asChild
+                  >
+                    <Link href="/release-simulator">Lock release date</Link>
+                  </Button>
+                  {s.id === "release-tease" ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-lg text-[11px]"
+                      asChild
+                    >
+                      <Link href="/crm?tab=money">Tip link</Link>
+                    </Button>
+                  ) : null}
+                </div>
               </Card>
             ))
           )}
@@ -362,15 +397,32 @@ export function IntelligencePanel() {
               <pre className="mt-2 whitespace-pre-wrap font-sans text-[12px] leading-snug text-omniv-text-secondary">
                 {studio}
               </pre>
-              <Link href="/release-simulator">
-                <Button
-                  variant="outline"
-                  className="mt-3 h-9 w-full gap-1 rounded-xl text-[12px]"
-                >
-                  Score release readiness
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              </Link>
+              <p className="mt-3 text-[11px] text-omniv-text-muted">
+                Next: shoot one clip today. Soft tip or room link only on the last post.
+              </p>
+              <div className="mt-2 flex flex-col gap-2">
+                <Link href="/release-simulator">
+                  <Button
+                    variant="outline"
+                    className="h-9 w-full gap-1 rounded-xl text-[12px]"
+                  >
+                    Lock a release date
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+                <div className="flex gap-2">
+                  <Link href="/crm?tab=money" className="flex-1">
+                    <Button variant="outline" className="h-9 w-full rounded-xl text-[12px]">
+                      Tip link
+                    </Button>
+                  </Link>
+                  <Link href="/crm?tab=rooms" className="flex-1">
+                    <Button variant="outline" className="h-9 w-full rounded-xl text-[12px]">
+                      Open room
+                    </Button>
+                  </Link>
+                </div>
+              </div>
             </Card>
           )}
         </div>
