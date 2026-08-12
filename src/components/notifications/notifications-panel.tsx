@@ -25,6 +25,12 @@ import { Loader2, Sparkles, Zap, X } from "lucide-react";
 
 type InboxFilter = "all" | "outside" | "internal";
 
+function extractUrls(text: string): string[] {
+  const re = /https?:\/\/[^\s)\]"']+/gi;
+  const found = text.match(re) || [];
+  return [...new Set(found.map((u) => u.replace(/[.,;:]+$/, "")))].slice(0, 3);
+}
+
 export function NotificationsPanel() {
   const router = useRouter();
   const [items, setItems] = useState<AgentProposal[]>([]);
@@ -331,6 +337,21 @@ export function NotificationsPanel() {
             </div>
             <h3 className="text-[14px] font-semibold tracking-tight">{p.title}</h3>
             <p className="mt-1 text-[12px] text-omniv-text-muted">{p.body}</p>
+            {extractUrls(p.body).length > 0 && (
+              <div className="mt-2 flex flex-col gap-1">
+                {extractUrls(p.body).map((u) => (
+                  <a
+                    key={u}
+                    href={u}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate text-[12px] font-medium text-omniv-gold underline-offset-2 hover:underline"
+                  >
+                    Open source →
+                  </a>
+                ))}
+              </div>
+            )}
             <Button
               className="mt-3 h-9 gap-1.5 rounded-xl"
               disabled={busyId === p.id}
