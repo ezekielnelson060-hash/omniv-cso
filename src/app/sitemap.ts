@@ -25,7 +25,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return [
     {
-      url: baseUrl,
+      // Trailing slash must match canonical + GSC property association
+      url: `${baseUrl}/`,
       lastModified: now,
       changeFrequency: "weekly",
       priority: 1,
@@ -74,12 +75,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${baseUrl}/cookies`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.2,
-    },
-    {
-      url: `${baseUrl}/forgot-password`,
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.2,

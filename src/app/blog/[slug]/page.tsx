@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { allSlugs, getPost } from "@/lib/blog/posts";
+import { StructuredData } from "@/components/StructuredData";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -32,8 +33,61 @@ export default async function BlogPostPage({ params }: Props) {
   const post = getPost(slug);
   if (!post) notFound();
 
+  const pageUrl = `https://omniv.media/blog/${post.slug}`;
+  const articleLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.description,
+    datePublished: `${post.date}T08:00:00+01:00`,
+    dateModified: `${post.date}T08:00:00+01:00`,
+    author: {
+      "@type": "Organization",
+      name: "Omniv",
+      url: "https://omniv.media/",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Omniv",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://omniv.media/logo.svg",
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": pageUrl,
+    },
+  };
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: "https://omniv.media/",
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Blog",
+        item: "https://omniv.media/blog",
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: post.title,
+        item: pageUrl,
+      },
+    ],
+  };
+
   return (
     <main className="mx-auto min-h-dvh max-w-3xl px-4 py-12 text-omniv-text">
+      <StructuredData id={`article-${post.slug}`} data={articleLd} />
+      <StructuredData id={`crumb-${post.slug}`} data={breadcrumbLd} />
       <Link
         href="/blog"
         className="text-[12px] text-omniv-gold underline-offset-2 hover:underline"
