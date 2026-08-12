@@ -102,8 +102,23 @@ export function pendingCount(): number {
 
 export function clearStalePending() {
   const cutoff = Date.now() - 1000 * 60 * 60 * 24 * 14;
-  const list = loadProposals().filter(
-    (p) => p.status === "pending" || p.createdAt > cutoff
-  );
+  const list = loadProposals().filter((p) => {
+    if (p.status === "pending" && (p.createdAt || 0) < cutoff) return false;
+    if (p.status !== "pending" && (p.createdAt || 0) < cutoff) return false;
+    return true;
+  });
+  save(list);
+}
+
+/** Remove non-music market junk left from earlier loose NewsAPI queries */
+export function purgeNonMusicMarketPending() {
+  const reject =
+    /\b(grocery|H-?E-?B|Walmart|Costco|produce|delivery fee|restaurant review|recipe)\b/i;
+  const list = loadProposals().filter((p) => {
+    if (p.status !== "pending") return true;
+    if (!String(p.id || "").startsWith("market-")) return true;
+    const hay = `${p.title} ${p.body}`;
+    return !reject.test(hay);
+  });
   save(list);
 }
