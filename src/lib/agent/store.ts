@@ -113,7 +113,7 @@ export function clearStalePending() {
 /** Remove non-music market junk left from earlier loose NewsAPI queries */
 export function purgeNonMusicMarketPending() {
   const reject =
-    /\b(grocery|H-?E-?B|Walmart|Costco|produce|delivery fee|restaurant review|recipe)\b/i;
+    /\b(grocery|H-?E-?B|Walmart|Costco|produce|delivery fee|restaurant review|recipe|fact-?check|Deseret|political debate|InTruth)\b/i;
   const list = loadProposals().filter((p) => {
     if (p.status !== "pending") return true;
     if (!String(p.id || "").startsWith("market-")) return true;
