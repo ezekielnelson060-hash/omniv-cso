@@ -41,7 +41,6 @@ export function RosterSwitcher() {
       const data = (await res.json()) as { error?: string };
       if (!res.ok) {
         setErr(data.error || "Could not add artist");
-        setBusy(false);
         return;
       }
       setName("");
@@ -50,18 +49,15 @@ export function RosterSwitcher() {
       await refresh();
     } catch {
       setErr("Network error");
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
-  }
-
-  if (loading) {
-    return <p className="text-xs text-omniv-text-muted">Loading roster…</p>;
   }
 
   const atLimit = artists.length >= max;
 
   return (
-    <div className="rounded-xl border border-omniv-border bg-omniv-elevated/40 p-3">
+    <div className="rounded-2xl border border-omniv-border bg-omniv-elevated/40 p-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Users className="h-3.5 w-3.5 text-omniv-gold" />
@@ -85,16 +81,17 @@ export function RosterSwitcher() {
       {atLimit && (
         <p className="mb-2 text-[11px] text-omniv-text-muted">
           Roster full on {plan}.{" "}
-          <Link href="/settings" className="text-omniv-gold underline-offset-2 hover:underline">
+          <Link href="/settings?tab=billing" className="text-omniv-gold underline-offset-2 hover:underline">
             Upgrade for more slots
           </Link>
         </p>
       )}
 
-      {artists.length === 0 ? (
-        <p className="text-xs text-omniv-text-muted">
-          No artists yet — add up to {max} on your plan. Each gets a fan gate at
-          /f/[slug].
+      {loading && artists.length === 0 ? (
+        <p className="text-[12px] text-omniv-text-muted">Loading roster…</p>
+      ) : artists.length === 0 ? (
+        <p className="text-[12px] text-omniv-text-muted">
+          No artists yet — add one or create a tip link in Money.
         </p>
       ) : (
         <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto">
@@ -117,12 +114,6 @@ export function RosterSwitcher() {
             </button>
           ))}
         </div>
-      )}
-
-      {active && (
-        <p className="mt-2 font-data text-[10px] text-omniv-text-muted">
-          Active gate: /f/{active.slug}
-        </p>
       )}
 
       {open && !atLimit && (

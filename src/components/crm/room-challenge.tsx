@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Check, Circle, Zap } from "lucide-react";
+import { Check, Circle, Zap, X } from "lucide-react";
 
 const STEPS = [
   {
@@ -33,18 +33,22 @@ const STEPS = [
   },
   {
     id: "report",
-    title: "Report back",
+    title: "Report back to Ziki",
     href: "/ziki",
     doneKey: "omniv_challenge_report",
   },
 ] as const;
 
+const DISMISS_KEY = "omniv_challenge_dismissed";
+
+/** Optional first-week checklist. Hides when dismissed or all steps done. */
 export function RoomChallenge({
   onOpenRooms,
 }: {
   onOpenRooms?: () => void;
 }) {
   const [done, setDone] = useState<Record<string, boolean>>({});
+  const [hidden, setHidden] = useState(true);
 
   useEffect(() => {
     const next: Record<string, boolean> = {};
@@ -56,6 +60,13 @@ export function RoomChallenge({
       }
     }
     setDone(next);
+    try {
+      const dismissed = localStorage.getItem(DISMISS_KEY) === "1";
+      const allDone = STEPS.every((s) => next[s.id]);
+      setHidden(dismissed || allDone);
+    } catch {
+      setHidden(false);
+    }
   }, []);
 
   function mark(id: string, key: string) {
@@ -64,8 +75,30 @@ export function RoomChallenge({
     } catch {
       /* soft */
     }
-    setDone((d) => ({ ...d, [id]: true }));
+    setDone((d) => {
+      const next = { ...d, [id]: true };
+      if (STEPS.every((s) => next[s.id])) {
+        try {
+          localStorage.setItem(DISMISS_KEY, "1");
+        } catch {
+          /* soft */
+        }
+        setHidden(true);
+      }
+      return next;
+    });
   }
+
+  function dismiss() {
+    try {
+      localStorage.setItem(DISMISS_KEY, "1");
+    } catch {
+      /* soft */
+    }
+    setHidden(true);
+  }
+
+  if (hidden) return null;
 
   const count = STEPS.filter((s) => done[s.id]).length;
 
@@ -76,69 +109,70 @@ export function RoomChallenge({
           <Zap className="h-4 w-4 text-omniv-gold" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
-            48-hour room challenge
-          </p>
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
+              First room · optional
+            </p>
+            <button
+              type="button"
+              onClick={dismiss}
+              className="rounded-md p-1 text-omniv-text-muted hover:bg-omniv-elevated"
+              aria-label="Dismiss checklist"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
           <p className="mt-0.5 text-[13px] font-semibold tracking-tight">
-            Who&apos;s in?
+            Get one room live this week
           </p>
           <p className="mt-1 text-[12px] leading-snug text-omniv-text-secondary">
-            Scan → top city → open a room → share the link → tell Ziki what
-            happened. {count}/{STEPS.length} done.
+            Optional checklist — scan → city → open room → share → tell Ziki.
+            Do it once, then it goes away. {count}/{STEPS.length} done.
           </p>
         </div>
       </div>
 
       <ul className="mt-3 space-y-1.5">
         {STEPS.map((s, i) => {
-          const isDone = done[s.id];
+          const isDone = !!done[s.id];
           return (
             <li
               key={s.id}
-              className="flex items-center gap-2 rounded-xl border border-omniv-border/80 bg-omniv-black/30 px-2.5 py-2"
+              className="flex items-center gap-2 rounded-xl border border-omniv-border/60 bg-omniv-black/20 px-3 py-2"
             >
-              <button
-                type="button"
-                className="shrink-0 text-omniv-gold"
-                onClick={() => mark(s.id, s.doneKey)}
-                aria-label={isDone ? "Done" : "Mark done"}
-              >
-                {isDone ? (
-                  <Check className="h-4 w-4" />
-                ) : (
-                  <Circle className="h-4 w-4 opacity-50" />
-                )}
-              </button>
-              <span
-                className={`min-w-0 flex-1 text-[12px] ${
-                  isDone ? "text-omniv-text-muted line-through" : "text-omniv-text"
-                }`}
-              >
-                <span className="text-omniv-text-muted">{i + 1}.</span> {s.title}
+              {isDone ? (
+                <Check className="h-4 w-4 shrink-0 text-omniv-gold" />
+              ) : (
+                <Circle className="h-4 w-4 shrink-0 text-omniv-text-muted" />
+              )}
+              <span className="min-w-0 flex-1 text-[12px]">
+                {i + 1}. {s.title}
               </span>
               {s.id === "room" && onOpenRooms ? (
                 <Button
+                  type="button"
                   size="sm"
                   variant="outline"
-                  className="h-7 shrink-0 rounded-lg px-2 text-[10px]"
+                  className="h-7 text-[11px]"
                   onClick={() => {
-                    onOpenRooms();
                     mark(s.id, s.doneKey);
+                    onOpenRooms();
                   }}
                 >
                   Open
                 </Button>
               ) : (
-                <Link href={s.href}>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 shrink-0 rounded-lg px-2 text-[10px]"
-                    onClick={() => mark(s.id, s.doneKey)}
-                  >
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-[11px]"
+                  asChild
+                >
+                  <Link href={s.href} onClick={() => mark(s.id, s.doneKey)}>
                     Go
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               )}
             </li>
           );
