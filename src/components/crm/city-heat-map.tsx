@@ -4,10 +4,18 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import { MapPin, Flame, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Flame, Loader2 } from "lucide-react";
+import { briefForCity } from "@/lib/strategy/city-demand";
 
-type CityRow = { city: string; total: number; ready: number; heat: number };
+type CityRow = {
+  city: string;
+  total: number;
+  ready: number;
+  heat: number;
+  line: string;
+  ticket: number;
+  cap: number;
+};
 
 export function CityHeatMap({
   onCreateGathering,
@@ -36,11 +44,22 @@ export function CityHeatMap({
         if (f.would_attend) cur.ready += 1;
         map.set(city, cur);
       }
-      const list = [...map.entries()].map(([city, v]) => ({
-        city,
-        ...v,
-        heat: 0,
-      }));
+      const list = [...map.entries()].map(([city, v]) => {
+        const brief = briefForCity({
+          city,
+          count: v.total,
+          wouldAttend: v.ready,
+        });
+        return {
+          city,
+          total: v.total,
+          ready: v.ready,
+          heat: 0,
+          line: brief.line,
+          ticket: brief.optimalTicketUsd,
+          cap: brief.recommendedCap,
+        };
+      });
       const max = Math.max(1, ...list.map((r) => r.total + r.ready * 2));
       for (const r of list) {
         r.heat = Math.round(((r.total + r.ready * 2) / max) * 100);
@@ -53,15 +72,15 @@ export function CityHeatMap({
   }, []);
 
   return (
-    <Card className="p-3">
+    <Card className="p-3.5">
       <div className="mb-2 flex items-center gap-2">
         <Flame className="h-4 w-4 text-omniv-gold" />
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
-            City heat
+            Who would show up
           </p>
           <p className="text-[11px] text-omniv-text-muted">
-            Where the list is densest — open Drop Parties where heat is real.
+            Fans × intent → ticket × room size. Not vanity listeners.
           </p>
         </div>
       </div>
@@ -71,44 +90,38 @@ export function CityHeatMap({
         </p>
       ) : rows.length === 0 ? (
         <p className="py-3 text-xs text-omniv-text-muted">
-          No city data yet. Fan Gate captures city on join.
+          No city data yet. Fan Gate captures city + would attend.
         </p>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-2.5">
           {rows.map((r) => (
-            <div key={r.city} className="flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <div className="mb-0.5 flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1 truncate text-[12px] font-medium">
-                    <MapPin className="h-3 w-3 text-omniv-gold" />
-                    {r.city}
-                  </span>
-                  <span className="shrink-0 text-[10px] text-omniv-text-muted">
-                    {r.total} fans · {r.ready} ready
-                  </span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-omniv-border">
-                  <div
-                    className={cn(
-                      "h-full rounded-full transition-all",
-                      r.heat > 70
-                        ? "bg-omniv-gold"
-                        : r.heat > 40
-                          ? "bg-omniv-gold/70"
-                          : "bg-omniv-gold/40"
-                    )}
-                    style={{ width: `${r.heat}%` }}
-                  />
-                </div>
+            <div
+              key={r.city}
+              className="rounded-xl border border-omniv-border/70 bg-omniv-black/30 px-3 py-2.5"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-[13px] font-semibold">{r.city}</p>
+                <span className="shrink-0 font-data text-[10px] text-omniv-gold">
+                  {r.heat}% heat
+                </span>
               </div>
-              {onCreateGathering && r.ready > 0 && (
+              <p className="mt-1 text-[12px] leading-snug text-omniv-text-secondary">
+                {r.line}
+              </p>
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-omniv-border">
+                <div
+                  className="h-full rounded-full bg-omniv-gold"
+                  style={{ width: `${Math.min(100, r.heat)}%` }}
+                />
+              </div>
+              {onCreateGathering && (
                 <Button
                   size="sm"
-                  variant="outline"
-                  className="h-7 shrink-0 text-[10px]"
-                  onClick={() => onCreateGathering(r.city, r.ready)}
+                  className="mt-2 h-8 rounded-lg text-[11px]"
+                  onClick={() => onCreateGathering(r.city, r.ready || r.total)}
                 >
-                  Room
+                  Open room · {r.cap}-cap
+                  {r.ticket > 0 ? ` · $${r.ticket}` : " · free+tip"}
                 </Button>
               )}
             </div>
