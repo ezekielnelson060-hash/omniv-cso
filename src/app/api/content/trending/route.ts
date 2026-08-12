@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /**
- * Genre/style → short-form sound & content angles.
- * Uses Artist Brain; expands when TikTok commercial research scopes are available.
+ * Genre-aware content angles for short-form.
+ * Uses Artist Brain; pattern library until live TikTok chart API is wired.
  */
 export async function GET() {
   try {
@@ -14,7 +14,7 @@ export async function GET() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized", sounds: [] }, { status: 401 });
     }
 
     let genre: string[] = [];
@@ -58,7 +58,7 @@ export async function GET() {
         label: "Duet / stitch gap",
         why: "Leave 1s of space after the drop so others can stitch reaction. Grows reach without ads.",
         platform: "TikTok",
-        action: "Post master · pin comment \u201cduet this\u201d",
+        action: "Post master · pin comment “duet this”",
       },
       {
         id: "bpm-match",
@@ -80,7 +80,7 @@ export async function GET() {
       genre: genre,
       style,
       sounds,
-      note: "Pattern-based on your Artist Brain. Live TikTok chart IDs need expanded Research API access — these angles still drive better posts today.",
+      note: "Based on your Artist Brain (genre + stage). Use these as filming jobs today — then lock a release date so posts lead somewhere.",
     });
   } catch (e) {
     console.error("content/trending", e);
