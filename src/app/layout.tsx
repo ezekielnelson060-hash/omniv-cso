@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     template: "%s | Omniv",
   },
   description:
-    "Omniv ranks your highest-impact career moves, helps you open ticketed rooms, and turns your catalogue into revenue. Career OS for independent artists, managers, and labels.",
+    "Omniv ranks your highest-impact career moves, helps you open ticketed rooms, and turns your catalogue into revenue. The career OS independents were never given.",
   keywords: [
     "independent artist",
     "music career",
@@ -50,9 +50,17 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Omniv — AI Career Strategist for Artists",
     description:
-      "Stop guessing. Ranked next moves, owned fans, ticketed rooms, and first cash.",
-    url: "https://omniv.media/",
+      "Stop guessing. Start knowing. Your AI manager for music careers.",
+    url: "https://omniv.media",
     siteName: "Omniv",
+    images: [
+      {
+        url: "https://omniv.media/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Omniv — AI career strategist for independent artists",
+      },
+    ],
     locale: "en_US",
     type: "website",
   },
@@ -60,9 +68,10 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Omniv — AI Career Strategist",
     description: "The career OS for independent artists.",
+    images: ["https://omniv.media/og-image.jpg"],
   },
   alternates: {
-    canonical: "https://omniv.media/",
+    canonical: "https://omniv.media",
   },
   robots: {
     index: true,
