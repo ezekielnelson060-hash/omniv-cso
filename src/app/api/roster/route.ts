@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { rosterLimitForPlan } from "@/lib/roster-limits";
 
 function slugify(name: string) {
@@ -13,10 +14,20 @@ function slugify(name: string) {
   );
 }
 
-async function getPlan(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+function adminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createServiceClient(url, key, { auth: { persistSession: false } });
+}
+
+async function getPlan(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+) {
   const { data } = await supabase
     .from("profiles")
-    .select("plan, plan_status, billing_status")
+    .select("plan, plan_status, billing_status, full_name")
     .eq("id", userId)
     .maybeSingle();
   const paid =
@@ -24,10 +35,15 @@ async function getPlan(supabase: Awaited<ReturnType<typeof createClient>>, userI
     data?.billing_status === "active" ||
     data?.billing_status === "paid";
   if (!paid && data?.plan && data.plan !== "free") {
-    // unpaid claimed plan → treat as free for limits
-    return "free";
+    return {
+      plan: "free" as string,
+      fullName: data?.full_name as string | null,
+    };
   }
-  return data?.plan || "free";
+  return {
+    plan: (data?.plan as string) || "free",
+    fullName: (data?.full_name as string) || null,
+  };
 }
 
 export async function GET() {
@@ -36,29 +52,40 @@ export async function GET() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user)
-      return NextResponse.json({ artists: [], max: 1, count: 0 });
+    if (!user) return NextResponse.json({ artists: [], max: 1, count: 0 });
 
-    const plan = await getPlan(supabase, user.id);
+    const { plan } = await getPlan(supabase, user.id);
     const max = rosterLimitForPlan(plan);
 
-    let { data, error } = await supabase
+    let artists: {
+      id?: string;
+      stage_name?: string;
+      slug?: string;
+      genre?: string | null;
+    }[] = [];
+
+    const { data, error } = await supabase
       .from("roster_artists")
       .select("id, stage_name, slug, genre, org_id")
       .eq("owner_user_id", user.id)
       .order("stage_name")
       .limit(max);
 
-    if (error) {
-      const fallback = await supabase
-        .from("roster_artists")
-        .select("id, stage_name, slug, genre, org_id")
-        .order("stage_name")
-        .limit(max);
-      data = fallback.data;
+    if (!error && data) {
+      artists = data;
+    } else {
+      const admin = adminClient();
+      if (admin) {
+        const { data: rows } = await admin
+          .from("roster_artists")
+          .select("id, stage_name, slug, genre, org_id")
+          .eq("owner_user_id", user.id)
+          .order("stage_name")
+          .limit(max);
+        artists = rows || [];
+      }
     }
 
-    const artists = data || [];
     return NextResponse.json({
       artists,
       max,
@@ -66,7 +93,7 @@ export async function GET() {
       plan,
     });
   } catch (e) {
-    console.error(e);
+    console.error("[roster GET]", e);
     return NextResponse.json({ artists: [], max: 1, count: 0 });
   }
 }
@@ -85,22 +112,40 @@ export async function POST(req: Request) {
       genre?: string;
       slug?: string;
     };
-    const stageName = body.stageName?.trim();
-    if (!stageName)
-      return NextResponse.json({ error: "stageName required" }, { status: 400 });
 
-    const plan = await getPlan(supabase, user.id);
+    const { plan, fullName } = await getPlan(supabase, user.id);
     const max = rosterLimitForPlan(plan);
 
-    const { count } = await supabase
+    let stageName = body.stageName?.trim();
+    if (!stageName || stageName === "My tip jar") {
+      stageName = fullName?.trim() || "My tip jar";
+    }
+
+    const admin = adminClient();
+    const db = admin || supabase;
+
+    const { count } = await db
       .from("roster_artists")
       .select("id", { count: "exact", head: true })
       .eq("owner_user_id", user.id);
 
     if ((count ?? 0) >= max) {
+      const { data: existingList } = await db
+        .from("roster_artists")
+        .select("id, stage_name, slug, genre, org_id")
+        .eq("owner_user_id", user.id)
+        .limit(1);
+      if (existingList?.[0]?.slug) {
+        return NextResponse.json({
+          artist: existingList[0],
+          max,
+          plan,
+          reused: true,
+        });
+      }
       return NextResponse.json(
         {
-          error: `Roster limit reached (${max} artists on ${plan}). Upgrade to add more.`,
+          error: `Roster limit reached (${max} on ${plan}). Upgrade to add more.`,
           max,
           plan,
         },
@@ -109,7 +154,7 @@ export async function POST(req: Request) {
     }
 
     let slug = body.slug?.trim() || slugify(stageName);
-    const { data: existing } = await supabase
+    const { data: existing } = await db
       .from("roster_artists")
       .select("id")
       .eq("slug", slug)
@@ -117,26 +162,29 @@ export async function POST(req: Request) {
     if (existing) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
 
     let orgId: string | null = null;
-    const { data: org } = await supabase
-      .from("orgs")
-      .select("id")
-      .eq("owner_user_id", user.id)
-      .limit(1)
-      .maybeSingle();
-
-    if (org?.id) {
-      orgId = org.id;
-    } else {
-      const { data: created } = await supabase
+    try {
+      const { data: org } = await db
         .from("orgs")
-        .insert({
-          name: "My Workspace",
-          kind: "manager",
-          owner_user_id: user.id,
-        })
         .select("id")
-        .single();
-      orgId = created?.id ?? null;
+        .eq("owner_user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+      if (org?.id) {
+        orgId = org.id as string;
+      } else {
+        const { data: created } = await db
+          .from("orgs")
+          .insert({
+            name: "My Workspace",
+            kind: "manager",
+            owner_user_id: user.id,
+          })
+          .select("id")
+          .maybeSingle();
+        orgId = (created?.id as string) || null;
+      }
+    } catch {
+      orgId = null;
     }
 
     const row: Record<string, unknown> = {
@@ -147,20 +195,41 @@ export async function POST(req: Request) {
     };
     if (orgId) row.org_id = orgId;
 
-    const { data: artist, error } = await supabase
+    let { data: artist, error } = await db
       .from("roster_artists")
       .insert(row)
       .select("id, stage_name, slug, genre, org_id")
       .single();
 
-    if (error) {
-      console.error(error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error && orgId) {
+      delete row.org_id;
+      const retry = await db
+        .from("roster_artists")
+        .insert(row)
+        .select("id, stage_name, slug, genre, org_id")
+        .single();
+      artist = retry.data;
+      error = retry.error;
+    }
+
+    if (error || !artist) {
+      console.error("[roster POST]", error);
+      return NextResponse.json(
+        {
+          error:
+            error?.message ||
+            "Could not create tip link. Check roster_artists allows owner_user_id insert.",
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ artist, max, plan });
   } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: "Failed" }, { status: 500 });
+    console.error("[roster POST]", e);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Failed" },
+      { status: 500 }
+    );
   }
 }
