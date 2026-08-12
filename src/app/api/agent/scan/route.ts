@@ -4,6 +4,7 @@ import { runAgentScan } from "@/lib/agent/scan";
 import { loadMarketProposals } from "@/lib/agent/market-news";
 import { loadXMarketProposals } from "@/lib/agent/x-market";
 import { buildTrendProposals } from "@/lib/agent/trend-signals";
+import { rankCityBriefs } from "@/lib/strategy/city-demand";
 import type { ArtistBrain, CatalogueRelease, CatalogueTrack } from "@/types";
 
 export const runtime = "nodejs";
@@ -108,30 +109,42 @@ export async function POST() {
       /* optional */
     }
 
-    let fanCities: { city: string; count: number }[] = [];
+    let fanCities: { city: string; count: number; wouldAttend?: number }[] =
+      [];
     let fanCount = 0;
+    function rollupFans(
+      list: { city?: string | null; would_attend?: boolean | null }[]
+    ) {
+      fanCount = list.length;
+      const map = new Map<string, { count: number; ready: number }>();
+      for (const f of list) {
+        const c = String(f.city || "").trim();
+        if (!c) continue;
+        const cur = map.get(c) || { count: 0, ready: 0 };
+        cur.count += 1;
+        if (f.would_attend) cur.ready += 1;
+        map.set(c, cur);
+      }
+      fanCities = [...map.entries()]
+        .map(([city, v]) => ({
+          city,
+          count: v.count,
+          wouldAttend: v.ready,
+        }))
+        .sort((a, b) => b.count - a.count);
+    }
     try {
       const { data: roster } = await supabase
         .from("roster_artists")
         .select("id")
-        .eq("user_id", user.id);
+        .or(`user_id.eq.${user.id},owner_user_id.eq.${user.id}`);
       const ids = (roster || []).map((r) => r.id as string);
       if (ids.length) {
         const { data: fans } = await supabase
           .from("fans")
-          .select("city")
+          .select("city, would_attend")
           .in("artist_id", ids);
-        const list = fans || [];
-        fanCount = list.length;
-        const map = new Map<string, number>();
-        for (const f of list) {
-          const c = String(f.city || "").trim();
-          if (!c) continue;
-          map.set(c, (map.get(c) || 0) + 1);
-        }
-        fanCities = [...map.entries()]
-          .map(([city, count]) => ({ city, count }))
-          .sort((a, b) => b.count - a.count);
+        rollupFans(fans || []);
       }
     } catch {
       /* soft */
@@ -141,20 +154,10 @@ export async function POST() {
       try {
         const { data: fans } = await supabase
           .from("fans")
-          .select("city")
+          .select("city, would_attend")
           .eq("user_id", user.id)
-          .limit(500);
-        const list = fans || [];
-        fanCount = list.length;
-        const map = new Map<string, number>();
-        for (const f of list) {
-          const c = String(f.city || "").trim();
-          if (!c) continue;
-          map.set(c, (map.get(c) || 0) + 1);
-        }
-        fanCities = [...map.entries()]
-          .map(([city, count]) => ({ city, count }))
-          .sort((a, b) => b.count - a.count);
+          .limit(800);
+        rollupFans(fans || []);
       } catch {
         /* soft */
       }
@@ -265,11 +268,38 @@ export async function POST() {
       hasAudio: tracks.length > 0 || releases.length > 0,
     });
 
+    const cityBriefs = rankCityBriefs(fanCities, 3);
+    const nowCity = Date.now();
+    const cityDemandSignals = cityBriefs.map((b, i) => ({
+      id: `city-${b.city
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .slice(0, 24)}`,
+      title: b.city,
+      body: b.line,
+      urgency: i === 0 ? ("today" as const) : ("this_week" as const),
+      impact: b.addressable >= 15 ? ("high" as const) : ("medium" as const),
+      source: "webhook" as const,
+      action: {
+        type: "OPEN_CRM" as const,
+        label: `Open room · ${b.city}`,
+        payload: {
+          focus: "rooms",
+          city: b.city,
+          capacity: b.recommendedCap,
+          ticketUsd: b.optimalTicketUsd,
+        },
+      },
+      status: "pending" as const,
+      createdAt: nowCity - i * 500,
+    }));
+
     const proposalsOut = [
-      ...xSignals.slice(0, 4),
-      ...marketSignals.slice(0, 4),
+      ...cityDemandSignals.slice(0, 3),
+      ...xSignals.slice(0, 3),
+      ...marketSignals.slice(0, 3),
       ...metricSignals.slice(0, 2),
-      ...trendSignals.slice(0, 3),
+      ...trendSignals.slice(0, 2),
       ...result.proposals,
     ].slice(0, 16);
 
@@ -299,6 +329,7 @@ export async function POST() {
           id.startsWith("market-") ||
           id.startsWith("x-") ||
           id.startsWith("trend-") ||
+          id.startsWith("city-") ||
           x.source === "webhook"
         );
       });
@@ -331,10 +362,12 @@ export async function POST() {
         metricSignals.length +
         marketSignals.length +
         xSignals.length +
-        trendSignals.length,
+        trendSignals.length +
+        cityDemandSignals.length,
       market: marketSignals.length,
       x: xSignals.length,
       trends: trendSignals.length,
+      cities: cityDemandSignals.length,
     });
   } catch (e) {
     console.error("agent scan", e);
