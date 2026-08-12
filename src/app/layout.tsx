@@ -51,7 +51,7 @@ export const metadata: Metadata = {
     title: "Omniv — AI Career Strategist for Artists",
     description:
       "Stop guessing. Ranked next moves, owned fans, ticketed rooms, and first cash.",
-    url: "https://omniv.media",
+    url: "https://omniv.media/",
     siteName: "Omniv",
     locale: "en_US",
     type: "website",
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     description: "The career OS for independent artists.",
   },
   alternates: {
-    canonical: "https://omniv.media",
+    canonical: "https://omniv.media/",
   },
   robots: {
     index: true,
@@ -92,23 +92,84 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "SoftwareApplication",
-              name: "Omniv",
-              applicationCategory: "BusinessApplication",
-              operatingSystem: "Web",
-              url: "https://omniv.media",
-              description:
-                "AI career strategist for independent artists — ranked moves, fan gates, ticketed rooms, and catalogue tools.",
-              offers: {
-                "@type": "Offer",
-                price: "0",
-                priceCurrency: "USD",
-              },
-              publisher: {
-                "@type": "Organization",
-                name: "Omniv",
-                url: "https://omniv.media",
-              },
+              "@graph": [
+                {
+                  "@type": "Organization",
+                  "@id": "https://omniv.media/#organization",
+                  name: "Omniv",
+                  url: "https://omniv.media/",
+                  logo: {
+                    "@type": "ImageObject",
+                    url: "https://omniv.media/logo.svg",
+                  },
+                  description:
+                    "AI career strategist for independent artists. Maps fans by city and intent, ranks career moves, ticketed rooms and tips.",
+                },
+                {
+                  "@type": "WebSite",
+                  "@id": "https://omniv.media/#website",
+                  url: "https://omniv.media/",
+                  name: "Omniv",
+                  publisher: { "@id": "https://omniv.media/#organization" },
+                },
+                {
+                  "@type": "SoftwareApplication",
+                  "@id": "https://omniv.media/#software",
+                  name: "Omniv",
+                  applicationCategory: "BusinessApplication",
+                  operatingSystem: "Web",
+                  url: "https://omniv.media/",
+                  description:
+                    "Career OS for independents: city demand briefs, Agent market signals, rooms, tips, ranked moves.",
+                  offers: {
+                    "@type": "Offer",
+                    price: "0",
+                    priceCurrency: "USD",
+                    description: "Free artist scan and Fan Gate",
+                  },
+                  featureList:
+                    "AI career strategist, Fan city mapping, Intent-to-attend, Ticketed rooms, Tip links, Market signals",
+                  publisher: { "@id": "https://omniv.media/#organization" },
+                },
+                {
+                  "@type": "FAQPage",
+                  "@id": "https://omniv.media/#faq",
+                  mainEntity: [
+                    {
+                      "@type": "Question",
+                      name: "What is Omniv?",
+                      acceptedAnswer: {
+                        "@type": "Answer",
+                        text: "Omniv is an AI career strategist for independent artists. It maps fans by city and intent, ranks the highest-impact next move, and helps you open ticketed rooms and tip links.",
+                      },
+                    },
+                    {
+                      "@type": "Question",
+                      name: "How does Omniv help artists make money?",
+                      acceptedAnswer: {
+                        "@type": "Answer",
+                        text: "Omniv turns Fan Gate data into a demand brief: fans, intent-to-attend, ticket price, venue size. Open a room, collect tips, get paid to your bank.",
+                      },
+                    },
+                    {
+                      "@type": "Question",
+                      name: "Is Omniv free to use?",
+                      acceptedAnswer: {
+                        "@type": "Answer",
+                        text: "Yes. Free artist scan, Fan Gate, and core tools are available. Higher tiers unlock higher usage limits.",
+                      },
+                    },
+                    {
+                      "@type": "Question",
+                      name: "What makes Omniv different from Spotify for Artists?",
+                      acceptedAnswer: {
+                        "@type": "Answer",
+                        text: "Spotify for Artists shows past analytics. Omniv tells you what to do next and helps you execute — rooms, tip links, and outside market signals.",
+                      },
+                    },
+                  ],
+                },
+              ],
             }),
           }}
         />
