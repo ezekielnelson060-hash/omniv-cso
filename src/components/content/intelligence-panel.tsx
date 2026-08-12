@@ -123,19 +123,74 @@ export function IntelligencePanel() {
       <div className="sticky top-0 z-20 -mx-3 border-b border-omniv-border/80 bg-omniv-black/95 px-3 py-2.5 backdrop-blur-md sm:-mx-4 sm:px-4 md:mx-0 md:rounded-2xl md:border">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">Content</p>
-            <p className="text-[13px] font-semibold tracking-tight">Sounds · hooks · ship</p>
+            <p className="text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
+              Content
+            </p>
+            <p className="text-[13px] font-semibold tracking-tight">
+              Sounds · hooks · ship
+            </p>
           </div>
-          <Link href="/release-simulator" className="text-[11px] font-medium text-omniv-gold">Release →</Link>
+          <Link
+            href="/release-simulator"
+            className="text-[11px] font-medium text-omniv-gold"
+          >
+            Release →
+          </Link>
         </div>
         <div className="mt-2.5 flex gap-1 overflow-x-auto pb-0.5">
-          {([{ id: "trends" as const, label: "Trending" }, { id: "analyse" as const, label: "Analyse" }, { id: "studio" as const, label: "Studio" }] as const).map((item) => (
-            <button key={item.id} type="button" onClick={() => setTab(item.id)} className={cn("shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition", tab === item.id ? "bg-omniv-gold text-omniv-black" : "border border-omniv-border bg-omniv-card/50 text-omniv-text-muted")}>
+          {(
+            [
+              { id: "trends" as const, label: "Trending" },
+              { id: "analyse" as const, label: "Analyse" },
+              { id: "studio" as const, label: "Studio" },
+            ] as const
+          ).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setTab(item.id)}
+              className={cn(
+                "shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition",
+                tab === item.id
+                  ? "bg-omniv-gold text-omniv-black"
+                  : "border border-omniv-border bg-omniv-card/50 text-omniv-text-muted"
+              )}
+            >
               {item.label}
             </button>
           ))}
         </div>
       </div>
+
+      <Card className="border-omniv-gold/20 bg-omniv-gold/5 p-3.5">
+        <p className="text-[12px] font-semibold text-omniv-gold">Before you drop</p>
+        <ol className="mt-2 list-decimal space-y-1 pl-4 text-[12px] text-omniv-text-secondary">
+          <li>Simulate a window in Release</li>
+          <li>Shoot 3–5 clips from Trends / Studio</li>
+          <li>Share Fan Gate so cities fill in</li>
+          <li>Put tip link in bio only on the last pre-drop post</li>
+        </ol>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link
+            href="/release-simulator"
+            className="inline-flex h-8 items-center rounded-lg bg-omniv-gold px-2.5 text-[11px] font-semibold text-omniv-black"
+          >
+            Plan release
+          </Link>
+          <Link
+            href="/crm?tab=fans"
+            className="inline-flex h-8 items-center rounded-lg border border-omniv-border px-2.5 text-[11px] font-medium"
+          >
+            Fan Gate
+          </Link>
+          <Link
+            href="/crm?tab=money"
+            className="inline-flex h-8 items-center rounded-lg border border-omniv-border px-2.5 text-[11px] font-medium"
+          >
+            Tip link
+          </Link>
+        </div>
+      </Card>
 
       {error && <p className="text-xs text-omniv-danger">{error}</p>}
 
@@ -145,13 +200,19 @@ export function IntelligencePanel() {
             <div className="flex items-start gap-2">
               <Music2 className="mt-0.5 h-4 w-4 shrink-0 text-omniv-gold" />
               <div>
-                <p className="text-[13px] font-semibold">Sounds for {genreLabel || "your lane"}</p>
-                <p className="mt-1 text-[12px] text-omniv-text-secondary">Matched to your style so clips pull the right fans.</p>
+                <p className="text-[13px] font-semibold">
+                  Sounds for {genreLabel || "your lane"}
+                </p>
+                <p className="mt-1 text-[12px] text-omniv-text-secondary">
+                  Matched to your style so clips pull the right fans.
+                </p>
               </div>
             </div>
           </Card>
           {loadingTrends ? (
-            <p className="flex items-center gap-2 text-[12px] text-omniv-text-muted"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading angles…</p>
+            <p className="flex items-center gap-2 text-[12px] text-omniv-text-muted">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading angles…
+            </p>
           ) : (
             sounds.map((s) => (
               <Card key={s.id} className="p-3.5">
@@ -159,18 +220,52 @@ export function IntelligencePanel() {
                   <Badge variant="gold">{s.platform}</Badge>
                   <span className="text-[13px] font-semibold">{s.label}</span>
                 </div>
-                <p className="mt-2 text-[12px] leading-snug text-omniv-text-secondary">{s.why}</p>
-                <p className="mt-2 text-[11px] font-medium text-omniv-gold">→ {s.action}</p>
+                <p className="mt-2 text-[12px] leading-snug text-omniv-text-secondary">
+                  {s.why}
+                </p>
+                <p className="mt-2 text-[11px] font-medium text-omniv-gold">
+                  → {s.action}
+                </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button type="button" size="sm" className="h-8 rounded-lg text-[11px]" onClick={() => { setTab("studio"); setBrief(`${s.label} for ${genreLabel || "my genre"} on ${s.platform}. ${s.why} Action: ${s.action}`); }}>Write scripts</Button>
-                  <Button size="sm" variant="outline" className="h-8 rounded-lg text-[11px]" asChild><Link href="/release-simulator">Lock release date</Link></Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 rounded-lg text-[11px]"
+                    onClick={() => {
+                      setTab("studio");
+                      setBrief(
+                        `${s.label} for ${genreLabel || "my genre"} on ${s.platform}. ${s.why} Action: ${s.action}`
+                      );
+                    }}
+                  >
+                    Write scripts
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 rounded-lg text-[11px]"
+                    asChild
+                  >
+                    <Link href="/release-simulator">Lock release date</Link>
+                  </Button>
                 </div>
               </Card>
             ))
           )}
-          {trendNote && <p className="text-[10px] text-omniv-text-muted">{trendNote}</p>}
-          <Button className="h-10 w-full gap-1.5 rounded-xl" onClick={() => { setTab("studio"); setBrief(`Hooks and captions for ${genreLabel || "my genre"} this week`); }}>
-            <Clapperboard className="h-4 w-4" /> Generate this week’s scripts
+          {trendNote && (
+            <p className="text-[10px] text-omniv-text-muted">{trendNote}</p>
+          )}
+          <Button
+            className="h-10 w-full gap-1.5 rounded-xl"
+            onClick={() => {
+              setTab("studio");
+              setBrief(
+                `Hooks and captions for ${genreLabel || "my genre"} this week`
+              );
+            }}
+          >
+            <Clapperboard className="h-4 w-4" />
+            Generate this week’s scripts
           </Button>
         </div>
       )}
@@ -179,30 +274,86 @@ export function IntelligencePanel() {
         <div className="space-y-3">
           <Card className="p-3.5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-omniv-gold/15"><Film className="h-4 w-4 text-omniv-gold" /></div>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-omniv-gold/15">
+                <Film className="h-4 w-4 text-omniv-gold" />
+              </div>
               <div className="flex-1">
                 <h2 className="text-sm font-semibold">Analyse a clip</h2>
-                <p className="text-[11px] text-omniv-text-muted">Hook strength, clarity, CTA</p>
+                <p className="text-[11px] text-omniv-text-muted">
+                  Hook strength, clarity, CTA
+                </p>
               </div>
-              <input ref={inputRef} type="file" accept="video/*,image/*,audio/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setFileName(f.name); void analyse(f); } }} />
-              <Button size="sm" className="h-9 gap-1 rounded-xl text-[11px]" onClick={() => inputRef.current?.click()} disabled={busy}>
-                {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+              <input
+                ref={inputRef}
+                type="file"
+                accept="video/*,image/*,audio/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    setFileName(f.name);
+                    void analyse(f);
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                className="h-9 gap-1 rounded-xl text-[11px]"
+                onClick={() => inputRef.current?.click()}
+                disabled={busy}
+              >
+                {busy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Upload className="h-3.5 w-3.5" />
+                )}
                 {busy ? "Analysing…" : "Upload"}
               </Button>
             </div>
-            {fileName && <p className="mt-1.5 font-data text-[10px] text-omniv-text-muted">{fileName}</p>}
+            {fileName && (
+              <p className="mt-1.5 font-data text-[10px] text-omniv-text-muted">
+                {fileName}
+              </p>
+            )}
             <div className="mt-2 flex flex-wrap gap-1">
               {PLATFORMS.map((p) => (
-                <button key={p} type="button" onClick={() => setPlatform(p)} className={cn("rounded-full border px-2.5 py-1 text-[11px]", platform === p ? "border-omniv-gold/50 bg-omniv-gold/15 text-omniv-gold" : "border-omniv-border text-omniv-text-muted")}>{p}</button>
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPlatform(p)}
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-[11px]",
+                    platform === p
+                      ? "border-omniv-gold/50 bg-omniv-gold/15 text-omniv-gold"
+                      : "border-omniv-border text-omniv-text-muted"
+                  )}
+                >
+                  {p}
+                </button>
               ))}
             </div>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Context: hook, audience…" className="mt-2 w-full rounded-xl border border-omniv-border bg-omniv-elevated px-3 py-2 text-[13px] focus-gold" />
-            <Button className="mt-2 h-9 rounded-xl" variant="outline" disabled={busy} onClick={() => void analyse(null)}>Analyse description</Button>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              placeholder="Context: hook, audience…"
+              className="mt-2 w-full rounded-xl border border-omniv-border bg-omniv-elevated px-3 py-2 text-[13px] focus-gold"
+            />
+            <Button
+              className="mt-2 h-9 rounded-xl"
+              variant="outline"
+              disabled={busy}
+              onClick={() => void analyse(null)}
+            >
+              Analyse description
+            </Button>
           </Card>
           {result && (
             <Card className="border-omniv-gold/20 p-3.5">
               <Badge variant="gold">Intelligence</Badge>
-              <pre className="mt-2 whitespace-pre-wrap font-sans text-[12px] leading-snug text-omniv-text-secondary">{result}</pre>
+              <pre className="mt-2 whitespace-pre-wrap font-sans text-[12px] leading-snug text-omniv-text-secondary">
+                {result}
+              </pre>
             </Card>
           )}
         </div>
@@ -212,29 +363,78 @@ export function IntelligencePanel() {
         <div className="space-y-3">
           <Card className="p-3.5">
             <h3 className="text-[13px] font-semibold">Studio brief</h3>
-            <p className="mt-1 text-[11px] text-omniv-text-muted">Scripts, captions, duet angles — then shoot.</p>
+            <p className="mt-1 text-[11px] text-omniv-text-muted">
+              Scripts, captions, duet angles — then shoot.
+            </p>
             <div className="mt-2 flex flex-wrap gap-1">
               {PLATFORMS.map((p) => (
-                <button key={p} type="button" onClick={() => setPlatform(p)} className={cn("rounded-full border px-2.5 py-1 text-[11px]", platform === p ? "border-omniv-gold/50 bg-omniv-gold/15 text-omniv-gold" : "border-omniv-border text-omniv-text-muted")}>{p}</button>
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPlatform(p)}
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-[11px]",
+                    platform === p
+                      ? "border-omniv-gold/50 bg-omniv-gold/15 text-omniv-gold"
+                      : "border-omniv-border text-omniv-text-muted"
+                  )}
+                >
+                  {p}
+                </button>
               ))}
             </div>
-            <textarea value={brief} onChange={(e) => setBrief(e.target.value)} rows={3} placeholder="e.g. Tease new single, soft tip CTA…" className="mt-2 w-full rounded-xl border border-omniv-border bg-omniv-elevated px-3 py-2 text-[13px] focus-gold" />
-            <Button className="mt-2 h-10 w-full gap-1.5 rounded-xl" disabled={busy} onClick={() => void genStudio()}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            <textarea
+              value={brief}
+              onChange={(e) => setBrief(e.target.value)}
+              rows={3}
+              placeholder="e.g. Tease new single, soft tip CTA…"
+              className="mt-2 w-full rounded-xl border border-omniv-border bg-omniv-elevated px-3 py-2 text-[13px] focus-gold"
+            />
+            <Button
+              className="mt-2 h-10 w-full gap-1.5 rounded-xl"
+              disabled={busy}
+              onClick={() => void genStudio()}
+            >
+              {busy ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
               Generate system
             </Button>
           </Card>
           {studio && (
             <Card className="border-omniv-gold/20 p-3.5">
               <Badge variant="gold">Studio pack</Badge>
-              <pre className="mt-2 whitespace-pre-wrap font-sans text-[12px] leading-snug text-omniv-text-secondary">{studio}</pre>
+              <pre className="mt-2 whitespace-pre-wrap font-sans text-[12px] leading-snug text-omniv-text-secondary">
+                {studio}
+              </pre>
               <div className="mt-2 flex flex-col gap-2">
-                <Button variant="outline" className="h-9 w-full gap-1 rounded-xl text-[12px]" asChild>
-                  <Link href="/release-simulator">Lock a release date <ArrowRight className="h-3.5 w-3.5" /></Link>
+                <Button
+                  variant="outline"
+                  className="h-9 w-full gap-1 rounded-xl text-[12px]"
+                  asChild
+                >
+                  <Link href="/release-simulator">
+                    Lock a release date
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
                 </Button>
                 <div className="flex gap-2">
-                  <Button variant="outline" className="h-9 flex-1 rounded-xl text-[12px]" asChild><Link href="/crm?tab=money">Tip link</Link></Button>
-                  <Button variant="outline" className="h-9 flex-1 rounded-xl text-[12px]" asChild><Link href="/crm?tab=rooms">Open room</Link></Button>
+                  <Button
+                    variant="outline"
+                    className="h-9 flex-1 rounded-xl text-[12px]"
+                    asChild
+                  >
+                    <Link href="/crm?tab=money">Tip link</Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-9 flex-1 rounded-xl text-[12px]"
+                    asChild
+                  >
+                    <Link href="/crm?tab=rooms">Open room</Link>
+                  </Button>
                 </div>
               </div>
             </Card>
