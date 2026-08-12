@@ -19,6 +19,7 @@ function TipLinkBlock() {
   const [copied, setCopied] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [createErr, setCreateErr] = useState<string | null>(null);
+
   useEffect(() => {
     void (async () => {
       try {
@@ -59,12 +60,16 @@ function TipLinkBlock() {
         return;
       }
       if (data.artist?.slug) {
-        setArtists([
-          {
-            slug: String(data.artist.slug),
-            name: String(data.artist.stage_name || data.artist.slug),
-          },
-        ]);
+        const next = {
+          slug: String(data.artist.slug),
+          name: String(data.artist.stage_name || data.artist.slug),
+        };
+        setArtists((prev) => {
+          if (prev.some((a) => a.slug === next.slug)) return prev;
+          return [next, ...prev];
+        });
+      } else {
+        setCreateErr("Created but no slug returned");
       }
     } catch {
       setCreateErr("Network error");
@@ -94,10 +99,12 @@ function TipLinkBlock() {
       </div>
     );
   }
+
   const origin =
     typeof window !== "undefined"
       ? window.location.origin
       : "https://omniv.media";
+
   return (
     <div className="mt-3 space-y-2 rounded-xl border border-omniv-gold/25 bg-omniv-gold/5 px-3 py-2">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-omniv-gold">
@@ -112,17 +119,27 @@ function TipLinkBlock() {
           >
             <p className="text-[11px] font-medium">{a.name}</p>
             <p className="break-all text-[10px] text-omniv-text-muted">{url}</p>
-            <button
-              type="button"
-              className="mt-1 text-[11px] font-medium text-omniv-gold hover:underline"
-              onClick={() => {
-                void navigator.clipboard.writeText(url);
-                setCopied(a.slug);
-                window.setTimeout(() => setCopied(null), 1500);
-              }}
-            >
-              {copied === a.slug ? "Copied" : "Copy tip link"}
-            </button>
+            <div className="mt-1 flex flex-wrap gap-3">
+              <button
+                type="button"
+                className="text-[11px] font-medium text-omniv-gold hover:underline"
+                onClick={() => {
+                  void navigator.clipboard.writeText(url);
+                  setCopied(a.slug);
+                  window.setTimeout(() => setCopied(null), 1500);
+                }}
+              >
+                {copied === a.slug ? "Copied" : "Copy tip link"}
+              </button>
+              <a
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] font-medium text-omniv-text-secondary hover:underline"
+              >
+                Open tip page
+              </a>
+            </div>
           </div>
         );
       })}
