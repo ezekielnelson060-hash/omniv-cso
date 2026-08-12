@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,41 @@ import { stashAct } from "@/lib/ziki-memory";
 import { Loader2, Sparkles, Zap, X } from "lucide-react";
 
 type InboxFilter = "all" | "outside" | "internal";
+
+/** Turn bare URLs in agent body into tappable links (no extra row). */
+function linkifyBody(text: string): ReactNode {
+  const re = /https?:\/\/[^\s)\]"']+/gi;
+  const nodes: ReactNode[] = [];
+  let last = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > last) {
+      nodes.push(text.slice(last, match.index));
+    }
+    let url = match[0];
+    let trail = "";
+    while (/[.,;:!?]$/.test(url)) {
+      trail = url.slice(-1) + trail;
+      url = url.slice(0, -1);
+    }
+    nodes.push(
+      <a
+        key={key++}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="break-all font-medium text-omniv-gold underline-offset-2 hover:underline"
+      >
+        {url}
+      </a>
+    );
+    if (trail) nodes.push(trail);
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes.length ? nodes : text;
+}
 
 export function NotificationsPanel() {
   const router = useRouter();
@@ -332,7 +367,9 @@ export function NotificationsPanel() {
               </span>
             </div>
             <h3 className="text-[14px] font-semibold tracking-tight">{p.title}</h3>
-            <p className="mt-1 text-[12px] text-omniv-text-muted">{p.body}</p>
+            <p className="mt-1 text-[12px] text-omniv-text-muted">
+              {linkifyBody(p.body)}
+            </p>
             <Button
               className="mt-3 h-9 gap-1.5 rounded-xl"
               disabled={busyId === p.id}
