@@ -9,24 +9,40 @@ export type MarketArticle = {
 };
 
 /**
- * Global music-market queries (not region-locked).
- * NewsAPI free tier: keep each query tight; we merge + dedupe.
+ * Music-industry-only queries (global). Require music/artist/label language
+ * so grocery / retail / random delivery stories never enter Agent.
  */
 const MARKET_QUERIES = [
-  // Labels / A&R looking at independents
-  '("independent artist" OR "indie artist" OR "unsigned artist" OR "open submissions") AND (label OR "A&R" OR signing OR imprint OR "record deal")',
-  // Sync / supervisors / placements worldwide
-  '("music supervisor" OR "sync licensing" OR soundtrack OR "music placement" OR "needle drop") AND (film OR TV OR advertising OR game OR trailer)',
-  // Playlists / radio / editorial
-  '("playlist" OR editorial OR curator OR "New Music Friday") AND (Spotify OR Apple OR "radio add") AND (music OR artist)',
-  // Global scenes as equal weight (not Afro-only)
-  '(K-pop OR Latin OR Afrobeats OR "UK drill" OR "indie pop" OR "alt-R&B" OR country OR "hip-hop") AND (label OR licensing OR playlist OR tour OR deal)',
+  '("independent artist" OR "indie artist" OR "unsigned artist") AND (label OR "A&R" OR signing OR "record deal" OR imprint)',
+  '("music supervisor" OR "sync licensing" OR "music placement" OR "needle drop") AND (film OR television OR advertising OR game OR trailer OR Netflix)',
+  '(playlist OR "New Music Friday" OR curator OR editorial) AND (Spotify OR "Apple Music" OR "submit music") AND (artist OR song OR track)',
+  '("open submissions" OR "demo submission" OR "artist submissions") AND (label OR playlist OR festival OR "music supervisor")',
+  '(Afrobeats OR "K-pop" OR "Latin music" OR "UK drill" OR "alt-R&B" OR "hip-hop" OR "indie pop") AND (label OR licensing OR playlist OR tour OR "record deal")',
 ];
 
-/**
- * Fetch music-market headlines from NewsAPI.
- * Env: NEWS_API_KEY or NEWSAPI_KEY
- */
+const REJECT =
+  /\b(grocery|groceries|supermarket|H-?E-?B|Walmart|Costco|Aldi|Kroger|Joe V'?s|delivery fee|produce aisle|meal kit|restaurant review|recipe|cooking|diet|weight loss|crypto pump|stock price|earnings report|real estate|mortgage|weather forecast|sports score|NBA|NFL|Premier League)\b/i;
+
+const REQUIRE =
+  /\b(music|musician|artist|song|album|track|playlist|label|A&R|sync|soundtrack|licensing|Spotify|Apple Music|Bandcamp|tour|concert|EP|LP|single|Afrobeats|hip-?hop|R&B|K-pop|indie|producer|beat|release|streaming|radio|DJ|festival|venue)\b/i;
+
+export function isMusicMarketArticle(
+  title: string,
+  description?: string | null,
+  source?: string
+): boolean {
+  const hay = `${title} ${description || ""} ${source || ""}`;
+  if (REJECT.test(hay)) return false;
+  if (!REQUIRE.test(hay)) return false;
+  if (
+    /\b(food|drink|dining|retail|shopping)\b/i.test(hay) &&
+    !REQUIRE.test(title)
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export async function fetchMarketNews(opts?: {
   query?: string;
   pageSize?: number;
@@ -43,7 +59,7 @@ export async function fetchMarketNews(opts?: {
     return fetchOneQuery(key, opts.query, pageSize);
   }
 
-  const per = Math.max(2, Math.ceil(pageSize / MARKET_QUERIES.length));
+  const per = Math.max(2, Math.ceil(pageSize / MARKET_QUERIES.length) + 1);
   const batches = await Promise.all(
     MARKET_QUERIES.map((q) => fetchOneQuery(key, q, per))
   );
@@ -51,6 +67,7 @@ export async function fetchMarketNews(opts?: {
   const byUrl = new Map<string, MarketArticle>();
   for (const list of batches) {
     for (const a of list) {
+      if (!isMusicMarketArticle(a.title, a.description, a.source)) continue;
       const k = a.url || a.title;
       if (!byUrl.has(k)) byUrl.set(k, a);
     }
@@ -70,10 +87,13 @@ async function fetchOneQuery(
   pageSize: number
 ): Promise<MarketArticle[]> {
   const url = new URL("https://newsapi.org/v2/everything");
-  url.searchParams.set("q", q);
+  url.searchParams.set(
+    "q",
+    `(${q}) AND (music OR artist OR song OR playlist OR label)`
+  );
   url.searchParams.set("language", "en");
   url.searchParams.set("sortBy", "publishedAt");
-  url.searchParams.set("pageSize", String(pageSize));
+  url.searchParams.set("pageSize", String(Math.min(20, pageSize * 2)));
 
   const res = await fetch(url.toString(), {
     headers: { "X-Api-Key": key },
@@ -100,11 +120,14 @@ async function fetchOneQuery(
   for (const a of json.articles || []) {
     const title = (a.title || "").trim();
     if (!title || title === "[Removed]") continue;
+    const description = (a.description || "").trim().slice(0, 280) || null;
+    const source = a.source?.name || "Market";
+    if (!isMusicMarketArticle(title, description, source)) continue;
     out.push({
       title: title.slice(0, 160),
-      description: (a.description || "").trim().slice(0, 280) || null,
+      description,
       url: a.url || "",
-      source: a.source?.name || "Market",
+      source,
       publishedAt: a.publishedAt || new Date().toISOString(),
     });
   }
@@ -155,7 +178,7 @@ function inferPitchAction(
     };
   }
 
-  if (/playlist|editorial|curator|radio|new music friday/.test(hay)) {
+  if (/playlist|curator|editorial|new music friday|submit/.test(hay)) {
     return {
       type: "DRAFT_OUTREACH",
       label: "Draft playlist note",
@@ -175,15 +198,13 @@ function inferPitchAction(
   };
 }
 
-/** Turn news articles into Agent Outside proposals (source: webhook). */
 export function articlesToProposals(
   articles: MarketArticle[],
   now = Date.now()
 ): AgentProposal[] {
   return articles.map((a, i) => {
     const body = [
-      a.description ||
-        "Industry headline — check if your catalogue or roster fits (any market).",
+      a.description || "Music market signal — check if it opens a pitch.",
       a.source ? `Source: ${a.source}` : "",
       a.url ? `Read: ${a.url}` : "",
     ]
