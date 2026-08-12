@@ -66,7 +66,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("roster_artists")
-      .select("id, stage_name, slug, genre, org_id")
+      .select("id, stage_name, slug, genre")
       .eq("owner_user_id", user.id)
       .order("stage_name")
       .limit(max);
@@ -78,7 +78,7 @@ export async function GET() {
       if (admin) {
         const { data: rows } = await admin
           .from("roster_artists")
-          .select("id, stage_name, slug, genre, org_id")
+          .select("id, stage_name, slug, genre")
           .eq("owner_user_id", user.id)
           .order("stage_name")
           .limit(max);
@@ -104,6 +104,7 @@ export async function POST(req: Request) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
+
     if (!user)
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -123,6 +124,11 @@ export async function POST(req: Request) {
 
     const admin = adminClient();
     const db = admin || supabase;
+    if (!admin) {
+      console.warn(
+        "[roster POST] SUPABASE_SERVICE_ROLE_KEY missing — tip create may hit RLS"
+      );
+    }
 
     const { count } = await db
       .from("roster_artists")
@@ -132,7 +138,7 @@ export async function POST(req: Request) {
     if ((count ?? 0) >= max) {
       const { data: existingList } = await db
         .from("roster_artists")
-        .select("id, stage_name, slug, genre, org_id")
+        .select("id, stage_name, slug, genre")
         .eq("owner_user_id", user.id)
         .limit(1);
       if (existingList?.[0]?.slug) {
@@ -161,7 +167,6 @@ export async function POST(req: Request) {
       .maybeSingle();
     if (existing) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
 
-    // Never touch orgs — RLS infinite recursion blocked tip create.
     const row: Record<string, unknown> = {
       stage_name: stageName,
       slug,
@@ -172,19 +177,33 @@ export async function POST(req: Request) {
     const { data: artist, error } = await db
       .from("roster_artists")
       .insert(row)
-      .select("id, stage_name, slug, genre, org_id")
+      .select("id, stage_name, slug, genre")
       .single();
 
     if (error || !artist) {
       console.error("[roster POST]", error);
-      return NextResponse.json(
-        {
-          error:
-            error?.message ||
-            "Could not create tip link. Need roster_artists insert for owner_user_id.",
-        },
-        { status: 500 }
-      );
+      const msg = error?.message || "Could not create tip link";
+      if (/orgs|recursion/i.test(msg)) {
+        return NextResponse.json(
+          {
+            error:
+              "Database policy still blocks tip links. Run migration 021_fix_rls_no_orgs_recursion.sql in Supabase SQL Editor, then try again.",
+            code: "RLS_ORGS",
+          },
+          { status: 500 }
+        );
+      }
+      if (/org_id|null value/i.test(msg)) {
+        return NextResponse.json(
+          {
+            error:
+              "Run migration 021_fix_rls_no_orgs_recursion.sql in Supabase (makes org_id optional for solo tip links).",
+            code: "ORG_ID_REQUIRED",
+          },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json({ error: msg }, { status: 500 });
     }
 
     return NextResponse.json({ artist, max, plan });
