@@ -10,7 +10,7 @@ const STEPS = [
   {
     id: "scan",
     title: "Scan your artist brain",
-    href: "/activate",
+    href: "/opportunities",
     doneKey: "omniv_challenge_scan",
   },
   {
@@ -28,46 +28,42 @@ const STEPS = [
   {
     id: "share",
     title: "Share the link",
-    href: "/crm?tab=rooms",
+    href: "/crm?focus=room",
     doneKey: "omniv_challenge_share",
   },
   {
     id: "report",
-    title: "Report back to Ziki",
-    href: "/ziki",
+    title: "Report back",
+    href: "/crm?tab=money",
     doneKey: "omniv_challenge_report",
   },
-] as const;
+];
 
 const DISMISS_KEY = "omniv_challenge_dismissed";
 
-/** Optional first-week checklist. Hides when dismissed or all steps done. */
-export function RoomChallenge({
-  onOpenRooms,
-}: {
-  onOpenRooms?: () => void;
-}) {
+export function RoomChallenge() {
   const [done, setDone] = useState<Record<string, boolean>>({});
-  const [hidden, setHidden] = useState(true);
+  const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
-    const next: Record<string, boolean> = {};
-    for (const s of STEPS) {
-      try {
-        next[s.id] = localStorage.getItem(s.doneKey) === "1";
-      } catch {
-        next[s.id] = false;
-      }
-    }
-    setDone(next);
     try {
-      const dismissed = localStorage.getItem(DISMISS_KEY) === "1";
-      const allDone = STEPS.every((s) => next[s.id]);
-      setHidden(dismissed || allDone);
+      if (localStorage.getItem(DISMISS_KEY) === "1") {
+        setDismissed(true);
+        return;
+      }
+      const map: Record<string, boolean> = {};
+      for (const s of STEPS) {
+        map[s.id] = localStorage.getItem(s.doneKey) === "1";
+      }
+      setDone(map);
+      setDismissed(false);
     } catch {
-      setHidden(false);
+      setDismissed(false);
     }
   }, []);
+
+  const count = STEPS.filter((s) => done[s.id]).length;
+  if (dismissed || count >= STEPS.length) return null;
 
   function mark(id: string, key: string) {
     try {
@@ -75,18 +71,7 @@ export function RoomChallenge({
     } catch {
       /* soft */
     }
-    setDone((d) => {
-      const next = { ...d, [id]: true };
-      if (STEPS.every((s) => next[s.id])) {
-        try {
-          localStorage.setItem(DISMISS_KEY, "1");
-        } catch {
-          /* soft */
-        }
-        setHidden(true);
-      }
-      return next;
-    });
+    setDone((d) => ({ ...d, [id]: true }));
   }
 
   function dismiss() {
@@ -95,85 +80,55 @@ export function RoomChallenge({
     } catch {
       /* soft */
     }
-    setHidden(true);
+    setDismissed(true);
   }
 
-  if (hidden) return null;
-
-  const count = STEPS.filter((s) => done[s.id]).length;
-
   return (
-    <Card className="overflow-hidden border-omniv-gold/30 bg-gradient-to-br from-omniv-gold/10 via-omniv-card to-omniv-black/40 p-4">
-      <div className="flex items-start gap-2">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-omniv-gold/20">
-          <Zap className="h-4 w-4 text-omniv-gold" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
-              First room · optional
-            </p>
-            <button
-              type="button"
-              onClick={dismiss}
-              className="rounded-md p-1 text-omniv-text-muted hover:bg-omniv-elevated"
-              aria-label="Dismiss checklist"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <p className="mt-0.5 text-[13px] font-semibold tracking-tight">
-            Get one room live this week
-          </p>
-          <p className="mt-1 text-[12px] leading-snug text-omniv-text-secondary">
-            Optional checklist — scan → city → open room → share → tell Ziki.
-            Do it once, then it goes away. {count}/{STEPS.length} done.
-          </p>
-        </div>
+    <Card className="relative border-omniv-gold/25 bg-omniv-gold/5 p-4">
+      <button
+        type="button"
+        className="absolute right-2 top-2 rounded-md p-1 text-omniv-text-muted hover:bg-omniv-card"
+        onClick={dismiss}
+        aria-label="Dismiss"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+      <div className="flex items-center gap-2 pr-6">
+        <Zap className="h-4 w-4 text-omniv-gold" />
+        <p className="text-[13px] font-semibold">48-hour room challenge</p>
+        <span className="text-[11px] text-omniv-text-muted">
+          {count}/{STEPS.length}
+        </span>
       </div>
-
-      <ul className="mt-3 space-y-1.5">
-        {STEPS.map((s, i) => {
-          const isDone = !!done[s.id];
-          return (
-            <li
-              key={s.id}
-              className="flex items-center gap-2 rounded-xl border border-omniv-border/60 bg-omniv-black/20 px-3 py-2"
+      <p className="mt-1 text-[12px] text-omniv-text-secondary">
+        Optional. One room this week beats another dashboard.
+      </p>
+      <ul className="mt-3 space-y-2">
+        {STEPS.map((s) => (
+          <li key={s.id} className="flex items-center gap-2">
+            {done[s.id] ? (
+              <Check className="h-4 w-4 shrink-0 text-emerald-500" />
+            ) : (
+              <Circle className="h-4 w-4 shrink-0 text-omniv-text-muted" />
+            )}
+            <Link
+              href={s.href}
+              className="flex-1 text-[12px] font-medium text-omniv-text hover:text-omniv-gold"
+              onClick={() => mark(s.id, s.doneKey)}
             >
-              {isDone ? (
-                <Check className="h-4 w-4 shrink-0 text-omniv-gold" />
-              ) : (
-                <Circle className="h-4 w-4 shrink-0 text-omniv-text-muted" />
-              )}
-              <span className="min-w-0 flex-1 text-[12px]">
-                {i + 1}. {s.title}
-              </span>
-              {s.id === "room" && onOpenRooms ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-[11px]"
-                  onClick={() => {
-                    mark(s.id, s.doneKey);
-                    onOpenRooms();
-                  }}
-                >
-                  Open
-                </Button>
-              ) : (
-                <Link
-                  href={s.href}
-                  onClick={() => mark(s.id, s.doneKey)}
-                  className="inline-flex h-7 items-center rounded-md border border-omniv-border px-2.5 text-[11px] font-medium text-omniv-text-secondary hover:border-omniv-gold/40 hover:text-omniv-gold"
-                >
-                  Go
-                </Link>
-              )}
-            </li>
-          );
-        })}
+              {s.title}
+            </Link>
+          </li>
+        ))}
       </ul>
+      <Button
+        variant="outline"
+        size="sm"
+        className="mt-3 h-8 w-full text-[11px]"
+        onClick={dismiss}
+      >
+        Not now
+      </Button>
     </Card>
   );
 }
