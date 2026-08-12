@@ -1,12 +1,20 @@
 "use client";
 
-import { forwardRef, type ButtonHTMLAttributes } from "react";
+import {
+  forwardRef,
+  isValidElement,
+  cloneElement,
+  type ButtonHTMLAttributes,
+  type ReactElement,
+} from "react";
 import { cn } from "@/lib/utils";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "ghost" | "outline" | "danger";
   size?: "sm" | "md" | "lg" | "icon";
   loading?: boolean;
+  /** When true, styles the single child element (e.g. Link) instead of a button */
+  asChild?: boolean;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -17,6 +25,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       size = "md",
       loading = false,
       disabled,
+      asChild = false,
       children,
       ...props
     },
@@ -45,10 +54,19 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       icon: "h-10 w-10 rounded-[var(--radius)]",
     };
 
+    const classes = cn(base, variants[variant], sizes[size], className);
+
+    if (asChild && isValidElement(children)) {
+      const child = children as ReactElement<{ className?: string }>;
+      return cloneElement(child, {
+        className: cn(classes, child.props.className),
+      });
+    }
+
     return (
       <button
         ref={ref}
-        className={cn(base, variants[variant], sizes[size], className)}
+        className={classes}
         disabled={disabled || loading}
         {...props}
       >
