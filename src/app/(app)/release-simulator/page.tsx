@@ -6,6 +6,8 @@ import { PredictiveCalendar } from "@/components/release/predictive-calendar";
 import { FeatureGate } from "@/components/billing/feature-gate";
 import { usePlan } from "@/components/billing/plan-provider";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 
 export default function ReleaseSimulatorPage() {
   const { plan, setPlan } = usePlan();
@@ -13,7 +15,7 @@ export default function ReleaseSimulatorPage() {
     <AppShell>
       <div className="relative -mx-3 mb-3 overflow-hidden sm:-mx-4 md:mx-0 md:rounded-2xl">
         <div className="absolute inset-0 bg-gradient-to-br from-violet-500/12 via-omniv-gold/8 to-transparent" />
-        <div className="relative flex flex-col gap-2 px-3 pb-3 pt-1 sm:flex-row sm:items-end sm:justify-between sm:px-4 md:px-5 md:pt-4">
+        <div className="relative flex flex-col gap-3 px-3 pb-3 pt-1 sm:flex-row sm:items-end sm:justify-between sm:px-4 md:px-5 md:pt-4">
           <div>
             <p className="font-data text-[10px] uppercase tracking-[0.16em] text-omniv-gold">
               Studio
@@ -21,17 +23,23 @@ export default function ReleaseSimulatorPage() {
             <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
               Release
             </h1>
-            <p className="mt-1 max-w-lg text-[12px] text-omniv-text-secondary">
-              Score the window, TikTok/playlist lanes, then ship content before
-              the date.
+            <p className="mt-1 max-w-lg text-[13px] text-omniv-text-secondary">
+              Pick a drop window. See what content to post before the date.
+              Connect the plan to your catalogue and tip link so the release can
+              make money.
             </p>
           </div>
-          <Link
-            href="/content"
-            className="text-[12px] font-medium text-omniv-gold"
-          >
-            Content · sounds →
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="outline" className="h-9 text-[12px]">
+              <Link href="/content">
+                Content & sounds
+                <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+            <Button asChild size="sm" className="h-9 text-[12px]">
+              <Link href="/crm?tab=money">Tip link</Link>
+            </Button>
+          </div>
         </div>
       </div>
       <FeatureGate
