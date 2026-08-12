@@ -14,6 +14,7 @@ import {
   purgeInternalPending,
   isOutsideSignal,
   clearStalePending,
+  purgeNonMusicMarketPending,
 } from "@/lib/agent/store";
 import { runAgentScan } from "@/lib/agent/scan";
 import { getArtistBrain, getProfile } from "@/lib/db/profile";
@@ -47,6 +48,7 @@ export function NotificationsPanel() {
 
   useEffect(() => {
     clearStalePending();
+    purgeNonMusicMarketPending();
     purgeInternalPending();
     refresh();
     const on = () => refresh();
