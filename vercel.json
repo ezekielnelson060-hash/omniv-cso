@@ -5,20 +5,8 @@
       "schedule": "0 6 * * 1"
     },
     {
-      "path": "/api/cron/fan-tiers",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron/agent-scan",
-      "schedule": "0 7 * * *"
-    },
-    {
-      "path": "/api/cron/platform-metrics",
-      "schedule": "0 8 * * *"
-    },
-    {
       "path": "/api/cron/market-news",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }
