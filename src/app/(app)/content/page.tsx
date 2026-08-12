@@ -5,7 +5,6 @@ import { AppShell } from "@/components/layout/app-shell";
 import { IntelligencePanel } from "@/components/content/intelligence-panel";
 import { FeatureGate } from "@/components/billing/feature-gate";
 import { usePlan } from "@/components/billing/plan-provider";
-import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
 export default function ContentPage() {
@@ -29,15 +28,19 @@ export default function ContentPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild size="sm" variant="outline" className="h-9 text-[12px]">
-              <Link href="/release-simulator">
-                Plan release
-                <ArrowRight className="ml-1 h-3.5 w-3.5" />
-              </Link>
-            </Button>
-            <Button asChild size="sm" className="h-9 text-[12px]">
-              <Link href="/catalogue">Your tracks</Link>
-            </Button>
+            <Link
+              href="/release-simulator"
+              className="inline-flex h-9 items-center gap-1 rounded-full border border-omniv-border px-3 text-[12px] font-medium hover:border-omniv-gold/40"
+            >
+              Plan release
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link
+              href="/catalogue"
+              className="inline-flex h-9 items-center rounded-full bg-omniv-gold px-3 text-[12px] font-semibold text-black"
+            >
+              Your tracks
+            </Link>
           </div>
         </div>
       </div>

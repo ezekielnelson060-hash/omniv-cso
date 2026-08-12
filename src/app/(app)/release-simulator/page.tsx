@@ -6,7 +6,6 @@ import { PredictiveCalendar } from "@/components/release/predictive-calendar";
 import { FeatureGate } from "@/components/billing/feature-gate";
 import { usePlan } from "@/components/billing/plan-provider";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 
 export default function ReleaseSimulatorPage() {
@@ -30,15 +29,19 @@ export default function ReleaseSimulatorPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild size="sm" variant="outline" className="h-9 text-[12px]">
-              <Link href="/content">
-                Content & sounds
-                <ArrowRight className="ml-1 h-3.5 w-3.5" />
-              </Link>
-            </Button>
-            <Button asChild size="sm" className="h-9 text-[12px]">
-              <Link href="/crm?tab=money">Tip link</Link>
-            </Button>
+            <Link
+              href="/content"
+              className="inline-flex h-9 items-center gap-1 rounded-full border border-omniv-border px-3 text-[12px] font-medium hover:border-omniv-gold/40"
+            >
+              Content & sounds
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link
+              href="/crm?tab=money"
+              className="inline-flex h-9 items-center rounded-full bg-omniv-gold px-3 text-[12px] font-semibold text-black"
+            >
+              Tip link
+            </Link>
           </div>
         </div>
       </div>
