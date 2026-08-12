@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -459,6 +460,15 @@ export function SimulatorPanel() {
               <Button size="sm" className="gap-1.5" onClick={sendToZiki}>
                 <MessageSquare className="h-3.5 w-3.5" />
                 Open in Ziki
+              </Button>
+              <Button size="sm" variant="outline" className="gap-1.5" asChild>
+                <Link href="/content">Content & sounds</Link>
+              </Button>
+              <Button size="sm" variant="outline" className="gap-1.5" asChild>
+                <Link href="/crm?tab=money">Tip link in bio</Link>
+              </Button>
+              <Button size="sm" variant="outline" className="gap-1.5" asChild>
+                <Link href="/crm?tab=rooms">Open a room</Link>
               </Button>
             </div>
           </Card>
