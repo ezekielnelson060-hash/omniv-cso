@@ -14,7 +14,7 @@ type Venue = {
   type: string;
 };
 
-/** Real places near a city via OpenStreetMap Nominatim. */
+/** Places near a city via Omniv → OpenStreetMap. */
 export function VenueFinder({
   city: seedCity,
   onPick,
@@ -42,59 +42,22 @@ export function VenueFinder({
     setErr(null);
     setRows([]);
     try {
-      const geoRes = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(c)}`,
-        {
-          headers: {
-            "Accept-Language": "en",
-            "User-Agent": "OmnivVenueFinder/1.0",
-          },
-        }
+      const res = await fetch(
+        `/api/venues/search?city=${encodeURIComponent(c)}&q=${encodeURIComponent(query.trim() || "music venue")}`
       );
-      const geo = (await geoRes.json()) as { lat: string; lon: string }[];
-      if (!geo?.[0]) {
-        setErr("City not found — try another spelling");
-        return;
+      const data = (await res.json()) as {
+        venues?: Venue[];
+        error?: string | null;
+      };
+      const list = data.venues || [];
+      setRows(list);
+      if (!list.length) {
+        setErr(
+          data.error || "No venues in that box — try club, bar, or theater"
+        );
       }
-      const lat = Number(geo[0].lat);
-      const lon = Number(geo[0].lon);
-      const d = 0.12;
-      const viewbox = `${lon - d},${lat + d},${lon + d},${lat - d}`;
-      const q = `${query.trim() || "venue"} ${c}`;
-      const placeRes = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&limit=12&q=${encodeURIComponent(q)}&viewbox=${viewbox}&bounded=1`,
-        {
-          headers: {
-            "Accept-Language": "en",
-            "User-Agent": "OmnivVenueFinder/1.0",
-          },
-        }
-      );
-      const places = (await placeRes.json()) as {
-        place_id: number;
-        display_name: string;
-        lat: string;
-        lon: string;
-        type?: string;
-        class?: string;
-      }[];
-      setRows(
-        (places || []).map((p) => {
-          const parts = (p.display_name || "").split(",");
-          return {
-            id: String(p.place_id),
-            name: parts[0]?.trim() || "Venue",
-            lat: Number(p.lat),
-            lon: Number(p.lon),
-            address: p.display_name,
-            type: p.type || p.class || "place",
-          };
-        })
-      );
-      if (!(places || []).length)
-        setErr("No venues in that box — broaden the search term");
     } catch {
-      setErr("Search failed — check network and try again");
+      setErr("Search failed — try again");
     } finally {
       setBusy(false);
     }
@@ -102,16 +65,16 @@ export function VenueFinder({
 
   return (
     <div className="space-y-3 rounded-2xl border border-omniv-border bg-omniv-card p-4">
-      <div className="flex items-center gap-2">
-        <MapPin className="h-4 w-4 text-omniv-gold" />
+      <div className="flex items-start gap-2">
+        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-omniv-gold" />
         <div>
           <p className="text-sm font-semibold tracking-tight">Find a venue</p>
-          <p className="text-[11px] text-omniv-text-muted">
+          <p className="text-[12px] text-omniv-text-muted">
             After you see your hot city — search places nearby and book.
           </p>
         </div>
       </div>
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="space-y-2">
         <Input
           value={city}
           onChange={(e) => setCity(e.target.value)}
@@ -125,7 +88,7 @@ export function VenueFinder({
           className="h-10"
         />
         <Button
-          className="h-10 gap-1.5 rounded-xl"
+          className="h-10 w-full gap-1.5 rounded-xl"
           disabled={busy}
           onClick={() => void search()}
         >

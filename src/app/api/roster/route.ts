@@ -161,56 +161,19 @@ export async function POST(req: Request) {
       .maybeSingle();
     if (existing) slug = `${slug}-${Date.now().toString(36).slice(-4)}`;
 
-    let orgId: string | null = null;
-    try {
-      const { data: org } = await db
-        .from("orgs")
-        .select("id")
-        .eq("owner_user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-      if (org?.id) {
-        orgId = org.id as string;
-      } else {
-        const { data: created } = await db
-          .from("orgs")
-          .insert({
-            name: "My Workspace",
-            kind: "manager",
-            owner_user_id: user.id,
-          })
-          .select("id")
-          .maybeSingle();
-        orgId = (created?.id as string) || null;
-      }
-    } catch {
-      orgId = null;
-    }
-
+    // Never touch orgs — RLS infinite recursion blocked tip create.
     const row: Record<string, unknown> = {
       stage_name: stageName,
       slug,
       genre: body.genre?.trim() || null,
       owner_user_id: user.id,
     };
-    if (orgId) row.org_id = orgId;
 
-    let { data: artist, error } = await db
+    const { data: artist, error } = await db
       .from("roster_artists")
       .insert(row)
       .select("id, stage_name, slug, genre, org_id")
       .single();
-
-    if (error && orgId) {
-      delete row.org_id;
-      const retry = await db
-        .from("roster_artists")
-        .insert(row)
-        .select("id, stage_name, slug, genre, org_id")
-        .single();
-      artist = retry.data;
-      error = retry.error;
-    }
 
     if (error || !artist) {
       console.error("[roster POST]", error);
@@ -218,7 +181,7 @@ export async function POST(req: Request) {
         {
           error:
             error?.message ||
-            "Could not create tip link. Check roster_artists allows owner_user_id insert.",
+            "Could not create tip link. Need roster_artists insert for owner_user_id.",
         },
         { status: 500 }
       );
