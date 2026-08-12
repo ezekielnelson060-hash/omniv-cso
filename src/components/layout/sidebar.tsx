@@ -40,6 +40,7 @@ const primary: NavItem[] = [
   { href: "/catalogue", label: "Catalogue", icon: Library },
 ];
 
+/** Always visible — collapse was hiding Release / Content / Progress. */
 const studio: NavItem[] = [
   { href: "/release-simulator", label: "Release", icon: Rocket },
   { href: "/content", label: "Content", icon: Film },
@@ -55,11 +56,18 @@ const more: NavItem[] = [
   { href: "/help", label: "Help", icon: HelpCircle },
 ];
 
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mt-4 px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-text-muted">
+      {children}
+    </p>
+  );
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [studioOpen, setStudioOpen] = useState(true);
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(true);
   const [name, setName] = useState<string | null>(null);
   const pending = useAgentPending();
 
@@ -116,7 +124,7 @@ export function Sidebar() {
   }
 
   const panel = (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-omniv-black">
       <div className="flex items-center gap-2.5 px-3 py-4">
         <Image
           src="/logo.svg"
@@ -126,7 +134,7 @@ export function Sidebar() {
           className="rounded-lg"
         />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-semibold tracking-tight">
+          <p className="truncate text-[14px] font-semibold tracking-tight text-omniv-text">
             Omniv
           </p>
           {name && (
@@ -143,23 +151,15 @@ export function Sidebar() {
         </button>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto px-2 pb-4">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-4">
         {primary.map((item) => (
           <NavLink key={item.href} item={item} />
         ))}
 
-        <button
-          type="button"
-          onClick={() => setStudioOpen((v) => !v)}
-          className="mt-3 flex w-full items-center gap-2 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-text-muted"
-        >
-          Studio
-          <ChevronDown
-            className={cn("h-3.5 w-3.5 transition", studioOpen && "rotate-180")}
-          />
-        </button>
-        {studioOpen &&
-          studio.map((item) => <NavLink key={item.href} item={item} />)}
+        <SectionLabel>Studio</SectionLabel>
+        {studio.map((item) => (
+          <NavLink key={item.href} item={item} />
+        ))}
 
         <button
           type="button"
@@ -168,10 +168,14 @@ export function Sidebar() {
         >
           More
           <ChevronDown
-            className={cn("h-3.5 w-3.5 transition", moreOpen && "rotate-180")}
+            className={cn(
+              "h-3.5 w-3.5 transition-transform",
+              moreOpen ? "rotate-180" : ""
+            )}
           />
         </button>
-        {moreOpen && more.map((item) => <NavLink key={item.href} item={item} />)}
+        {moreOpen &&
+          more.map((item) => <NavLink key={item.href} item={item} />)}
       </nav>
     </div>
   );
