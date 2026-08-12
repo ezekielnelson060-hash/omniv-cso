@@ -12,6 +12,7 @@ import { CityHeatMap } from "@/components/crm/city-heat-map";
 import { GatheringsPanel } from "@/components/crm/gatherings-panel";
 import { VenueFinder } from "@/components/crm/venue-finder";
 import { RoomChallenge } from "@/components/crm/room-challenge";
+import { ShareFanGate } from "@/components/crm/share-fan-gate";
 import { RosterPayouts } from "@/components/crm/roster-payouts";
 import { StorySlides } from "@/components/onboarding/story-slides";
 import { isPlaceholderStageName } from "@/lib/crm-priority";
@@ -212,6 +213,11 @@ export function CrmPanel({
             ))}
           </div>
           <RosterSwitcher />
+          <ShareFanGate
+            gateSlug={gateSlug}
+            artistName={primaryArtistName}
+            fanCount={fanCount}
+          />
           <RoomChallenge />
           <div className="grid gap-4 lg:grid-cols-2">
             <CityHeatMap
@@ -287,6 +293,11 @@ export function CrmPanel({
 
       {tab === "fans" && (
         <div className="space-y-4">
+          <ShareFanGate
+            gateSlug={gateSlug}
+            artistName={primaryArtistName}
+            fanCount={fanCount}
+          />
           <FanGateMetrics
             fanCount={fanCount}
             fans7d={fans7d}
