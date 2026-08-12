@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** After onboarding / legacy /dashboard links → Activate research. */
-export default function DashboardRedirect() {
-  redirect("/activate");
+/** Home entry → Moves (precision plan). Activate scan was redundant. */
+export default function DashboardPage() {
+  redirect("/opportunities");
 }
