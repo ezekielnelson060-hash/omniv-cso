@@ -1,0 +1,3 @@
+Trigger production deploy of HEAD main.
+Includes: Schema.org FAQ, sitemap trailing slash, city demand briefs, Ideogram landing.
+Timestamp: 2026-08-12T17:00:00Z
