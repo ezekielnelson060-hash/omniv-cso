@@ -103,14 +103,31 @@ export function FanGateMetrics(m: FanGateMetricsData) {
           </Badge>
         ))}
         {m.gateSlug && (
-          <a
-            href={`/f/${m.gateSlug}`}
-            target="_blank"
-            rel="noreferrer"
-            className="ml-auto font-data text-[11px] text-omniv-gold hover:underline"
-          >
-            /f/{m.gateSlug}
-          </a>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <a
+              href={`/f/${m.gateSlug}?source=bio`}
+              target="_blank"
+              rel="noreferrer"
+              className="font-data text-[11px] text-omniv-gold hover:underline"
+            >
+              /f/{m.gateSlug}
+            </a>
+            <button
+              type="button"
+              className="rounded-lg border border-omniv-border px-2 py-1 text-[11px] font-medium text-omniv-text-secondary hover:border-omniv-gold/40 hover:text-omniv-gold"
+              onClick={() => {
+                const origin =
+                  typeof window !== "undefined"
+                    ? window.location.origin
+                    : "https://omniv.media";
+                void navigator.clipboard.writeText(
+                  `${origin}/f/${m.gateSlug}?source=bio`
+                );
+              }}
+            >
+              Copy
+            </button>
+          </div>
         )}
       </div>
     </Card>
