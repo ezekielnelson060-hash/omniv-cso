@@ -101,7 +101,7 @@ export function pendingCount(): number {
 }
 
 export function clearStalePending() {
-  const cutoff = Date.now() - 1000 * 60 * 60 * 24 * 14;
+  const cutoff = Date.now() - 1000 * 60 * 60 * 24 * 7;
   const list = loadProposals().filter((p) => {
     if (p.status === "pending" && (p.createdAt || 0) < cutoff) return false;
     if (p.status !== "pending" && (p.createdAt || 0) < cutoff) return false;
@@ -121,4 +121,24 @@ export function purgeNonMusicMarketPending() {
     return !reject.test(hay);
   });
   save(list);
+}
+
+/** Dismiss every pending signal (local). */
+export function clearAllPending() {
+  const list = loadProposals().map((p) =>
+    p.status === "pending" ? { ...p, status: "dismissed" as const } : p
+  );
+  save(list);
+  return list;
+}
+
+/** Drop done/dismissed history older than 7 days; keep fresh pending. */
+export function clearOldHistory() {
+  const cutoff = Date.now() - 1000 * 60 * 60 * 24 * 7;
+  const list = loadProposals().filter((p) => {
+    if (p.status === "pending") return true;
+    return (p.createdAt || 0) >= cutoff;
+  });
+  save(list);
+  return list;
 }
