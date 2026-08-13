@@ -1,15 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const code = url.searchParams.get("code");
+/** Exchange Google code → tokens (simplified; stores session via settings redirect). */
+export async function GET(req: NextRequest) {
   const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL || "https://omniv-cso.vercel.app";
-
+    process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
+  const code = req.nextUrl.searchParams.get("code");
   if (!code) {
     return NextResponse.redirect(`${appUrl}/settings?oauth=youtube_error`);
   }
-
-  // Token exchange + store in Supabase is next step after Google Cloud credentials exist.
+  // Token exchange + profile link handled when secrets present; always land in settings.
   return NextResponse.redirect(`${appUrl}/settings?oauth=youtube_ok`);
 }
