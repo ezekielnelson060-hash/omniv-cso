@@ -9,6 +9,8 @@ const CONTENT_TYPES = [
   "bio_cta",
   "release_announcement",
   "story_sequence",
+  "tip_soft",
+  "release_day_pack",
 ] as const;
 
 type ContentType = (typeof CONTENT_TYPES)[number];
@@ -58,6 +60,12 @@ Include subject suggestion, greeting, body, CTA, sign-off.`,
 Sections: **Instagram**, **TikTok**, **Email**, **Stories**.`,
       story_sequence: `Write a 4-frame Stories sequence for ${name} about: ${brief}.
 Frame 1–4: visual direction + text overlay + optional sticker.`,
+      tip_soft: `Write 5 soft tip / support lines for ${name} about: ${brief}.
+Rules: never pushy, never "buy me coffee" spam. Prefer "if this helped you this week…" tone.
+Include: 2 bio one-liners (under 80 chars), 2 caption enders, 1 Stories text. Numbered.`,
+      release_day_pack: `Write a 24-hour release-day content pack for ${name}: ${brief}.
+Timeline: **T-3h**, **Drop**, **+2h**, **+8h**, **Next morning**.
+Each beat: post type, hook, caption angle, soft CTA (Fan Gate or tip — not hard sell).`,
     };
 
     const result = await zikiComplete(prompts[type], system);
