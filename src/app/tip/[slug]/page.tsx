@@ -5,7 +5,8 @@ import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Heart, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { ArtistAvatar } from "@/components/public/artist-avatar";
 
 /** Public tip page — audience language only */
 export default function TipPage() {
@@ -14,7 +15,8 @@ export default function TipPage() {
   const slug = String(params.slug || "");
   const paid = search.get("paid") === "1";
 
-  const [artist, setArtist] = useState<string>("…");
+  const [artist, setArtist] = useState<string>("...");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [tagline, setTagline] = useState(
     "Support the music. Every tip helps the next song."
   );
@@ -24,7 +26,7 @@ export default function TipPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState(
-    paid ? "Thank you — your support means a lot." : null
+    paid ? "Thank you - your support means a lot." : null
   );
 
   useEffect(() => {
@@ -38,9 +40,11 @@ export default function TipPage() {
           const data = (await res.json()) as {
             stageName?: string;
             tipTagline?: string | null;
+            avatarUrl?: string | null;
           };
           if (data.stageName) setArtist(data.stageName);
           if (data.tipTagline?.trim()) setTagline(data.tipTagline.trim());
+          if (data.avatarUrl) setAvatarUrl(data.avatarUrl);
         }
       } catch {
         /* soft */
@@ -83,14 +87,18 @@ export default function TipPage() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-omniv-black px-4 py-12 text-omniv-text">
       <div className="w-full max-w-md space-y-5 rounded-2xl border border-omniv-border bg-omniv-card p-6">
-        <div className="flex items-center gap-2">
-          <Heart className="h-5 w-5 text-omniv-gold" />
+        <div className="flex items-center gap-3">
+          <ArtistAvatar
+            name={artist === "..." ? "Artist" : artist}
+            src={avatarUrl}
+            size={52}
+          />
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
               Support
             </p>
             <h1 className="text-xl font-semibold tracking-tight">
-              {artist === "…" ? "Artist" : artist}
+              {artist === "..." ? "Artist" : artist}
             </h1>
           </div>
         </div>
@@ -148,7 +156,7 @@ export default function TipPage() {
               disabled={busy || !slug}
             >
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-              Tip ${amount || "…"}
+              Tip ${amount || "..."}
             </Button>
           </form>
         )}
