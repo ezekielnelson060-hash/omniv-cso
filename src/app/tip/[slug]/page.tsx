@@ -7,30 +7,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Heart, Loader2 } from "lucide-react";
 
-/** Public standalone tip link — /tip/[roster-slug] */
+/** Public tip page — audience language only */
 export default function TipPage() {
   const params = useParams();
   const search = useSearchParams();
   const slug = String(params.slug || "");
   const paid = search.get("paid") === "1";
 
-  const [artist, setArtist] = useState<string>("Artist");
+  const [artist, setArtist] = useState<string>("…");
+  const [tagline, setTagline] = useState(
+    "Support the music. Every tip helps the next song."
+  );
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("5");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [msg, setMsg] = useState(paid ? "Thank you — tip received." : null);
+  const [msg, setMsg] = useState(
+    paid ? "Thank you — your support means a lot." : null
+  );
 
   useEffect(() => {
+    if (!slug) return;
     void (async () => {
       try {
         const res = await fetch(
           `/api/roster/public?slug=${encodeURIComponent(slug)}`
         );
         if (res.ok) {
-          const data = (await res.json()) as { stageName?: string };
+          const data = (await res.json()) as {
+            stageName?: string;
+            tipTagline?: string | null;
+          };
           if (data.stageName) setArtist(data.stageName);
+          if (data.tipTagline?.trim()) setTagline(data.tipTagline.trim());
         }
       } catch {
         /* soft */
@@ -40,6 +50,10 @@ export default function TipPage() {
 
   async function pay(e: React.FormEvent) {
     e.preventDefault();
+    if (!slug) {
+      setErr("This tip link is incomplete. Ask the artist for a fresh link.");
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {
@@ -73,15 +87,14 @@ export default function TipPage() {
           <Heart className="h-5 w-5 text-omniv-gold" />
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
-              Tip jar
+              Support
             </p>
-            <h1 className="text-xl font-semibold tracking-tight">{artist}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">
+              {artist === "…" ? "Artist" : artist}
+            </h1>
           </div>
         </div>
-        <p className="text-[13px] text-omniv-text-secondary">
-          Support the music directly. No room required — share this link
-          anywhere.
-        </p>
+        <p className="text-[13px] text-omniv-text-secondary">{tagline}</p>
         {msg && (
           <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[12px] text-emerald-300">
             {msg}
@@ -132,7 +145,7 @@ export default function TipPage() {
             <Button
               type="submit"
               className="h-11 w-full gap-2 rounded-xl"
-              disabled={busy}
+              disabled={busy || !slug}
             >
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}
               Tip ${amount || "…"}
