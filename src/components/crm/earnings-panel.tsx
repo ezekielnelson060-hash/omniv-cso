@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
 import { Banknote, AlertCircle } from "lucide-react";
+import { ShareLinkButtons } from "@/components/crm/share-link-buttons";
 
 type Row = {
   amount: number;
@@ -16,7 +17,6 @@ type Row = {
 
 function TipLinkBlock() {
   const [artists, setArtists] = useState<{ slug: string; name: string }[]>([]);
-  const [copied, setCopied] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [createErr, setCreateErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,25 +51,6 @@ function TipLinkBlock() {
   useEffect(() => {
     void loadArtists();
   }, []);
-
-  async function copyUrl(slug: string) {
-    const url = `${origin}/tip/${slug}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(slug);
-      window.setTimeout(() => setCopied(null), 2000);
-    } catch {
-      /* soft */
-    }
-  }
-
-  function shareWhatsApp(slug: string, name: string) {
-    const url = `${origin}/tip/${slug}`;
-    const text = encodeURIComponent(
-      `Support ${name} — tip here (no account needed): ${url}`
-    );
-    window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
-  }
 
   async function createMyTipLink() {
     setCreating(true);
@@ -113,7 +94,11 @@ function TipLinkBlock() {
           if (prev.some((a) => a.slug === next.slug)) return prev;
           return [next, ...prev];
         });
-        await copyUrl(next.slug);
+        try {
+          await navigator.clipboard.writeText(`${origin}/tip/${next.slug}`);
+        } catch {
+          /* soft */
+        }
       } else {
         await loadArtists();
         setCreateErr(
@@ -140,8 +125,8 @@ function TipLinkBlock() {
           Create your tip link
         </p>
         <p className="text-[12px] text-omniv-text-secondary">
-          One link for bio, stories, and room chat. Fans tip without joining a
-          room. About 90% goes to you.
+          One link for bio, stories, and chats. Fans tip without a ticket. About
+          90% goes to you.
         </p>
         <button
           type="button"
@@ -174,29 +159,13 @@ function TipLinkBlock() {
             <p className="mt-0.5 break-all font-data text-[11px] text-omniv-gold">
               {url}
             </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => void copyUrl(a.slug)}
-                className="h-8 rounded-lg border border-omniv-border px-3 text-[12px] font-medium hover:border-omniv-gold/40 hover:text-omniv-gold"
-              >
-                {copied === a.slug ? "Copied" : "Copy tip link"}
-              </button>
-              <button
-                type="button"
-                onClick={() => shareWhatsApp(a.slug, a.name)}
-                className="h-8 rounded-lg border border-omniv-border px-3 text-[12px] font-medium hover:border-omniv-gold/40"
-              >
-                WhatsApp
-              </button>
-              <a
-                href={url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-8 items-center rounded-lg border border-omniv-border px-3 text-[12px] font-medium hover:border-omniv-gold/40"
-              >
-                Open tip page
-              </a>
+            <div className="mt-2">
+              <ShareLinkButtons
+                url={url}
+                message={`Support ${a.name} — tip here:`}
+                previewHref={url}
+                previewLabel="Open tip page"
+              />
             </div>
           </div>
         );
@@ -253,7 +222,7 @@ export function EarningsPanel() {
         <h2 className="text-sm font-semibold tracking-tight">Earnings</h2>
       </div>
       <p className="mt-1 text-xs text-omniv-text-muted">
-        Tickets from rooms + tips from standalone tip links.
+        Tickets from rooms + tips from your tip links.
       </p>
       <TipLinkBlock />
       {loading ? (
