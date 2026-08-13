@@ -15,6 +15,8 @@ const TYPES = [
   { id: "bio_cta", label: "Bio CTA" },
   { id: "release_announcement", label: "Release pack" },
   { id: "story_sequence", label: "Stories sequence" },
+  { id: "tip_soft", label: "Soft tip line (bio / caption)" },
+  { id: "release_day_pack", label: "Release-day 24h pack" },
 ] as const;
 
 export function ContentGenerator({ artistName }: { artistName?: string }) {
@@ -23,11 +25,13 @@ export function ContentGenerator({ artistName }: { artistName?: string }) {
   const [busy, setBusy] = useState(false);
   const [out, setOut] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   async function generate() {
     setBusy(true);
     setErr(null);
     setOut(null);
+    setCopied(false);
     try {
       const res = await fetch("/api/ziki/content", {
         method: "POST",
@@ -55,7 +59,8 @@ export function ContentGenerator({ artistName }: { artistName?: string }) {
         <h3 className="text-sm font-medium">Ziki content studio</h3>
       </div>
       <p className="mb-4 text-xs text-omniv-text-secondary">
-        Generate captions, scripts, and email copy grounded in your strategy voice.
+        Captions, scripts, soft tip lines, release-day packs — grounded in your
+        voice.
       </p>
       <div className="flex flex-wrap gap-2">
         {TYPES.map((t) => (
@@ -95,8 +100,29 @@ export function ContentGenerator({ artistName }: { artistName?: string }) {
       </Button>
       {err && <p className="mt-2 text-xs text-omniv-danger">{err}</p>}
       {out && (
-        <div className="mt-4 rounded-xl border border-omniv-gold/20 bg-omniv-gold/5 p-4">
+        <div className="mt-4 space-y-3 rounded-xl border border-omniv-gold/20 bg-omniv-gold/5 p-4">
           <StudioText text={out} />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8"
+              onClick={() => {
+                void navigator.clipboard.writeText(out);
+                setCopied(true);
+                window.setTimeout(() => setCopied(false), 2000);
+              }}
+            >
+              {copied ? "Copied" : "Copy text"}
+            </Button>
+            <Button size="sm" variant="outline" className="h-8" asChild>
+              <a href="/crm?tab=money">Open tip link</a>
+            </Button>
+            <Button size="sm" variant="outline" className="h-8" asChild>
+              <a href="/crm?tab=fans">Fan Gate</a>
+            </Button>
+          </div>
         </div>
       )}
     </Card>

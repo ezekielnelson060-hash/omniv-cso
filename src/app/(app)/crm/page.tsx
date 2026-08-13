@@ -23,7 +23,11 @@ function CrmInner() {
       ? tabRaw
       : focus === "room"
         ? "rooms"
-        : "home";
+        : focus === "money"
+          ? "money"
+          : focus === "fans"
+            ? "fans"
+            : "home";
 
   return (
     <>
