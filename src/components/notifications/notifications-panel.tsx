@@ -14,6 +14,8 @@ import {
   purgeInternalPending,
   isOutsideSignal,
   clearStalePending,
+  clearAllPending,
+  clearOldHistory,
   purgeNonMusicMarketPending,
 } from "@/lib/agent/store";
 import { runAgentScan } from "@/lib/agent/scan";
@@ -26,7 +28,6 @@ import { Loader2, Sparkles, Zap, X } from "lucide-react";
 
 type InboxFilter = "all" | "outside" | "internal";
 
-/** Turn bare URLs in agent body into tappable links (no extra row). */
 function linkifyBody(text: string): ReactNode {
   const re = /https?:\/\/[^\s)\]"']+/gi;
   const nodes: ReactNode[] = [];
@@ -340,6 +341,44 @@ export function NotificationsPanel() {
           </button>
         ))}
       </div>
+
+      {pendingAll.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 rounded-xl text-[11px]"
+            onClick={() => {
+              clearStalePending();
+              clearOldHistory();
+              purgeNonMusicMarketPending();
+              setLastMsg("Cleared signals older than 7 days");
+              refresh();
+            }}
+          >
+            Clear old signals
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 rounded-xl text-[11px]"
+            onClick={() => {
+              clearAllPending();
+              setLastMsg("All pending signals dismissed");
+              refresh();
+              void fetch("/api/agent/inbox", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ clearPending: true }),
+              }).catch(() => null);
+            }}
+          >
+            Dismiss all pending
+          </Button>
+        </div>
+      )}
 
       {narrative && (
         <Card className="border-omniv-gold/20 bg-omniv-gold/5 p-3">
