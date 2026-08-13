@@ -1,14 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
-import { Check, Copy, Link2, Share2 } from "lucide-react";
+import { Link2 } from "lucide-react";
+import { ShareLinkButtons } from "@/components/crm/share-link-buttons";
 
-/**
- * High-leverage: one place to copy / share the Fan Gate.
- * Without this link live, city heat and rooms stay empty.
- */
 export function ShareFanGate({
   gateSlug,
   artistName,
@@ -18,8 +14,6 @@ export function ShareFanGate({
   artistName?: string | null;
   fanCount?: number;
 }) {
-  const [copied, setCopied] = useState(false);
-
   const origin =
     typeof window !== "undefined"
       ? window.location.origin
@@ -29,25 +23,6 @@ export function ShareFanGate({
     if (!gateSlug) return null;
     return `${origin}/f/${gateSlug}?source=bio`;
   }, [gateSlug, origin]);
-
-  async function copy() {
-    if (!url) return;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* soft */
-    }
-  }
-
-  function shareWhatsApp() {
-    if (!url) return;
-    const text = encodeURIComponent(
-      `Join my list — drop your city if you’d show up: ${url}`
-    );
-    window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
-  }
 
   if (!gateSlug) {
     return (
@@ -64,6 +39,8 @@ export function ShareFanGate({
   }
 
   const empty = fanCount === 0;
+  const name = artistName || "me";
+  const message = `Join ${name}'s list — drop your city if you'd show up:`;
 
   return (
     <Card
@@ -81,7 +58,7 @@ export function ShareFanGate({
           </p>
           <p className="mt-1 text-[12px] text-omniv-text-secondary">
             {empty
-              ? "Fans enter email + city + “would attend.” That fills your map and rooms. Put this link in Instagram / TikTok bio."
+              ? "Fans enter email + city + would attend. That fills your map and rooms. Put this link in Instagram / TikTok bio, or share below."
               : `${fanCount} on your list. Keep the link in bio so the list keeps growing.`}
           </p>
           {artistName && (
@@ -92,35 +69,13 @@ export function ShareFanGate({
           <p className="mt-2 break-all font-data text-[11px] text-omniv-gold">
             {url}
           </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              className="h-9 gap-1.5 rounded-xl"
-              onClick={() => void copy()}
-            >
-              {copied ? (
-                <Check className="h-3.5 w-3.5" />
-              ) : (
-                <Copy className="h-3.5 w-3.5" />
-              )}
-              {copied ? "Copied" : "Copy link"}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-9 gap-1.5 rounded-xl"
-              onClick={shareWhatsApp}
-            >
-              <Share2 className="h-3.5 w-3.5" />
-              WhatsApp
-            </Button>
-            <Button size="sm" variant="outline" className="h-9 rounded-xl" asChild>
-              <a href={url!} target="_blank" rel="noreferrer">
-                Preview gate
-              </a>
-            </Button>
+          <div className="mt-3">
+            <ShareLinkButtons
+              url={url!}
+              message={message}
+              previewHref={url!}
+              previewLabel="Preview gate"
+            />
           </div>
         </div>
       </div>
