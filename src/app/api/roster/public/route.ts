@@ -23,21 +23,23 @@ export async function GET(req: Request) {
     slug?: string | null;
     gate_tagline?: string | null;
     tip_tagline?: string | null;
+    owner_user_id?: string | null;
+    image_url?: string | null;
   } | null = null;
 
   const full = await admin
     .from("roster_artists")
-    .select("stage_name, slug, gate_tagline, tip_tagline")
+    .select("stage_name, slug, gate_tagline, tip_tagline, owner_user_id, image_url")
     .eq("slug", slug)
     .maybeSingle();
 
-  if (full.error && /gate_tagline|tip_tagline|column/i.test(full.error.message)) {
+  if (full.error) {
     const basic = await admin
       .from("roster_artists")
-      .select("stage_name, slug")
+      .select("stage_name, slug, owner_user_id")
       .eq("slug", slug)
       .maybeSingle();
-    data = basic.data;
+    data = basic.data as typeof data;
   } else {
     data = full.data;
   }
@@ -46,25 +48,65 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
 
+  let avatarUrl: string | null =
+    (data.image_url && String(data.image_url).trim()) || null;
+
+  if (!avatarUrl && data.owner_user_id) {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("avatar_url")
+      .eq("id", data.owner_user_id)
+      .maybeSingle();
+    if (profile?.avatar_url) {
+      avatarUrl = String(profile.avatar_url);
+    }
+  }
+
+  if (!avatarUrl) {
+    const withOrg = await admin
+      .from("roster_artists")
+      .select("org_id")
+      .eq("slug", slug)
+      .maybeSingle();
+    const orgId = withOrg.data?.org_id as string | undefined;
+    if (orgId) {
+      const { data: org } = await admin
+        .from("orgs")
+        .select("owner_user_id")
+        .eq("id", orgId)
+        .maybeSingle();
+      if (org?.owner_user_id) {
+        const { data: profile } = await admin
+          .from("profiles")
+          .select("avatar_url")
+          .eq("id", org.owner_user_id)
+          .maybeSingle();
+        if (profile?.avatar_url) avatarUrl = String(profile.avatar_url);
+      }
+    }
+  }
+
   return NextResponse.json({
     stageName: cleanStageName(String(data.stage_name || "")),
     slug: data.slug,
     gateTagline: data.gate_tagline || null,
     tipTagline: data.tip_tagline || null,
+    avatarUrl,
   });
 }
 
-/** Drop accidental slug suffixes that leaked into display names (e.g. "T1ax"). */
 function cleanStageName(name: string) {
   const trimmed = name.trim();
   if (!trimmed) return "Artist";
-  return trimmed
-    .replace(/\s+[a-z0-9]{3,5}$/i, (m) => {
-      const token = m.trim();
-      if (/^[a-z]*\d[a-z0-9]*$/i.test(token) || /^\d+[a-z]+$/i.test(token)) {
-        return "";
-      }
-      return m;
-    })
-    .trim() || trimmed;
+  return (
+    trimmed
+      .replace(/\s+[a-z0-9]{3,5}$/i, (m) => {
+        const token = m.trim();
+        if (/^[a-z]*\d[a-z0-9]*$/i.test(token) || /^\d+[a-z]+$/i.test(token)) {
+          return "";
+        }
+        return m;
+      })
+      .trim() || trimmed
+  );
 }
