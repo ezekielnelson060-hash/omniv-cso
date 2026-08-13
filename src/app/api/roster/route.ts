@@ -215,3 +215,87 @@ export async function POST(req: Request) {
     );
   }
 }
+
+export async function PATCH(req: Request) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = (await req.json()) as {
+      id?: string;
+      slug?: string;
+      stageName?: string;
+      gateTagline?: string | null;
+      tipTagline?: string | null;
+    };
+
+    if (!body.id && !body.slug) {
+      return NextResponse.json({ error: "id or slug required" }, { status: 400 });
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (body.stageName?.trim()) updates.stage_name = body.stageName.trim();
+    if (body.gateTagline !== undefined) {
+      updates.gate_tagline = body.gateTagline?.trim() || null;
+    }
+    if (body.tipTagline !== undefined) {
+      updates.tip_tagline = body.tipTagline?.trim() || null;
+    }
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: "nothing to update" }, { status: 400 });
+    }
+
+    let q = supabase
+      .from("roster_artists")
+      .update(updates)
+      .eq("owner_user_id", user.id);
+    if (body.id) q = q.eq("id", body.id);
+    else q = q.eq("slug", body.slug);
+
+    const { data, error } = await q
+      .select("id, stage_name, slug, genre")
+      .maybeSingle();
+    if (error) {
+      if (/gate_tagline|tip_tagline|column/i.test(error.message)) {
+        const onlyName: Record<string, unknown> = {};
+        if (updates.stage_name) onlyName.stage_name = updates.stage_name;
+        if (!Object.keys(onlyName).length) {
+          return NextResponse.json(
+            {
+              error:
+                "Run migration 022_public_page_taglines.sql in Supabase to edit public taglines.",
+              code: "NEED_MIGRATION",
+            },
+            { status: 400 }
+          );
+        }
+        let q2 = supabase
+          .from("roster_artists")
+          .update(onlyName)
+          .eq("owner_user_id", user.id);
+        if (body.id) q2 = q2.eq("id", body.id);
+        else q2 = q2.eq("slug", body.slug);
+        const retry = await q2
+          .select("id, stage_name, slug, genre")
+          .maybeSingle();
+        if (retry.error) {
+          return NextResponse.json(
+            { error: retry.error.message },
+            { status: 500 }
+          );
+        }
+        return NextResponse.json({ artist: retry.data });
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ artist: data });
+  } catch (e) {
+    console.error("[roster PATCH]", e);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
+  }
+}
