@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
  * GET /api/agent/inbox — list proposals for the signed-in user.
  * PATCH /api/agent/inbox — persist status (done | dismissed | pending) server-side
  *   so dismiss/confirm survives localStorage clears and multi-device.
+ *   Also supports { clearPending: true } to dismiss all pending.
  */
 export async function GET() {
   try {
@@ -62,11 +63,60 @@ export async function PATCH(req: Request) {
       id?: string;
       status?: "done" | "dismissed" | "pending";
       ids?: { id: string; status: "done" | "dismissed" | "pending" }[];
+      clearPending?: boolean;
     };
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    const { data: profile, error: pErr } = await supabase
+      .from("profiles")
+      .select("agent_inbox")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (pErr) {
+      return NextResponse.json({ error: pErr.message }, { status: 500 });
+    }
+
+    const inbox = (profile?.agent_inbox || {}) as {
+      proposals?: AgentProposal[];
+      narrative?: string;
+      scannedAt?: number;
+    };
+    const existing = Array.isArray(inbox.proposals) ? inbox.proposals : [];
+
+    if (body.clearPending) {
+      const next = existing.map((p) =>
+        !p.status || p.status === "pending"
+          ? { ...p, status: "dismissed" as const }
+          : p
+      );
+      const pending = next.filter((p) => p.status === "pending");
+      const closed = next
+        .filter((p) => p.status === "done" || p.status === "dismissed")
+        .slice(0, 20);
+      const proposals = [...pending, ...closed].slice(0, 40);
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          agent_inbox: {
+            proposals,
+            scannedAt: inbox.scannedAt || Date.now(),
+            narrative: inbox.narrative || "",
+          },
+        })
+        .eq("id", user.id);
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json({
+        ok: true,
+        cleared: true,
+        pending: 0,
+      });
     }
 
     const updates: { id: string; status: "done" | "dismissed" | "pending" }[] =
@@ -87,27 +137,11 @@ export async function PATCH(req: Request) {
 
     if (!updates.length) {
       return NextResponse.json(
-        { error: "id + status (or ids[]) required" },
+        { error: "id + status (or ids[] or clearPending) required" },
         { status: 400 }
       );
     }
 
-    const { data: profile, error: pErr } = await supabase
-      .from("profiles")
-      .select("agent_inbox")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (pErr) {
-      return NextResponse.json({ error: pErr.message }, { status: 500 });
-    }
-
-    const inbox = (profile?.agent_inbox || {}) as {
-      proposals?: AgentProposal[];
-      narrative?: string;
-      scannedAt?: number;
-    };
-    const existing = Array.isArray(inbox.proposals) ? inbox.proposals : [];
     const byStatus = new Map(updates.map((u) => [u.id, u.status]));
 
     const next = existing.map((p) => {
@@ -115,7 +149,6 @@ export async function PATCH(req: Request) {
       return s ? { ...p, status: s } : p;
     });
 
-    // Drop old dismissed/done beyond 20 to keep jsonb lean
     const pending = next.filter((p) => p.status === "pending");
     const closed = next
       .filter((p) => p.status === "done" || p.status === "dismissed")
