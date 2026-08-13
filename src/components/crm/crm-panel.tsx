@@ -13,6 +13,7 @@ import { GatheringsPanel } from "@/components/crm/gatherings-panel";
 import { VenueFinder } from "@/components/crm/venue-finder";
 import { RoomChallenge } from "@/components/crm/room-challenge";
 import { ShareFanGate } from "@/components/crm/share-fan-gate";
+import { PublicPageEditor } from "@/components/crm/public-page-editor";
 import { RosterPayouts } from "@/components/crm/roster-payouts";
 import { StorySlides } from "@/components/onboarding/story-slides";
 import { isPlaceholderStageName } from "@/lib/crm-priority";
@@ -279,6 +280,7 @@ export function CrmPanel({
             Tickets from rooms. Tips from your tip links. Copy a link per artist
             on your roster. Labels set payout per act below.
           </p>
+          <PublicPageEditor slug={gateSlug} />
           <div className="rounded-2xl border border-omniv-gold/20 bg-omniv-gold/5 px-3.5 py-2.5 text-[12px] text-omniv-text-secondary">
             <span className="font-semibold text-omniv-gold">~90% to you</span>
             {" · "}
@@ -298,6 +300,7 @@ export function CrmPanel({
             artistName={primaryArtistName}
             fanCount={fanCount}
           />
+          <PublicPageEditor slug={gateSlug} />
           <FanGateMetrics
             fanCount={fanCount}
             fans7d={fans7d}
