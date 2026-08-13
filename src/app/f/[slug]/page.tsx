@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { track } from "@/lib/analytics";
 import { CheckCircle2, Loader2, MapPin } from "lucide-react";
+import { ArtistAvatar } from "@/components/public/artist-avatar";
 
 function GateInner() {
   const params = useParams();
@@ -21,10 +22,11 @@ function GateInner() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reward, setReward] = useState<string | null>(null);
-  const [artistName, setArtistName] = useState("…");
+  const [artistName, setArtistName] = useState("...");
   const [tagline, setTagline] = useState(
     "Hear about new music and shows near you first."
   );
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (slug) track("fan_gate_view", { slug, source }, `/f/${slug}`);
@@ -41,9 +43,11 @@ function GateInner() {
         const data = (await res.json()) as {
           stageName?: string;
           gateTagline?: string | null;
+          avatarUrl?: string | null;
         };
         if (data.stageName) setArtistName(data.stageName);
         if (data.gateTagline?.trim()) setTagline(data.gateTagline.trim());
+        if (data.avatarUrl) setAvatarUrl(data.avatarUrl);
       } catch {
         /* soft */
       }
@@ -75,7 +79,7 @@ function GateInner() {
         artist?: string;
       };
       if (!res.ok) {
-        setError(data.error || "Could not save — try again");
+        setError(data.error || "Could not save - try again");
         setBusy(false);
         return;
       }
@@ -83,7 +87,7 @@ function GateInner() {
       setReward(data.reward || null);
       setDone(true);
     } catch {
-      setError("Network error — try again");
+      setError("Network error - try again");
     }
     setBusy(false);
   }
@@ -94,14 +98,18 @@ function GateInner() {
 
       <div className="relative z-10 w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-omniv-elevated">
-            <span className="text-lg text-omniv-gold">✦</span>
+          <div className="mx-auto mb-4 flex justify-center">
+            <ArtistAvatar
+              name={artistName === "..." ? "Artist" : artistName}
+              src={avatarUrl}
+              size={64}
+            />
           </div>
           <p className="font-data text-[10px] uppercase tracking-[0.16em] text-omniv-gold">
             Omniv · Fan list
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-omniv-text">
-            Join {artistName === "…" ? "the list" : `${artistName}'s list`}
+            Join {artistName === "..." ? "the list" : `${artistName}'s list`}
           </h1>
           <p className="mt-2 text-[13px] leading-relaxed text-omniv-text-secondary">
             {tagline}
@@ -117,7 +125,7 @@ function GateInner() {
               </p>
               <p className="text-[13px] text-omniv-text-secondary">
                 {reward ||
-                  "Thanks — you'll hear about new music and events near you."}
+                  "Thanks - you'll hear about new music and events near you."}
               </p>
             </div>
           ) : (
@@ -188,7 +196,7 @@ export default function FanGatePage() {
     <Suspense
       fallback={
         <div className="flex min-h-dvh items-center justify-center bg-omniv-black text-sm text-omniv-text-muted">
-          Loading…
+          Loading...
         </div>
       }
     >
