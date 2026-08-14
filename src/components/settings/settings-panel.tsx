@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { MfaPanel } from "@/components/settings/mfa-panel";
 
 const SURFACE_HINTS = [
   { id: "spotify", label: "Spotify", placeholder: "https://open.spotify.com/artist/..." },
@@ -230,6 +231,8 @@ export function SettingsPanel() {
         </div>
         {status && <p className="mt-2 text-xs text-omniv-gold">{status}</p>}
       </Card>
+
+      <MfaPanel />
 
       <Card className="p-5">
         <div className="mb-3 flex items-center gap-2">
