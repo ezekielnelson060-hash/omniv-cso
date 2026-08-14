@@ -39,10 +39,7 @@ export function MfaPanel() {
       setLoading(false);
       return;
     }
-    const all = [
-      ...(data?.totp || []),
-      ...(data?.phone || []),
-    ] as Factor[];
+    const all = [...(data?.totp || []), ...(data?.phone || [])] as Factor[];
     setFactors(all.filter((f) => f.status === "verified"));
     setLoading(false);
   }, []);
@@ -185,27 +182,25 @@ export function MfaPanel() {
               <p className="text-xs text-omniv-text-secondary">
                 Scan this QR with your authenticator app, then enter the 6-digit code.
               </p>
-              {/* qr_code from Supabase is often an SVG data URI or raw SVG */}
-              {qr.startsWith("data:") || qr.startsWith("<svg") ? (
-                <div
-                  className="mx-auto flex h-44 w-44 items-center justify-center rounded-lg bg-white p-2"
-                  dangerouslySetInnerHTML={{
-                    __html: qr.startsWith("<svg") ? qr : "",
-                  }}
-                >
-                  {qr.startsWith("data:") ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={qr} alt="2FA QR code" className="h-40 w-40" />
-                  ) : null}
-                </div>
-              ) : (
-                <p className="break-all font-data text-[10px] text-omniv-text-muted">
-                  Secret: {secret}
-                </p>
-              )}
+              <div className="mx-auto flex h-44 w-44 items-center justify-center rounded-lg bg-white p-2">
+                {qr.startsWith("data:") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={qr} alt="2FA QR code" className="h-40 w-40" />
+                ) : qr.startsWith("<svg") ? (
+                  <div
+                    className="h-40 w-40"
+                    dangerouslySetInnerHTML={{ __html: qr }}
+                  />
+                ) : (
+                  <p className="break-all p-2 font-data text-[10px] text-black">
+                    {secret}
+                  </p>
+                )}
+              </div>
               {secret && (
                 <p className="text-center font-data text-[11px] text-omniv-text-muted">
-                  Or enter manually: <span className="text-omniv-gold">{secret}</span>
+                  Or enter manually:{" "}
+                  <span className="text-omniv-gold">{secret}</span>
                 </p>
               )}
               <Input
