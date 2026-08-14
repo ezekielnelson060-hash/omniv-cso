@@ -25,7 +25,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return [
     {
-      // Trailing slash must match canonical + GSC property association
       url: `${baseUrl}/`,
       lastModified: now,
       changeFrequency: "weekly",
@@ -38,16 +37,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.85,
     },
     {
-      url: `${baseUrl}/login`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
       url: `${baseUrl}/signup`,
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/login`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.5,
     },
     {
       url: `${baseUrl}/audit`,

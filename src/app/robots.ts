@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 const baseUrl = (
-  process.env.NEXT_PUBLIC_APP_URL || "https://www.omniv.media"
+  process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
 ).replace(/\/$/, "");
 
 export default function robots(): MetadataRoute.Robots {
@@ -31,11 +31,10 @@ export default function robots(): MetadataRoute.Robots {
           "/discover",
           "/help",
           "/g/",
-          "/tip/",
-          "/f/",
         ],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
+    host: baseUrl.replace(/^https?:\/\//, ""),
   };
 }
