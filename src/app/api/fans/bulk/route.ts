@@ -89,7 +89,7 @@ export async function POST(req: Request) {
   let updated = 0;
 
   for (const f of fans || []) {
-    const current: string[] = Array.isArray(f.tags) ? f.tags : [];
+    const current: string[] = Array.isArray(f.tags) ? (f.tags as string[]) : [];
     let nextTags = [...current];
     const patch: Record<string, unknown> = {};
 

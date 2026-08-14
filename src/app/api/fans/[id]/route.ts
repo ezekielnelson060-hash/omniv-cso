@@ -3,28 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-async function assertArtistAccess(admin: ReturnType<typeof createClient>, userId: string, artistId: string) {
-  const { data: artist } = await admin
-    .from("roster_artists")
-    .select("id, org_id")
-    .eq("id", artistId)
-    .maybeSingle();
-  if (!artist) return false;
-  const { data: org } = await admin
-    .from("orgs")
-    .select("owner_user_id")
-    .eq("id", artist.org_id)
-    .maybeSingle();
-  if (org?.owner_user_id === userId) return true;
-  const { data: member } = await admin
-    .from("org_members")
-    .select("id")
-    .eq("org_id", artist.org_id)
-    .eq("user_id", userId)
-    .maybeSingle();
-  return Boolean(member);
-}
-
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -59,8 +37,28 @@ export async function PATCH(
     .maybeSingle();
   if (!fan) return NextResponse.json({ error: "Fan not found" }, { status: 404 });
 
-  const ok = await assertArtistAccess(admin, user.id, fan.artist_id);
-  if (!ok) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { data: artist } = await admin
+    .from("roster_artists")
+    .select("id, org_id")
+    .eq("id", fan.artist_id)
+    .maybeSingle();
+  if (!artist) return NextResponse.json({ error: "Artist not found" }, { status: 404 });
+
+  const { data: org } = await admin
+    .from("orgs")
+    .select("owner_user_id")
+    .eq("id", artist.org_id)
+    .maybeSingle();
+  const { data: member } = await admin
+    .from("org_members")
+    .select("id")
+    .eq("org_id", artist.org_id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (org?.owner_user_id !== user.id && !member) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const body = (await req.json()) as {
     first_name?: string | null;
