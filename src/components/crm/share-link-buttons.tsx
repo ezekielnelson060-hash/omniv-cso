@@ -5,14 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Check, Copy, Share2 } from "lucide-react";
 
 /**
- * Multi-channel share for Fan Gate / tip links.
- * Copy + system share sheet + WhatsApp + Telegram + X + SMS.
+ * Clean share for Fan Gate / tip links.
+ * Copy + system share sheet + Preview only.
+ * Individual WhatsApp / Telegram / X / SMS removed — native Share covers them.
  */
 export function ShareLinkButtons({
   url,
   message,
   previewHref,
-  previewLabel = "Preview",
+  previewLabel = "Preview gate",
 }: {
   url: string;
   message: string;
@@ -43,14 +44,6 @@ export function ShareLinkButtons({
     void copy();
   }
 
-  function open(href: string) {
-    window.open(href, "_blank", "noopener,noreferrer");
-  }
-
-  const encodedMsg = encodeURIComponent(`${message} ${url}`);
-  const encodedUrl = encodeURIComponent(url);
-  const encodedText = encodeURIComponent(message);
-
   return (
     <div className="flex flex-wrap gap-2">
       <Button
@@ -66,6 +59,7 @@ export function ShareLinkButtons({
         )}
         {copied ? "Copied" : "Copy link"}
       </Button>
+
       <Button
         type="button"
         size="sm"
@@ -76,46 +70,7 @@ export function ShareLinkButtons({
         <Share2 className="h-3.5 w-3.5" />
         Share
       </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="h-9 rounded-xl"
-        onClick={() => open(`https://wa.me/?text=${encodedMsg}`)}
-      >
-        WhatsApp
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="h-9 rounded-xl"
-        onClick={() =>
-          open(`https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`)
-        }
-      >
-        Telegram
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="h-9 rounded-xl"
-        onClick={() =>
-          open(`https://twitter.com/intent/tweet?text=${encodedMsg}`)
-        }
-      >
-        X
-      </Button>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="h-9 rounded-xl"
-        onClick={() => open(`sms:?&body=${encodedMsg}`)}
-      >
-        SMS
-      </Button>
+
       {previewHref && (
         <Button size="sm" variant="outline" className="h-9 rounded-xl" asChild>
           <a href={previewHref} target="_blank" rel="noreferrer">
