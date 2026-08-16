@@ -57,40 +57,20 @@ export async function GET() {
 
     const { plan } = await getPlan(supabase, user.id);
     const max = rosterLimitForPlan(plan);
+    const admin = adminClient();
+    const db = admin || supabase;
 
-    let artists: {
-      id?: string;
-      stage_name?: string;
-      slug?: string;
-      genre?: string | null;
-    }[] = [];
-
-    const { data, error } = await supabase
+    const { data } = await db
       .from("roster_artists")
-      .select("id, stage_name, slug, genre")
+      .select("id, stage_name, slug, genre, public_page")
       .eq("owner_user_id", user.id)
       .order("stage_name")
       .limit(max);
 
-    if (!error && data) {
-      artists = data;
-    } else {
-      const admin = adminClient();
-      if (admin) {
-        const { data: rows } = await admin
-          .from("roster_artists")
-          .select("id, stage_name, slug, genre")
-          .eq("owner_user_id", user.id)
-          .order("stage_name")
-          .limit(max);
-        artists = rows || [];
-      }
-    }
-
     return NextResponse.json({
-      artists,
+      artists: data || [],
       max,
-      count: artists.length,
+      count: (data || []).length,
       plan,
     });
   } catch (e) {
@@ -177,7 +157,6 @@ export async function POST(req: Request) {
       .single();
 
     if (error || !artist) {
-      console.error("[roster POST]", error);
       return NextResponse.json(
         { error: error?.message || "Could not create" },
         { status: 500 }
@@ -217,7 +196,41 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "id or slug required" }, { status: 400 });
     }
 
+    const admin = adminClient();
+    if (!admin) {
+      return NextResponse.json(
+        { error: "Server missing SUPABASE_SERVICE_ROLE_KEY" },
+        { status: 503 }
+      );
+    }
+
+    // Find the row first (by id or slug), then verify ownership
+    let find = admin.from("roster_artists").select(
+      "id, owner_user_id, stage_name, slug, public_page"
+    );
+    if (body.id) find = find.eq("id", body.id);
+    else find = find.eq("slug", body.slug!);
+
+    const { data: foundRaw } = await find.maybeSingle();
+    const found = foundRaw as {
+      id: string;
+      owner_user_id?: string | null;
+      stage_name?: string;
+      slug?: string;
+      public_page?: unknown;
+    } | null;
+
+    if (!found) {
+      return NextResponse.json({ error: "Artist not found" }, { status: 404 });
+    }
+
+    // Allow if owner matches OR owner is null (claim it)
+    if (found.owner_user_id && found.owner_user_id !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const updates: Record<string, unknown> = {};
+    if (!found.owner_user_id) updates.owner_user_id = user.id;
     if (body.stageName?.trim()) updates.stage_name = body.stageName.trim();
     if (body.gateTagline !== undefined) {
       updates.gate_tagline = body.gateTagline?.trim() || null;
@@ -228,83 +241,47 @@ export async function PATCH(req: Request) {
     if (body.publicPage !== undefined) {
       updates.public_page = mergePublicPage(body.publicPage);
     }
+
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: "nothing to update" }, { status: 400 });
     }
 
-    // Prefer service role so public_page writes aren't blocked by RLS
-    const admin = adminClient();
-    const db = admin || supabase;
-
-    let q = db
+    const { data: updatedRaw, error } = await admin
       .from("roster_artists")
       .update(updates)
-      .eq("owner_user_id", user.id);
-    if (body.id) q = q.eq("id", body.id);
-    else q = q.eq("slug", body.slug!);
-
-    const { data, error } = await q
+      .eq("id", found.id)
       .select("id, stage_name, slug, genre, public_page")
-      .maybeSingle();
+      .single();
 
     if (error) {
-      if (/public_page|column/i.test(error.message)) {
-        return NextResponse.json(
-          {
-            error:
-              "Run migration 024_artist_public_page.sql in Supabase SQL Editor.",
-            code: "NEED_MIGRATION",
-          },
-          { status: 400 }
-        );
-      }
-      if (/gate_tagline|tip_tagline|column/i.test(error.message)) {
-        const onlyName: Record<string, unknown> = {};
-        if (updates.stage_name) onlyName.stage_name = updates.stage_name;
-        if (updates.public_page) onlyName.public_page = updates.public_page;
-        if (!Object.keys(onlyName).length) {
-          return NextResponse.json(
-            { error: error.message },
-            { status: 400 }
-          );
-        }
-        let q2 = db
-          .from("roster_artists")
-          .update(onlyName)
-          .eq("owner_user_id", user.id);
-        if (body.id) q2 = q2.eq("id", body.id);
-        else q2 = q2.eq("slug", body.slug!);
-        const retry = await q2
-          .select("id, stage_name, slug, genre, public_page")
-          .maybeSingle();
-        if (retry.error) {
-          return NextResponse.json(
-            { error: retry.error.message },
-            { status: 500 }
-          );
-        }
-        return NextResponse.json({
-          artist: retry.data,
-          page: mergePublicPage(
-            (retry.data as { public_page?: unknown } | null)?.public_page
-          ),
-        });
-      }
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    if (!data) {
+      console.error("[roster PATCH]", error);
       return NextResponse.json(
-        { error: "Artist not found for your account" },
-        { status: 404 }
+        {
+          error: /public_page/i.test(error.message)
+            ? "Run migration 024_artist_public_page.sql in Supabase"
+            : error.message,
+        },
+        { status: 500 }
       );
     }
 
+    const updated = updatedRaw as {
+      id: string;
+      stage_name?: string;
+      slug?: string;
+      public_page?: unknown;
+    };
+
+    const page = mergePublicPage(updated.public_page);
+
     return NextResponse.json({
-      artist: data,
-      page: mergePublicPage(
-        (data as { public_page?: unknown }).public_page
-      ),
+      ok: true,
+      artist: updated,
+      page,
+      // debug fields so UI can prove write stuck
+      savedMessageTop: page.messageTop || "",
+      savedTrackTitle: page.track?.title || "",
+      savedSpotify: page.track?.spotifyUrl || "",
     });
   } catch (e) {
     console.error("[roster PATCH]", e);

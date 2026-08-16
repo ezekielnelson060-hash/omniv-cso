@@ -12,10 +12,6 @@ import {
 } from "@/lib/artist-public-page";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
-/**
- * Full artist/release page editor.
- * Saves via /api/roster PATCH (owner_user_id) — same path as stage name.
- */
 export function PublicPageEditor({
   slug,
   onSaved,
@@ -31,32 +27,43 @@ export function PublicPageEditor({
   const [resolvedSlug, setResolvedSlug] = useState(slug || "");
 
   const load = useCallback(async () => {
-    if (!slug || !isSupabaseConfigured()) return;
+    if (!isSupabaseConfigured()) return;
+    // Prefer API so we always see what the server has
+    try {
+      const res = await fetch("/api/roster");
+      if (res.ok) {
+        const data = (await res.json()) as {
+          artists?: {
+            slug?: string;
+            stage_name?: string;
+            public_page?: unknown;
+          }[];
+        };
+        const list = data.artists || [];
+        const match =
+          list.find((a) => a.slug === slug) || list[0];
+        if (match) {
+          setStageName(String(match.stage_name || ""));
+          setResolvedSlug(String(match.slug || slug || ""));
+          setPage(mergePublicPage(match.public_page));
+          return;
+        }
+      }
+    } catch {
+      /* fall through */
+    }
+
+    if (!slug) return;
     const supabase = createClient();
     const { data } = await supabase
       .from("roster_artists")
       .select("id, stage_name, slug, public_page")
       .eq("slug", slug)
       .maybeSingle();
-
     if (data) {
       setStageName(String(data.stage_name || ""));
       setResolvedSlug(String(data.slug || slug));
       setPage(mergePublicPage(data.public_page));
-      return;
-    }
-
-    // fallback: first owned artist
-    const { data: any } = await supabase
-      .from("roster_artists")
-      .select("id, stage_name, slug, public_page")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (any) {
-      setStageName(String(any.stage_name || ""));
-      setResolvedSlug(String(any.slug || ""));
-      setPage(mergePublicPage(any.public_page));
     }
   }, [slug]);
 
@@ -93,9 +100,20 @@ export function PublicPageEditor({
         return;
       }
       if (data.page) setPage(mergePublicPage(data.page));
-      setMsg(
-        `Saved. Open https://omniv.media/f/${s} to see song, links, tip.`
-      );
+
+      const top = data.savedMessageTop || "";
+      const track = data.savedTrackTitle || "";
+      const spotify = data.savedSpotify || "";
+
+      if (!top && !track && !spotify && !page.messageTop && !page.track?.title) {
+        setMsg(
+          `Saved shell. Add a message top or Spotify URL, then save again. Preview: /f/${s}`
+        );
+      } else {
+        setMsg(
+          `Saved to DB. Top: "${top || "(empty)"}" · Track: "${track || "(empty)"}". Open /f/${s} now.`
+        );
+      }
       onSaved?.();
     } catch {
       setErr("Network error");
@@ -127,19 +145,15 @@ export function PublicPageEditor({
         >
           /f/{previewSlug}
         </a>
-        — song, story, list, links, tips.
       </p>
 
       <div className="mt-4 space-y-3">
         <div>
-          <label className="text-[11px] text-omniv-text-muted">
-            Display name
-          </label>
+          <label className="text-[11px] text-omniv-text-muted">Display name</label>
           <Input
             className="mt-1 h-10"
             value={stageName}
             onChange={(e) => setStageName(e.target.value)}
-            placeholder="Your stage name"
           />
         </div>
         <div>
@@ -177,16 +191,6 @@ export function PublicPageEditor({
           }
         />
         <Input
-          label="Apple Music URL"
-          value={page.track?.appleUrl || ""}
-          onChange={(e) =>
-            setPage({
-              ...page,
-              track: { ...page.track, appleUrl: e.target.value },
-            })
-          }
-        />
-        <Input
           label="Download URL"
           value={page.track?.downloadUrl || ""}
           onChange={(e) =>
@@ -198,25 +202,13 @@ export function PublicPageEditor({
         />
 
         <div>
-          <label className="text-[11px] text-omniv-text-muted">
-            Message middle
-          </label>
+          <label className="text-[11px] text-omniv-text-muted">Message middle</label>
           <textarea
             className="mt-1 min-h-[56px] w-full rounded-xl border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm"
             value={page.messageMiddle || ""}
-            onChange={(e) =>
-              setPage({ ...page, messageMiddle: e.target.value })
-            }
+            onChange={(e) => setPage({ ...page, messageMiddle: e.target.value })}
           />
         </div>
-
-        <Input
-          label="List headline"
-          value={page.captureHeadline || ""}
-          onChange={(e) =>
-            setPage({ ...page, captureHeadline: e.target.value })
-          }
-        />
 
         <p className="text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
           Links
@@ -276,15 +268,11 @@ export function PublicPageEditor({
         </label>
 
         <div>
-          <label className="text-[11px] text-omniv-text-muted">
-            Message bottom
-          </label>
+          <label className="text-[11px] text-omniv-text-muted">Message bottom</label>
           <textarea
             className="mt-1 min-h-[56px] w-full rounded-xl border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm"
             value={page.messageBottom || ""}
-            onChange={(e) =>
-              setPage({ ...page, messageBottom: e.target.value })
-            }
+            onChange={(e) => setPage({ ...page, messageBottom: e.target.value })}
           />
         </div>
 
@@ -297,7 +285,7 @@ export function PublicPageEditor({
           {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
           Save artist page
         </Button>
-        {msg && <p className="text-[12px] text-emerald-600">{msg}</p>}
+        {msg && <p className="text-[12px] text-emerald-600 whitespace-pre-wrap">{msg}</p>}
         {err && <p className="text-[12px] text-omniv-danger">{err}</p>}
       </div>
     </Card>
