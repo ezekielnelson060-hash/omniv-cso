@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { mergePublicPage } from "@/lib/artist-public-page";
 
-/** Public roster lookup by slug (tip page, fan gate). Audience-facing only. */
+/** Public roster lookup by slug (artist page, tip, fan gate). */
 export async function GET(req: Request) {
   const slug = new URL(req.url).searchParams.get("slug")?.trim();
   if (!slug) {
@@ -25,18 +26,21 @@ export async function GET(req: Request) {
     tip_tagline?: string | null;
     owner_user_id?: string | null;
     image_url?: string | null;
+    public_page?: unknown;
   } | null = null;
 
   const full = await admin
     .from("roster_artists")
-    .select("stage_name, slug, gate_tagline, tip_tagline, owner_user_id, image_url")
+    .select(
+      "stage_name, slug, gate_tagline, tip_tagline, owner_user_id, image_url, public_page"
+    )
     .eq("slug", slug)
     .maybeSingle();
 
   if (full.error) {
     const basic = await admin
       .from("roster_artists")
-      .select("stage_name, slug, owner_user_id")
+      .select("stage_name, slug, owner_user_id, gate_tagline, tip_tagline, image_url")
       .eq("slug", slug)
       .maybeSingle();
     data = basic.data as typeof data;
@@ -86,12 +90,22 @@ export async function GET(req: Request) {
     }
   }
 
+  const page = mergePublicPage(data.public_page);
+  // Fall back taglines into page messages if empty
+  if (!page.messageTop?.trim() && data.gate_tagline) {
+    page.messageTop = String(data.gate_tagline);
+  }
+  if (!page.messageBottom?.trim() && data.tip_tagline) {
+    page.messageBottom = String(data.tip_tagline);
+  }
+
   return NextResponse.json({
     stageName: cleanStageName(String(data.stage_name || "")),
     slug: data.slug,
     gateTagline: data.gate_tagline || null,
     tipTagline: data.tip_tagline || null,
     avatarUrl,
+    page,
   });
 }
 
