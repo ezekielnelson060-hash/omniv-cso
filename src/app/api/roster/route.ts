@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { rosterLimitForPlan } from "@/lib/roster-limits";
+import { mergePublicPage, type ArtistPublicPage } from "@/lib/artist-public-page";
 
 function slugify(name: string) {
   return (
@@ -124,11 +125,6 @@ export async function POST(req: Request) {
 
     const admin = adminClient();
     const db = admin || supabase;
-    if (!admin) {
-      console.warn(
-        "[roster POST] SUPABASE_SERVICE_ROLE_KEY missing — tip create may hit RLS"
-      );
-    }
 
     const { count } = await db
       .from("roster_artists")
@@ -182,28 +178,10 @@ export async function POST(req: Request) {
 
     if (error || !artist) {
       console.error("[roster POST]", error);
-      const msg = error?.message || "Could not create tip link";
-      if (/orgs|recursion/i.test(msg)) {
-        return NextResponse.json(
-          {
-            error:
-              "Database policy still blocks tip links. Run migration 021_fix_rls_no_orgs_recursion.sql in Supabase SQL Editor, then try again.",
-            code: "RLS_ORGS",
-          },
-          { status: 500 }
-        );
-      }
-      if (/org_id|null value/i.test(msg)) {
-        return NextResponse.json(
-          {
-            error:
-              "Run migration 021_fix_rls_no_orgs_recursion.sql in Supabase (makes org_id optional for solo tip links).",
-            code: "ORG_ID_REQUIRED",
-          },
-          { status: 500 }
-        );
-      }
-      return NextResponse.json({ error: msg }, { status: 500 });
+      return NextResponse.json(
+        { error: error?.message || "Could not create" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ artist, max, plan });
@@ -232,6 +210,7 @@ export async function PATCH(req: Request) {
       stageName?: string;
       gateTagline?: string | null;
       tipTagline?: string | null;
+      publicPage?: ArtistPublicPage;
     };
 
     if (!body.id && !body.slug) {
@@ -246,42 +225,57 @@ export async function PATCH(req: Request) {
     if (body.tipTagline !== undefined) {
       updates.tip_tagline = body.tipTagline?.trim() || null;
     }
+    if (body.publicPage !== undefined) {
+      updates.public_page = mergePublicPage(body.publicPage);
+    }
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: "nothing to update" }, { status: 400 });
     }
 
-    let q = supabase
+    // Prefer service role so public_page writes aren't blocked by RLS
+    const admin = adminClient();
+    const db = admin || supabase;
+
+    let q = db
       .from("roster_artists")
       .update(updates)
       .eq("owner_user_id", user.id);
     if (body.id) q = q.eq("id", body.id);
-    else q = q.eq("slug", body.slug);
+    else q = q.eq("slug", body.slug!);
 
     const { data, error } = await q
-      .select("id, stage_name, slug, genre")
+      .select("id, stage_name, slug, genre, public_page")
       .maybeSingle();
+
     if (error) {
+      if (/public_page|column/i.test(error.message)) {
+        return NextResponse.json(
+          {
+            error:
+              "Run migration 024_artist_public_page.sql in Supabase SQL Editor.",
+            code: "NEED_MIGRATION",
+          },
+          { status: 400 }
+        );
+      }
       if (/gate_tagline|tip_tagline|column/i.test(error.message)) {
         const onlyName: Record<string, unknown> = {};
         if (updates.stage_name) onlyName.stage_name = updates.stage_name;
+        if (updates.public_page) onlyName.public_page = updates.public_page;
         if (!Object.keys(onlyName).length) {
           return NextResponse.json(
-            {
-              error:
-                "Run migration 022_public_page_taglines.sql in Supabase to edit public taglines.",
-              code: "NEED_MIGRATION",
-            },
+            { error: error.message },
             { status: 400 }
           );
         }
-        let q2 = supabase
+        let q2 = db
           .from("roster_artists")
           .update(onlyName)
           .eq("owner_user_id", user.id);
         if (body.id) q2 = q2.eq("id", body.id);
-        else q2 = q2.eq("slug", body.slug);
+        else q2 = q2.eq("slug", body.slug!);
         const retry = await q2
-          .select("id, stage_name, slug, genre")
+          .select("id, stage_name, slug, genre, public_page")
           .maybeSingle();
         if (retry.error) {
           return NextResponse.json(
@@ -289,11 +283,29 @@ export async function PATCH(req: Request) {
             { status: 500 }
           );
         }
-        return NextResponse.json({ artist: retry.data });
+        return NextResponse.json({
+          artist: retry.data,
+          page: mergePublicPage(
+            (retry.data as { public_page?: unknown } | null)?.public_page
+          ),
+        });
       }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    return NextResponse.json({ artist: data });
+
+    if (!data) {
+      return NextResponse.json(
+        { error: "Artist not found for your account" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      artist: data,
+      page: mergePublicPage(
+        (data as { public_page?: unknown }).public_page
+      ),
+    });
   } catch (e) {
     console.error("[roster PATCH]", e);
     return NextResponse.json({ error: "Failed" }, { status: 500 });

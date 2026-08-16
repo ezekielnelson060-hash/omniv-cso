@@ -13,8 +13,8 @@ import {
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
 /**
- * Full artist/release page editor — song, messages, links, tip.
- * Always expanded so it's obvious (not buried under old wording UI).
+ * Full artist/release page editor.
+ * Saves via /api/roster PATCH (owner_user_id) — same path as stage name.
  */
 export function PublicPageEditor({
   slug,
@@ -23,100 +23,79 @@ export function PublicPageEditor({
   slug?: string | null;
   onSaved?: () => void;
 }) {
-  const [artistId, setArtistId] = useState<string | null>(null);
   const [stageName, setStageName] = useState("");
   const [page, setPage] = useState<ArtistPublicPage>(mergePublicPage({}));
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [resolvedSlug, setResolvedSlug] = useState(slug || "");
 
-  const resolveArtist = useCallback(async () => {
+  const load = useCallback(async () => {
     if (!slug || !isSupabaseConfigured()) return;
     const supabase = createClient();
     const { data } = await supabase
       .from("roster_artists")
-      .select("id, stage_name, slug")
+      .select("id, stage_name, slug, public_page")
       .eq("slug", slug)
       .maybeSingle();
+
     if (data) {
-      setArtistId(data.id);
       setStageName(String(data.stage_name || ""));
-    } else {
-      // fallback: first roster row if slug mismatch
-      const { data: any } = await supabase
-        .from("roster_artists")
-        .select("id, stage_name, slug")
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (any) {
-        setArtistId(any.id);
-        setStageName(String(any.stage_name || ""));
-      }
+      setResolvedSlug(String(data.slug || slug));
+      setPage(mergePublicPage(data.public_page));
+      return;
+    }
+
+    // fallback: first owned artist
+    const { data: any } = await supabase
+      .from("roster_artists")
+      .select("id, stage_name, slug, public_page")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (any) {
+      setStageName(String(any.stage_name || ""));
+      setResolvedSlug(String(any.slug || ""));
+      setPage(mergePublicPage(any.public_page));
     }
   }, [slug]);
 
-  const loadPage = useCallback(async (id: string) => {
-    const res = await fetch(
-      `/api/roster/public-page?artistId=${encodeURIComponent(id)}`
-    );
-    const data = await res.json();
-    if (!res.ok) {
-      setErr(
-        data.error ||
-          "Could not load page — run migration 024_artist_public_page.sql in Supabase"
-      );
-      return;
-    }
-    setPage(mergePublicPage(data.page));
-    if (data.stageName) setStageName(data.stageName);
-  }, []);
-
   useEffect(() => {
-    void resolveArtist();
-  }, [resolveArtist]);
+    void load();
+  }, [load]);
 
-  useEffect(() => {
-    if (artistId) void loadPage(artistId);
-  }, [artistId, loadPage]);
-
-  if (!slug) return null;
+  if (!slug && !resolvedSlug) return null;
 
   async function save() {
-    if (!artistId) {
-      setErr("Artist not found — add a roster artist first");
+    const s = resolvedSlug || slug;
+    if (!s) {
+      setErr("No artist slug");
       return;
     }
     setBusy(true);
     setErr(null);
     setMsg(null);
     try {
-      await fetch("/api/roster", {
+      const res = await fetch("/api/roster", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          slug,
+          slug: s,
           stageName: stageName.trim() || undefined,
           gateTagline: page.messageTop?.trim() || null,
           tipTagline: page.messageBottom?.trim() || null,
+          publicPage: page,
         }),
-      });
-
-      const res = await fetch("/api/roster/public-page", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ artistId, page }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setErr(
-          data.error ||
-            "Save failed — run migration 024 in Supabase if you have not"
-        );
+        setErr(data.error || "Could not save");
         return;
       }
-      setPage(mergePublicPage(data.page));
-      setMsg("Saved. Open Preview page to see song, tips, and links.");
+      if (data.page) setPage(mergePublicPage(data.page));
+      setMsg(
+        `Saved. Open https://omniv.media/f/${s} to see song, links, tip.`
+      );
       onSaved?.();
     } catch {
       setErr("Network error");
@@ -131,21 +110,30 @@ export function PublicPageEditor({
     setPage({ ...page, links });
   }
 
+  const previewSlug = resolvedSlug || slug;
+
   return (
     <Card className="border-omniv-gold/30 bg-omniv-gold/5 p-4">
       <p className="text-[13px] font-semibold text-omniv-gold">
         Artist page editor
       </p>
       <p className="mt-0.5 text-[12px] text-omniv-text-secondary">
-        This controls what fans see on{" "}
-        <span className="font-data text-omniv-gold">/f/{slug}</span>
-        : song, story, list, links, tips.
+        Controls{" "}
+        <a
+          href={`/f/${previewSlug}`}
+          target="_blank"
+          rel="noreferrer"
+          className="font-data text-omniv-gold underline"
+        >
+          /f/{previewSlug}
+        </a>
+        — song, story, list, links, tips.
       </p>
 
       <div className="mt-4 space-y-3">
         <div>
           <label className="text-[11px] text-omniv-text-muted">
-            Display name (what fans see)
+            Display name
           </label>
           <Input
             className="mt-1 h-10"
@@ -160,7 +148,7 @@ export function PublicPageEditor({
             className="mt-1 min-h-[64px] w-full rounded-xl border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm"
             value={page.messageTop || ""}
             onChange={(e) => setPage({ ...page, messageTop: e.target.value })}
-            placeholder="Why this drop / what you're building…"
+            placeholder="Why this drop…"
           />
         </div>
 
@@ -228,11 +216,6 @@ export function PublicPageEditor({
           onChange={(e) =>
             setPage({ ...page, captureHeadline: e.target.value })
           }
-        />
-        <Input
-          label="After join message"
-          value={page.captureReward || ""}
-          onChange={(e) => setPage({ ...page, captureReward: e.target.value })}
         />
 
         <p className="text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
@@ -307,7 +290,7 @@ export function PublicPageEditor({
 
         <Button
           type="button"
-          className="h-10 w-full gap-1.5 sm:w-auto"
+          className="h-10 w-full gap-1.5"
           disabled={busy}
           onClick={() => void save()}
         >
