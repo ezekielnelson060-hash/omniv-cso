@@ -219,6 +219,7 @@ export function CrmPanel({
             artistName={primaryArtistName}
             fanCount={fanCount}
           />
+          <PublicPageEditor slug={gateSlug} />
           <RoomChallenge />
           <div className="grid gap-4 lg:grid-cols-2">
             <CityHeatMap
@@ -277,8 +278,8 @@ export function CrmPanel({
       {tab === "money" && (
         <div className="space-y-4">
           <p className="text-[13px] leading-snug text-omniv-text-secondary">
-            Tickets from rooms. Tips from your tip links. Copy a link per artist
-            on your roster. Labels set payout per act below.
+            Tickets from rooms. Tips from your page. Copy the bio link per
+            artist. Labels set payout per act below.
           </p>
           <PublicPageEditor slug={gateSlug} />
           <div className="rounded-2xl border border-omniv-gold/20 bg-omniv-gold/5 px-3.5 py-2.5 text-[12px] text-omniv-text-secondary">
