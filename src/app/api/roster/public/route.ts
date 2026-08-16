@@ -4,7 +4,8 @@ import { mergePublicPage } from "@/lib/artist-public-page";
 
 /** Public roster lookup by slug (artist page, tip, fan gate). */
 export async function GET(req: Request) {
-  const slug = new URL(req.url).searchParams.get("slug")?.trim();
+  const raw = new URL(req.url).searchParams.get("slug")?.trim() || "";
+  const slug = raw.toLowerCase();
   if (!slug) {
     return NextResponse.json({ error: "slug required" }, { status: 400 });
   }
@@ -19,7 +20,7 @@ export async function GET(req: Request) {
 
   const admin = createClient(url, key, { auth: { persistSession: false } });
 
-  let data: {
+  type Row = {
     stage_name?: string | null;
     slug?: string | null;
     gate_tagline?: string | null;
@@ -27,29 +28,69 @@ export async function GET(req: Request) {
     owner_user_id?: string | null;
     image_url?: string | null;
     public_page?: unknown;
-  } | null = null;
+    org_id?: string | null;
+  };
 
-  const full = await admin
-    .from("roster_artists")
-    .select(
-      "stage_name, slug, gate_tagline, tip_tagline, owner_user_id, image_url, public_page"
-    )
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (full.error) {
-    const basic = await admin
+  async function lookup(selectCols: string): Promise<Row | null> {
+    // exact
+    let q = await admin
       .from("roster_artists")
-      .select("stage_name, slug, owner_user_id, gate_tagline, tip_tagline, image_url")
+      .select(selectCols)
       .eq("slug", slug)
+      .limit(1)
       .maybeSingle();
-    data = basic.data as typeof data;
-  } else {
-    data = full.data;
+    if (!q.error && q.data) return q.data as unknown as Row;
+
+    // case-insensitive
+    q = await admin
+      .from("roster_artists")
+      .select(selectCols)
+      .ilike("slug", slug)
+      .limit(1)
+      .maybeSingle();
+    if (!q.error && q.data) return q.data as unknown as Row;
+
+    // prefix (handles truncated URLs like /f/zil)
+    if (slug.length >= 3) {
+      const list = await admin
+        .from("roster_artists")
+        .select(selectCols)
+        .ilike("slug", `${slug}%`)
+        .limit(5);
+      if (!list.error && list.data && list.data.length === 1) {
+        return list.data[0] as unknown as Row;
+      }
+      // if multiple, prefer longest match starting with slug
+      if (!list.error && list.data && list.data.length > 1) {
+        const sorted = [...list.data].sort(
+          (a, b) =>
+            String((b as Row).slug || "").length -
+            String((a as Row).slug || "").length
+        );
+        return sorted[0] as unknown as Row;
+      }
+    }
+    return null;
+  }
+
+  // Prefer full columns; fall back if public_page column missing
+  let data = await lookup(
+    "stage_name, slug, gate_tagline, tip_tagline, owner_user_id, image_url, public_page, org_id"
+  );
+  if (!data) {
+    data = await lookup(
+      "stage_name, slug, gate_tagline, tip_tagline, owner_user_id, image_url, org_id"
+    );
+  }
+  if (!data) {
+    data = await lookup("stage_name, slug, owner_user_id, org_id");
   }
 
   if (!data) {
-    return NextResponse.json({ error: "not found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "not found", slug },
+      { status: 404 }
+    );
   }
 
   let avatarUrl: string | null =
@@ -61,37 +102,26 @@ export async function GET(req: Request) {
       .select("avatar_url")
       .eq("id", data.owner_user_id)
       .maybeSingle();
-    if (profile?.avatar_url) {
-      avatarUrl = String(profile.avatar_url);
-    }
+    if (profile?.avatar_url) avatarUrl = String(profile.avatar_url);
   }
 
-  if (!avatarUrl) {
-    const withOrg = await admin
-      .from("roster_artists")
-      .select("org_id")
-      .eq("slug", slug)
+  if (!avatarUrl && data.org_id) {
+    const { data: org } = await admin
+      .from("orgs")
+      .select("owner_user_id")
+      .eq("id", data.org_id)
       .maybeSingle();
-    const orgId = withOrg.data?.org_id as string | undefined;
-    if (orgId) {
-      const { data: org } = await admin
-        .from("orgs")
-        .select("owner_user_id")
-        .eq("id", orgId)
+    if (org?.owner_user_id) {
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", org.owner_user_id)
         .maybeSingle();
-      if (org?.owner_user_id) {
-        const { data: profile } = await admin
-          .from("profiles")
-          .select("avatar_url")
-          .eq("id", org.owner_user_id)
-          .maybeSingle();
-        if (profile?.avatar_url) avatarUrl = String(profile.avatar_url);
-      }
+      if (profile?.avatar_url) avatarUrl = String(profile.avatar_url);
     }
   }
 
   const page = mergePublicPage(data.public_page);
-  // Fall back taglines into page messages if empty
   if (!page.messageTop?.trim() && data.gate_tagline) {
     page.messageTop = String(data.gate_tagline);
   }
