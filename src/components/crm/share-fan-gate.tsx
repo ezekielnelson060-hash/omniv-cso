@@ -28,11 +28,11 @@ export function ShareFanGate({
     return (
       <Card className="border-omniv-gold/25 bg-omniv-gold/5 p-4">
         <p className="text-[13px] font-semibold text-omniv-gold">
-          Fan Gate not ready
+          Artist page not ready
         </p>
         <p className="mt-1 text-[12px] text-omniv-text-secondary">
-          Add yourself on the roster (stage name) so Omniv can open your gate
-          link. Then put it in your bio.
+          Add yourself on the roster (stage name) so Omniv can open your bio
+          link. Then put it in Instagram / TikTok.
         </p>
       </Card>
     );
@@ -40,7 +40,7 @@ export function ShareFanGate({
 
   const empty = fanCount === 0;
   const name = artistName || "me";
-  const message = `Join ${name}'s list — drop your city if you'd show up:`;
+  const message = `Join ${name} — music, list, and shows near you:`;
 
   return (
     <Card
@@ -54,16 +54,16 @@ export function ShareFanGate({
         <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-omniv-gold" />
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-semibold">
-            {empty ? "Share your Fan Gate" : "Your Fan Gate"}
+            {empty ? "Share your artist page" : "Your artist page"}
           </p>
           <p className="mt-1 text-[12px] text-omniv-text-secondary">
             {empty
-              ? "Fans enter email + city + would attend. That fills your map and rooms. Put this link in Instagram / TikTok bio, or share below."
-              : `${fanCount} on your list. Keep the link in bio so the list keeps growing.`}
+              ? "One bio link: song, story, email + city list, links, and tips. Edit the page below, then put this URL in Instagram / TikTok."
+              : `${fanCount} on your list. Keep this link in bio — song, list, tips in one place.`}
           </p>
           {artistName && (
             <p className="mt-1 text-[11px] text-omniv-text-muted">
-              Gate for {artistName}
+              Page for {artistName}
             </p>
           )}
           <p className="mt-2 break-all font-data text-[11px] text-omniv-gold">
@@ -74,7 +74,7 @@ export function ShareFanGate({
               url={url!}
               message={message}
               previewHref={url!}
-              previewLabel="Preview gate"
+              previewLabel="Preview page"
             />
           </div>
         </div>
