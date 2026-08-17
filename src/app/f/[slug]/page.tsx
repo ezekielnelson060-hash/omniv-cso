@@ -33,7 +33,6 @@ function ReleasePageInner() {
   const [page, setPage] = useState<ArtistPublicPage>(mergePublicPage({}));
   const [loaded, setLoaded] = useState(false);
 
-  // Capture
   const [email, setEmail] = useState("");
   const [city, setCity] = useState("");
   const [wouldAttend, setWouldAttend] = useState(true);
@@ -42,8 +41,6 @@ function ReleasePageInner() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Tip
-  const [tipOpen, setTipOpen] = useState(false);
   const [tipName, setTipName] = useState("");
   const [tipEmail, setTipEmail] = useState("");
   const [amount, setAmount] = useState("5");
@@ -77,7 +74,8 @@ function ReleasePageInner() {
         if (data.avatarUrl) setAvatarUrl(data.avatarUrl);
         if (data.page) setPage(mergePublicPage(data.page));
         const amounts = data.page?.tipAmounts;
-        if (amounts?.[0]) setAmount(String(amounts[0] === 3 ? 5 : amounts[1] || 5));
+        if (amounts?.[0])
+          setAmount(String(amounts[0] === 3 ? 5 : amounts[1] || 5));
       } catch {
         /* soft */
       }
@@ -98,7 +96,8 @@ function ReleasePageInner() {
           artistSlug: slug,
           email: email.trim(),
           city: city.trim() || undefined,
-          wouldAttend: page.showWouldAttend !== false ? wouldAttend : undefined,
+          wouldAttend:
+            page.showWouldAttend !== false ? wouldAttend : undefined,
           consent: true,
           source,
         }),
@@ -155,61 +154,65 @@ function ReleasePageInner() {
     Boolean(page.track?.title) ||
     Boolean(embed) ||
     Boolean(page.track?.downloadUrl) ||
-    Boolean(page.track?.youtubeUrl);
+    Boolean(page.track?.youtubeUrl) ||
+    Boolean(page.track?.appleUrl);
   const amounts = page.tipAmounts || [3, 5, 10, 20];
   const tipOn = page.tipEnabled !== false;
+  const displayName = artistName === "..." ? "Artist" : artistName;
+
+  if (!loaded) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-[#0a0a0a] text-sm text-white/40">
+        Loading…
+      </div>
+    );
+  }
 
   return (
-    <div className="relative min-h-dvh bg-omniv-black text-omniv-text">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(212,175,55,0.09),_transparent_50%)]" />
+    <div className="relative min-h-dvh bg-[#0a0a0a] text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(212,175,55,0.12),_transparent_55%)]" />
 
-      <div className="relative z-10 mx-auto max-w-lg px-4 pb-16 pt-10 sm:px-6">
+      <div className="relative z-10 mx-auto max-w-md px-4 pb-20 pt-12 sm:px-5">
         {/* Header */}
         <header className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex justify-center">
-            <ArtistAvatar
-              name={artistName === "..." ? "Artist" : artistName}
-              src={avatarUrl}
-              size={80}
-            />
+          <div className="mx-auto mb-5 flex justify-center">
+            <div className="rounded-2xl ring-1 ring-white/10 shadow-[0_0_40px_rgba(212,175,55,0.15)]">
+              <ArtistAvatar name={displayName} src={avatarUrl} size={88} />
+            </div>
           </div>
-          <p className="font-data text-[10px] uppercase tracking-[0.18em] text-omniv-gold">
+          <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#d4af37]">
             Omniv
           </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-            {artistName === "..." ? "Artist" : artistName}
+          <h1 className="mt-2 text-[28px] font-semibold tracking-tight sm:text-[32px]">
+            {displayName}
           </h1>
-          {page.messageTop?.trim() && (
-            <p className="mx-auto mt-3 max-w-md text-[14px] leading-relaxed text-omniv-text-secondary">
-              {page.messageTop.trim()}
-            </p>
-          )}
-          {!page.messageTop?.trim() && loaded && (
-            <p className="mx-auto mt-3 max-w-md text-[14px] leading-relaxed text-omniv-text-secondary">
-              New music, shows near you, and a direct line — not another algorithm feed.
+          {(page.messageTop?.trim() || loaded) && (
+            <p className="mx-auto mt-4 max-w-sm text-[15px] leading-relaxed text-white/65">
+              {page.messageTop?.trim() ||
+                "New music, shows near you, and a direct line — not another algorithm feed."}
             </p>
           )}
         </header>
 
-        {/* Track / release */}
+        {/* Track */}
         {hasTrack && (
-          <section className="mb-6 overflow-hidden rounded-2xl border border-omniv-border bg-omniv-card">
+          <section className="mb-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
             {(page.track?.title || page.track?.subtitle) && (
-              <div className="border-b border-omniv-border px-4 py-3">
+              <div className="border-b border-white/10 px-4 py-3.5">
                 {page.track?.title && (
-                  <h2 className="text-base font-semibold tracking-tight">
+                  <h2 className="text-[16px] font-semibold tracking-tight">
                     {page.track.title}
                   </h2>
                 )}
                 {page.track?.subtitle && (
-                  <p className="mt-0.5 text-[12px] text-omniv-text-muted">
+                  <p className="mt-0.5 text-[12px] text-white/45">
                     {page.track.subtitle}
                   </p>
                 )}
               </div>
             )}
             {embed && (
-              <div className="bg-black/40 p-2 sm:p-3">
+              <div className="bg-black/50 p-2">
                 <iframe
                   title="Spotify"
                   src={embed}
@@ -227,10 +230,10 @@ function ReleasePageInner() {
                   href={page.track.spotifyUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl border border-omniv-border bg-omniv-elevated px-3 text-[13px] font-medium hover:border-omniv-gold/40"
+                  className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.06] px-3 text-[13px] font-medium hover:border-[#d4af37]/40"
                 >
                   Stream on Spotify
-                  <ExternalLink className="h-3.5 w-3.5" />
+                  <ExternalLink className="h-3.5 w-3.5 opacity-60" />
                 </a>
               )}
               {page.track?.appleUrl && (
@@ -238,21 +241,10 @@ function ReleasePageInner() {
                   href={page.track.appleUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl border border-omniv-border bg-omniv-elevated px-3 text-[13px] font-medium hover:border-omniv-gold/40"
+                  className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.06] px-3 text-[13px] font-medium"
                 >
                   Apple Music
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              )}
-              {page.track?.youtubeUrl && (
-                <a
-                  href={page.track.youtubeUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl border border-omniv-border bg-omniv-elevated px-3 text-[13px] font-medium hover:border-omniv-gold/40"
-                >
-                  YouTube
-                  <ExternalLink className="h-3.5 w-3.5" />
+                  <ExternalLink className="h-3.5 w-3.5 opacity-60" />
                 </a>
               )}
               {page.track?.downloadUrl && (
@@ -260,7 +252,7 @@ function ReleasePageInner() {
                   href={page.track.downloadUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl bg-omniv-gold px-3 text-[13px] font-semibold text-omniv-black"
+                  className="inline-flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#d4af37] px-3 text-[13px] font-semibold text-black"
                 >
                   <Download className="h-3.5 w-3.5" />
                   Download
@@ -270,70 +262,61 @@ function ReleasePageInner() {
           </section>
         )}
 
-        {/* Middle message */}
         {page.messageMiddle?.trim() && (
-          <p className="mb-6 rounded-2xl border border-omniv-border/80 bg-omniv-elevated/40 px-4 py-3 text-[13px] leading-relaxed text-omniv-text-secondary">
+          <p className="mb-5 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3.5 text-[14px] leading-relaxed text-white/60">
             {page.messageMiddle.trim()}
           </p>
         )}
 
         {/* Capture */}
-        <section className="mb-6 rounded-2xl border border-omniv-border bg-omniv-card p-4 sm:p-5">
-          <h3 className="text-sm font-semibold tracking-tight">
+        <section className="mb-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
+          <h3 className="text-[15px] font-semibold tracking-tight">
             {page.captureHeadline || "Get the next drop + shows near you"}
           </h3>
-          <p className="mt-1 text-[12px] text-omniv-text-muted">
-            Email + city only. No spam — early access and invites near you.
+          <p className="mt-1 text-[12px] text-white/45">
+            Email + city. Early access and invites near you — no spam.
           </p>
 
           {done ? (
-            <div className="mt-4 space-y-2 py-2 text-center">
-              <CheckCircle2 className="mx-auto h-7 w-7 text-omniv-gold" />
-              <p className="text-sm font-medium">You're on the list</p>
-              <p className="text-[13px] text-omniv-text-secondary">
+            <div className="mt-5 space-y-2 py-2 text-center">
+              <CheckCircle2 className="mx-auto h-8 w-8 text-[#d4af37]" />
+              <p className="text-[15px] font-medium">You&apos;re on the list</p>
+              <p className="text-[13px] text-white/55">
                 {page.captureReward ||
-                  "Thanks — you'll hear about new music and events near you."}
+                  "Thanks — you&apos;ll hear about new music and events near you."}
               </p>
-              {tipOn && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="mt-2 h-10 gap-1.5 rounded-xl"
-                  onClick={() => setTipOpen(true)}
-                >
-                  <Heart className="h-3.5 w-3.5 text-omniv-gold" />
-                  Support the next one
-                </Button>
-              )}
             </div>
           ) : (
-            <form className="mt-4 space-y-3" onSubmit={(e) => void submitCapture(e)}>
+            <form
+              className="mt-4 space-y-3"
+              onSubmit={(e) => void submitCapture(e)}
+            >
               <Input
                 type="email"
                 required
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-11 rounded-xl"
+                className="h-12 rounded-xl border-white/10 bg-white/[0.05]"
               />
               <div className="relative">
-                <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-omniv-text-muted" />
+                <MapPin className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
                 <Input
                   placeholder="City (where you are)"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  className="h-11 rounded-xl pl-9"
+                  className="h-12 rounded-xl border-white/10 bg-white/[0.05] pl-10"
                 />
               </div>
               {page.showWouldAttend !== false && (
-                <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-omniv-border bg-omniv-elevated/50 px-3 py-2.5">
+                <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-white/8 bg-white/[0.03] px-3.5 py-3">
                   <input
                     type="checkbox"
                     checked={wouldAttend}
                     onChange={(e) => setWouldAttend(e.target.checked)}
                     className="mt-0.5"
                   />
-                  <span className="text-xs leading-relaxed text-omniv-text-secondary">
+                  <span className="text-[12px] leading-relaxed text-white/55">
                     I would come to a small show or listening session near me.
                   </span>
                 </label>
@@ -346,7 +329,7 @@ function ReleasePageInner() {
                   className="mt-0.5"
                   required
                 />
-                <span className="text-[11px] leading-relaxed text-omniv-text-muted">
+                <span className="text-[11px] leading-relaxed text-white/40">
                   I agree to get updates about music and events near me.
                 </span>
               </label>
@@ -354,7 +337,7 @@ function ReleasePageInner() {
               <Button
                 type="submit"
                 disabled={busy || !email.trim() || !consent}
-                className="h-11 w-full rounded-xl font-semibold"
+                className="h-12 w-full rounded-xl bg-[#d4af37] text-[14px] font-semibold text-black hover:bg-[#c9a42e]"
               >
                 {busy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -366,47 +349,38 @@ function ReleasePageInner() {
           )}
         </section>
 
-        {/* Links (Linktree layer) */}
         {(page.links || []).length > 0 && (
-          <section className="mb-6 space-y-2">
-            <p className="px-1 text-[10px] font-medium uppercase tracking-wider text-omniv-text-muted">
-              Links
-            </p>
+          <section className="mb-5 space-y-2">
             {(page.links || []).map((l) => (
               <a
                 key={l.url + l.label}
                 href={l.url}
                 target="_blank"
                 rel="noreferrer"
-                className="flex h-12 items-center justify-between rounded-xl border border-omniv-border bg-omniv-card px-4 text-[14px] font-medium transition-colors hover:border-omniv-gold/40"
+                className="flex h-12 items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-4 text-[14px] font-medium transition-colors hover:border-[#d4af37]/35"
               >
                 <span>{l.label}</span>
-                <ExternalLink className="h-3.5 w-3.5 text-omniv-text-muted" />
+                <ExternalLink className="h-3.5 w-3.5 text-white/35" />
               </a>
             ))}
           </section>
         )}
 
-        {/* Tip */}
         {tipOn && (
-          <section className="mb-6 rounded-2xl border border-omniv-gold/25 bg-omniv-gold/5 p-4 sm:p-5">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-                  <Heart className="h-4 w-4 text-omniv-gold" />
-                  Support {artistName === "..." ? "the artist" : artistName}
-                </h3>
-                <p className="mt-1 text-[12px] text-omniv-text-secondary">
-                  Optional. Every tip goes to the next song and the next room.
-                </p>
-              </div>
-            </div>
+          <section className="mb-6 rounded-2xl border border-[#d4af37]/25 bg-[#d4af37]/[0.06] p-4 sm:p-5">
+            <h3 className="flex items-center gap-1.5 text-[15px] font-semibold">
+              <Heart className="h-4 w-4 text-[#d4af37]" />
+              Support {displayName}
+            </h3>
+            <p className="mt-1 text-[12px] text-white/50">
+              Optional. Every tip goes to the next song and the next room.
+            </p>
             {tipMsg && (
-              <p className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[12px] text-emerald-300">
+              <p className="mt-3 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-[12px] text-emerald-300">
                 {tipMsg}
               </p>
             )}
-            {!tipMsg && (tipOpen || true) && (
+            {!tipMsg && (
               <form className="mt-4 space-y-3" onSubmit={(e) => void payTip(e)}>
                 <div className="flex gap-2">
                   {amounts.map((a) => (
@@ -414,10 +388,10 @@ function ReleasePageInner() {
                       key={a}
                       type="button"
                       onClick={() => setAmount(String(a))}
-                      className={`h-10 flex-1 rounded-xl border text-[13px] font-medium ${
+                      className={`h-11 flex-1 rounded-xl border text-[13px] font-medium ${
                         amount === String(a)
-                          ? "border-omniv-gold bg-omniv-gold/15 text-omniv-gold"
-                          : "border-omniv-border text-omniv-text-muted"
+                          ? "border-[#d4af37] bg-[#d4af37]/15 text-[#d4af37]"
+                          : "border-white/10 text-white/45"
                       }`}
                     >
                       ${a}
@@ -428,7 +402,7 @@ function ReleasePageInner() {
                   placeholder="Your name (optional)"
                   value={tipName}
                   onChange={(e) => setTipName(e.target.value)}
-                  className="h-10 rounded-xl"
+                  className="h-11 rounded-xl border-white/10 bg-white/[0.05]"
                 />
                 <Input
                   type="email"
@@ -436,12 +410,12 @@ function ReleasePageInner() {
                   placeholder="Email for receipt"
                   value={tipEmail || email}
                   onChange={(e) => setTipEmail(e.target.value)}
-                  className="h-10 rounded-xl"
+                  className="h-11 rounded-xl border-white/10 bg-white/[0.05]"
                 />
                 {tipErr && <p className="text-xs text-rose-400">{tipErr}</p>}
                 <Button
                   type="submit"
-                  className="h-11 w-full rounded-xl font-semibold"
+                  className="h-12 w-full rounded-xl bg-[#d4af37] text-[14px] font-semibold text-black"
                   disabled={tipBusy || !slug}
                 >
                   {tipBusy ? (
@@ -455,21 +429,16 @@ function ReleasePageInner() {
           </section>
         )}
 
-        {/* Bottom message */}
         {page.messageBottom?.trim() && (
-          <p className="mb-8 text-center text-[13px] leading-relaxed text-omniv-text-secondary">
+          <p className="mb-8 text-center text-[13px] leading-relaxed text-white/50">
             {page.messageBottom.trim()}
           </p>
         )}
 
-        <p className="text-center text-[10px] text-omniv-text-muted">
+        <p className="text-center text-[10px] text-white/30">
           Powered by{" "}
-          <Link href="/" className="text-omniv-gold hover:underline">
+          <Link href="/" className="text-[#d4af37] hover:underline">
             Omniv
-          </Link>
-          {" · "}
-          <Link href={`/tip/${slug}`} className="hover:underline">
-            Tip only
           </Link>
         </p>
       </div>
@@ -481,7 +450,7 @@ export default function FanGatePage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-dvh items-center justify-center bg-omniv-black text-sm text-omniv-text-muted">
+        <div className="flex min-h-dvh items-center justify-center bg-[#0a0a0a] text-sm text-white/40">
           Loading…
         </div>
       }
