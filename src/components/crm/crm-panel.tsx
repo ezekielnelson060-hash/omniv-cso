@@ -7,6 +7,7 @@ import { FanGateMetrics } from "@/components/crm/fan-gate-metrics";
 import { RosterSwitcher } from "@/components/crm/roster-switcher";
 import { ContractsPanel } from "@/components/crm/contracts-panel";
 import { EarningsPanel } from "@/components/crm/earnings-panel";
+import { RoyaltyChecklist } from "@/components/crm/royalty-checklist";
 import { AudienceMap } from "@/components/crm/audience-map";
 import { CityHeatMap } from "@/components/crm/city-heat-map";
 import { GatheringsPanel } from "@/components/crm/gatherings-panel";
@@ -278,17 +279,18 @@ export function CrmPanel({
       {tab === "money" && (
         <div className="space-y-4">
           <p className="text-[13px] leading-snug text-omniv-text-secondary">
-            Tickets from rooms. Tips from your page. Copy the bio link per
-            artist. Labels set payout per act below.
+            Tips and rooms pay you here. The checklist below is money platforms
+            already owe you — Omniv does not replace those.
           </p>
+          <EarningsPanel />
+          <RoyaltyChecklist />
           <PublicPageEditor slug={gateSlug} />
           <div className="rounded-2xl border border-omniv-gold/20 bg-omniv-gold/5 px-3.5 py-2.5 text-[12px] text-omniv-text-secondary">
             <span className="font-semibold text-omniv-gold">~90% to you</span>
             {" · "}
-            Omniv 10%. Africa: auto-pay when bank is linked. US / EU / Asia: payout
-            on schedule to the account you save.
+            Omniv 10%. Africa: auto-pay when bank is linked. US / EU / Asia:
+            payout on schedule to the account you save.
           </div>
-          <EarningsPanel />
           <RosterPayouts />
           <ContractsPanel />
         </div>
