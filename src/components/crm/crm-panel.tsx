@@ -14,7 +14,6 @@ import { GatheringsPanel } from "@/components/crm/gatherings-panel";
 import { VenueFinder } from "@/components/crm/venue-finder";
 import { RoomChallenge } from "@/components/crm/room-challenge";
 import { ShareFanGate } from "@/components/crm/share-fan-gate";
-import { PublicPageEditor } from "@/components/crm/public-page-editor";
 import { RosterPayouts } from "@/components/crm/roster-payouts";
 import { StorySlides } from "@/components/onboarding/story-slides";
 import { isPlaceholderStageName } from "@/lib/crm-priority";
@@ -220,7 +219,6 @@ export function CrmPanel({
             artistName={primaryArtistName}
             fanCount={fanCount}
           />
-          <PublicPageEditor slug={gateSlug} />
           <RoomChallenge />
           <div className="grid gap-4 lg:grid-cols-2">
             <CityHeatMap
@@ -279,12 +277,11 @@ export function CrmPanel({
       {tab === "money" && (
         <div className="space-y-4">
           <p className="text-[13px] leading-snug text-omniv-text-secondary">
-            Tips and rooms pay you here. The checklist below is money platforms
-            already owe you — Omniv does not replace those.
+            Tips and rooms pay you here. Checklist is money platforms already
+            owe you — Omniv does not replace those.
           </p>
           <EarningsPanel />
           <RoyaltyChecklist />
-          <PublicPageEditor slug={gateSlug} />
           <div className="rounded-2xl border border-omniv-gold/20 bg-omniv-gold/5 px-3.5 py-2.5 text-[12px] text-omniv-text-secondary">
             <span className="font-semibold text-omniv-gold">~90% to you</span>
             {" · "}
@@ -303,7 +300,6 @@ export function CrmPanel({
             artistName={primaryArtistName}
             fanCount={fanCount}
           />
-          <PublicPageEditor slug={gateSlug} />
           <FanGateMetrics
             fanCount={fanCount}
             fans7d={fans7d}
