@@ -14,6 +14,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = getPost(slug);
   if (!post) return { title: "Post" };
+  const ogImages = post.image
+    ? [{ url: `https://omniv.media${post.image}` }]
+    : undefined;
   return {
     title: post.title,
     description: post.description,
@@ -24,8 +27,67 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: post.description,
       url: `https://omniv.media/blog/${post.slug}`,
       type: "article",
+      images: ogImages,
     },
   };
+}
+
+function Block({ text }: { text: string }) {
+  if (text.startsWith("IMG:")) {
+    const src = text.slice(4).trim();
+    return (
+      <div className="my-8 overflow-hidden rounded-2xl border border-omniv-border bg-omniv-elevated">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt=""
+          className="aspect-[16/9] w-full object-cover object-center"
+        />
+      </div>
+    );
+  }
+  if (text.startsWith("### ")) {
+    return (
+      <h3 className="mt-8 text-xl font-semibold tracking-tight text-omniv-text">
+        {text.slice(4)}
+      </h3>
+    );
+  }
+  if (text.startsWith("## ")) {
+    return (
+      <h2 className="mt-10 text-2xl font-semibold tracking-tight text-omniv-text">
+        {text.slice(3)}
+      </h2>
+    );
+  }
+  const thick =
+    text.length < 90 &&
+    (text.includes("?") ||
+      text === "It usually isn't." ||
+      text === "That's useful." ||
+      text === "start asking:" ||
+      text === "who would show up?" ||
+      text.startsWith("How many") ||
+      text.startsWith("Which ") ||
+      text.startsWith("Where ") ||
+      text.startsWith("What ") ||
+      text.startsWith("Find the") ||
+      text.startsWith("Open the") ||
+      text.startsWith("Own the") ||
+      text.startsWith("Get paid") ||
+      text.startsWith("Then do"));
+  if (thick) {
+    return (
+      <p className="text-[17px] font-medium leading-snug text-omniv-text">
+        {text}
+      </p>
+    );
+  }
+  return (
+    <p className="text-[15px] leading-relaxed text-omniv-text-secondary">
+      {text}
+    </p>
+  );
 }
 
 export default async function BlogPostPage({ params }: Props) {
@@ -41,6 +103,7 @@ export default async function BlogPostPage({ params }: Props) {
     description: post.description,
     datePublished: `${post.date}T08:00:00+01:00`,
     dateModified: `${post.date}T08:00:00+01:00`,
+    image: post.image ? `https://omniv.media${post.image}` : undefined,
     author: {
       "@type": "Organization",
       name: "Omniv",
@@ -95,19 +158,31 @@ export default async function BlogPostPage({ params }: Props) {
         ← All posts
       </Link>
       <p className="mt-4 text-[11px] text-omniv-text-muted">{post.date}</p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">{post.title}</h1>
+      <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">
+        {post.title}
+      </h1>
       <p className="mt-3 text-[15px] text-omniv-text-secondary">{post.description}</p>
-      <article className="mt-8 space-y-4 text-[15px] leading-relaxed text-omniv-text-secondary">
+      {post.image && (
+        <div className="mt-8 overflow-hidden rounded-2xl border border-omniv-border">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={post.image}
+            alt=""
+            className="aspect-[16/9] w-full object-cover object-center"
+          />
+        </div>
+      )}
+      <article className="mt-8 space-y-4">
         {post.body.map((para, i) => (
-          <p key={i}>{para}</p>
+          <Block key={i} text={para} />
         ))}
       </article>
       <div className="mt-10 rounded-2xl border border-omniv-gold/30 bg-omniv-gold/10 p-4">
         <p className="text-[14px] font-medium text-omniv-text">
-          Ready for a ranked next move?
+          You already have fans. Find out who would show up.
         </p>
         <p className="mt-1 text-[13px] text-omniv-text-muted">
-          Scan on Omniv — top city, catalogue gaps, and one clear action.
+          Free Artist Scan — city, intent, and one ranked move.
         </p>
         <Link
           href="/signup"
