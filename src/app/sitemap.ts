@@ -9,6 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
   const blogSlugs = [
+    "you-dont-need-more-fans",
     "how-to-make-money-independent-artist",
     "how-to-find-fans-in-any-city",
     "sync-licensing-guide",
@@ -33,14 +34,20 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: `${baseUrl}/blog`,
       lastModified: now,
-      changeFrequency: "weekly" as const,
-      priority: 0.85,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/audit`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.6,
     },
     {
       url: `${baseUrl}/signup`,
       lastModified: now,
       changeFrequency: "monthly",
-      priority: 0.9,
+      priority: 0.7,
     },
     {
       url: `${baseUrl}/login`,
@@ -49,16 +56,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.5,
     },
     {
-      url: `${baseUrl}/audit`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.85,
-    },
-    {
       url: `${baseUrl}/contact`,
       lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.5,
+      changeFrequency: "yearly",
+      priority: 0.4,
     },
     {
       url: `${baseUrl}/privacy`,
@@ -76,13 +77,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${baseUrl}/cookies`,
       lastModified: now,
       changeFrequency: "yearly",
-      priority: 0.2,
+      priority: 0.3,
     },
     {
       url: `${baseUrl}/data-deletion`,
       lastModified: now,
       changeFrequency: "yearly",
-      priority: 0.2,
+      priority: 0.3,
     },
     ...blogRoutes,
   ];
