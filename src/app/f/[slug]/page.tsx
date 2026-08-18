@@ -55,6 +55,17 @@ function ReleasePageInner() {
   }, [slug, source]);
 
   useEffect(() => {
+    if (!loaded) return;
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#tip") {
+      document.getElementById("tip")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [loaded]);
+
+  useEffect(() => {
     if (!slug) return;
     void (async () => {
       try {
@@ -173,11 +184,15 @@ function ReleasePageInner() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(212,175,55,0.12),_transparent_55%)]" />
 
       <div className="relative z-10 mx-auto max-w-md px-4 pb-20 pt-12 sm:px-5">
-        {/* Header */}
         <header className="mb-8 text-center">
           <div className="mx-auto mb-5 flex justify-center">
             <div className="rounded-2xl ring-1 ring-white/10 shadow-[0_0_40px_rgba(212,175,55,0.15)]">
-              <ArtistAvatar name={displayName} src={avatarUrl} size={88} />
+              <ArtistAvatar
+                name={displayName}
+                src={avatarUrl}
+                slug={slug}
+                size={88}
+              />
             </div>
           </div>
           <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-[#d4af37]">
@@ -194,7 +209,6 @@ function ReleasePageInner() {
           )}
         </header>
 
-        {/* Track */}
         {hasTrack && (
           <section className="mb-5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
             {(page.track?.title || page.track?.subtitle) && (
@@ -268,7 +282,6 @@ function ReleasePageInner() {
           </p>
         )}
 
-        {/* Capture */}
         <section className="mb-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
           <h3 className="text-[15px] font-semibold tracking-tight">
             {page.captureHeadline || "Get the next drop + shows near you"}
@@ -280,10 +293,10 @@ function ReleasePageInner() {
           {done ? (
             <div className="mt-5 space-y-2 py-2 text-center">
               <CheckCircle2 className="mx-auto h-8 w-8 text-[#d4af37]" />
-              <p className="text-[15px] font-medium">You&apos;re on the list</p>
+              <p className="text-[15px] font-medium">You're on the list</p>
               <p className="text-[13px] text-white/55">
                 {page.captureReward ||
-                  "Thanks — you&apos;ll hear about new music and events near you."}
+                  "Thanks — you'll hear about new music and events near you."}
               </p>
             </div>
           ) : (
@@ -367,7 +380,10 @@ function ReleasePageInner() {
         )}
 
         {tipOn && (
-          <section className="mb-6 rounded-2xl border border-[#d4af37]/25 bg-[#d4af37]/[0.06] p-4 sm:p-5">
+          <section
+            id="tip"
+            className="mb-6 scroll-mt-6 rounded-2xl border border-[#d4af37]/25 bg-[#d4af37]/[0.06] p-4 sm:p-5"
+          >
             <h3 className="flex items-center gap-1.5 text-[15px] font-semibold">
               <Heart className="h-4 w-4 text-[#d4af37]" />
               Support {displayName}
