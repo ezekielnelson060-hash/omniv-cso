@@ -28,7 +28,6 @@ export function PublicPageEditor({
 
   const load = useCallback(async () => {
     if (!isSupabaseConfigured()) return;
-    // Prefer API so we always see what the server has
     try {
       const res = await fetch("/api/roster");
       if (res.ok) {
@@ -40,8 +39,7 @@ export function PublicPageEditor({
           }[];
         };
         const list = data.artists || [];
-        const match =
-          list.find((a) => a.slug === slug) || list[0];
+        const match = list.find((a) => a.slug === slug) || list[0];
         if (match) {
           setStageName(String(match.stage_name || ""));
           setResolvedSlug(String(match.slug || slug || ""));
@@ -100,20 +98,7 @@ export function PublicPageEditor({
         return;
       }
       if (data.page) setPage(mergePublicPage(data.page));
-
-      const top = data.savedMessageTop || "";
-      const track = data.savedTrackTitle || "";
-      const spotify = data.savedSpotify || "";
-
-      if (!top && !track && !spotify && !page.messageTop && !page.track?.title) {
-        setMsg(
-          `Saved shell. Add a message top or Spotify URL, then save again. Preview: /f/${s}`
-        );
-      } else {
-        setMsg(
-          `Saved to DB. Top: "${top || "(empty)"}" · Track: "${track || "(empty)"}". Open /f/${s} now.`
-        );
-      }
+      setMsg("Saved");
       onSaved?.();
     } catch {
       setErr("Network error");
@@ -283,9 +268,9 @@ export function PublicPageEditor({
           onClick={() => void save()}
         >
           {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          Save artist page
+          Save
         </Button>
-        {msg && <p className="text-[12px] text-emerald-600 whitespace-pre-wrap">{msg}</p>}
+        {msg && <p className="text-[12px] text-emerald-600">{msg}</p>}
         {err && <p className="text-[12px] text-omniv-danger">{err}</p>}
       </div>
     </Card>
