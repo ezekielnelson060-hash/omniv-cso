@@ -4,10 +4,106 @@ export type BlogPost = {
   description: string;
   keywords: string[];
   date: string;
+  /** Optional hero image under /public */
+  image?: string;
+  /**
+   * Body blocks:
+   * - "## Heading" → h2
+   * - "### Subheading" → h3
+   * - "IMG:/path" → image
+   * - otherwise paragraph
+   */
   body: string[];
 };
 
 export const posts: BlogPost[] = [
+  {
+    slug: "you-dont-need-more-fans",
+    title: "You Don't Need More Fans. You Need to Know Which Fans Would Show Up.",
+    description:
+      "More followers don't automatically mean more music revenue. Learn how independent artists can identify real fan demand, find their strongest cities and turn listeners into ticket buyers.",
+    keywords: [
+      "independent artist fan growth",
+      "music audience demand",
+      "concert demand independent artist",
+      "fans who would show up",
+      "music monetization",
+    ],
+    date: "2026-08-18",
+    image: "/blog/empty-room-hero.jpg",
+    body: [
+      "Most independent artists think their biggest problem is audience size.",
+      "It usually isn't.",
+      "The harder problem is knowing which people in that audience actually have intent.",
+      "An artist can have thousands of followers and still have no idea where their next 20 ticket buyers will come from.",
+      "That's because followers, listeners and buyers are three different things.",
+      "IMG:/blog/empty-room-hero.jpg",
+      "## Followers aren't demand",
+      "A follower has expressed interest.",
+      "That's useful.",
+      "But it doesn't mean they're going to buy your next release, attend your show or support your next project.",
+      "The same applies to streaming.",
+      "Spotify can tell you that people listened.",
+      "Instagram can tell you that people watched.",
+      "Neither necessarily tells you:",
+      "\"these are the people who would show up.\"",
+      "That's the information independent artists need.",
+      "## Start measuring intent",
+      "Instead of asking only:",
+      "How many followers do I have?",
+      "How many streams did I get?",
+      "How many views did the video receive?",
+      "start asking:",
+      "Which cities have the strongest audience?",
+      "Which fans engage repeatedly?",
+      "Which fans would attend an event?",
+      "Which songs create the strongest response?",
+      "Where is demand concentrated?",
+      "What action should happen next?",
+      "Those questions turn an audience into something you can actually operate.",
+      "## Why city matters",
+      "An independent artist might live in Lagos but have stronger demand in Accra.",
+      "Another might have listeners spread across London, Abuja and Nairobi.",
+      "Without understanding that distribution, an artist can spend months promoting themselves in the wrong market.",
+      "The biggest audience isn't always the best market.",
+      "The better question is:",
+      "\"where is the strongest actionable demand?\"",
+      "IMG:/blog/room-filled.jpg",
+      "## 20 buyers can teach you more than 20,000 views",
+      "Imagine two artists.",
+      "Artist A receives 20,000 views on a video.",
+      "Artist B gets 20 people to buy tickets to a small listening room.",
+      "Artist A has more attention.",
+      "Artist B has stronger evidence of demand.",
+      "That doesn't mean views are worthless.",
+      "It means they're upstream.",
+      "The career gets interesting when attention becomes action.",
+      "## Build from demand",
+      "The independent artist doesn't necessarily need another content calendar.",
+      "They need a system that can connect the signals:",
+      "audience → city → intent → opportunity → action",
+      "That's the problem Omniv is built around.",
+      "Instead of asking an artist to guess what they should do next, Omniv analyzes their career signals and ranks the highest-impact move.",
+      "Sometimes that move is content.",
+      "Sometimes it's a release.",
+      "Sometimes it's a city.",
+      "Sometimes it's a room.",
+      "The point is that the answer shouldn't be predetermined.",
+      "It should come from the data.",
+      "IMG:/blog/intimate-stage.jpg",
+      "## The real question",
+      "You don't need to know whether you have \"enough\" fans.",
+      "You need to know:",
+      "who would show up?",
+      "Because once you know that, you can build around something real.",
+      "Find the city.",
+      "Open the room.",
+      "Own the relationship.",
+      "Get paid.",
+      "Then do it again.",
+      "Start with the free Omniv Artist Scan and find out what your audience is actually telling you.",
+    ],
+  },
   {
     slug: "how-to-make-money-independent-artist",
     title: "How to Make Money as an Independent Artist in 2026",
