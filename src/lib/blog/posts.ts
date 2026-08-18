@@ -4,17 +4,25 @@ export type BlogPost = {
   description: string;
   keywords: string[];
   date: string;
-  /** Optional hero image under /public */
+  /** Optional hero image URL or /public path */
   image?: string;
   /**
    * Body blocks:
    * - "## Heading" → h2
    * - "### Subheading" → h3
-   * - "IMG:/path" → image
+   * - "IMG:url" → image
    * - otherwise paragraph
    */
   body: string[];
 };
+
+/** Campaign 01 hero set — empty room → demand → intimate room */
+const IMG_EMPTY =
+  "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=1200&h=675&q=80";
+const IMG_FILLED =
+  "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&h=675&q=80";
+const IMG_INTIMATE =
+  "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=1200&h=675&q=80";
 
 export const posts: BlogPost[] = [
   {
@@ -30,14 +38,14 @@ export const posts: BlogPost[] = [
       "music monetization",
     ],
     date: "2026-08-18",
-    image: "/blog/empty-room-hero.jpg",
+    image: IMG_EMPTY,
     body: [
       "Most independent artists think their biggest problem is audience size.",
       "It usually isn't.",
       "The harder problem is knowing which people in that audience actually have intent.",
       "An artist can have thousands of followers and still have no idea where their next 20 ticket buyers will come from.",
       "That's because followers, listeners and buyers are three different things.",
-      "IMG:/blog/empty-room-hero.jpg",
+      `IMG:${IMG_EMPTY}`,
       "## Followers aren't demand",
       "A follower has expressed interest.",
       "That's useful.",
@@ -68,7 +76,7 @@ export const posts: BlogPost[] = [
       "The biggest audience isn't always the best market.",
       "The better question is:",
       "\"where is the strongest actionable demand?\"",
-      "IMG:/blog/room-filled.jpg",
+      `IMG:${IMG_FILLED}`,
       "## 20 buyers can teach you more than 20,000 views",
       "Imagine two artists.",
       "Artist A receives 20,000 views on a video.",
@@ -90,7 +98,7 @@ export const posts: BlogPost[] = [
       "Sometimes it's a room.",
       "The point is that the answer shouldn't be predetermined.",
       "It should come from the data.",
-      "IMG:/blog/intimate-stage.jpg",
+      `IMG:${IMG_INTIMATE}`,
       "## The real question",
       "You don't need to know whether you have \"enough\" fans.",
       "You need to know:",
