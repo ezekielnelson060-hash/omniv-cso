@@ -21,18 +21,21 @@ export async function GET(req: Request) {
 
   const admin = createClient(url, key, { auth: { persistSession: false } });
 
+  type ArtistRow = {
+    id?: string;
+    owner_user_id?: string | null;
+    org_id?: string | null;
+    image_url?: string | null;
+    slug?: string | null;
+  };
+
   const { data: artist } = await admin
     .from("roster_artists")
     .select("id, owner_user_id, org_id, image_url")
     .eq("slug", slug)
     .maybeSingle();
 
-  let row = artist as {
-    id?: string;
-    owner_user_id?: string | null;
-    org_id?: string | null;
-    image_url?: string | null;
-  } | null;
+  let row: ArtistRow | null = (artist as ArtistRow | null) || null;
 
   if (!row) {
     const { data: list } = await admin
@@ -41,12 +44,11 @@ export async function GET(req: Request) {
       .ilike("slug", `${slug}%`)
       .limit(5);
     if (list?.length) {
-      const sorted = [...list].sort(
-        (a, b) =>
-          String((b as { slug?: string }).slug || "").length -
-          String((a as { slug?: string }).slug || "").length
+      const rows = list as unknown as ArtistRow[];
+      rows.sort(
+        (a, b) => String(b.slug || "").length - String(a.slug || "").length
       );
-      row = sorted[0] as typeof row;
+      row = rows[0] || null;
     }
   }
 
@@ -62,7 +64,8 @@ export async function GET(req: Request) {
       .select("avatar_url")
       .eq("id", row.owner_user_id)
       .maybeSingle();
-    avatarUrl = profile?.avatar_url?.trim() || null;
+    avatarUrl =
+      (profile as { avatar_url?: string } | null)?.avatar_url?.trim() || null;
   }
 
   if (!avatarUrl && row.org_id) {
@@ -71,13 +74,15 @@ export async function GET(req: Request) {
       .select("owner_user_id")
       .eq("id", row.org_id)
       .maybeSingle();
-    if (org?.owner_user_id) {
+    const orgRow = org as { owner_user_id?: string } | null;
+    if (orgRow?.owner_user_id) {
       const { data: profile } = await admin
         .from("profiles")
         .select("avatar_url")
-        .eq("id", org.owner_user_id)
+        .eq("id", orgRow.owner_user_id)
         .maybeSingle();
-      avatarUrl = profile?.avatar_url?.trim() || null;
+      avatarUrl =
+        (profile as { avatar_url?: string } | null)?.avatar_url?.trim() || null;
     }
   }
 
