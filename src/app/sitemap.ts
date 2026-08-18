@@ -10,11 +10,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const blogSlugs = [
     "you-dont-need-more-fans",
-    "how-to-make-money-independent-artist",
-    "how-to-find-fans-in-any-city",
-    "sync-licensing-guide",
-    "owned-audience-vs-followers",
-    "ticketed-listening-party-guide",
+    "how-to-find-your-best-fan-city",
+    "how-many-fans-to-sell-out-a-show",
+    "how-to-host-your-first-listening-party",
+    "how-to-build-an-owned-fanbase",
+    "ai-tools-for-musicians-what-ai-should-do",
+    "make-money-without-only-streaming",
   ];
 
   const blogRoutes = blogSlugs.map((slug) => ({
