@@ -21,81 +21,94 @@ export async function GET(req: Request) {
   const admin = createClient(url, key, { auth: { persistSession: false } });
 
   type Row = {
-    id?: string;
+    id: string;
     stage_name?: string | null;
     slug?: string | null;
-    gate_tagline?: string | null;
-    tip_tagline?: string | null;
     owner_user_id?: string | null;
-    image_url?: string | null;
-    public_page?: unknown;
     org_id?: string | null;
   };
 
-  // 1) Find row by slug (minimal columns — always works)
-  let found: Row | null = null;
+  async function findBySlug(): Promise<Row | null> {
+    // Minimal columns only — never 404 because of optional columns
+    const cols = "id, stage_name, slug, owner_user_id, org_id";
 
-  {
-    const { data, error } = await admin
+    const exact = await admin
       .from("roster_artists")
-      .select(
-        "id, stage_name, slug, gate_tagline, tip_tagline, owner_user_id, image_url, org_id"
-      )
+      .select(cols)
       .eq("slug", slug)
       .limit(1)
       .maybeSingle();
-    if (!error && data) found = data as Row;
-  }
+    if (!exact.error && exact.data) return exact.data as unknown as Row;
 
-  if (!found) {
-    const { data, error } = await admin
+    const ilike = await admin
       .from("roster_artists")
-      .select(
-        "id, stage_name, slug, gate_tagline, tip_tagline, owner_user_id, image_url, org_id"
-      )
+      .select(cols)
       .ilike("slug", slug)
       .limit(1)
       .maybeSingle();
-    if (!error && data) found = data as Row;
-  }
+    if (!ilike.error && ilike.data) return ilike.data as unknown as Row;
 
-  if (!found && slug.length >= 3) {
-    const { data, error } = await admin
-      .from("roster_artists")
-      .select(
-        "id, stage_name, slug, gate_tagline, tip_tagline, owner_user_id, image_url, org_id"
-      )
-      .ilike("slug", `${slug}%`)
-      .limit(5);
-    if (!error && data && data.length) {
-      const rows = data as Row[];
-      // Prefer exact-ish longest slug (e.g. ziki-worldwide-t1ax over ziki-worldwide)
-      rows.sort(
-        (a, b) => String(b.slug || "").length - String(a.slug || "").length
-      );
-      found = rows[0];
+    if (slug.length >= 3) {
+      const prefix = await admin
+        .from("roster_artists")
+        .select(cols)
+        .ilike("slug", `${slug}%`)
+        .limit(8);
+      if (!prefix.error && prefix.data?.length) {
+        const rows = prefix.data as unknown as Row[];
+        rows.sort(
+          (a, b) => String(b.slug || "").length - String(a.slug || "").length
+        );
+        return rows[0];
+      }
     }
+    return null;
   }
 
-  if (!found) {
+  const found = await findBySlug();
+  if (!found?.id) {
     return NextResponse.json({ error: "not found", slug }, { status: 404 });
   }
 
-  // 2) Load public_page separately so a missing column never wipes the row
+  // Optional fields — each query isolated so one missing column never breaks the page
   let publicPageRaw: unknown = null;
-  if (found.id) {
-    const { data: pageRow, error: pageErr } = await admin
+  let gateTagline: string | null = null;
+  let tipTagline: string | null = null;
+  let imageUrl: string | null = null;
+
+  try {
+    const { data } = await admin
       .from("roster_artists")
       .select("public_page")
       .eq("id", found.id)
       .maybeSingle();
-    if (!pageErr && pageRow) {
-      publicPageRaw = (pageRow as { public_page?: unknown }).public_page;
+    if (data) publicPageRaw = (data as { public_page?: unknown }).public_page;
+  } catch {
+    /* column may not exist */
+  }
+
+  try {
+    const { data } = await admin
+      .from("roster_artists")
+      .select("gate_tagline, tip_tagline, image_url")
+      .eq("id", found.id)
+      .maybeSingle();
+    if (data) {
+      const row = data as {
+        gate_tagline?: string | null;
+        tip_tagline?: string | null;
+        image_url?: string | null;
+      };
+      gateTagline = row.gate_tagline ?? null;
+      tipTagline = row.tip_tagline ?? null;
+      imageUrl = row.image_url ?? null;
     }
+  } catch {
+    /* optional */
   }
 
   let avatarUrl: string | null =
-    (found.image_url && String(found.image_url).trim()) || null;
+    (imageUrl && String(imageUrl).trim()) || null;
 
   if (!avatarUrl && found.owner_user_id) {
     const { data: profile } = await admin
@@ -123,19 +136,19 @@ export async function GET(req: Request) {
   }
 
   const page = mergePublicPage(publicPageRaw);
-  if (!page.messageTop?.trim() && found.gate_tagline) {
-    page.messageTop = String(found.gate_tagline);
+  if (!page.messageTop?.trim() && gateTagline) {
+    page.messageTop = String(gateTagline);
   }
-  if (!page.messageBottom?.trim() && found.tip_tagline) {
-    page.messageBottom = String(found.tip_tagline);
+  if (!page.messageBottom?.trim() && tipTagline) {
+    page.messageBottom = String(tipTagline);
   }
 
   return NextResponse.json(
     {
       stageName: cleanStageName(String(found.stage_name || "")),
       slug: found.slug,
-      gateTagline: found.gate_tagline || null,
-      tipTagline: found.tip_tagline || null,
+      gateTagline,
+      tipTagline,
       avatarUrl,
       page,
     },
