@@ -2,6 +2,17 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { mergePublicPage } from "@/lib/artist-public-page";
 
+/** Reject inline data-URIs — they bloat the payload (200kb+) and kill mobile load. */
+function usableImageUrl(raw: unknown): string | null {
+  if (raw == null) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  if (s.startsWith("data:")) return null;
+  if (s.startsWith("http://") || s.startsWith("https://") || s.startsWith("/"))
+    return s;
+  return null;
+}
+
 /** Public roster lookup by slug (artist page, tip, fan gate). */
 export async function GET(req: Request) {
   const raw = new URL(req.url).searchParams.get("slug")?.trim() || "";
@@ -29,7 +40,6 @@ export async function GET(req: Request) {
   };
 
   async function findBySlug(): Promise<Row | null> {
-    // Minimal columns only — never 404 because of optional columns
     const cols = "id, stage_name, slug, owner_user_id, org_id";
 
     const exact = await admin
@@ -70,54 +80,45 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "not found", slug }, { status: 404 });
   }
 
-  // Optional fields — each query isolated so one missing column never breaks the page
-  let publicPageRaw: unknown = null;
-  let gateTagline: string | null = null;
-  let tipTagline: string | null = null;
-  let imageUrl: string | null = null;
-
-  try {
-    const { data } = await admin
+  // Parallel optional fields
+  const [pageRes, metaRes, profileRes] = await Promise.all([
+    admin
       .from("roster_artists")
       .select("public_page")
       .eq("id", found.id)
-      .maybeSingle();
-    if (data) publicPageRaw = (data as { public_page?: unknown }).public_page;
-  } catch {
-    /* column may not exist */
-  }
-
-  try {
-    const { data } = await admin
+      .maybeSingle(),
+    admin
       .from("roster_artists")
       .select("gate_tagline, tip_tagline, image_url")
       .eq("id", found.id)
-      .maybeSingle();
-    if (data) {
-      const row = data as {
-        gate_tagline?: string | null;
-        tip_tagline?: string | null;
-        image_url?: string | null;
-      };
-      gateTagline = row.gate_tagline ?? null;
-      tipTagline = row.tip_tagline ?? null;
-      imageUrl = row.image_url ?? null;
-    }
-  } catch {
-    /* optional */
-  }
+      .maybeSingle(),
+    found.owner_user_id
+      ? admin
+          .from("profiles")
+          .select("avatar_url")
+          .eq("id", found.owner_user_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
-  let avatarUrl: string | null =
-    (imageUrl && String(imageUrl).trim()) || null;
+  const publicPageRaw = pageRes.data
+    ? (pageRes.data as { public_page?: unknown }).public_page
+    : null;
 
-  if (!avatarUrl && found.owner_user_id) {
-    const { data: profile } = await admin
-      .from("profiles")
-      .select("avatar_url")
-      .eq("id", found.owner_user_id)
-      .maybeSingle();
-    if (profile?.avatar_url) avatarUrl = String(profile.avatar_url);
-  }
+  const meta = metaRes.data as {
+    gate_tagline?: string | null;
+    tip_tagline?: string | null;
+    image_url?: string | null;
+  } | null;
+
+  const gateTagline = meta?.gate_tagline ?? null;
+  const tipTagline = meta?.tip_tagline ?? null;
+
+  let avatarUrl =
+    usableImageUrl(meta?.image_url) ||
+    usableImageUrl(
+      (profileRes.data as { avatar_url?: string } | null)?.avatar_url
+    );
 
   if (!avatarUrl && found.org_id) {
     const { data: org } = await admin
@@ -131,7 +132,7 @@ export async function GET(req: Request) {
         .select("avatar_url")
         .eq("id", org.owner_user_id)
         .maybeSingle();
-      if (profile?.avatar_url) avatarUrl = String(profile.avatar_url);
+      avatarUrl = usableImageUrl(profile?.avatar_url);
     }
   }
 
@@ -154,7 +155,8 @@ export async function GET(req: Request) {
     },
     {
       headers: {
-        "Cache-Control": "no-store, max-age=0",
+        // Short CDN/browser cache — public page changes rarely mid-session
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120",
       },
     }
   );
