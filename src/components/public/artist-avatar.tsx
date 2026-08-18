@@ -1,31 +1,63 @@
 "use client";
 
-/** Artist-first mark for public pages (Fan Gate, tip, etc.). */
+import { useEffect, useState } from "react";
+
+/** Artist-first mark for public pages. Loads photo async so main page stays fast. */
 export function ArtistAvatar({
   name,
   src,
+  slug,
   size = 56,
 }: {
   name: string;
   src?: string | null;
+  /** When set, fetches /api/roster/public/avatar if src missing */
+  slug?: string | null;
   size?: number;
 }) {
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() || "")
-    .join("") || "•";
+  const [loaded, setLoaded] = useState<string | null>(src || null);
 
-  if (src) {
+  useEffect(() => {
+    if (src) {
+      setLoaded(src);
+      return;
+    }
+    if (!slug) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/roster/public/avatar?slug=${encodeURIComponent(slug)}`
+        );
+        if (!res.ok) return;
+        const data = (await res.json()) as { avatarUrl?: string | null };
+        if (!cancelled && data.avatarUrl) setLoaded(data.avatarUrl);
+      } catch {
+        /* soft */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [src, slug]);
+
+  const initials =
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() || "")
+      .join("") || "•";
+
+  if (loaded) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={src}
+        src={loaded}
         alt={name}
         width={size}
         height={size}
-        className="rounded-2xl border border-omniv-border object-cover shadow-sm"
+        className="rounded-2xl border border-white/10 object-cover shadow-lg"
         style={{ width: size, height: size }}
       />
     );
@@ -33,7 +65,7 @@ export function ArtistAvatar({
 
   return (
     <div
-      className="flex items-center justify-center rounded-2xl border border-omniv-gold/30 bg-omniv-elevated text-omniv-gold"
+      className="flex items-center justify-center rounded-2xl border border-[#d4af37]/35 bg-white/5 text-[#d4af37]"
       style={{ width: size, height: size }}
       aria-hidden
     >
