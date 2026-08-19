@@ -15,9 +15,9 @@ import { cn } from "@/lib/utils";
 const TOTAL_STEPS = 6;
 
 const ROLES: { id: UserRole; label: string; desc: string }[] = [
-  { id: "artist", label: "Artist", desc: "Your career. One ranked move at a time" },
-  { id: "manager", label: "Manager", desc: "Roster clarity for developing acts" },
-  { id: "label", label: "Label", desc: "Attention allocation across the roster" },
+  { id: "artist", label: "Artist", desc: "Find where your music has real demand" },
+  { id: "manager", label: "Manager", desc: "Verify where each act has a market" },
+  { id: "label", label: "Label", desc: "Check demand before you invest" },
 ];
 
 const STAGES: { id: CareerStage; label: string; desc: string }[] = [
@@ -46,14 +46,14 @@ const GENRE_OPTIONS = [
 ];
 
 const INTEREST_OPTIONS = [
-  { id: "content", label: "Content & short-form" },
-  { id: "release", label: "Releases & singles" },
+  { id: "market", label: "Find my strongest market" },
+  { id: "live", label: "Rooms & live demand" },
+  { id: "audience", label: "Own the fan list" },
+  { id: "release", label: "Release timing" },
+  { id: "monetise", label: "Get paid from fans" },
+  { id: "content", label: "Content that compounds" },
   { id: "playlist", label: "Playlists & editorial" },
-  { id: "live", label: "Live / tours / festivals" },
   { id: "collab", label: "Collaborations" },
-  { id: "brand", label: "Brand & positioning" },
-  { id: "audience", label: "Audience growth" },
-  { id: "monetise", label: "Monetisation" },
 ];
 
 const URL_HINTS: Record<string, string> = {
@@ -79,8 +79,8 @@ export default function OnboardingPage() {
   const [careerStage, setCareerStage] = useState<CareerStage | null>(null);
   const [goalText, setGoalText] = useState("");
   const [interests, setInterests] = useState<string[]>([
-    "content",
-    "release",
+    "market",
+    "live",
     "audience",
   ]);
   const [selected, setSelected] = useState<string[]>([
@@ -116,7 +116,7 @@ export default function OnboardingPage() {
       await new Promise((r) => setTimeout(r, 320));
     }
     if (isSupabaseConfigured()) {
-      setMsg("Sealing Artist Brain · activating Command Center…");
+      setMsg("Locking demand profile · preparing your market scan…");
       const social_links: Record<string, string> = {};
       for (const id of selected) {
         const u = (links[id] || "").trim();
@@ -147,7 +147,7 @@ export default function OnboardingPage() {
         goals:
           goals.length > 0
             ? goals
-            : ["Clarify next release window", "Grow engaged audience"],
+            : ["Find strongest market city", "Test a paid room"],
         bigDream: goalText.trim() || goals[0] || undefined,
         interests,
       });
@@ -172,10 +172,10 @@ export default function OnboardingPage() {
 
         {step === 0 && (
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Claim your seat</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Who are you?</h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              This is not a generic account. Role and name lock how Omniv ranks
-              priorities for the rest of the system.
+              Omniv verifies where demand is real — for your career or your roster.
+              Start with who you are.
             </p>
             <div className="mt-6 space-y-3">
               <Input
@@ -216,9 +216,10 @@ export default function OnboardingPage() {
 
         {step === 1 && (
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Lock your sound</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Your sound & stage</h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              Genre, style, and stage become private context, the advantage most artists never lock in.
+              Genre and career stage help Omniv read your signals in the right lane —
+              not generic music advice.
             </p>
             <p className="mt-5 text-xs font-medium uppercase tracking-wider text-omniv-text-muted">
               Genre (up to 4)
@@ -320,28 +321,28 @@ export default function OnboardingPage() {
         {step === 2 && (
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
-              What is the Big Dream?
+              What are you trying to prove?
             </h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              Managers hold one career image and refuse weekly noise that does
-              not serve it. Write that picture. Omniv ranks every move against it.
+              One clear outcome — a city, a room, a list, a payday. Omniv ranks
+              demand moves against this, not random content tips.
             </p>
             <div className="mt-5">
               <label className="mb-1.5 block text-sm font-medium text-omniv-text-secondary">
-                Big Dream (first line is the north star; more lines = near-term goals)
+                Goal (first line is the north star; more lines = near-term goals)
               </label>
               <textarea
                 value={goalText}
                 onChange={(e) => setGoalText(e.target.value)}
                 rows={4}
                 placeholder={
-                  "Headlining 2k rooms in 24 months while owning my masters\n50k direct fans on my list\nConsistent weekly content system"
+                  "Prove Accra will fill a 40-person room\nOwn 500 fans on my list who would show up\nFirst $1k from rooms + tips"
                 }
                 className="w-full rounded-[var(--radius)] border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm focus-gold"
               />
             </div>
             <p className="mt-5 text-xs font-medium uppercase tracking-wider text-omniv-text-muted">
-              Focus areas for opportunities
+              What should Omniv prioritise?
             </p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {INTEREST_OPTIONS.map((opt) => {
@@ -381,11 +382,11 @@ export default function OnboardingPage() {
         {step === 3 && (
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
-              Where the career actually lives
+              Where do the signals live?
             </h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              Platforms bias scores and opportunities. Only select what you will
-              actually run. Noise dilutes intelligence.
+              Pick platforms you actually use. Omniv reads audience and geography
+              from them to verify market demand — not vanity charts.
             </p>
             <div className="mt-6 grid grid-cols-2 gap-2">
               {platforms.map((p) => {
@@ -429,10 +430,11 @@ export default function OnboardingPage() {
         {step === 4 && (
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
-              Profile links
+              Links for the demand scan
             </h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              Saved for weekly scans and Ziki context. Skip any you don't have.
+              Optional but powerful. Spotify, Instagram, TikTok — the more real
+              links you add, the clearer the market picture.
             </p>
             <div className="mt-6 space-y-3">
               {selected.map((id) => (
@@ -461,12 +463,12 @@ export default function OnboardingPage() {
         {step === 5 && (
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
-              {scanning ? "Building your OS" : "Activate Omniv"}
+              {scanning ? "Verifying your market signals" : "Run your demand scan"}
             </h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
               {scanning
                 ? msg
-                : "Command Center, Artist Brain, Ziki, and Opportunity Feed activate on this profile only."}
+                : "We'll map where demand looks strongest and what to test first — a city, a room, a list move."}
             </p>
             {!scanning && (
               <ul className="mt-4 space-y-1.5 text-xs text-omniv-text-muted">
@@ -491,7 +493,7 @@ export default function OnboardingPage() {
                   Back
                 </Button>
                 <Button className="flex-1 gap-2" onClick={() => void finish()}>
-                  Enter Command Center <ArrowRight className="h-4 w-4" />
+                  Verify my market <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
             )}
