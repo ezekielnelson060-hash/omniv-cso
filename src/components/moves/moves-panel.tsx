@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { AgentProposal } from "@/lib/agent/types";
 import { Loader2, Sparkles, Zap, Check } from "lucide-react";
+import { MarketDemandCard } from "@/components/demand/market-demand-card";
 
 /** Moves = precision plan. Agent = intelligence inbox. */
 export function MovesPanel() {
@@ -187,6 +188,8 @@ export function MovesPanel() {
           </Button>
         </div>
       </div>
+
+      <MarketDemandCard />
 
       {narrative && (
         <Card className="border-omniv-gold/20 bg-omniv-gold/5 p-3">
