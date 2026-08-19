@@ -22,7 +22,6 @@ function buildStories(opts: {
 }): Story[] {
   const city = opts.city?.trim() || null;
   const dream = opts.dream?.trim() || null;
-  const who = opts.stageName?.trim() || "you";
 
   const moveExample = city
     ? `Open a room in ${city}, text the list in room chat, share the tip link.`
@@ -32,41 +31,39 @@ function buildStories(opts: {
 
   return [
     {
-      kicker: "48-hour challenge",
-      title: "City · room · share · cash signal",
-      body: `In 48 hours: (1) share Fan Gate (2) see top city (3) open a room (4) share the link in chat (5) report back. ${moveExample}`,
-      cta: "Start in Rooms",
-      href: "/crm?focus=room",
-    },
-    {
-      kicker: "Moves",
-      title: "One action. Not a feed.",
-      body: `Open Moves → top card → tap the button → do that one thing. For ${who}: ${moveExample}`,
-      cta: "Open Moves",
-      href: "/notifications",
-    },
-    {
-      kicker: "Fan Gate",
-      title: "Every fan becomes data you own",
-      body: "They enter email → pick a city → mark would attend. You see the list and city heat. Stop renting the audience.",
+      kicker: "Demand",
+      title: "Don't guess the market. Verify it.",
+      body: `Omniv looks for where people actually concentrate — not just followers. ${city ? `Your signals already point toward ${city}.` : "Share Fan Gate and connect platforms so the map gets real."}`,
       cta: "Open Fans",
       href: "/crm",
     },
     {
-      kicker: "Get paid",
-      title: "About 90% to your account",
-      body: "Settings → Get paid → bank → turn on auto-pay. Tickets and tips split without payment codes.",
-      cta: "Get paid",
-      href: "/settings",
+      kicker: "Verify",
+      title: "Evidence over vibes",
+      body: "Streams and views are attention. Demand is who would show up, buy a ticket, or join your list. We rank cities by how strong that evidence looks.",
+      cta: "See Moves",
+      href: "/notifications",
     },
     {
-      kicker: "With Ziki",
-      title: "Ask for the next step only",
-      body: dream
-        ? `Tell Ziki your goal and demand one concrete action for today — city, message, or link. Goal: "${dream.slice(0, 48)}${dream.length > 48 ? "…" : ""}".`
-        : "Ask Ziki: What is the one thing I do today? Refuse long strategy. Demand a button you can press.",
-      cta: "Talk to Ziki",
-      href: "/ziki",
+      kicker: "Act",
+      title: "Cheapest proof: open a room",
+      body: `${moveExample} One paid room teaches more than another month of posting.`,
+      cta: "Start in Rooms",
+      href: "/crm?focus=room",
+    },
+    {
+      kicker: "Own",
+      title: "Every fan becomes data you control",
+      body: "Fan Gate: email → city → would attend. Platforms can change. Your list and intent data stay with you.",
+      cta: "Fan Gate",
+      href: "/crm",
+    },
+    {
+      kicker: "Get paid",
+      title: "Tips and tickets when demand is real",
+      body: "Settings → Get paid. When the room fills or fans tip, money lands without payment codes.",
+      cta: "Get paid",
+      href: "/settings",
     },
   ];
 }
@@ -109,7 +106,7 @@ export function StorySlides({
 
   if (!open) return null;
 
-  const s = stories[i];
+  const s = stories[i]!;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-3 sm:items-center">
