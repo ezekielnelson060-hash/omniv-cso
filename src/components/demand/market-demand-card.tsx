@@ -62,10 +62,10 @@ export function MarketDemandCard() {
             <ShieldCheck className="h-4 w-4 text-omniv-gold" />
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-omniv-gold">
-                Market demand
+                Regional · market demand
               </p>
               <p className="text-[12px] text-omniv-text-secondary">
-                Verify where people would show up — not follower counts
+                Your cities, your intent, your proof — not global noise
               </p>
             </div>
           </div>
