@@ -8,7 +8,7 @@ import { Bell, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Polls agent inbox + listens for omniv-agent.
+ * Polls global inbox + listens for omniv-agent.
  * Toast when pending rises; optional browser Notification when tab hidden.
  */
 export function AgentLiveSignals() {
@@ -38,7 +38,7 @@ export function AgentLiveSignals() {
           (p) => p.status === "pending" && !beforeIds.has(p.id)
         );
         if (fresh.length > 0 && after >= before) {
-          const top = fresh[0];
+          const top = fresh[0]!;
           setToast(
             fresh.length === 1
               ? top.title
@@ -51,9 +51,9 @@ export function AgentLiveSignals() {
             Notification.permission === "granted"
           ) {
             try {
-              new Notification("Omniv Agent", {
+              new Notification("Omniv Global", {
                 body: top.title,
-                tag: "omniv-agent",
+                tag: "omniv-global",
               });
             } catch {
               /* ignore */
@@ -106,7 +106,7 @@ export function AgentLiveSignals() {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-omniv-gold">
-            Agent
+            Global
           </p>
           <p className="text-[13px] font-medium leading-snug text-omniv-text">
             {toast}
@@ -117,7 +117,7 @@ export function AgentLiveSignals() {
               className="text-[11px] text-omniv-gold hover:underline"
               onClick={() => setToast(null)}
             >
-              Open inbox →
+              Open Global →
             </Link>
             {typeof Notification !== "undefined" &&
               Notification.permission === "default" && (
