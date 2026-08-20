@@ -14,7 +14,7 @@ import { useAgentPending } from "@/components/notifications/agent-nav-badge";
 
 const tabs = [
   { href: "/crm", label: "Home", icon: Home },
-  { href: "/opportunities", label: "Moves", icon: Sparkles },
+  { href: "/opportunities", label: "Regional", icon: Sparkles },
   { href: "/ziki", label: "Ziki", icon: MessageSquare },
   { href: "/catalogue", label: "Music", icon: Disc3 },
   { href: "/analytics", label: "Progress", icon: BarChart3 },
@@ -22,7 +22,7 @@ const tabs = [
 
 export function MobileTabBar() {
   const path = usePathname();
-  const pending = useAgentPending();
+  useAgentPending(); // keep hook warm for sidebar badge
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-omniv-border bg-omniv-black/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
@@ -32,7 +32,6 @@ export function MobileTabBar() {
             path === href ||
             (href !== "/crm" && path.startsWith(href)) ||
             (href === "/crm" && (path === "/" || path.startsWith("/crm")));
-          const showDot = href === "/opportunities" && pending > 0;
           return (
             <Link
               key={href}
@@ -44,9 +43,6 @@ export function MobileTabBar() {
             >
               <Icon className={cn("h-5 w-5", active && "text-omniv-gold")} />
               <span className="truncate">{label}</span>
-              {showDot && (
-                <span className="absolute right-1/4 top-1 h-1.5 w-1.5 rounded-full bg-omniv-gold" />
-              )}
             </Link>
           );
         })}
