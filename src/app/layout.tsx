@@ -21,19 +21,19 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
   ),
   title: {
-    default: "Omniv — AI Career Strategist for Independent Artists",
+    default: "Omniv — Verify Artist Market Demand",
     template: "%s | Omniv",
   },
   description:
-    "Omniv ranks your highest-impact career moves, helps you open ticketed rooms, and turns your catalogue into revenue. The career OS independents were never given.",
+    "Stop guessing where your fans are. Capture city + intent, score real market demand, open the right-sized room, get paid. Ziki is your visual Chief Strategic Officer trained on artist management.",
   keywords: [
     "independent artist",
-    "music career",
-    "AI manager",
+    "market demand",
     "fan gate",
     "ticketed rooms",
     "music monetization",
-    "afrobeat",
+    "artist management",
+    "city demand",
     "indie music",
   ],
   icons: { icon: "/logo.svg", apple: "/logo.svg" },
@@ -48,9 +48,9 @@ export const metadata: Metadata = {
     { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
   ],
   openGraph: {
-    title: "Omniv — AI Career Strategist for Artists",
+    title: "Omniv — Verify Artist Market Demand",
     description:
-      "Stop guessing. Start knowing. Your AI manager for music careers.",
+      "Fans, city, would-attend → demand score → right-sized room. Not another AI that says post more.",
     url: "https://omniv.media",
     siteName: "Omniv",
     images: [
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
         url: "https://omniv.media/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "Omniv — AI career strategist for independent artists",
+        alt: "Omniv — verify artist market demand before you spend",
       },
     ],
     locale: "en_US",
@@ -66,8 +66,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Omniv — AI Career Strategist",
-    description: "The career OS for independent artists.",
+    title: "Omniv — Verify Artist Market Demand",
+    description:
+      "Capture demand. Score the market. Open the room. Get paid.",
     images: ["https://omniv.media/og-image.jpg"],
   },
   alternates: {
@@ -112,7 +113,7 @@ export default function RootLayout({
                     url: "https://omniv.media/logo.svg",
                   },
                   description:
-                    "AI career strategist for independent artists. Maps fans by city and intent, ranks career moves, ticketed rooms and tips.",
+                    "Artist market demand intelligence. Maps fans by city and intent, scores demand, ticketed rooms and tips.",
                 },
                 {
                   "@type": "WebSite",
@@ -129,7 +130,7 @@ export default function RootLayout({
                   operatingSystem: "Web",
                   url: "https://omniv.media/",
                   description:
-                    "Career OS for independents: city demand briefs, Agent market signals, rooms, tips, ranked moves.",
+                    "Verify market demand: city + intent scores, rooms, tips, ranked regional moves, global signals.",
                   offers: {
                     "@type": "Offer",
                     price: "0",
@@ -137,7 +138,7 @@ export default function RootLayout({
                     description: "Free artist scan and Fan Gate",
                   },
                   featureList:
-                    "AI career strategist, Fan city mapping, Intent-to-attend, Ticketed rooms, Tip links, Market signals",
+                    "Market demand scores, Fan city mapping, Intent-to-attend, Ticketed rooms, Tip links, Visual CSO",
                   publisher: { "@id": "https://omniv.media/#organization" },
                 },
                 {
@@ -149,7 +150,7 @@ export default function RootLayout({
                       name: "What is Omniv?",
                       acceptedAnswer: {
                         "@type": "Answer",
-                        text: "Omniv is an AI career strategist for independent artists. It maps fans by city and intent, ranks the highest-impact next move, and helps you open ticketed rooms and tip links.",
+                        text: "Omniv verifies artist market demand. It maps fans by city and intent, scores where people would show up, and helps you open the right-sized room and tip links.",
                       },
                     },
                     {
@@ -173,7 +174,7 @@ export default function RootLayout({
                       name: "What makes Omniv different from Spotify for Artists?",
                       acceptedAnswer: {
                         "@type": "Answer",
-                        text: "Spotify for Artists shows past analytics. Omniv tells you what to do next and helps you execute — rooms, tip links, and outside market signals.",
+                        text: "Spotify for Artists shows past analytics. Omniv verifies demand before you spend — rooms, tip links, and ranked next moves.",
                       },
                     },
                   ],
