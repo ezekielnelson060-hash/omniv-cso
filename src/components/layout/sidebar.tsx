@@ -37,7 +37,7 @@ type NavItem = { href: string; label: string; icon: typeof Users };
 const primary: NavItem[] = [
   { href: "/crm", label: "Command Center", icon: Users },
   { href: "/ziki", label: "Ziki", icon: MessageSquare },
-  { href: "/opportunities", label: "Moves", icon: Sparkles },
+  { href: "/opportunities", label: "Regional", icon: Sparkles },
   { href: "/catalogue", label: "Catalogue", icon: Library },
 ];
 
@@ -54,7 +54,7 @@ const org: NavItem[] = [
 ];
 
 const bottom: NavItem[] = [
-  { href: "/notifications", label: "Agent", icon: Bell },
+  { href: "/notifications", label: "Global", icon: Bell },
   { href: "/help", label: "Help", icon: HelpCircle },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
