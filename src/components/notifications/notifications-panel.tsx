@@ -100,8 +100,8 @@ export function NotificationsPanel() {
           const outN = data.proposals.filter(isOutsideSignal).length;
           setNarrative(
             outN
-              ? `Outside: ${outN} signal(s) from partners / metrics.`
-              : "No new outside signals. Connect Partners or paste DSP links. Precision plan is in Moves."
+              ? `Global: ${outN} outside signal(s) from partners / metrics.`
+              : "No new global signals. Connect Partners or paste DSP links. Regional holds your market plan."
           );
           refresh();
           return;
@@ -129,8 +129,8 @@ export function NotificationsPanel() {
       const outN = result.proposals.filter(isOutsideSignal).length;
       setNarrative(
         outN
-          ? `Outside: ${outN} signal(s).`
-          : "No outside signals from local scan. Partner webhooks + DSP metrics feed Agent. Moves holds the plan."
+          ? `Global: ${outN} outside signal(s).`
+          : "No global signals from local scan. Partner webhooks + DSP metrics feed Global. Regional holds the plan."
       );
       refresh();
     } finally {
@@ -270,10 +270,10 @@ export function NotificationsPanel() {
 
   const emptyCopy =
     filter === "outside"
-      ? "No outside signals yet. Connect Partners in Settings or paste DSP links so popularity can rise here. Numbered execution stays in Moves."
+      ? "No global signals yet. Connect Partners or paste DSP links. Regional plan (rooms, Fan Gate, demand) stays in Regional."
       : filter === "internal"
-        ? "Setup steps belong in Moves. Agent only keeps outside intelligence."
-        : "Outside deals land here. Open Moves for the precision plan.";
+        ? "Artist setup and market moves live under Regional. Global is for outside intelligence only."
+        : "Global intelligence: partner alerts, metric rises, world signals. Regional owns your market plan.";
 
   return (
     <div className="space-y-4">
@@ -282,14 +282,14 @@ export function NotificationsPanel() {
         <div className="relative flex flex-wrap items-end justify-between gap-3 px-3 pb-4 pt-1 sm:px-4 md:px-5 md:pt-4">
           <div>
             <p className="font-data text-[10px] uppercase tracking-[0.16em] text-omniv-gold">
-              Agent
+              Global intelligence
             </p>
             <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
-              Intelligence
+              Outside the roster
             </h1>
             <p className="mt-1 max-w-lg text-[12px] text-omniv-text-secondary">
-              Outside deals, partner alerts, metric rises. Precision plan is
-              Moves — not here.
+              World signals, partner alerts, metric rises. They inform the next
+              test — Regional verifies whether you have demand.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -321,8 +321,8 @@ export function NotificationsPanel() {
         {(
           [
             { id: "all" as const, label: "All", n: pendingAll.length },
-            { id: "outside" as const, label: "Outside", n: outsideCount },
-            { id: "internal" as const, label: "Internal", n: internalCount },
+            { id: "outside" as const, label: "Global", n: outsideCount },
+            { id: "internal" as const, label: "Regional noise", n: internalCount },
           ] as const
         ).map((tab) => (
           <button
@@ -402,7 +402,7 @@ export function NotificationsPanel() {
                 {p.urgency}
               </span>
               <span className="rounded-full border border-omniv-border px-2 py-0.5 text-[10px] text-omniv-text-muted">
-                {isOutsideSignal(p) ? "outside" : p.source}
+                {isOutsideSignal(p) ? "global" : p.source}
               </span>
             </div>
             <h3 className="text-[14px] font-semibold tracking-tight">{p.title}</h3>
