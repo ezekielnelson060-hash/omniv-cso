@@ -129,7 +129,7 @@ export default function LandingPage() {
             <div className="rounded-[1.35rem] bg-[#0a0a0a] p-5 md:p-7">
               <div className="flex items-center justify-between gap-2">
                 <p className="font-data text-[10px] uppercase tracking-[0.2em] text-omniv-gold">This week’s demand line</p>
-                <span className="rounded-full bg-omniv-gold/15 px-2 py-0.5 text-[10px] font-medium text-omniv-gold">Ziki</span>
+                <span className="rounded-full bg-omniv-gold/15 px-2 py-0.5 text-[10px] font-medium text-omniv-gold">Ziki · Visual CSO</span>
               </div>
               <ul className="mt-4 space-y-2.5 text-left text-[13px] text-zinc-300">
                 <li className="rounded-xl border border-white/8 bg-white/[0.03] px-3.5 py-3">
@@ -143,7 +143,7 @@ export default function LandingPage() {
                 </li>
               </ul>
               <p className="mt-4 text-left text-[12px] text-zinc-600">
-                Fans × intent → ticket × room. Then catalogue, contracts, and royalty paths when you&apos;re ready to scale.
+                Fans × intent → ticket × room. Then catalogue, contracts, and royalty paths when you're ready to scale.
               </p>
             </div>
           </div>
@@ -168,7 +168,7 @@ export default function LandingPage() {
                 <li>Bio is five dead links. List lives on Instagram.</li>
                 <li>Streams look loud. The room stays empty.</li>
                 <li>Tips, tickets, contracts, royalties — five tabs, zero plan.</li>
-                <li>You still don&apos;t know <span className="text-zinc-300">who would show up</span>.</li>
+                <li>You still don't know <span className="text-zinc-300">who would show up</span>.</li>
               </ul>
             </div>
           </FadeUp>
@@ -178,7 +178,7 @@ export default function LandingPage() {
               <ul className="mt-4 space-y-3 text-[14px] leading-relaxed text-zinc-200">
                 <li>One page: story · song · list · tip · links.</li>
                 <li>CRM, maps, rooms, payouts — demand becomes money.</li>
-                <li>Ziki + ranked moves so “what now?” has an answer.</li>
+                <li>Ziki (visual CSO) + ranked moves so “what now?” has an answer.</li>
                 <li>Catalogue, contracts, royalty checklist when you scale.</li>
               </ul>
             </div>
@@ -208,7 +208,7 @@ export default function LandingPage() {
             {
               icon: ListChecks,
               t: "Ranked moves + Ziki",
-              d: "AI career partner. Ranked next steps — share the gate, open the room, drop the tip, pitch — so dopamine meets a plan, not a blank feed.",
+              d: "Ziki is your visual Chief Strategic Officer. Ranked next steps — share the gate, open the room, tip, pitch — demand first, then the move.",
             },
           ].map((f, i) => (
             <FadeUp key={f.t} delay={i * 0.06}>
@@ -224,7 +224,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Full stack — every surface */}
       <section id="stack" className="relative z-10 mx-auto max-w-6xl px-5 py-14 md:px-8">
         <FadeUp>
           <p className="text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-omniv-gold">The full stack</p>
@@ -275,17 +274,17 @@ export default function LandingPage() {
             },
             {
               icon: MessageSquare,
-              t: "Ziki AI",
-              d: "Chat strategist. Ask what to do next. Attach context. Get moves grounded in your data — not generic hustle quotes.",
+              t: "Ziki — Visual CSO",
+              d: "Your visual Chief Strategic Officer, trained on artist management. Market demand, rooms, releases, money — briefed from your real data, not generic hustle.",
             },
             {
               icon: ListChecks,
               t: "Ranked moves",
-              d: "Home and Moves surfaces rank high-impact tasks. Execute one. Come back for the next. No more blank “content calendar.”",
+              d: "Regional surfaces rank high-impact tasks. Execute one. Come back for the next. No more blank “content calendar.”",
             },
             {
               icon: Radio,
-              t: "Agent signals",
+              t: "Global signals",
               d: "Outside market noise filtered for music — labels, sync, playlists — with a path to the source.",
             },
             {
@@ -341,7 +340,7 @@ export default function LandingPage() {
               <span className="text-zinc-400">Scale the catalogue.</span>
             </p>
             <p className="mt-2 text-[12px] text-zinc-600">
-              Page · gate · CRM · maps · rooms · tips · Ziki · moves · agent · catalogue · contracts · royalties · payouts
+              Page · gate · CRM · maps · rooms · tips · Ziki · moves · global · catalogue · contracts · royalties · payouts
             </p>
           </div>
         </FadeUp>
@@ -418,7 +417,7 @@ export default function LandingPage() {
                 <span className="text-[15px] font-semibold">Omniv</span>
               </Link>
               <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-zinc-500">
-                Career OS for independents: artist page, fan gate, CRM, city maps, rooms, tips, Ziki, ranked moves, agent, catalogue, contracts, royalty checklist, payouts.
+                Career OS for independents: artist page, fan gate, CRM, city maps, rooms, tips, Ziki (visual CSO), ranked moves, global signals, catalogue, contracts, royalty checklist, payouts.
               </p>
               <p className="mt-4 text-[12px] text-zinc-600">omniv.media</p>
             </div>
