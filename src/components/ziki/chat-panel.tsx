@@ -32,7 +32,6 @@ import {
   formatPassportForZiki,
   type AudioPassport,
 } from "@/lib/audio-passport";
-import { TrackWaveform } from "@/components/ziki/track-waveform";
 import { MessageActions } from "@/components/ziki/message-actions";
 import { RichText } from "@/components/ziki/rich-text";
 import {
@@ -76,12 +75,8 @@ export function ChatPanel() {
       id: string;
       name: string;
       type: string;
-      data?: string;
-      fileUri?: string;
-      url?: string;
       passport?: AudioPassport | null;
       analyzing?: boolean;
-      uploading?: boolean;
     }[]
   >([]);
   const [busy, setBusy] = useState(false);
@@ -90,7 +85,6 @@ export function ChatPanel() {
   const [ready, setReady] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
   const bootstrapped = useRef(false);
 
   const persist = useCallback((id: string, msgs: ChatMessage[], title?: string) => {
@@ -107,12 +101,13 @@ export function ChatPanel() {
     if (bootstrapped.current) return;
     bootstrapped.current = true;
     void (async () => {
+      let name = "your project";
       try {
         const [brain, profile] = await Promise.all([
           getArtistBrain(),
           getProfile(),
         ]);
-        const name =
+        name =
           brain?.stageName ||
           brain?.name ||
           profile?.full_name ||
@@ -140,20 +135,24 @@ export function ChatPanel() {
       const seed = searchParams.get("q") || act?.summary || "";
       let id = getActiveId() || existing[0]?.id;
       if (!id) {
-        const t = createThread(welcomeMsg("your project"));
+        const t = createThread("New brief");
         id = t.id;
+        const welcome = [welcomeMsg(name)];
+        upsertThread({ ...t, messages: welcome });
         setThreads(loadThreads());
+        setMessages(welcome);
+      } else {
+        const th = loadThreads().find((x) => x.id === id);
+        const msgs = th?.messages?.length
+          ? th.messages
+          : [welcomeMsg(name)];
+        setMessages(msgs);
       }
       setActiveIdState(id);
-      const th = loadThreads().find((x) => x.id === id);
-      const msgs = th?.messages?.length
-        ? th.messages
-        : [welcomeMsg(artistName || "your project")];
-      setMessages(msgs);
       if (seed) setInput(seed);
       setReady(true);
     })();
-  }, [searchParams, artistName]);
+  }, [searchParams]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -223,9 +222,11 @@ export function ChatPanel() {
   }
 
   function newChat() {
-    const t = createThread(welcomeMsg(artistName));
+    const t = createThread("New brief");
+    const welcome = [welcomeMsg(artistName)];
+    upsertThread({ ...t, messages: welcome });
     setActiveIdState(t.id);
-    setMessages(t.messages);
+    setMessages(welcome);
     setThreads(loadThreads());
     setHistoryOpen(false);
   }
@@ -348,7 +349,7 @@ export function ChatPanel() {
             >
               {m.role === "assistant" ? (
                 <>
-                  <RichText content={m.content} />
+                  <RichText text={m.content} />
                   <MessageActions content={m.content} />
                 </>
               ) : (
@@ -387,10 +388,7 @@ export function ChatPanel() {
                 className="rounded-lg border border-omniv-border px-2 py-1 text-[11px]"
               >
                 {a.name}
-                {a.analyzing && " · analyzing…"}
-                {a.passport && (
-                  <TrackWaveform passport={a.passport} className="mt-1" />
-                )}
+                {a.analyzing ? " · analyzing…" : a.passport ? " · ready" : ""}
               </div>
             ))}
           </div>
@@ -408,7 +406,6 @@ export function ChatPanel() {
               />
             </label>
             <textarea
-              ref={inputRef}
               rows={1}
               value={input}
               onChange={(e) => setInput(e.target.value)}
