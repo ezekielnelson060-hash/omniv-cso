@@ -10,7 +10,7 @@ import type { AgentProposal } from "@/lib/agent/types";
 import { Loader2, Sparkles, Zap, Check } from "lucide-react";
 import { MarketDemandCard } from "@/components/demand/market-demand-card";
 
-/** Moves = precision plan. Agent = intelligence inbox. */
+/** Regional = artist market plan + demand. Global = outside signals at /notifications. */
 export function MovesPanel() {
   const router = useRouter();
   const [items, setItems] = useState<AgentProposal[]>([]);
@@ -163,14 +163,14 @@ export function MovesPanel() {
         <div className="relative flex flex-wrap items-end justify-between gap-3 px-3 pb-4 pt-1 sm:px-4 md:px-5 md:pt-4">
           <div>
             <p className="font-data text-[10px] uppercase tracking-[0.16em] text-omniv-gold">
-              Moves
+              Regional intelligence
             </p>
             <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
-              This week's plan
+              Your market plan
             </h1>
             <p className="mt-1 max-w-lg text-[12px] text-omniv-text-secondary">
-              Precision steps only. Agent is intelligence — Moves is what you
-              execute, in order.
+              Where your demand is and what to do next — cities, rooms, list.
+              Global signals stay outside; they only inform the next test.
             </p>
           </div>
           <Button
@@ -275,8 +275,7 @@ export function MovesPanel() {
 
           {!active.length && (
             <p className="rounded-2xl border border-dashed border-omniv-border px-4 py-10 text-center text-[12px] text-omniv-text-muted">
-              Plan clear. Refresh after you upload a track, share Fan Gate, or
-              update your goal.
+              Plan clear. Share Fan Gate, capture city + intent, or refresh after a room.
             </p>
           )}
         </div>
@@ -300,15 +299,15 @@ export function MovesPanel() {
       )}
 
       <p className="text-center text-[11px] text-omniv-text-muted">
-        Outside signals and confirm chips live in{" "}
+        World / partner signals live in{" "}
         <button
           type="button"
           className="text-omniv-gold underline-offset-2 hover:underline"
           onClick={() => router.push("/notifications")}
         >
-          Agent
+          Global intelligence
         </button>
-        .
+        . They inform — they do not invent demand.
       </p>
     </div>
   );
