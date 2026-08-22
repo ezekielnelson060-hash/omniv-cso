@@ -5,12 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { platforms, scanMessages } from "@/data/mock";
+import { scanMessages } from "@/data/mock";
 import { completeOnboarding } from "@/lib/db/profile";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import type { CareerStage, UserRole } from "@/types";
-import { ArrowRight, Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowRight } from "lucide-react";
 
 function OnboardingInner() {
   const router = useRouter();
