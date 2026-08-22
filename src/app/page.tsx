@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { SiteFooter } from "@/components/site-footer";
 
 /** Marketing home — demand verification wedge. */
 export default function HomePage() {
@@ -47,7 +48,7 @@ export default function HomePage() {
           (your visual Chief Strategic Officer trained on artist management).
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href="/signup">
+          <Link href="/verify">
             <Button className="h-11 px-6">Verify my market</Button>
           </Link>
           <Link href="/blog">
@@ -83,12 +84,7 @@ export default function HomePage() {
         </div>
       </main>
 
-      <footer className="border-t border-omniv-border py-8 text-center text-[12px] text-omniv-text-muted">
-        Omniv · Verify demand before you spend ·{" "}
-        <Link href="/privacy" className="text-omniv-gold hover:underline">
-          Privacy
-        </Link>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
