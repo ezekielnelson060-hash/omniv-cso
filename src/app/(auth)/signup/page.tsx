@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,15 +20,17 @@ function SignupForm() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (fromVerify && typeof window !== "undefined") {
+      sessionStorage.setItem("omniv_path", "verify");
+    }
+  }, [fromVerify]);
+
   const panel = useMemo(
     () =>
       fromVerify
         ? {
-            title: (
-              <>
-                Let's find your market.
-              </>
-            ),
+            title: <>Let's find your market.</>,
             sub: "Create your free Omniv account and build your demand page.",
           }
         : {
@@ -46,6 +48,14 @@ function SignupForm() {
     [fromVerify]
   );
 
+  function goOnboarding() {
+    if (fromVerify && typeof window !== "undefined") {
+      sessionStorage.setItem("omniv_path", "verify");
+    }
+    router.push(fromVerify ? "/onboarding?path=verify" : "/onboarding");
+    router.refresh();
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -53,7 +63,7 @@ function SignupForm() {
     setLoading(true);
     try {
       if (!isSupabaseConfigured()) {
-        router.push("/onboarding");
+        goOnboarding();
         return;
       }
       const supabase = createClient();
@@ -61,10 +71,13 @@ function SignupForm() {
         email,
         password,
         options: {
-          data: { full_name: name.trim() },
+          data: {
+            full_name: name.trim(),
+            signup_source: fromVerify ? "verify" : "organic",
+          },
           emailRedirectTo:
             typeof window !== "undefined"
-              ? `${window.location.origin}/onboarding`
+              ? `${window.location.origin}/onboarding${fromVerify ? "?path=verify" : ""}`
               : undefined,
         },
       });
@@ -74,8 +87,7 @@ function SignupForm() {
         return;
       }
       if (data.session) {
-        router.push("/onboarding");
-        router.refresh();
+        goOnboarding();
         return;
       }
       setInfo("Check your email to confirm, then sign in.");
