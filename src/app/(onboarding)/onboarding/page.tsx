@@ -110,7 +110,7 @@ function OnboardingInner() {
                 label="City you thought was your market (optional)"
                 value={testCity}
                 onChange={(e) => setTestCity(e.target.value)}
-                placeholder="e.g. Lagos"
+                placeholder="e.g. London"
               />
             </div>
             <Button
