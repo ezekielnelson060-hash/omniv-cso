@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -67,8 +67,10 @@ const URL_HINTS: Record<string, string> = {
   soundcloud: "https://soundcloud.com/…",
 };
 
-export default function OnboardingPage() {
+function OnboardingInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [marketTest, setMarketTest] = useState(false);
   const [step, setStep] = useState(0);
   const [role, setRole] = useState<UserRole | null>(null);
   const [fullName, setFullName] = useState("");
@@ -93,6 +95,20 @@ export default function OnboardingPage() {
   const [progress, setProgress] = useState(0);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [testCity, setTestCity] = useState("");
+
+  useEffect(() => {
+    const q = searchParams.get("path") === "verify";
+    const s =
+      typeof window !== "undefined" &&
+      sessionStorage.getItem("omniv_path") === "verify";
+    if (q || s) {
+      setMarketTest(true);
+      setRole("artist");
+      setCareerStage("emerging");
+      setInterests(["market", "live", "audience"]);
+    }
+  }, [searchParams]);
 
   function toggleGenre(g: string) {
     setGenres((prev) =>
@@ -107,16 +123,21 @@ export default function OnboardingPage() {
   }
 
   async function finish() {
-    if (!role || !careerStage) return;
+    const effectiveRole = role || "artist";
+    const effectiveStage = careerStage || "emerging";
     setScanning(true);
     setError(null);
     for (let i = 0; i < scanMessages.length; i++) {
       setMsg(scanMessages[i]!);
       setProgress(Math.round(((i + 1) / scanMessages.length) * 100));
-      await new Promise((r) => setTimeout(r, 320));
+      await new Promise((r) => setTimeout(r, marketTest ? 180 : 320));
     }
     if (isSupabaseConfigured()) {
-      setMsg("Locking demand profile · preparing your market scan…");
+      setMsg(
+        marketTest
+          ? "Preparing your demand page…"
+          : "Locking demand profile · preparing your market scan…"
+      );
       const social_links: Record<string, string> = {};
       for (const id of selected) {
         const u = (links[id] || "").trim();
@@ -131,10 +152,13 @@ export default function OnboardingPage() {
         .map((g) => g.trim())
         .filter(Boolean)
         .slice(0, 5);
+      if (marketTest && testCity.trim()) {
+        goals.unshift(`Test demand in ${testCity.trim()}`);
+      }
 
       const res = await completeOnboarding({
         fullName: fullName || "Artist",
-        role,
+        role: effectiveRole,
         platforms: selected,
         social_links,
         genre: genreList.length ? genreList : ["TBD"],
@@ -143,13 +167,13 @@ export default function OnboardingPage() {
           "To be refined as catalogue and content signals land.",
         brandVoice:
           brandVoice.trim() || "Authentic, intentional, growth-focused.",
-        careerStage,
+        careerStage: effectiveStage,
         goals:
           goals.length > 0
             ? goals
             : ["Find strongest market city", "Test a paid room"],
         bigDream: goalText.trim() || goals[0] || undefined,
-        interests,
+        interests: interests.length ? interests : ["market", "live", "audience"],
       });
       if (!res.ok) {
         setError(res.error || "Could not save profile");
@@ -157,7 +181,10 @@ export default function OnboardingPage() {
         return;
       }
     }
-    router.push("/dashboard");
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("omniv_path");
+    }
+    router.push(marketTest ? "/crm?welcome=verify" : "/dashboard");
   }
 
   return (
@@ -165,12 +192,91 @@ export default function OnboardingPage() {
       <div className="w-full max-w-lg">
         <div className="mb-8">
           <p className="text-xs font-medium uppercase tracking-widest text-omniv-gold">
-            Step {Math.min(step + 1, TOTAL_STEPS)} of {TOTAL_STEPS}
+            {marketTest
+              ? `Market test · step ${Math.min(step + 1, 2)} of 2`
+              : `Step ${Math.min(step + 1, TOTAL_STEPS)} of ${TOTAL_STEPS}`}
           </p>
-          <Progress value={((step + 1) / TOTAL_STEPS) * 100} className="mt-2" />
+          <Progress
+            value={
+              marketTest
+                ? ((step + 1) / 2) * 100
+                : ((step + 1) / TOTAL_STEPS) * 100
+            }
+            className="mt-2"
+          />
         </div>
 
-        {step === 0 && (
+        {marketTest && step === 0 && (
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Start your market test
+            </h1>
+            <p className="mt-1 text-sm text-omniv-text-secondary">
+              Two quick steps. Then you get a demand page to share — email, city,
+              would-attend — so the market can answer.
+            </p>
+            <div className="mt-6 space-y-3">
+              <Input
+                label="Stage name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="e.g. the name fans know"
+              />
+              <Input
+                label="City you thought was your market (optional)"
+                value={testCity}
+                onChange={(e) => setTestCity(e.target.value)}
+                placeholder="e.g. Lagos"
+              />
+            </div>
+            <Button
+              className="mt-6 w-full gap-2"
+              disabled={!fullName.trim()}
+              onClick={() => setStep(1)}
+            >
+              Continue <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {marketTest && step === 1 && (
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {scanning ? "Setting up your demand page…" : "Ready to verify"}
+            </h1>
+            <p className="mt-1 text-sm text-omniv-text-secondary">
+              {scanning
+                ? msg
+                : "We'll create your profile and open CRM so you can share your Fan Gate link with your audience."}
+            </p>
+            {!scanning && (
+              <ul className="mt-4 space-y-1.5 text-xs text-omniv-text-muted">
+                <li>· Artist: {fullName}</li>
+                {testCity.trim() && <li>· Testing against: {testCity}</li>}
+                <li>· Next: share Fan Gate → collect city + intent</li>
+              </ul>
+            )}
+            {error && <p className="mt-3 text-xs text-omniv-danger">{error}</p>}
+            {scanning && (
+              <div className="mt-6">
+                <Progress value={progress} />
+                <p className="mt-2 text-xs text-omniv-text-muted">{progress}%</p>
+              </div>
+            )}
+            {!scanning && (
+              <div className="mt-6 flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setStep(0)}>
+                  Back
+                </Button>
+                <Button className="flex-1 gap-2" onClick={() => void finish()}>
+                  Open my demand tools <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!marketTest && step === 0 && (
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Who are you?</h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
@@ -214,12 +320,11 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {step === 1 && (
+        {!marketTest && step === 1 && (
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Your sound & stage</h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              Genre and career stage help Omniv read your signals in the right lane —
-              not generic music advice.
+              Genre and career stage help Omniv read your signals in the right lane.
             </p>
             <p className="mt-5 text-xs font-medium uppercase tracking-wider text-omniv-text-muted">
               Genre (up to 4)
@@ -262,7 +367,7 @@ export default function OnboardingPage() {
                 value={musicStyle}
                 onChange={(e) => setMusicStyle(e.target.value)}
                 rows={3}
-                placeholder="Describe your sound: tempo, mood, production, influences…"
+                placeholder="Describe your sound…"
                 className="w-full rounded-[var(--radius)] border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm focus-gold"
               />
             </div>
@@ -271,7 +376,7 @@ export default function OnboardingPage() {
                 label="Brand voice (optional)"
                 value={brandVoice}
                 onChange={(e) => setBrandVoice(e.target.value)}
-                placeholder="e.g. Intimate, bold, spiritual, playful…"
+                placeholder="e.g. Intimate, bold…"
               />
             </div>
             <p className="mt-5 text-xs font-medium uppercase tracking-wider text-omniv-text-muted">
@@ -307,8 +412,7 @@ export default function OnboardingPage() {
               <Button
                 className="flex-1 gap-2"
                 disabled={
-                  !careerStage ||
-                  (genres.length === 0 && !customGenre.trim())
+                  !careerStage || (genres.length === 0 && !customGenre.trim())
                 }
                 onClick={() => setStep(2)}
               >
@@ -318,26 +422,23 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {step === 2 && (
+        {!marketTest && step === 2 && (
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
               What are you trying to prove?
             </h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              One clear outcome — a city, a room, a list, a payday. Omniv ranks
-              demand moves against this, not random content tips.
+              One clear outcome — a city, a room, a list, a payday.
             </p>
             <div className="mt-5">
               <label className="mb-1.5 block text-sm font-medium text-omniv-text-secondary">
-                Goal (first line is the north star; more lines = near-term goals)
+                Goal
               </label>
               <textarea
                 value={goalText}
                 onChange={(e) => setGoalText(e.target.value)}
                 rows={4}
-                placeholder={
-                  "Prove Accra will fill a 40-person room\nOwn 500 fans on my list who would show up\nFirst $1k from rooms + tips"
-                }
+                placeholder="Prove Accra will fill a 40-person room"
                 className="w-full rounded-[var(--radius)] border border-omniv-border bg-omniv-elevated px-3 py-2 text-sm focus-gold"
               />
             </div>
@@ -379,14 +480,13 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {step === 3 && (
+        {!marketTest && step === 3 && (
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
               Where do the signals live?
             </h1>
             <p className="mt-1 text-sm text-omniv-text-secondary">
-              Pick platforms you actually use. Omniv reads audience and geography
-              from them to verify market demand — not vanity charts.
+              Pick platforms you actually use.
             </p>
             <div className="mt-6 grid grid-cols-2 gap-2">
               {platforms.map((p) => {
@@ -427,15 +527,12 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {step === 4 && (
+        {!marketTest && step === 4 && (
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
               Links for the demand scan
             </h1>
-            <p className="mt-1 text-sm text-omniv-text-secondary">
-              Optional but powerful. Spotify, Instagram, TikTok — the more real
-              links you add, the clearer the market picture.
-            </p>
+            <p className="mt-1 text-sm text-omniv-text-secondary">Optional but powerful.</p>
             <div className="mt-6 space-y-3">
               {selected.map((id) => (
                 <Input
@@ -460,7 +557,7 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {step === 5 && (
+        {!marketTest && step === 5 && (
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
               {scanning ? "Verifying your market signals" : "Run your demand scan"}
@@ -468,19 +565,16 @@ export default function OnboardingPage() {
             <p className="mt-1 text-sm text-omniv-text-secondary">
               {scanning
                 ? msg
-                : "We'll map where demand looks strongest and what to test first — a city, a room, a list move."}
+                : "We'll map where demand looks strongest and what to test first."}
             </p>
             {!scanning && (
               <ul className="mt-4 space-y-1.5 text-xs text-omniv-text-muted">
                 <li>· Name: {fullName}</li>
                 <li>· Genre: {[...genres, customGenre].filter(Boolean).join(", ")}</li>
                 <li>· Level: {careerStage}</li>
-                <li>· Focus: {interests.join(", ")}</li>
               </ul>
             )}
-            {error && (
-              <p className="mt-3 text-xs text-omniv-danger">{error}</p>
-            )}
+            {error && <p className="mt-3 text-xs text-omniv-danger">{error}</p>}
             {scanning && (
               <div className="mt-6">
                 <Progress value={progress} />
@@ -501,5 +595,19 @@ export default function OnboardingPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-dvh items-center justify-center text-sm text-omniv-text-muted">
+          Loading…
+        </div>
+      }
+    >
+      <OnboardingInner />
+    </Suspense>
   );
 }
