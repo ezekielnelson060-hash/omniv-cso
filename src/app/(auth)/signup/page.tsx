@@ -1,18 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useMemo, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { ArrowRight } from "lucide-react";
-import { Suspense } from "react";
 
-function SignupForm() {
+export default function SignupPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const fromVerify = searchParams.get("from") === "verify";
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -21,38 +18,16 @@ function SignupForm() {
   const [info, setInfo] = useState<string | null>(null);
 
   useEffect(() => {
-    if (fromVerify && typeof window !== "undefined") {
+    if (typeof window !== "undefined") {
       sessionStorage.setItem("omniv_path", "verify");
     }
-  }, [fromVerify]);
-
-  const panel = useMemo(
-    () =>
-      fromVerify
-        ? {
-            title: <>Let's find your market.</>,
-            sub: "Create your free Omniv account and build your demand page.",
-          }
-        : {
-            title: (
-              <>
-                Build the list.
-                <br />
-                Open the room.
-                <br />
-                Rank the week.
-              </>
-            ),
-            sub: "Career OS for independent artists, managers, and labels.",
-          },
-    [fromVerify]
-  );
+  }, []);
 
   function goOnboarding() {
-    if (fromVerify && typeof window !== "undefined") {
+    if (typeof window !== "undefined") {
       sessionStorage.setItem("omniv_path", "verify");
     }
-    router.push(fromVerify ? "/onboarding?path=verify" : "/onboarding");
+    router.push("/onboarding");
     router.refresh();
   }
 
@@ -73,11 +48,11 @@ function SignupForm() {
         options: {
           data: {
             full_name: name.trim(),
-            signup_source: fromVerify ? "verify" : "organic",
+            signup_source: "verify",
           },
           emailRedirectTo:
             typeof window !== "undefined"
-              ? `${window.location.origin}/onboarding${fromVerify ? "?path=verify" : ""}`
+              ? `${window.location.origin}/onboarding`
               : undefined,
         },
       });
@@ -110,10 +85,10 @@ function SignupForm() {
         </div>
         <div className="relative">
           <p className="text-xl font-semibold leading-snug tracking-tight text-omniv-text">
-            {panel.title}
+            Let's find your market.
           </p>
           <p className="mt-2 max-w-sm text-[12px] leading-snug text-omniv-text-muted">
-            {panel.sub}
+            Create your free account and build your demand page.
           </p>
         </div>
         <p className="relative text-[10px] text-omniv-text-muted">
@@ -128,28 +103,15 @@ function SignupForm() {
             <span className="text-sm font-semibold">Omniv</span>
           </div>
           <h1 className="text-xl font-semibold tracking-tight">
-            {fromVerify ? "Let's find your market" : "Create account"}
+            Let's find your market
           </h1>
           <p className="mt-1 text-[11px] text-omniv-text-muted">
-            {fromVerify
-              ? "Create your free account and start your market test."
-              : (
-                  <>
-                    Already on Omniv?{" "}
-                    <Link href="/login" className="text-omniv-gold hover:underline">
-                      Sign in
-                    </Link>
-                  </>
-                )}
+            Create your free account and start your market test.{" "}
+            Already on Omniv?{" "}
+            <Link href="/login" className="text-omniv-gold hover:underline">
+              Sign in
+            </Link>
           </p>
-          {fromVerify && (
-            <p className="mt-1 text-[11px] text-omniv-text-muted">
-              Already on Omniv?{" "}
-              <Link href="/login" className="text-omniv-gold hover:underline">
-                Sign in
-              </Link>
-            </p>
-          )}
 
           <form onSubmit={handleSubmit} className="mt-5 space-y-3">
             <div>
@@ -194,11 +156,7 @@ function SignupForm() {
             {error && <p className="text-xs text-rose-400">{error}</p>}
             {info && <p className="text-xs text-omniv-gold">{info}</p>}
             <Button type="submit" className="h-10 w-full gap-1.5" disabled={loading}>
-              {loading
-                ? "Creating…"
-                : fromVerify
-                  ? "Start My Market Test"
-                  : "Create account"}
+              {loading ? "Creating…" : "Start My Market Test"}
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </form>
@@ -217,19 +175,5 @@ function SignupForm() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function SignupPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-dvh items-center justify-center text-sm text-omniv-text-muted">
-          Loading…
-        </div>
-      }
-    >
-      <SignupForm />
-    </Suspense>
   );
 }
