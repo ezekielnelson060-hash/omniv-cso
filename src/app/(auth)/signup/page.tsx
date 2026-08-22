@@ -1,21 +1,50 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { ArrowRight } from "lucide-react";
+import { Suspense } from "react";
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromVerify = searchParams.get("from") === "verify";
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+
+  const panel = useMemo(
+    () =>
+      fromVerify
+        ? {
+            title: (
+              <>
+                Let's find your market.
+              </>
+            ),
+            sub: "Create your free Omniv account and build your demand page.",
+          }
+        : {
+            title: (
+              <>
+                Build the list.
+                <br />
+                Open the room.
+                <br />
+                Rank the week.
+              </>
+            ),
+            sub: "Career OS for independent artists, managers, and labels.",
+          },
+    [fromVerify]
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,18 +98,14 @@ export default function SignupPage() {
         </div>
         <div className="relative">
           <p className="text-xl font-semibold leading-snug tracking-tight text-omniv-text">
-            Build the list.
-            <br />
-            Open the room.
-            <br />
-            Rank the week.
+            {panel.title}
           </p>
           <p className="mt-2 max-w-sm text-[12px] leading-snug text-omniv-text-muted">
-            Career OS for independent artists, managers, and labels.
+            {panel.sub}
           </p>
         </div>
         <p className="relative text-[10px] text-omniv-text-muted">
-          Free audit at /audit · omniv.media
+          Free to start. No credit card required · omniv.media
         </p>
       </div>
 
@@ -90,18 +115,34 @@ export default function SignupPage() {
             <img src="/logo.svg" alt="Omniv" className="h-7 w-7 rounded-lg" />
             <span className="text-sm font-semibold">Omniv</span>
           </div>
-          <h1 className="text-xl font-semibold tracking-tight">Create account</h1>
+          <h1 className="text-xl font-semibold tracking-tight">
+            {fromVerify ? "Let's find your market" : "Create account"}
+          </h1>
           <p className="mt-1 text-[11px] text-omniv-text-muted">
-            Already on Omniv?{" "}
-            <Link href="/login" className="text-omniv-gold hover:underline">
-              Sign in
-            </Link>
+            {fromVerify
+              ? "Create your free account and start your market test."
+              : (
+                  <>
+                    Already on Omniv?{" "}
+                    <Link href="/login" className="text-omniv-gold hover:underline">
+                      Sign in
+                    </Link>
+                  </>
+                )}
           </p>
+          {fromVerify && (
+            <p className="mt-1 text-[11px] text-omniv-text-muted">
+              Already on Omniv?{" "}
+              <Link href="/login" className="text-omniv-gold hover:underline">
+                Sign in
+              </Link>
+            </p>
+          )}
 
           <form onSubmit={handleSubmit} className="mt-5 space-y-3">
             <div>
               <label className="text-[10px] font-medium text-omniv-text-muted">
-                Name
+                Name / stage name
               </label>
               <Input
                 required
@@ -141,12 +182,17 @@ export default function SignupPage() {
             {error && <p className="text-xs text-rose-400">{error}</p>}
             {info && <p className="text-xs text-omniv-gold">{info}</p>}
             <Button type="submit" className="h-10 w-full gap-1.5" disabled={loading}>
-              {loading ? "Creating…" : "Create account"}
+              {loading
+                ? "Creating…"
+                : fromVerify
+                  ? "Start My Market Test"
+                  : "Create account"}
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </form>
           <p className="mt-3 text-[10px] text-omniv-text-muted">
-            By continuing you agree to our{" "}
+            Free to start. No credit card required. By continuing you agree to
+            our{" "}
             <Link href="/terms" className="text-omniv-gold hover:underline">
               Terms
             </Link>{" "}
@@ -159,5 +205,19 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-dvh items-center justify-center text-sm text-omniv-text-muted">
+          Loading…
+        </div>
+      }
+    >
+      <SignupForm />
+    </Suspense>
   );
 }
