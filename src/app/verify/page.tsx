@@ -47,7 +47,7 @@ function CtaButton({ className }: { className?: string }) {
 }
 
 const CITIES = [
-  { city: "London", interested: 34, attend: 18, pct: 42 },
+  { city: "Lagos", interested: 34, attend: 18, pct: 42 },
   { city: "Toronto", interested: 81, attend: 47, pct: 100, highlight: true },
   { city: "Atlanta", interested: 12, attend: 6, pct: 15 },
 ];
@@ -89,13 +89,13 @@ export default function VerifyLandingPage() {
         <div className="relative mx-auto max-w-3xl">
           <FadeUp>
             <p className="font-data text-[11px] uppercase tracking-[0.2em] text-omniv-gold">
-              For independent artists worldwide
+              For independent artists
             </p>
             <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl md:text-[3.25rem] md:leading-[1.1]">
               Would your fans actually show up?
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-[16px] leading-relaxed text-zinc-300">
-              You might have streams in London, followers in Atlanta, and listeners
+              You might have streams in Lagos, followers in Toronto, and listeners
               everywhere. That doesn't tell you where you have a real market.
             </p>
             <p className="mx-auto mt-3 max-w-xl text-[16px] leading-relaxed text-zinc-300">
@@ -123,7 +123,7 @@ export default function VerifyLandingPage() {
             </h2>
             <p className="mx-auto mt-4 max-w-lg text-[16px] leading-relaxed text-zinc-300">
               You can have 20,000 streams. 8,000 followers. 500 likes. And still
-              have no idea if you can fill a room in London.
+              have no idea if you can fill a room in Lagos.
             </p>
             <p className="mt-2 text-[16px] text-zinc-400">
               Attention isn't the same thing as demand.
@@ -173,7 +173,7 @@ export default function VerifyLandingPage() {
             Example result · not live data
           </p>
           <h2 className="mt-2 text-center text-3xl font-semibold tracking-tight text-white">
-            You think London is your market.
+            You think Lagos is your market.
           </h2>
           <p className="mt-2 text-center text-[16px] text-zinc-300">
             Your audience might disagree.
