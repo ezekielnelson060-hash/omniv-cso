@@ -11,10 +11,6 @@
     {
       "path": "/api/cron/platform-metrics",
       "schedule": "0 12 * * *"
-    },
-    {
-      "path": "/api/cron/nurture",
-      "schedule": "0 10 * * *"
     }
   ]
 }
