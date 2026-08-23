@@ -75,6 +75,12 @@ function OnboardingInner() {
       } catch {
         /* CRM can create later */
       }
+      // Day-0 nurture — non-blocking
+      try {
+        void fetch("/api/email/welcome", { method: "POST" });
+      } catch {
+        /* email optional */
+      }
     }
     if (typeof window !== "undefined") sessionStorage.removeItem("omniv_path");
     router.push("/crm?welcome=verify");
@@ -110,7 +116,7 @@ function OnboardingInner() {
                 label="City you thought was your market (optional)"
                 value={testCity}
                 onChange={(e) => setTestCity(e.target.value)}
-                placeholder="e.g. London"
+                placeholder="e.g. Lagos"
               />
             </div>
             <Button
