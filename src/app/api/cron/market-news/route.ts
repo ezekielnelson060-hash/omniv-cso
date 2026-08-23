@@ -3,22 +3,30 @@ import { createClient } from "@supabase/supabase-js";
 import { loadMarketProposals } from "@/lib/agent/market-news";
 import { loadXMarketProposals } from "@/lib/agent/x-market";
 import type { AgentProposal } from "@/lib/agent/types";
+import { runScheduledNurture } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
  * Pull music-market news + X public opportunities → Agent Outside for every profile.
+ * Also runs nurture emails (days 2–30) so no extra cron slot is required.
  * Vercel Cron: GET /api/cron/market-news
  * Auth: Authorization: Bearer CRON_SECRET
- *
- * Env: NEWS_API_KEY and/or X_BEARER_TOKEN
  */
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
   const secret = process.env.CRON_SECRET;
   if (secret && auth !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Nurture sequence (days 2–30) — piggyback so we don't need a 4th cron slot
+  let nurture = { sent: 0, checked: 0, errors: [] as string[] };
+  try {
+    nurture = await runScheduledNurture();
+  } catch (e) {
+    console.error("[cron/market-news] nurture", e);
   }
 
   const newsKey =
@@ -29,8 +37,13 @@ export async function GET(req: Request) {
 
   if (!newsKey && !xToken) {
     return NextResponse.json(
-      { error: "NEWS_API_KEY or X_BEARER_TOKEN required", injected: 0 },
-      { status: 503 }
+      {
+        ok: true,
+        note: "NEWS_API_KEY / X_BEARER_TOKEN missing — nurture still ran",
+        nurture,
+        injected: 0,
+      },
+      { status: 200 }
     );
   }
 
@@ -67,6 +80,7 @@ export async function GET(req: Request) {
       articles: 0,
       profiles: 0,
       note: "No usable NewsAPI or X results this run",
+      nurture,
     });
   }
 
@@ -124,5 +138,6 @@ export async function GET(req: Request) {
     news: proposals.filter((p) => String(p.id).startsWith("market-")).length,
     profiles: updated,
     titles: proposals.map((x) => x.title).slice(0, 5),
+    nurture,
   });
 }
