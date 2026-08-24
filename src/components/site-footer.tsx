@@ -1,15 +1,15 @@
 import Link from "next/link";
 import Image from "next/image";
 
-/** Update these to your live Omniv pages (or set NEXT_PUBLIC_* env vars). */
+/** Live Omniv social profiles (override with NEXT_PUBLIC_* if needed). */
 const SOCIAL = {
   facebook:
     process.env.NEXT_PUBLIC_FACEBOOK_URL ||
-    "https://www.facebook.com/omniv.media",
+    "https://www.facebook.com/omnivmedia",
   x: process.env.NEXT_PUBLIC_X_URL || "https://x.com/omnivmedia",
   linkedin:
     process.env.NEXT_PUBLIC_LINKEDIN_URL ||
-    "https://www.linkedin.com/company/omniv",
+    "https://www.linkedin.com/company/omniv-intelligence/",
 };
 
 function XIcon({ className }: { className?: string }) {
