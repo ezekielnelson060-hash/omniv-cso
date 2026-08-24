@@ -55,10 +55,10 @@ export const metadata: Metadata = {
     siteName: "Omniv",
     images: [
       {
-        url: "https://omniv.media/og-image.jpg",
+        url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Omniv — verify your music demand before you spend",
+        alt: "Omniv — Verify Your Music Demand",
       },
     ],
     locale: "en_US",
@@ -69,7 +69,7 @@ export const metadata: Metadata = {
     title: "Omniv — Verify Your Music Demand",
     description:
       "Capture demand. Score the market. Open the room. Get paid.",
-    images: ["https://omniv.media/og-image.jpg"],
+    images: ["/opengraph-image"],
   },
   alternates: {
     canonical: "https://omniv.media",
