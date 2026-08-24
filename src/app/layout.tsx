@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
   ),
   title: {
-    default: "Omniv — Verify Artist Market Demand",
+    default: "Omniv — Verify Your Music Demand",
     template: "%s | Omniv",
   },
   description:
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
   ],
   openGraph: {
-    title: "Omniv — Verify Artist Market Demand",
+    title: "Omniv — Verify Your Music Demand",
     description:
       "Fans, city, would-attend → demand score → right-sized room. Not another AI that says post more.",
     url: "https://omniv.media",
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
         url: "https://omniv.media/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "Omniv — verify artist market demand before you spend",
+        alt: "Omniv — verify your music demand before you spend",
       },
     ],
     locale: "en_US",
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Omniv — Verify Artist Market Demand",
+    title: "Omniv — Verify Your Music Demand",
     description:
       "Capture demand. Score the market. Open the room. Get paid.",
     images: ["https://omniv.media/og-image.jpg"],
@@ -139,7 +139,7 @@ export default function RootLayout({
                   },
                   featureList:
                     "Market demand scores, Fan city mapping, Intent-to-attend, Ticketed rooms, Tip links, Visual CSO",
-                  publisher: { "@id": "https://omniv.media/#organization" },
+                  publisher: { "@id": "https://omniv.media/#software" },
                 },
                 {
                   "@type": "FAQPage",
