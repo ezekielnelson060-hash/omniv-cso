@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     template: "%s | Omniv",
   },
   description:
-    "Stop guessing where your fans are. Capture city + intent, score real market demand, open the right-sized room, get paid. Ziki is your visual Chief Strategic Officer trained on artist management.",
+    "Capture demand. Score the market. Open the room. Get paid.",
   keywords: [
     "independent artist",
     "market demand",
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Omniv — Verify Your Music Demand",
     description:
-      "Fans, city, would-attend → demand score → right-sized room. Not another AI that says post more.",
+      "Capture demand. Score the market. Open the room. Get paid.",
     url: "https://omniv.media",
     siteName: "Omniv",
     images: [
