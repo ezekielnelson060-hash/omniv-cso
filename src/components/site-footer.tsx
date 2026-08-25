@@ -56,7 +56,7 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative z-10 border-t border-white/10 bg-[#070707]">
+    <footer className="relative z-10 border-t border-white/10 bg-[#070707] pb-24 sm:pb-0">
       <div className="mx-auto max-w-6xl px-5 py-12 md:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">
@@ -164,33 +164,33 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-10 flex max-w-md flex-col gap-2.5 sm:max-w-sm">
+        <div className="mt-10 flex items-center gap-3">
           <a
             href={SOCIAL.x}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex h-11 items-center justify-center gap-2 rounded-full bg-black text-[14px] font-medium text-white ring-1 ring-white/15 transition hover:bg-zinc-900"
+            aria-label="Omniv on X"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-white ring-1 ring-white/10 transition hover:bg-white/10 hover:ring-white/20"
           >
             <XIcon className="h-4 w-4" />
-            X
           </a>
           <a
             href={SOCIAL.facebook}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex h-11 items-center justify-center gap-2 rounded-full bg-[#1877F2] text-[14px] font-medium text-white transition hover:bg-[#166FE5]"
+            aria-label="Omniv on Facebook"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1877F2]/15 text-[#1877F2] ring-1 ring-[#1877F2]/30 transition hover:bg-[#1877F2]/25"
           >
             <FacebookIcon className="h-4 w-4" />
-            Facebook
           </a>
           <a
             href={SOCIAL.linkedin}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex h-11 items-center justify-center gap-2 rounded-full bg-[#0A66C2] text-[14px] font-medium text-white transition hover:bg-[#0958a8]"
+            aria-label="Omniv on LinkedIn"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0A66C2]/15 text-[#0A66C2] ring-1 ring-[#0A66C2]/30 transition hover:bg-[#0A66C2]/25"
           >
             <LinkedInIcon className="h-4 w-4" />
-            LinkedIn
           </a>
         </div>
 
