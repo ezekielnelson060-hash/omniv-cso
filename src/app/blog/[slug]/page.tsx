@@ -177,6 +177,26 @@ export default async function BlogPostPage({ params }: Props) {
           <Block key={i} text={para} />
         ))}
       </article>
+      {post.slug === "how-to-build-an-owned-fanbase" && (
+        <div className="mt-8 rounded-2xl border border-omniv-border bg-omniv-elevated/50 p-4">
+          <p className="text-[12px] font-semibold uppercase tracking-wider text-omniv-text-muted">
+            Partner resource
+          </p>
+          <p className="mt-2 text-[14px] text-omniv-text">
+            Once you own the list, outreach still matters.{" "}
+            <a
+              href="https://learn-with-real-muzick.vercel.app/?ref=omniv"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-omniv-gold hover:underline"
+            >
+              RealMuZick
+            </a>{" "}
+            publishes a music promotion contact list and creator tools for
+            independents.
+          </p>
+        </div>
+      )}
       <div className="mt-10 rounded-2xl border border-omniv-gold/30 bg-omniv-gold/10 p-4">
         <p className="text-[14px] font-medium text-omniv-text">
           You already have fans. Find out who would show up.
