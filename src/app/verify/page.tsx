@@ -6,11 +6,17 @@ import { ArrowRight } from "lucide-react";
 
 const CTA_HREF = "/signup?from=verify";
 
-const CITIES = [
+const CITIES: {
+  city: string;
+  interested: number;
+  attend: number;
+  pct: number;
+  highlight?: boolean;
+}[] = [
   { city: "Lagos", interested: 34, attend: 18, pct: 42 },
   { city: "Toronto", interested: 81, attend: 47, pct: 100, highlight: true },
   { city: "Atlanta", interested: 12, attend: 6, pct: 15 },
-] as const;
+];
 
 function CtaButton({ className }: { className?: string }) {
   return (
@@ -358,7 +364,7 @@ export default function VerifyLandingPage() {
         <h2 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
           &ldquo;But I already know where my fans are.&rdquo;
         </h2>
-        <p className="mx-auto mt-4 max-w-lg text-[16px] leading-relaxed text-zinc-300">
+        <p className="mx-auto mt-4 max-w-lg text-[16px] text-zinc-300">
           Maybe. But do you know who would attend? How many? Which city has the
           strongest intent? What size room they could fill? Whether that demand
           is stronger than another city?
