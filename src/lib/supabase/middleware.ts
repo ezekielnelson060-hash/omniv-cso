@@ -63,6 +63,7 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/cookies") ||
     path.startsWith("/refund") ||
     path.startsWith("/blog") ||
+    path.startsWith("/partners") ||
     path.startsWith("/data-deletion") ||
     path === "/policy";
 
