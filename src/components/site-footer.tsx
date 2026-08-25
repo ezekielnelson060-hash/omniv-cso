@@ -118,6 +118,11 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link href="/partners" className="hover:text-zinc-200">
+                  Partners
+                </Link>
+              </li>
+              <li>
                 <Link href="/contact" className="hover:text-zinc-200">
                   Contact
                 </Link>
