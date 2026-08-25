@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
@@ -25,8 +26,18 @@ export default function PartnersPage() {
     <div className="min-h-dvh bg-[#050505] text-zinc-100">
       <header className="border-b border-white/5">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link href="/" className="text-[15px] font-semibold tracking-tight">
-            Omniv
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/logo.svg"
+              alt="Omniv"
+              width={28}
+              height={28}
+              className="rounded-md"
+              priority
+            />
+            <span className="text-[15px] font-semibold tracking-tight">
+              Omniv
+            </span>
           </Link>
           <Link
             href="/verify"
@@ -45,9 +56,9 @@ export default function PartnersPage() {
           Tools we share with independents
         </h1>
         <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-zinc-400">
-          Omniv verifies where demand is real. These partners help with adjacent
-          jobs — promotion contacts, production, outreach. We only list people
-          we're actively cross-promoting with.
+          Omniv verifies where demand is real. These are tools we recommend for
+          adjacent jobs — promotion contacts, production, outreach — from people
+          we're partnering with.
         </p>
 
         <ul className="mt-10 space-y-4">
