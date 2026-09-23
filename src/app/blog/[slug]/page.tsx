@@ -66,27 +66,17 @@ function Block({ text }: { text: string }) {
       text === "It usually isn't." ||
       text === "That's useful." ||
       text === "start asking:" ||
-      text === "who would show up?" ||
       text.startsWith("How many") ||
       text.startsWith("Which ") ||
       text.startsWith("Where ") ||
-      text.startsWith("What ") ||
-      text.startsWith("Find the") ||
-      text.startsWith("Open the") ||
-      text.startsWith("Own the") ||
-      text.startsWith("Get paid") ||
-      text.startsWith("Then do"));
+      text.startsWith("What "));
   if (thick) {
     return (
-      <p className="text-[17px] font-medium leading-snug text-omniv-text">
-        {text}
-      </p>
+      <p className="text-[17px] font-medium leading-snug text-omniv-text">{text}</p>
     );
   }
   return (
-    <p className="text-[15px] leading-relaxed text-omniv-text-secondary">
-      {text}
-    </p>
+    <p className="text-[15px] leading-relaxed text-omniv-text-secondary">{text}</p>
   );
 }
 
@@ -117,33 +107,15 @@ export default async function BlogPostPage({ params }: Props) {
         url: "https://omniv.media/logo.svg",
       },
     },
-    mainEntityOfPage: {
-      "@type": "WebPage",
-      "@id": pageUrl,
-    },
+    mainEntityOfPage: { "@type": "WebPage", "@id": pageUrl },
   };
   const breadcrumbLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Home",
-        item: "https://omniv.media/",
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Blog",
-        item: "https://omniv.media/blog",
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: post.title,
-        item: pageUrl,
-      },
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://omniv.media/" },
+      { "@type": "ListItem", position: 2, name: "Blog", item: "https://omniv.media/blog" },
+      { "@type": "ListItem", position: 3, name: post.title, item: pageUrl },
     ],
   };
 
@@ -177,38 +149,18 @@ export default async function BlogPostPage({ params }: Props) {
           <Block key={i} text={para} />
         ))}
       </article>
-      {post.slug === "how-to-build-an-owned-fanbase" && (
-        <div className="mt-8 rounded-2xl border border-omniv-border bg-omniv-elevated/50 p-4">
-          <p className="text-[12px] font-semibold uppercase tracking-wider text-omniv-text-muted">
-            Partner resource
-          </p>
-          <p className="mt-2 text-[14px] text-omniv-text">
-            Once you own the list, outreach still matters.{" "}
-            <a
-              href="https://learn-with-real-muzick.vercel.app/?ref=omniv"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-omniv-gold hover:underline"
-            >
-              RealMuZick
-            </a>{" "}
-            publishes a music promotion contact list and creator tools for
-            independents.
-          </p>
-        </div>
-      )}
       <div className="mt-10 rounded-2xl border border-omniv-gold/30 bg-omniv-gold/10 p-4">
         <p className="text-[14px] font-medium text-omniv-text">
-          You already have fans. Find out who would show up.
+          Have something worth discovering?
         </p>
         <p className="mt-1 text-[13px] text-omniv-text-muted">
-          Free Artist Scan — city, intent, and one ranked move.
+          Publish on Omniv — the discovery network for the real world.
         </p>
         <Link
-          href="/signup"
+          href="/signup?from=publish"
           className="mt-3 inline-flex rounded-xl bg-omniv-gold px-4 py-2 text-[13px] font-semibold text-omniv-black"
         >
-          Start free scan
+          Publish on Omniv
         </Link>
       </div>
     </main>
