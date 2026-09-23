@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function EntityPage({ params, searchParams }: Props) {
   const { type, slug } = await params;
   const { tab } = await searchParams;
-  if (!ENTITY_TYPES.includes(type as EntityType)) notFound();
+  if (!(ENTITY_TYPES as readonly string[]).includes(type)) notFound();
 
   const supabase = await tryClient();
   const e = await getDiscoveryEntity(supabase, type, slug);
@@ -84,7 +84,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
           href="/explore"
           className="text-[12px] text-zinc-500 hover:text-omniv-gold"
         >
-          ← Explore
+          \u2190 Explore
         </Link>
 
         <div className="mt-8 flex items-start gap-4">
@@ -94,7 +94,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
               {ENTITY_LABELS[e.type]}
-              {e.location ? ` · ${e.location}` : ""}
+              {e.location ? ` \u00b7 ${e.location}` : ""}
             </p>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">
               {e.name}
@@ -111,7 +111,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
                 className="rounded-full border border-omniv-gold/35 bg-omniv-gold/10 px-3 py-1 text-[12px] text-omniv-gold"
               >
                 {INTENT_LABELS[i.kind]}
-                {i.detail ? ` · ${i.detail}` : ""}
+                {i.detail ? ` \u00b7 ${i.detail}` : ""}
               </span>
             ))}
           </div>
@@ -131,7 +131,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
           {tabs.map((t) => (
             <Link
               key={t.id}
-              href={`\( {path}?tab= \){t.id}`}
+              href={`${path}?tab=${t.id}`}
               className={`shrink-0 border-b-2 px-3 py-2 text-[13px] transition ${
                 activeTab === t.id
                   ? "border-omniv-gold text-white"
@@ -166,7 +166,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
                 rel="noopener noreferrer"
                 className="block text-[14px] text-omniv-gold hover:underline"
               >
-                {l.label} →
+                {l.label} \u2192
               </a>
             ))}
             <div className="border-t border-white/10 pt-8">
@@ -186,46 +186,6 @@ export default async function EntityPage({ params, searchParams }: Props) {
             )}
           </div>
         )}
-      </main>
-
-      <SiteFooter />
-    </div>
-  );
-}
-        {e.tags.length > 0 && (
-          <div className="mt-8 flex flex-wrap gap-2">
-            {e.tags.map((t) => (
-              <Link
-                key={t}
-                href={`/explore?q=${encodeURIComponent(t)}`}
-                className="rounded-full border border-white/10 px-3 py-1 text-[12px] text-zinc-500 hover:text-zinc-300"
-              >
-                {t}
-              </Link>
-            ))}
-          </div>
-        )}
-
-        {e.links && e.links.length > 0 && (
-          <ul className="mt-8 space-y-2 border-t border-white/10 pt-6">
-            {e.links.map((l) => (
-              <li key={l.href}>
-                <a
-                  href={l.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[14px] text-omniv-gold hover:underline"
-                >
-                  {l.label} →
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="mt-12 border-t border-white/10 pt-8">
-          <ContactForm entityName={e.name} entityPath={path} />
-        </div>
       </main>
 
       <SiteFooter />
