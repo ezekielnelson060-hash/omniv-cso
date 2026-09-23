@@ -1,8 +1,6 @@
 /**
  * Omniv Discovery Network — Phase 1 model
- *
  * Loop: Publish → Discover → Intent → Connect
- * Not a SaaS dashboard. Not a generic directory.
  */
 
 export const ENTITY_TYPES = [
@@ -10,7 +8,6 @@ export const ENTITY_TYPES = [
   "company",
   "brand",
   "product",
-  "artist",
   "project",
   "event",
   "opportunity",
@@ -23,19 +20,16 @@ export const ENTITY_LABELS: Record<EntityType, string> = {
   company: "Company",
   brand: "Brand",
   product: "Product",
-  artist: "Artist",
   project: "Project",
   event: "Event",
   opportunity: "Opportunity",
 };
 
-/** What the entity is looking for — first-class, filterable. */
 export const INTENT_KINDS = [
   "investors",
   "partners",
   "distributors",
   "creators",
-  "bookings",
   "hires",
   "cofounders",
   "beta_users",
@@ -52,7 +46,6 @@ export const INTENT_LABELS: Record<IntentKind, string> = {
   partners: "Looking for partners",
   distributors: "Looking for distributors",
   creators: "Looking for creators",
-  bookings: "Available for bookings",
   hires: "Hiring",
   cofounders: "Looking for co-founders",
   beta_users: "Accepting beta users",
@@ -78,9 +71,7 @@ export type DiscoveryEntity = {
   intents: EntityIntent[];
   tags: string[];
   links?: { label: string; href: string }[];
-  /** ISO date for "New" sorting */
   publishedAt: string;
-  /** Simple score for demo trending */
   heat?: number;
 };
 
