@@ -4,7 +4,7 @@ import Image from "next/image";
 export function NetworkHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/5 bg-[#050505]/95 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3.5">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5">
         <Link href="/" className="flex items-center gap-2">
           <Image
             src="/logo.svg"
@@ -32,7 +32,7 @@ export function NetworkHeader() {
             Log in
           </Link>
           <Link
-            href="/signup?from=publish"
+            href="/publish"
             className="rounded-full bg-white px-3.5 py-1.5 text-[13px] font-medium text-black transition hover:bg-zinc-200"
           >
             Publish
