@@ -18,12 +18,18 @@ export function NetworkHeader() {
             Omniv
           </span>
         </Link>
-        <nav className="flex items-center gap-1 sm:gap-3">
+        <nav className="flex items-center gap-1 sm:gap-2">
           <Link
             href="/explore"
             className="hidden rounded-full px-3 py-1.5 text-[13px] text-zinc-400 transition hover:text-white sm:inline"
           >
             Explore
+          </Link>
+          <Link
+            href="/saved"
+            className="hidden rounded-full px-3 py-1.5 text-[13px] text-zinc-400 transition hover:text-white sm:inline"
+          >
+            Saved
           </Link>
           <Link
             href="/login"
