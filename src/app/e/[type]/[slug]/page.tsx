@@ -3,11 +3,14 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { NetworkHeader } from "@/components/discovery/network-header";
 import { SiteFooter } from "@/components/site-footer";
+import { ContactForm } from "@/components/discovery/contact-form";
+import { SaveButton } from "@/components/discovery/save-button";
 import { getDiscoveryEntity } from "@/lib/discovery/db";
 import {
   ENTITY_LABELS,
   ENTITY_TYPES,
   INTENT_LABELS,
+  entityPath,
   type EntityType,
 } from "@/lib/discovery/types";
 
@@ -42,6 +45,7 @@ export default async function EntityPage({ params }: Props) {
   if (!e) notFound();
 
   const initial = e.name.slice(0, 1).toUpperCase();
+  const path = entityPath(e);
 
   return (
     <div className="min-h-dvh bg-[#050505] text-zinc-100">
@@ -86,13 +90,8 @@ export default async function EntityPage({ params }: Props) {
           </div>
         )}
 
-        <div className="mt-10 flex flex-wrap gap-3">
-          <a
-            href={`mailto:hello@omniv.media?subject=${encodeURIComponent(`Omniv: ${e.name}`)}`}
-            className="inline-flex h-11 items-center rounded-full bg-white px-5 text-[13px] font-medium text-black"
-          >
-            Contact
-          </a>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <SaveButton type={e.type} slug={e.slug} name={e.name} />
           <Link
             href="/publish"
             className="inline-flex h-11 items-center rounded-full border border-white/15 px-5 text-[13px] text-zinc-300"
@@ -138,6 +137,10 @@ export default async function EntityPage({ params }: Props) {
             ))}
           </ul>
         )}
+
+        <div className="mt-12 border-t border-white/10 pt-8">
+          <ContactForm entityName={e.name} entityPath={path} />
+        </div>
       </main>
 
       <SiteFooter />
