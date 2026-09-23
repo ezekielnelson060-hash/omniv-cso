@@ -59,6 +59,7 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/verify") ||
     path.startsWith("/explore") ||
     path.startsWith("/e/") ||
+    path.startsWith("/p/") ||
     path.startsWith("/publish") ||
     path.startsWith("/saved") ||
     path.startsWith("/privacy") ||
