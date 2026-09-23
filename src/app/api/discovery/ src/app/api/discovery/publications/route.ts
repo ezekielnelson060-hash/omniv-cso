@@ -36,7 +36,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Summary required" }, { status: 400 });
     }
     if (!publisherName) {
-      return NextResponse.json({ error: "Publisher name required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Publisher name required" },
+        { status: 400 }
+      );
     }
 
     let slug = slugify(title) || `pub-${Date.now()}`;
@@ -59,7 +62,8 @@ export async function POST(req: Request) {
       }
     }
 
-    const pubSlug = slugify(publisherName) || `publisher-${user.id.slice(0, 8)}`;
+    const pubSlug =
+      slugify(publisherName) || `publisher-${user.id.slice(0, 8)}`;
     let publisherId: string | null = null;
 
     const { data: existingPub } = await supabase
@@ -106,6 +110,31 @@ export async function POST(req: Request) {
         summary,
         body: content || null,
         tags,
+        meta,
+        heat: 10,
+      })
+      .select("slug")
+      .single();
+
+    if (error) {
+      console.error("publication insert", error);
+      return NextResponse.json(
+        {
+          error:
+            error.message.includes("relation") || error.code === "42P01"
+              ? "Run migration 031_discovery_publications.sql in Supabase first"
+              : error.message,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, path: `/p/${data.slug}` });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}        tags,
         meta,
         heat: 10,
       })
