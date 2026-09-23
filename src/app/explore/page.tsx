@@ -23,7 +23,8 @@ type Props = {
 
 export const metadata = {
   title: "Explore",
-  description: "Discover people, companies, artists, products, and opportunities on Omniv.",
+  description:
+    "Discover people, companies, brands, products, and opportunities on Omniv.",
 };
 
 export default async function ExplorePage({ searchParams }: Props) {
