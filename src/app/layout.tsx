@@ -21,20 +21,20 @@ export const metadata: Metadata = {
     process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
   ),
   title: {
-    default: "Omniv — Verify Your Music Demand",
+    default: "Omniv — Discovery network for the real world",
     template: "%s | Omniv",
   },
   description:
-    "Capture demand. Score the market. Open the room. Get paid.",
+    "Publish anything worth discovering. Find people, companies, artists, products, and opportunities — with intent.",
   keywords: [
-    "independent artist",
-    "market demand",
-    "fan gate",
-    "ticketed rooms",
-    "music monetization",
-    "artist management",
-    "city demand",
-    "indie music",
+    "discovery network",
+    "find companies",
+    "find artists",
+    "opportunities",
+    "publish profile",
+    "brands",
+    "creators",
+    "products",
   ],
   icons: { icon: "/logo.svg", apple: "/logo.svg" },
   manifest: "/manifest.webmanifest",
@@ -48,9 +48,9 @@ export const metadata: Metadata = {
     { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
   ],
   openGraph: {
-    title: "Omniv — Verify Your Music Demand",
+    title: "Omniv — Discovery network for the real world",
     description:
-      "Capture demand. Score the market. Open the room. Get paid.",
+      "Publish anything worth discovering. Find people, companies, artists, products, and opportunities — with intent.",
     url: "https://omniv.media",
     siteName: "Omniv",
     images: [
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Omniv — Verify Your Music Demand",
+        alt: "Omniv — discovery network",
       },
     ],
     locale: "en_US",
@@ -66,9 +66,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Omniv — Verify Your Music Demand",
+    title: "Omniv — Discovery network for the real world",
     description:
-      "Capture demand. Score the market. Open the room. Get paid.",
+      "Publish anything worth discovering. Find people, companies, artists, products, and opportunities — with intent.",
     images: ["/opengraph-image"],
   },
   alternates: {
@@ -113,7 +113,7 @@ export default function RootLayout({
                     url: "https://omniv.media/logo.svg",
                   },
                   description:
-                    "Artist market demand intelligence. Maps fans by city and intent, scores demand, ticketed rooms and tips.",
+                    "Discovery network for people, companies, artists, products, projects, events, and opportunities.",
                 },
                 {
                   "@type": "WebSite",
@@ -121,63 +121,11 @@ export default function RootLayout({
                   url: "https://omniv.media/",
                   name: "Omniv",
                   publisher: { "@id": "https://omniv.media/#organization" },
-                },
-                {
-                  "@type": "SoftwareApplication",
-                  "@id": "https://omniv.media/#software",
-                  name: "Omniv",
-                  applicationCategory: "BusinessApplication",
-                  operatingSystem: "Web",
-                  url: "https://omniv.media/",
-                  description:
-                    "Verify market demand: city + intent scores, rooms, tips, ranked regional moves, global signals.",
-                  offers: {
-                    "@type": "Offer",
-                    price: "0",
-                    priceCurrency: "USD",
-                    description: "Free artist scan and Fan Gate",
+                  potentialAction: {
+                    "@type": "SearchAction",
+                    target: "https://omniv.media/explore?q={search_term_string}",
+                    "query-input": "required name=search_term_string",
                   },
-                  featureList:
-                    "Market demand scores, Fan city mapping, Intent-to-attend, Ticketed rooms, Tip links, Visual CSO",
-                  publisher: { "@id": "https://omniv.media/#software" },
-                },
-                {
-                  "@type": "FAQPage",
-                  "@id": "https://omniv.media/#faq",
-                  mainEntity: [
-                    {
-                      "@type": "Question",
-                      name: "What is Omniv?",
-                      acceptedAnswer: {
-                        "@type": "Answer",
-                        text: "Omniv verifies artist market demand. It maps fans by city and intent, scores where people would show up, and helps you open the right-sized room and tip links.",
-                      },
-                    },
-                    {
-                      "@type": "Question",
-                      name: "How does Omniv help artists make money?",
-                      acceptedAnswer: {
-                        "@type": "Answer",
-                        text: "Omniv turns Fan Gate data into a demand brief: fans, intent-to-attend, ticket price, venue size. Open a room, collect tips, get paid to your bank.",
-                      },
-                    },
-                    {
-                      "@type": "Question",
-                      name: "Is Omniv free to use?",
-                      acceptedAnswer: {
-                        "@type": "Answer",
-                        text: "Yes. Free artist scan, Fan Gate, and core tools are available. Higher tiers unlock higher usage limits.",
-                      },
-                    },
-                    {
-                      "@type": "Question",
-                      name: "What makes Omniv different from Spotify for Artists?",
-                      acceptedAnswer: {
-                        "@type": "Answer",
-                        text: "Spotify for Artists shows past analytics. Omniv verifies demand before you spend — rooms, tip links, and ranked next moves.",
-                      },
-                    },
-                  ],
                 },
               ],
             }),
