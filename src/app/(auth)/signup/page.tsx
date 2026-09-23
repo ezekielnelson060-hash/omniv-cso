@@ -1,15 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { ArrowRight } from "lucide-react";
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextParam = searchParams.get("next");
+  const dest =
+    nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
+      ? nextParam
+      : "/publish";
+
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -19,15 +26,12 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      sessionStorage.setItem("omniv_path", "verify");
+      sessionStorage.setItem("omniv_path", "discover");
     }
   }, []);
 
-  function goOnboarding() {
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("omniv_path", "verify");
-    }
-    router.push("/onboarding");
+  function goNext() {
+    router.push(dest);
     router.refresh();
   }
 
@@ -38,7 +42,7 @@ export default function SignupPage() {
     setLoading(true);
     try {
       if (!isSupabaseConfigured()) {
-        goOnboarding();
+        goNext();
         return;
       }
       const supabase = createClient();
@@ -48,11 +52,11 @@ export default function SignupPage() {
         options: {
           data: {
             full_name: name.trim(),
-            signup_source: "verify",
+            signup_source: "discover",
           },
           emailRedirectTo:
             typeof window !== "undefined"
-              ? `${window.location.origin}/onboarding`
+              ? `${window.location.origin}${dest}`
               : undefined,
         },
       });
@@ -62,7 +66,7 @@ export default function SignupPage() {
         return;
       }
       if (data.session) {
-        goOnboarding();
+        goNext();
         return;
       }
       setInfo("Check your email to confirm, then sign in.");
@@ -85,14 +89,15 @@ export default function SignupPage() {
         </div>
         <div className="relative">
           <p className="text-xl font-semibold leading-snug tracking-tight text-omniv-text">
-            Let's find your market.
+            Publish. Get discovered.
           </p>
           <p className="mt-2 max-w-sm text-[12px] leading-snug text-omniv-text-muted">
-            Create your free account and build your demand page.
+            Create your free account and put your company, brand, product, or
+            opportunity on the network.
           </p>
         </div>
         <p className="relative text-[10px] text-omniv-text-muted">
-          Free to start. No credit card required · omniv.media
+          Free to start · omniv.media
         </p>
       </div>
 
@@ -102,13 +107,13 @@ export default function SignupPage() {
             <img src="/logo.svg" alt="Omniv" className="h-7 w-7 rounded-lg" />
             <span className="text-sm font-semibold">Omniv</span>
           </div>
-          <h1 className="text-xl font-semibold tracking-tight">
-            Let's find your market
-          </h1>
+          <h1 className="text-xl font-semibold tracking-tight">Create account</h1>
           <p className="mt-1 text-[11px] text-omniv-text-muted">
-            Create your free account and start your market test.{" "}
             Already on Omniv?{" "}
-            <Link href="/login" className="text-omniv-gold hover:underline">
+            <Link
+              href={`/login?next=${encodeURIComponent(dest)}`}
+              className="text-omniv-gold hover:underline"
+            >
               Sign in
             </Link>
           </p>
@@ -116,14 +121,14 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit} className="mt-5 space-y-3">
             <div>
               <label className="text-[10px] font-medium text-omniv-text-muted">
-                Name / stage name
+                Name
               </label>
               <Input
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="mt-1 h-10"
-                placeholder="Stage or full name"
+                placeholder="Your name"
               />
             </div>
             <div>
@@ -156,13 +161,12 @@ export default function SignupPage() {
             {error && <p className="text-xs text-rose-400">{error}</p>}
             {info && <p className="text-xs text-omniv-gold">{info}</p>}
             <Button type="submit" className="h-10 w-full gap-1.5" disabled={loading}>
-              {loading ? "Creating…" : "Start My Market Test"}
+              {loading ? "Creating…" : "Continue"}
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </form>
           <p className="mt-3 text-[10px] text-omniv-text-muted">
-            Free to start. No credit card required. By continuing you agree to
-            our{" "}
+            By continuing you agree to our{" "}
             <Link href="/terms" className="text-omniv-gold hover:underline">
               Terms
             </Link>{" "}
@@ -175,5 +179,19 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-dvh items-center justify-center text-sm text-zinc-500">
+          Loading…
+        </div>
+      }
+    >
+      <SignupForm />
+    </Suspense>
   );
 }
