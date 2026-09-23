@@ -3,9 +3,8 @@ import Link from "next/link";
 import { posts } from "@/lib/blog/posts";
 
 export const metadata: Metadata = {
-  title: "Blog — Career moves for independent artists",
-  description:
-    "Guides on demand, cities, rooms, owned audiences, AI strategy, and money beyond streaming.",
+  title: "Notes",
+  description: "Writing from Omniv on discovery, publishing, and building in public.",
   alternates: { canonical: "https://omniv.media/blog" },
 };
 
@@ -13,14 +12,13 @@ export default function BlogIndexPage() {
   return (
     <main className="mx-auto min-h-dvh max-w-6xl px-4 py-12 text-omniv-text">
       <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-omniv-gold">
-        Omniv blog
+        Omniv
       </p>
       <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">
-        Career moves for independents
+        Notes
       </h1>
       <p className="mt-2 max-w-2xl text-[14px] text-omniv-text-secondary">
-        Own the list. Open the room. Get paid. Practical playbooks on demand,
-        cities, and the next move — not algorithm myths.
+        Writing on discovery, publishing, and what belongs on a public network.
       </p>
 
       <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -54,10 +52,7 @@ export default function BlogIndexPage() {
       </div>
 
       <p className="mt-12 text-center text-[13px]">
-        <Link
-          href="/"
-          className="text-omniv-gold underline-offset-2 hover:underline"
-        >
+        <Link href="/" className="text-omniv-gold underline-offset-2 hover:underline">
           ← Back to Omniv
         </Link>
       </p>
