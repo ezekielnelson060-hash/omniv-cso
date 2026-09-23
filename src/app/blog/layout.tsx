@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Blog — independent artist growth & money",
-  description:
-    "Practical guides for independent artists: owned fans, city demand, ticketed rooms, sync, and cash paths beyond streaming.",
+  title: "Notes",
+  description: "Writing from Omniv on discovery, publishing, and building in public.",
   alternates: { canonical: "https://omniv.media/blog" },
   openGraph: {
-    title: "Omniv Blog",
-    description:
-      "How independents build demand maps, open rooms, and get paid without waiting on the algorithm.",
+    title: "Omniv Notes",
+    description: "Writing from Omniv on discovery, publishing, and building in public.",
     url: "https://omniv.media/blog",
   },
 };
