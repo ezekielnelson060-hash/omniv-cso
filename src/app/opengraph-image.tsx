@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "Omniv — Verify Your Music Demand";
+export const alt = "Omniv — Discovery network for the real world";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -44,23 +44,25 @@ export default function OgImage() {
         <div
           style={{
             marginTop: 24,
-            fontSize: 40,
+            fontSize: 36,
             fontWeight: 600,
             color: "#ffffff",
+            textAlign: "center",
+            maxWidth: 900,
           }}
         >
-          Verify Your Music Demand
+          Discovery network for the real world
         </div>
         <div
           style={{
             marginTop: 28,
-            fontSize: 26,
+            fontSize: 24,
             color: "#a1a1aa",
             textAlign: "center",
             maxWidth: 800,
           }}
         >
-          Capture demand. Score the market. Open the room. Get paid.
+          Publish. Discover. Intent. Connect.
         </div>
         <div
           style={{
