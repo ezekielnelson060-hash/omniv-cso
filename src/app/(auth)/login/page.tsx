@@ -1,16 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { ArrowRight, Shield } from "lucide-react";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
-  const next = "/dashboard";
+  const searchParams = useSearchParams();
+  const nextRaw = searchParams.get("next");
+  const next =
+    nextRaw && nextRaw.startsWith("/") && !nextRaw.startsWith("//")
+      ? nextRaw
+      : "/explore";
+
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,7 +45,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Check if MFA (AAL2) is required
       const { data: aal, error: aalErr } =
         await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (
@@ -109,17 +114,13 @@ export default function LoginPage() {
         </div>
         <div className="relative">
           <p className="text-xl font-semibold leading-snug tracking-tight text-omniv-text">
-            Your next move
-            <br />
-            should not be a guess.
+            Welcome back
           </p>
           <p className="mt-2 max-w-sm text-[12px] leading-snug text-omniv-text-muted">
-            Return to ranked priorities. Ziki already holds your context.
+            Explore the network or publish something new.
           </p>
         </div>
-        <p className="relative text-[10px] text-omniv-text-muted">
-          Private career intelligence for independent artists & labels
-        </p>
+        <p className="relative text-[10px] text-omniv-text-muted">omniv.media</p>
       </div>
 
       <div className="flex flex-1 flex-col justify-center px-4 py-8 sm:px-8">
@@ -134,7 +135,10 @@ export default function LoginPage() {
               <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
               <p className="mt-1 text-[11px] text-omniv-text-muted">
                 No account?{" "}
-                <Link href="/signup" className="text-omniv-gold hover:underline">
+                <Link
+                  href={`/signup?next=${encodeURIComponent(next)}`}
+                  className="text-omniv-gold hover:underline"
+                >
                   Create one
                 </Link>
               </p>
@@ -194,7 +198,7 @@ export default function LoginPage() {
                 </h1>
               </div>
               <p className="mt-1 text-[11px] text-omniv-text-muted">
-                Open your authenticator app and enter the 6-digit code for Omniv.
+                Enter the 6-digit code from your authenticator app.
               </p>
               <form onSubmit={handleMfa} className="mt-5 space-y-3">
                 <Input
@@ -236,5 +240,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-dvh items-center justify-center text-sm text-zinc-500">
+          Loading…
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
