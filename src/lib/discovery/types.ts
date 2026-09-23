@@ -140,7 +140,7 @@ export type Publication = {
 };
 
 export function entityPath(e: Pick<DiscoveryEntity, "type" | "slug">) {
-  return `/e/\( {e.type}/ \){e.slug}`;
+  return `/e/${e.type}/${e.slug}`;
 }
 
 export function publicationPath(p: Pick<Publication, "slug">) {
