@@ -147,4 +147,44 @@ export default function DiscoveryHomePage() {
       <SiteFooter />
     </div>
   );
+}              <h2 className="text-[15px] font-semibold text-white">New on Omniv</h2>
+              <Link
+                href="/explore?sort=new"
+                className="text-[13px] text-zinc-500 hover:text-omniv-gold"
+              >
+                See all
+              </Link>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {fresh.map((e) => (
+                <EntityCard key={e.id} entity={e} />
+              ))}
+            </div>
+          </div>
+
+          <aside className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+            <p className="text-[12px] font-semibold text-white">Publish on Omniv</p>
+            <p className="mt-2 text-[12px] leading-relaxed text-zinc-500">
+              Companies, brands, products, projects, events, opportunities — with
+              clear intent so the right people can find you.
+            </p>
+            <Link
+              href="/signup?from=publish"
+              className="mt-4 flex h-10 items-center justify-center rounded-full bg-omniv-gold text-[13px] font-semibold text-black"
+            >
+              Publish
+            </Link>
+            <Link
+              href="/explore"
+              className="mt-2 flex h-10 items-center justify-center rounded-full border border-white/15 text-[13px] text-zinc-300"
+            >
+              Browse all
+            </Link>
+          </aside>
+        </section>
+      </main>
+
+      <SiteFooter />
+    </div>
+  );
 }
