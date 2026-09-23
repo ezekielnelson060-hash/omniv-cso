@@ -2,13 +2,8 @@ import Link from "next/link";
 import { NetworkHeader } from "@/components/discovery/network-header";
 import { EntityCard } from "@/components/discovery/entity-card";
 import { SiteFooter } from "@/components/site-footer";
-import {
-  SEED_ENTITIES,
-  listByIntent,
-  newest,
-  searchEntities,
-  trending,
-} from "@/lib/discovery/seed";
+import { listDiscoveryEntities } from "@/lib/discovery/db";
+import type { DiscoveryEntity } from "@/lib/discovery/types";
 import {
   ENTITY_LABELS,
   ENTITY_TYPES,
@@ -27,7 +22,10 @@ export const metadata = {
     "Discover people, companies, brands, products, and opportunities on Omniv.",
 };
 
-function filterHref(base: Record<string, string | undefined>, patch: Record<string, string | undefined>) {
+function filterHref(
+  base: Record<string, string | undefined>,
+  patch: Record<string, string | undefined>
+) {
   const next = { ...base, ...patch };
   const params = new URLSearchParams();
   Object.entries(next).forEach(([k, v]) => {
@@ -35,6 +33,49 @@ function filterHref(base: Record<string, string | undefined>, patch: Record<stri
   });
   const s = params.toString();
   return s ? `/explore?${s}` : "/explore";
+}
+
+function filterList(
+  all: DiscoveryEntity[],
+  q: string,
+  type: EntityType | undefined,
+  intent: IntentKind | undefined,
+  sort: string
+) {
+  let list = [...all];
+  const s = q.trim().toLowerCase();
+  if (s) {
+    list = list.filter(
+      (e) =>
+        e.name.toLowerCase().includes(s) ||
+        e.tagline.toLowerCase().includes(s) ||
+        e.about.toLowerCase().includes(s) ||
+        e.tags.some((t) => t.toLowerCase().includes(s)) ||
+        e.location?.toLowerCase().includes(s) ||
+        e.type.includes(s)
+    );
+  }
+  if (type && ENTITY_TYPES.includes(type)) {
+    list = list.filter((e) => e.type === type);
+  }
+  if (intent) {
+    list = list.filter((e) => e.intents.some((i) => i.kind === intent));
+  }
+  if (sort === "new") {
+    list.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+  } else {
+    list.sort((a, b) => (b.heat ?? 0) - (a.heat ?? 0));
+  }
+  return list;
+}
+
+async function tryClient() {
+  try {
+    const { createClient } = await import("@/lib/supabase/server");
+    return await createClient();
+  } catch {
+    return null;
+  }
 }
 
 export default async function ExplorePage({ searchParams }: Props) {
@@ -51,30 +92,16 @@ export default async function ExplorePage({ searchParams }: Props) {
     sort: sort !== "trending" ? sort : undefined,
   };
 
-  let list = q ? searchEntities(q) : [...SEED_ENTITIES];
-
-  if (type && ENTITY_TYPES.includes(type)) {
-    list = list.filter((e) => e.type === type);
-  }
-  if (intent) {
-    const withIntent = new Set(listByIntent(intent).map((e) => e.id));
-    list = list.filter((e) => withIntent.has(e.id));
-  }
-  if (!q && !type && !intent) {
-    list = sort === "new" ? newest(50) : trending(50);
-  } else if (sort === "new") {
-    list = [...list].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
-  } else {
-    list = [...list].sort((a, b) => (b.heat ?? 0) - (a.heat ?? 0));
-  }
+  const supabase = await tryClient();
+  const all = await listDiscoveryEntities(supabase);
+  const list = filterList(all, q, type, intent, sort);
 
   return (
     <div className="min-h-dvh bg-[#050505] text-zinc-100">
       <NetworkHeader />
 
       <div className="mx-auto flex max-w-6xl gap-0 px-0 pb-16 md:gap-8 md:px-4 md:pt-6">
-        {/* Sidebar filters — directory pattern */}
-        <aside className="hidden w-56 shrink-0 border-r border-white/5 md:block md:border-0">
+        <aside className="hidden w-56 shrink-0 md:block">
           <div className="sticky top-20 space-y-8 py-2">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
@@ -182,7 +209,6 @@ export default async function ExplorePage({ searchParams }: Props) {
             </form>
           </div>
 
-          {/* Mobile type chips */}
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1 md:hidden">
             <Link
               href="/explore"
@@ -216,7 +242,7 @@ export default async function ExplorePage({ searchParams }: Props) {
           {list.length === 0 && (
             <p className="mt-16 text-center text-[14px] text-zinc-500">
               Nothing matched.{" "}
-              <Link href="/signup?from=publish" className="text-omniv-gold hover:underline">
+              <Link href="/publish" className="text-omniv-gold hover:underline">
                 Publish something
               </Link>
             </p>
