@@ -8,14 +8,13 @@ import { INTENT_LABELS, type IntentKind } from "@/lib/discovery/types";
 const LOOKING_FOR: { kind: IntentKind; href: string }[] = [
   { kind: "creators", href: "/explore?intent=creators" },
   { kind: "investors", href: "/explore?intent=investors" },
-  { kind: "bookings", href: "/explore?intent=bookings" },
   { kind: "hires", href: "/explore?intent=hires" },
   { kind: "partners", href: "/explore?intent=partners" },
+  { kind: "customers", href: "/explore?intent=customers" },
   { kind: "beta_users", href: "/explore?intent=beta_users" },
 ];
 
 const CATEGORIES = [
-  "Music",
   "Business",
   "Technology",
   "Fashion",
@@ -23,6 +22,7 @@ const CATEGORIES = [
   "Products",
   "Events",
   "Projects",
+  "Media",
 ];
 
 export default function DiscoveryHomePage() {
@@ -42,8 +42,8 @@ export default function DiscoveryHomePage() {
             What are you looking for?
           </h1>
           <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-zinc-400">
-            Find people, companies, artists, products, projects, and
-            opportunities — with intent, not just a name.
+            Find people, companies, brands, products, projects, and opportunities
+            — with intent, not just a name.
           </p>
 
           <form action="/explore" method="get" className="mx-auto mt-8 max-w-xl">
@@ -54,7 +54,7 @@ export default function DiscoveryHomePage() {
               id="q"
               name="q"
               type="search"
-              placeholder="Search people, companies, artists, products…"
+              placeholder="Search people, companies, brands, products…"
               className="h-12 w-full rounded-full border border-white/15 bg-white/[0.04] px-5 text-[15px] text-white outline-none placeholder:text-zinc-600 focus:border-omniv-gold/50 focus:ring-1 focus:ring-omniv-gold/30"
             />
           </form>
@@ -152,7 +152,7 @@ export default function DiscoveryHomePage() {
             Have something worth discovering?
           </h2>
           <p className="mx-auto mt-2 max-w-md text-[14px] text-zinc-400">
-            Publish a company, brand, artist, product, project, or opportunity.
+            Publish a company, brand, product, project, event, or opportunity.
             Own your public discovery layer.
           </p>
           <Link
