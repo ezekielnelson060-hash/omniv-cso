@@ -5,17 +5,16 @@ import { SiteFooter } from "@/components/site-footer";
 
 export const metadata: Metadata = {
   title: "Partners",
-  description:
-    "Tools and partners we recommend for independent artists — alongside Omniv demand verification.",
+  description: "Organizations and tools partnering with the Omniv discovery network.",
   alternates: { canonical: "https://omniv.media/partners" },
 };
 
 const PARTNERS = [
   {
     name: "RealMuZick",
-    tagline: "Music promotion list, FAQ chatbot & producer tools",
+    tagline: "Creator tools & promotion resources",
     blurb:
-      "Practical tools for independents: an 80-contact music promotion list, free release toolkit, and low-cost producer utilities. Useful when you're ready to submit and outreach — after you know which cities actually want the room.",
+      "Practical tools for people who publish and promote work — contact lists, release utilities, and studio helpers.",
     href: "https://learn-with-real-muzick.vercel.app/?ref=omniv",
     cta: "Visit RealMuZick",
   },
@@ -35,15 +34,10 @@ export default function PartnersPage() {
               className="rounded-md"
               priority
             />
-            <span className="text-[15px] font-semibold tracking-tight">
-              Omniv
-            </span>
+            <span className="text-[15px] font-semibold tracking-tight">Omniv</span>
           </Link>
-          <Link
-            href="/verify"
-            className="text-[13px] text-omniv-gold hover:underline"
-          >
-            Verify My Market
+          <Link href="/explore" className="text-[13px] text-omniv-gold hover:underline">
+            Explore
           </Link>
         </div>
       </header>
@@ -53,12 +47,11 @@ export default function PartnersPage() {
           Partners
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white md:text-4xl">
-          Tools we share with independents
+          Partners on the network
         </h1>
         <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-zinc-400">
-          Omniv verifies where demand is real. These are tools we recommend for
-          adjacent jobs — promotion contacts, production, outreach — from people
-          we're partnering with.
+          Omniv is a discovery network. These are organizations we list while we
+          actively partner — not endorsements of every product they sell.
         </p>
 
         <ul className="mt-10 space-y-4">
@@ -69,9 +62,7 @@ export default function PartnersPage() {
             >
               <p className="text-[17px] font-semibold text-white">{p.name}</p>
               <p className="mt-1 text-[13px] text-omniv-gold">{p.tagline}</p>
-              <p className="mt-3 text-[14px] leading-relaxed text-zinc-400">
-                {p.blurb}
-              </p>
+              <p className="mt-3 text-[14px] leading-relaxed text-zinc-400">{p.blurb}</p>
               <a
                 href={p.href}
                 target="_blank"
