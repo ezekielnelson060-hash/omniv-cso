@@ -16,6 +16,9 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
+const DESC =
+  "Publish anything worth discovering. Find people, companies, brands, products, and opportunities — with intent.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
@@ -24,17 +27,15 @@ export const metadata: Metadata = {
     default: "Omniv — Discovery network for the real world",
     template: "%s | Omniv",
   },
-  description:
-    "Publish anything worth discovering. Find people, companies, artists, products, and opportunities — with intent.",
+  description: DESC,
   keywords: [
     "discovery network",
     "find companies",
-    "find artists",
+    "find brands",
     "opportunities",
     "publish profile",
-    "brands",
-    "creators",
     "products",
+    "projects",
   ],
   icons: { icon: "/logo.svg", apple: "/logo.svg" },
   manifest: "/manifest.webmanifest",
@@ -49,8 +50,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     title: "Omniv — Discovery network for the real world",
-    description:
-      "Publish anything worth discovering. Find people, companies, artists, products, and opportunities — with intent.",
+    description: DESC,
     url: "https://omniv.media",
     siteName: "Omniv",
     images: [
@@ -67,8 +67,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Omniv — Discovery network for the real world",
-    description:
-      "Publish anything worth discovering. Find people, companies, artists, products, and opportunities — with intent.",
+    description: DESC,
     images: ["/opengraph-image"],
   },
   alternates: {
@@ -113,7 +112,7 @@ export default function RootLayout({
                     url: "https://omniv.media/logo.svg",
                   },
                   description:
-                    "Discovery network for people, companies, artists, products, projects, events, and opportunities.",
+                    "Discovery network for people, companies, brands, products, projects, events, and opportunities.",
                 },
                 {
                   "@type": "WebSite",
