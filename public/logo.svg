@@ -1,9 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
-  <rect width="256" height="256" fill="#050505"/>
-  <circle cx="128" cy="128" r="34" fill="#d4af37"/>
-  <circle cx="128" cy="128" r="62" stroke="#d4af37" stroke-width="3.2" fill="none"/>
-  <ellipse cx="128" cy="128" rx="96" ry="48" stroke="#d4af37" stroke-width="2.4" fill="none" transform="rotate(-32 128 128)" opacity="0.92"/>
-  <ellipse cx="128" cy="128" rx="96" ry="48" stroke="#d4af37" stroke-width="1.8" fill="none" transform="rotate(48 128 128)" opacity="0.72"/>
-  <circle cx="196" cy="86" r="4.5" fill="#d4af37"/>
-  <circle cx="70" cy="176" r="4" fill="#d4af37"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Omniv">
+  <defs>
+    <linearGradient id="gold" x1="12%" y1="8%" x2="88%" y2="92%">
+      <stop offset="0%" stop-color="#FFD34D"/>
+      <stop offset="45%" stop-color="#F5A623"/>
+      <stop offset="100%" stop-color="#D4890A"/>
+    </linearGradient>
+    <radialGradient id="core" cx="42%" cy="38%" r="62%">
+      <stop offset="0%" stop-color="#FFE566"/>
+      <stop offset="55%" stop-color="#F5A623"/>
+      <stop offset="100%" stop-color="#C97A08"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" ry="110" fill="#050505"/>
+  <g transform="rotate(-38 256 256)">
+    <ellipse cx="256" cy="256" rx="178" ry="86" fill="none" stroke="url(#gold)" stroke-width="38" stroke-linecap="round"/>
+  </g>
+  <circle cx="256" cy="256" r="90" fill="url(#core)"/>
+  <circle cx="382" cy="142" r="34" fill="url(#gold)"/>
 </svg>
