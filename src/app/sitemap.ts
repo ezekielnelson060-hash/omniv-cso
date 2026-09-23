@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+import { SEED_ENTITIES } from "@/lib/discovery/seed";
+import { entityPath } from "@/lib/discovery/types";
 
 const baseUrl = (
   process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
@@ -25,36 +27,43 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
+  const entityRoutes = SEED_ENTITIES.map((e) => ({
+    url: `${baseUrl}${entityPath(e)}`,
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+    priority: 0.8,
+  }));
+
   return [
     {
       url: `${baseUrl}/`,
       lastModified: now,
-      changeFrequency: "weekly",
+      changeFrequency: "daily",
       priority: 1,
+    },
+    {
+      url: `${baseUrl}/explore`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.95,
     },
     {
       url: `${baseUrl}/verify`,
       lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.95,
+      changeFrequency: "monthly",
+      priority: 0.4,
     },
     {
       url: `${baseUrl}/blog`,
       lastModified: now,
       changeFrequency: "weekly",
-      priority: 0.8,
+      priority: 0.6,
     },
     {
       url: `${baseUrl}/partners`,
       lastModified: now,
       changeFrequency: "monthly" as const,
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/audit`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.6,
+      priority: 0.4,
     },
     {
       url: `${baseUrl}/signup`,
@@ -72,32 +81,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${baseUrl}/contact`,
       lastModified: now,
       changeFrequency: "yearly",
-      priority: 0.4,
+      priority: 0.3,
     },
     {
       url: `${baseUrl}/privacy`,
       lastModified: now,
       changeFrequency: "yearly",
-      priority: 0.3,
+      priority: 0.2,
     },
     {
       url: `${baseUrl}/terms`,
       lastModified: now,
       changeFrequency: "yearly",
-      priority: 0.3,
+      priority: 0.2,
     },
-    {
-      url: `${baseUrl}/cookies`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/data-deletion`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
+    ...entityRoutes,
     ...blogRoutes,
   ];
 }
