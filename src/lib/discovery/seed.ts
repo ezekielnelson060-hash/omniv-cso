@@ -11,7 +11,10 @@ export const SEED_ENTITIES: DiscoveryEntity[] = [
     location: "Lagos, Nigeria",
     about:
       "Building speech and language tools for markets where English-first AI fails. Research + applied products for finance, health, and media.",
-    intents: [{ kind: "investors", detail: "Seed extension" }, { kind: "hires", detail: "ML engineers" }],
+    intents: [
+      { kind: "investors", detail: "Seed extension" },
+      { kind: "hires", detail: "ML engineers" },
+    ],
     tags: ["AI", "Africa", "infrastructure"],
     links: [{ label: "Website", href: "https://omniv.media" }],
     publishedAt: "2026-09-18",
@@ -19,15 +22,18 @@ export const SEED_ENTITIES: DiscoveryEntity[] = [
   },
   {
     id: "2",
-    type: "artist",
-    slug: "sade-okoro",
-    name: "Sade Okoro",
-    tagline: "Afrobeats · electronic",
+    type: "brand",
+    slug: "northline-media",
+    name: "Northline Media",
+    tagline: "Editorial studio for operators",
     location: "Toronto, Canada",
     about:
-      "Independent artist. Releases and rooms across Toronto and Lagos. Looking for the right stages—not the biggest ones.",
-    intents: [{ kind: "bookings" }, { kind: "partners", detail: "Sync & brand" }],
-    tags: ["music", "Afrobeats", "live"],
+      "Long-form briefings and research for operators building across markets. Open to distribution partners and guest contributors.",
+    intents: [
+      { kind: "partners", detail: "Distribution" },
+      { kind: "contributors" },
+    ],
+    tags: ["media", "editorial", "research"],
     publishedAt: "2026-09-20",
     heat: 78,
   },
@@ -41,7 +47,7 @@ export const SEED_ENTITIES: DiscoveryEntity[] = [
     about:
       "One shared desk for customer ops across WhatsApp, email, and Slack. Built for teams that live in chat.",
     intents: [{ kind: "beta_users" }, { kind: "customers" }],
-    tags: ["SaaS", "ops", "B2B"],
+    tags: ["ops", "B2B", "productivity"],
     publishedAt: "2026-09-21",
     heat: 71,
   },
@@ -54,7 +60,10 @@ export const SEED_ENTITIES: DiscoveryEntity[] = [
     location: "Accra, Ghana",
     about:
       "Limited drops, local makers, no fast-fashion calendar. Publishing collections and open calls for creators.",
-    intents: [{ kind: "creators", detail: "West Africa + diaspora" }, { kind: "distributors" }],
+    intents: [
+      { kind: "creators", detail: "West Africa + diaspora" },
+      { kind: "distributors" },
+    ],
     tags: ["fashion", "culture", "Ghana"],
     publishedAt: "2026-09-15",
     heat: 64,
@@ -82,7 +91,10 @@ export const SEED_ENTITIES: DiscoveryEntity[] = [
     location: "Lagos, Nigeria",
     about:
       "Evening for people shipping products. Short demos, no pitch theater. Monthly.",
-    intents: [{ kind: "attendees" }, { kind: "partners", detail: "Venue & sponsors" }],
+    intents: [
+      { kind: "attendees" },
+      { kind: "partners", detail: "Venue & sponsors" },
+    ],
     tags: ["events", "startups", "Lagos"],
     publishedAt: "2026-09-22",
     heat: 55,
@@ -124,7 +136,10 @@ export const SEED_ENTITIES: DiscoveryEntity[] = [
     location: "London, UK",
     about:
       "Design partner for regulated products. From research to shipped UI systems.",
-    intents: [{ kind: "customers", detail: "Series A–B fintechs" }, { kind: "hires" }],
+    intents: [
+      { kind: "customers", detail: "Series A–B fintechs" },
+      { kind: "hires" },
+    ],
     tags: ["design", "fintech", "agency"],
     publishedAt: "2026-09-08",
     heat: 60,
@@ -154,7 +169,9 @@ export function listByIntent(kind: string) {
 }
 
 export function trending(limit = 6) {
-  return [...SEED_ENTITIES].sort((a, b) => (b.heat ?? 0) - (a.heat ?? 0)).slice(0, limit);
+  return [...SEED_ENTITIES]
+    .sort((a, b) => (b.heat ?? 0) - (a.heat ?? 0))
+    .slice(0, limit);
 }
 
 export function newest(limit = 6) {
