@@ -1,205 +1,172 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { NetworkHeader } from "@/components/discovery/network-header";
+import { PublicationCard } from "@/components/discovery/publication-card";
 import { EntityCard } from "@/components/discovery/entity-card";
 import { SiteFooter } from "@/components/site-footer";
-import { listDiscoveryEntities } from "@/lib/discovery/db";
-import type { DiscoveryEntity } from "@/lib/discovery/types";
 import {
-  ENTITY_LABELS,
-  ENTITY_TYPES,
-  INTENT_LABELS,
-  type EntityType,
-  type IntentKind,
+  SEED_ENTITIES,
+  SEED_PUBLICATIONS,
+  newestPublications,
+  searchEntities,
+  searchPublications,
+  trending,
+  trendingPublications,
+} from "@/lib/discovery/seed";
+import {
+  EXPLORE_NAV,
+  PUBLICATION_LABELS,
+  PUBLICATION_TYPES,
+  type PublicationType,
 } from "@/lib/discovery/types";
 
 type Props = {
-  searchParams: Promise<{ q?: string; type?: string; intent?: string; sort?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    type?: string;
+    sort?: string;
+    publisher?: string;
+  }>;
 };
 
 export const metadata = {
   title: "Explore",
-  description:
-    "Discover people, companies, brands, products, and opportunities on Omniv.",
+  description: "Discover publications and publishers on Omniv.",
 };
-
-function filterHref(
-  base: Record<string, string | undefined>,
-  patch: Record<string, string | undefined>
-) {
-  const next = { ...base, ...patch };
-  const params = new URLSearchParams();
-  Object.entries(next).forEach(([k, v]) => {
-    if (v) params.set(k, v);
-  });
-  const s = params.toString();
-  return s ? `/explore?${s}` : "/explore";
-}
-
-function filterList(
-  all: DiscoveryEntity[],
-  q: string,
-  type: EntityType | undefined,
-  intent: IntentKind | undefined,
-  sort: string
-) {
-  let list = [...all];
-  const s = q.trim().toLowerCase();
-  if (s) {
-    list = list.filter(
-      (e) =>
-        e.name.toLowerCase().includes(s) ||
-        e.tagline.toLowerCase().includes(s) ||
-        e.about.toLowerCase().includes(s) ||
-        e.tags.some((t) => t.toLowerCase().includes(s)) ||
-        e.location?.toLowerCase().includes(s) ||
-        e.type.includes(s)
-    );
-  }
-  if (type && ENTITY_TYPES.includes(type)) {
-    list = list.filter((e) => e.type === type);
-  }
-  if (intent) {
-    list = list.filter((e) => e.intents.some((i) => i.kind === intent));
-  }
-  if (sort === "new") {
-    list.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
-  } else {
-    list.sort((a, b) => (b.heat ?? 0) - (a.heat ?? 0));
-  }
-  return list;
-}
-
-async function tryClient() {
-  try {
-    const { createClient } = await import("@/lib/supabase/server");
-    return await createClient();
-  } catch {
-    return null;
-  }
-}
 
 export default async function ExplorePage({ searchParams }: Props) {
   const sp = await searchParams;
   const q = sp.q?.trim() ?? "";
-  const type = sp.type as EntityType | undefined;
-  const intent = sp.intent as IntentKind | undefined;
+  const type = sp.type as PublicationType | undefined;
   const sort = sp.sort ?? "trending";
+  const publisherFilter = sp.publisher;
 
-  const base = {
-    q: q || undefined,
-    type: type || undefined,
-    intent: intent || undefined,
-    sort: sort !== "trending" ? sort : undefined,
-  };
+  if (publisherFilter) {
+    let list = q ? searchEntities(q) : [...SEED_ENTITIES];
+    list = list.filter((e) => e.type === publisherFilter);
+    if (sort === "new") {
+      list.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+    } else {
+      list.sort((a, b) => (b.heat ?? 0) - (a.heat ?? 0));
+    }
 
-  const supabase = await tryClient();
-  const all = await listDiscoveryEntities(supabase);
-  const list = filterList(all, q, type, intent, sort);
+    return (
+      <Shell q={q} type={type} sort={sort}>
+        <p className="text-[13px] text-zinc-500">
+          {list.length} publisher{list.length === 1 ? "" : "s"}
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {list.map((e) => (
+            <EntityCard key={e.id} entity={e} />
+          ))}
+        </div>
+      </Shell>
+    );
+  }
 
+  let list = q ? searchPublications(q) : [...SEED_PUBLICATIONS];
+  if (type && PUBLICATION_TYPES.includes(type)) {
+    list = list.filter((p) => p.type === type);
+  }
+  if (!q && !type) {
+    list = sort === "new" ? newestPublications(50) : trendingPublications(50);
+  } else if (sort === "new") {
+    list = [...list].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+  } else {
+    list = [...list].sort((a, b) => (b.heat ?? 0) - (a.heat ?? 0));
+  }
+
+  return (
+    <Shell q={q} type={type} sort={sort}>
+      <p className="text-[13px] text-zinc-500">
+        {list.length} publication{list.length === 1 ? "" : "s"}
+        {q ? ` · “${q}”` : ""}
+      </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {list.map((p) => (
+          <PublicationCard key={p.id} pub={p} />
+        ))}
+      </div>
+      {list.length === 0 && (
+        <p className="mt-16 text-center text-[14px] text-zinc-500">
+          Nothing matched.{" "}
+          <Link href="/publish" className="text-omniv-gold hover:underline">
+            Publish something
+          </Link>
+        </p>
+      )}
+    </Shell>
+  );
+}
+
+function Shell({
+  children,
+  q,
+  type,
+  sort,
+}: {
+  children: ReactNode;
+  q: string;
+  type?: string;
+  sort: string;
+}) {
   return (
     <div className="min-h-dvh bg-[#050505] text-zinc-100">
       <NetworkHeader />
-
-      <div className="mx-auto flex max-w-6xl gap-0 px-0 pb-16 md:gap-8 md:px-4 md:pt-6">
-        <aside className="hidden w-56 shrink-0 md:block">
-          <div className="sticky top-20 space-y-8 py-2">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                Filter by
-              </p>
-              <Link
-                href="/explore"
-                className="mt-2 block text-[13px] text-zinc-500 hover:text-omniv-gold"
-              >
-                Clear filters
-              </Link>
-            </div>
-
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                Type
-              </p>
-              <ul className="mt-2 space-y-1">
-                <li>
-                  <Link
-                    href={filterHref(base, { type: undefined })}
-                    className={`block rounded-lg px-2 py-1.5 text-[13px] ${
-                      !type ? "bg-white/10 text-white" : "text-zinc-400 hover:text-white"
-                    }`}
-                  >
-                    All
-                  </Link>
-                </li>
-                {ENTITY_TYPES.map((t) => (
-                  <li key={t}>
-                    <Link
-                      href={filterHref(base, { type: t })}
-                      className={`block rounded-lg px-2 py-1.5 text-[13px] ${
-                        type === t
-                          ? "bg-white/10 text-white"
-                          : "text-zinc-400 hover:text-white"
-                      }`}
-                    >
-                      {ENTITY_LABELS[t]}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                Intent
-              </p>
-              <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
-                {(Object.keys(INTENT_LABELS) as IntentKind[]).map((k) => (
-                  <li key={k}>
-                    <Link
-                      href={filterHref(base, { intent: k })}
-                      className={`block rounded-lg px-2 py-1.5 text-[12px] leading-snug ${
-                        intent === k
-                          ? "bg-omniv-gold/15 text-omniv-gold"
-                          : "text-zinc-400 hover:text-white"
-                      }`}
-                    >
-                      {INTENT_LABELS[k]}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+      <div className="mx-auto flex max-w-6xl gap-8 px-4 pb-16 pt-6">
+        <aside className="hidden w-44 shrink-0 md:block">
+          <div className="sticky top-20 space-y-1">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+              Explore
+            </p>
+            {EXPLORE_NAV.map((item) => {
+              const active =
+                (item.href === "/explore" &&
+                  !type &&
+                  !q &&
+                  sort === "trending" &&
+                  !item.href.includes("?")) ||
+                (type && item.href.includes(`type=${type}`)) ||
+                (sort === "new" && item.href.includes("sort=new")) ||
+                (sort === "trending" &&
+                  item.href.includes("sort=trending") &&
+                  !type);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`block rounded-lg px-2 py-1.5 text-[13px] ${
+                    active
+                      ? "bg-white/10 text-white"
+                      : "text-zinc-400 hover:text-white"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 px-4 pt-6 md:px-0">
+        <main className="min-w-0 flex-1">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight text-white">
-                Browse the network
+                Explore
               </h1>
               <p className="mt-1 text-[13px] text-zinc-500">
-                {list.length} listing{list.length === 1 ? "" : "s"}
-                {q ? ` · “${q}”` : ""}
+                What publishers are putting into the world.
               </p>
             </div>
             <form action="/explore" method="get" className="flex gap-2">
               {type && <input type="hidden" name="type" value={type} />}
-              {intent && <input type="hidden" name="intent" value={intent} />}
               <input
                 name="q"
                 type="search"
                 defaultValue={q}
-                placeholder="Search the network…"
-                className="h-10 w-full min-w-[180px] rounded-full border border-white/15 bg-white/[0.04] px-4 text-[13px] text-white outline-none placeholder:text-zinc-600 focus:border-omniv-gold/40 sm:w-56"
+                placeholder="Search…"
+                className="h-10 w-full min-w-[160px] rounded-full border border-white/15 bg-white/[0.04] px-4 text-[13px] text-white outline-none placeholder:text-zinc-600 sm:w-52"
               />
-              <select
-                name="sort"
-                defaultValue={sort}
-                className="h-10 rounded-full border border-white/15 bg-[#0a0a0a] px-3 text-[12px] text-zinc-300"
-              >
-                <option value="trending">Trending</option>
-                <option value="new">Newest</option>
-              </select>
               <button
                 type="submit"
                 className="h-10 rounded-full bg-white px-4 text-[12px] font-medium text-black"
@@ -210,46 +177,24 @@ export default async function ExplorePage({ searchParams }: Props) {
           </div>
 
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1 md:hidden">
-            <Link
-              href="/explore"
-              className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] ${
-                !type ? "bg-white text-black" : "border border-white/15 text-zinc-400"
-              }`}
-            >
-              All
-            </Link>
-            {ENTITY_TYPES.map((t) => (
+            {PUBLICATION_TYPES.map((t) => (
               <Link
                 key={t}
-                href={filterHref(base, { type: t })}
+                href={`/explore?type=${t}`}
                 className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] ${
                   type === t
                     ? "bg-white text-black"
                     : "border border-white/15 text-zinc-400"
                 }`}
               >
-                {ENTITY_LABELS[t]}
+                {PUBLICATION_LABELS[t]}
               </Link>
             ))}
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {list.map((e) => (
-              <EntityCard key={e.id} entity={e} />
-            ))}
-          </div>
-
-          {list.length === 0 && (
-            <p className="mt-16 text-center text-[14px] text-zinc-500">
-              Nothing matched.{" "}
-              <Link href="/publish" className="text-omniv-gold hover:underline">
-                Publish something
-              </Link>
-            </p>
-          )}
+          <div className="mt-6">{children}</div>
         </main>
       </div>
-
       <SiteFooter />
     </div>
   );
