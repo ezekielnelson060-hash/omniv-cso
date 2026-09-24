@@ -5,17 +5,15 @@ import { PublicationCard } from "@/components/discovery/publication-card";
 import { EntityCard } from "@/components/discovery/entity-card";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { listLivePublications } from "@/lib/discovery/db";
 import {
   SEED_ENTITIES,
-  SEED_PUBLICATIONS,
-  newestPublications,
   searchEntities,
   searchPublications,
-  trendingPublications,
 } from "@/lib/discovery/seed";
 import {
-  EXPLORE_NAV,
   PUBLICATION_TYPES,
+  type Publication,
   type PublicationType,
 } from "@/lib/discovery/types";
 
@@ -25,6 +23,7 @@ type Props = {
     type?: string;
     sort?: string;
     publisher?: string;
+    interest?: string;
   }>;
 };
 
@@ -33,16 +32,36 @@ export const metadata = {
   description: "Find what you're interested in on Omniv.",
 };
 
-const MOBILE_CHIPS: { id: string; label: string; href: string }[] = [
+const TYPE_CHIPS: { id: string; label: string; href: string }[] = [
   { id: "all", label: "All", href: "/explore" },
   { id: "article", label: "Articles", href: "/explore?type=article" },
   { id: "music", label: "Music", href: "/explore?type=music" },
   { id: "video", label: "Videos", href: "/explore?type=video" },
-  { id: "file", label: "Files", href: "/explore?type=file" },
   { id: "product", label: "Products", href: "/explore?type=product" },
   { id: "event", label: "Events", href: "/explore?type=event" },
   { id: "research", label: "Research", href: "/explore?type=research" },
+  { id: "opportunity", label: "Opportunities", href: "/explore?type=opportunity" },
 ];
+
+const INTERESTS = [
+  "AI",
+  "Music",
+  "Infrastructure",
+  "Technology",
+  "Business",
+  "Research",
+  "Culture",
+  "Africa",
+];
+
+async function tryClient() {
+  try {
+    const { createClient } = await import("@/lib/supabase/server");
+    return await createClient();
+  } catch {
+    return null;
+  }
+}
 
 export default async function ExplorePage({ searchParams }: Props) {
   const sp = await searchParams;
@@ -50,6 +69,7 @@ export default async function ExplorePage({ searchParams }: Props) {
   const type = sp.type as PublicationType | undefined;
   const sort = sp.sort ?? "trending";
   const publisherFilter = sp.publisher;
+  const interest = sp.interest?.trim() ?? "";
 
   if (publisherFilter) {
     let list = q ? searchEntities(q) : [...SEED_ENTITIES];
@@ -61,7 +81,7 @@ export default async function ExplorePage({ searchParams }: Props) {
     }
 
     return (
-      <Shell q={q} type={type} sort={sort}>
+      <Shell q={q} type={type} sort={sort} interest={interest}>
         <p className="text-[13px] text-zinc-500">
           {list.length} publisher{list.length === 1 ? "" : "s"}
         </p>
@@ -74,23 +94,58 @@ export default async function ExplorePage({ searchParams }: Props) {
     );
   }
 
-  let list = q ? searchPublications(q) : [...SEED_PUBLICATIONS];
+  const supabase = await tryClient();
+  const mixed = await listLivePublications(supabase, 60);
+
+  let list: Publication[] = q
+    ? searchPublications(q)
+    : mixed.length
+      ? mixed
+      : [...mixed];
+
+  // if search returned seed-only and we have live, prefer merge
+  if (q) {
+    const liveHits = mixed.filter(
+      (p) =>
+        p.title.toLowerCase().includes(q.toLowerCase()) ||
+        p.summary.toLowerCase().includes(q.toLowerCase()) ||
+        p.tags.some((t) => t.toLowerCase().includes(q.toLowerCase()))
+    );
+    const slugs = new Set(liveHits.map((p) => p.slug));
+    for (const s of list) {
+      if (!slugs.has(s.slug)) liveHits.push(s);
+    }
+    list = liveHits;
+  }
+
   if (type && PUBLICATION_TYPES.includes(type)) {
     list = list.filter((p) => p.type === type);
   }
-  if (!q && !type) {
-    list = sort === "new" ? newestPublications(50) : trendingPublications(50);
-  } else if (sort === "new") {
-    list = [...list].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+
+  if (interest) {
+    const needle = interest.toLowerCase();
+    list = list.filter(
+      (p) =>
+        p.tags.some((t) => t.toLowerCase().includes(needle)) ||
+        p.title.toLowerCase().includes(needle) ||
+        p.summary.toLowerCase().includes(needle)
+    );
+  }
+
+  if (sort === "new") {
+    list = [...list].sort((a, b) =>
+      (b.publishedAt || "").localeCompare(a.publishedAt || "")
+    );
   } else {
     list = [...list].sort((a, b) => (b.heat ?? 0) - (a.heat ?? 0));
   }
 
   return (
-    <Shell q={q} type={type} sort={sort}>
+    <Shell q={q} type={type} sort={sort} interest={interest}>
       <p className="text-[13px] text-zinc-500">
         {list.length} result{list.length === 1 ? "" : "s"}
         {q ? ` · “${q}”` : ""}
+        {interest ? ` · ${interest}` : ""}
       </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {list.map((p) => (
@@ -114,16 +169,18 @@ function Shell({
   q,
   type,
   sort,
+  interest,
 }: {
   children: ReactNode;
   q: string;
   type?: string;
   sort: string;
+  interest: string;
 }) {
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <header className="sticky top-0 z-40 border-b border-white/5 bg-[#050505]/95 backdrop-blur-sm md:border-b-0">
+        <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-sm">
           <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 md:max-w-2xl md:px-6 lg:max-w-4xl">
             <div className="flex items-center gap-2">
               <Image
@@ -160,14 +217,21 @@ function Shell({
               type="search"
               defaultValue={q}
               placeholder="Search anything…"
-              className="h-11 flex-1 rounded-full border border-white/15 bg-white/[0.04] px-4 text-[14px] text-white outline-none placeholder:text-zinc-600 focus:border-omniv-gold/40"
+              className="h-11 flex-1 rounded-full bg-white/[0.04] px-4 text-[14px] text-white outline-none ring-1 ring-white/15 placeholder:text-zinc-600 focus:ring-omniv-gold/40"
             />
             <button
               type="submit"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 text-zinc-400 transition hover:text-white"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-zinc-400 ring-1 ring-white/15 transition hover:text-white"
               aria-label="Search"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              >
                 <circle cx="11" cy="11" r="7" />
                 <path d="m20 20-3.5-3.5" strokeLinecap="round" />
               </svg>
@@ -175,7 +239,7 @@ function Shell({
           </form>
 
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-            {MOBILE_CHIPS.map((c) => {
+            {TYPE_CHIPS.map((c) => {
               const active =
                 (c.id === "all" && !type) || (type && c.id === type);
               return (
@@ -185,7 +249,7 @@ function Shell({
                   className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-medium ${
                     active
                       ? "bg-white text-black"
-                      : "border border-white/15 text-zinc-400"
+                      : "text-zinc-400 ring-1 ring-white/15"
                   }`}
                 >
                   {c.label}
@@ -194,17 +258,51 @@ function Shell({
             })}
           </div>
 
-          {/* desktop sort row */}
-          <div className="mt-3 hidden gap-2 md:flex">
-            {EXPLORE_NAV.slice(0, 6).map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-full border border-white/10 px-3 py-1 text-[12px] text-zinc-500 hover:text-white"
-              >
-                {item.label}
-              </Link>
-            ))}
+          <div className="mt-5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
+              Explore by interest
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {INTERESTS.map((name) => {
+                const active = interest.toLowerCase() === name.toLowerCase();
+                return (
+                  <Link
+                    key={name}
+                    href={active ? "/explore" : `/explore?interest=${encodeURIComponent(name)}`}
+                    className={`rounded-full px-3 py-1.5 text-[12px] font-medium ${
+                      active
+                        ? "bg-omniv-gold text-black"
+                        : "text-zinc-400 ring-1 ring-white/12 hover:text-white"
+                    }`}
+                  >
+                    {name}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-3 flex gap-2">
+            <Link
+              href={type ? `/explore?type=${type}&sort=trending` : "/explore?sort=trending"}
+              className={`rounded-full px-3 py-1 text-[12px] ${
+                sort !== "new"
+                  ? "text-white ring-1 ring-white/20"
+                  : "text-zinc-500"
+              }`}
+            >
+              Trending
+            </Link>
+            <Link
+              href={type ? `/explore?type=${type}&sort=new` : "/explore?sort=new"}
+              className={`rounded-full px-3 py-1 text-[12px] ${
+                sort === "new"
+                  ? "text-white ring-1 ring-white/20"
+                  : "text-zinc-500"
+              }`}
+            >
+              New
+            </Link>
           </div>
 
           <div className="mt-5">{children}</div>
