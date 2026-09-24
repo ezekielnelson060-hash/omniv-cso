@@ -39,6 +39,8 @@ type PubRow = {
   publisher_name: string | null;
 };
 
+export type LivePublication = Publication & { publisherName?: string };
+
 function rowToEntity(r: Row): DiscoveryEntity {
   return {
     id: r.id,
@@ -56,7 +58,7 @@ function rowToEntity(r: Row): DiscoveryEntity {
   };
 }
 
-function rowToPublication(r: PubRow): Publication {
+function rowToPublication(r: PubRow): LivePublication {
   return {
     id: r.id,
     type: r.type,
@@ -65,6 +67,7 @@ function rowToPublication(r: PubRow): Publication {
     summary: r.summary,
     body: r.body ?? undefined,
     publisherId: r.publisher_id || "live",
+    publisherName: r.publisher_name ?? undefined,
     tags: Array.isArray(r.tags) ? r.tags : [],
     meta: r.meta ?? undefined,
     publishedAt: (r.published_at || "").slice(0, 10),
@@ -72,7 +75,6 @@ function rowToPublication(r: PubRow): Publication {
   };
 }
 
-/** Live rows + seed demos (seed fills empty network). */
 export async function listDiscoveryEntities(
   supabase: SupabaseClient | null
 ): Promise<DiscoveryEntity[]> {
@@ -130,7 +132,7 @@ export async function getDiscoveryEntity(
 export async function getLivePublication(
   supabase: SupabaseClient | null,
   slug: string
-): Promise<Publication | null> {
+): Promise<LivePublication | null> {
   if (supabase) {
     try {
       const { data } = await supabase
@@ -152,7 +154,7 @@ export async function getLivePublication(
 export async function listLivePublications(
   supabase: SupabaseClient | null,
   limit = 50
-): Promise<Publication[]> {
+): Promise<LivePublication[]> {
   if (!supabase) return SEED_PUBLICATIONS;
 
   try {
