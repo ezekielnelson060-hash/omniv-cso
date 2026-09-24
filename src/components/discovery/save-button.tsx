@@ -8,7 +8,6 @@ import {
   type SavedItem,
 } from "@/lib/discovery/local-graph";
 
-/** @deprecated use SavedItem from local-graph */
 export type SavedRef = { type: string; slug: string; name: string };
 
 export function readSavedLegacy(): SavedRef[] {
@@ -36,15 +35,63 @@ export function SaveButton({
 }) {
   const [saved, setSaved] = useState(false);
   const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    setSaved(isSaved(kind, type, slug));
-    setReady(true);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/discovery/save");
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.auth && Array.isArray(data.saves)) {
+          setSaved(
+            data.saves.some(
+              (x: SavedItem) =>
+                x.kind === kind && x.type === type && x.slug === slug
+            )
+          );
+        } else {
+          setSaved(isSaved(kind, type, slug));
+        }
+      } catch {
+        if (!cancelled) setSaved(isSaved(kind, type, slug));
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [kind, type, slug]);
 
-  function onClick() {
+  async function onClick() {
+    if (busy) return;
+    setBusy(true);
     const item: SavedItem = { kind, type, slug, name, pubType };
-    setSaved(toggleSave(item));
+    try {
+      const res = await fetch("/api/discovery/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(item),
+      });
+      if (res.status === 401) {
+        setSaved(toggleSave(item));
+        return;
+      }
+      const data = await res.json();
+      if (res.ok) {
+        setSaved(Boolean(data.saved));
+        const local = isSaved(kind, type, slug);
+        if (data.saved !== local) toggleSave(item);
+      } else {
+        setSaved(toggleSave(item));
+      }
+    } catch {
+      setSaved(toggleSave(item));
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (variant === "icon") {
@@ -52,7 +99,7 @@ export function SaveButton({
       <button
         type="button"
         onClick={onClick}
-        disabled={!ready}
+        disabled={!ready || busy}
         aria-label={saved ? "Unsave" : "Save"}
         className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
           saved
@@ -81,7 +128,7 @@ export function SaveButton({
     <button
       type="button"
       onClick={onClick}
-      disabled={!ready}
+      disabled={!ready || busy}
       className={`inline-flex h-11 items-center rounded-full border px-5 text-[13px] transition ${
         saved
           ? "border-omniv-gold/50 bg-omniv-gold/15 text-omniv-gold"
