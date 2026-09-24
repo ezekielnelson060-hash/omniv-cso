@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { ProfileAvatarLink } from "@/components/discovery/profile-avatar-link";
 import { readSaved, type SavedItem } from "@/lib/discovery/local-graph";
 
 const TABS = [
@@ -73,16 +74,8 @@ export default function SavedPage() {
         <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-sm">
           <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3 md:max-w-2xl md:px-6">
             <div className="flex items-center gap-2">
-              <Image
-                src="/logo.svg"
-                alt="Omniv"
-                width={28}
-                height={28}
-                className="rounded-md"
-              />
-              <span className="text-[17px] font-semibold tracking-tight text-white">
-                Saved
-              </span>
+              <Image src="/logo.svg" alt="Omniv" width={28} height={28} className="rounded-md" />
+              <span className="text-[17px] font-semibold tracking-tight text-white">Saved</span>
             </div>
             <div className="flex items-center gap-2">
               <Link
@@ -95,21 +88,13 @@ export default function SavedPage() {
                   <path d="m20 20-3.5-3.5" strokeLinecap="round" />
                 </svg>
               </Link>
-              <Link
-                href="/profile"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-omniv-gold/20 text-[12px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/30"
-                aria-label="Profile"
-              >
-                ·
-              </Link>
+              <ProfileAvatarLink />
             </div>
           </div>
         </header>
 
         <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl md:px-6">
-          <p className="text-[13px] text-zinc-500">
-            Keep what matters. Access it anytime.
-          </p>
+          <p className="text-[13px] text-zinc-500">Keep what matters. Access it anytime.</p>
 
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             {TABS.map((t) => (
@@ -133,17 +118,13 @@ export default function SavedPage() {
           ) : filtered.length === 0 ? (
             <p className="mt-16 text-center text-[14px] text-zinc-500">
               Nothing saved yet.{" "}
-              <Link href="/explore" className="text-omniv-gold hover:underline">
-                Explore
-              </Link>
+              <Link href="/explore" className="text-omniv-gold hover:underline">Explore</Link>
             </p>
           ) : (
             <ul className="mt-5 space-y-2.5">
               {filtered.map((x) => {
                 const href =
-                  x.kind === "publication"
-                    ? `/p/${x.slug}`
-                    : `/e/${x.type}/${x.slug}`;
+                  x.kind === "publication" ? `/p/${x.slug}` : `/e/${x.type}/${x.slug}`;
                 const badge =
                   x.kind === "publication" ? x.pubType ?? x.type : x.type;
                 const tone = TONE[badge] || "from-zinc-700 to-zinc-900";
@@ -166,9 +147,7 @@ export default function SavedPage() {
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-semibold text-white">
-                          {x.name}
-                        </p>
+                        <p className="truncate text-[14px] font-semibold text-white">{x.name}</p>
                         <p className="mt-0.5 text-[12px] capitalize text-zinc-500">
                           {badge}
                           {x.kind === "entity" ? " · Profile" : ""}
