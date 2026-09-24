@@ -7,15 +7,18 @@ import {
 } from "@/components/discovery/feed-card";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { listLivePublications } from "@/lib/discovery/db";
 import {
   newestPublications,
   publicationsByType,
   trendingPublications,
 } from "@/lib/discovery/seed";
+import type { Publication } from "@/lib/discovery/types";
 
 export const metadata = {
   title: "For You",
-  description: "Personalized picks based on what you follow and what's trending.",
+  description:
+    "Personalized picks based on what you follow and what's trending.",
 };
 
 type Props = {
@@ -30,17 +33,56 @@ const TABS = [
   { id: "articles", label: "Articles" },
 ] as const;
 
+async function tryClient() {
+  try {
+    const { createClient } = await import("@/lib/supabase/server");
+    return await createClient();
+  } catch {
+    return null;
+  }
+}
+
+function sortHeat(a: Publication, b: Publication) {
+  return (b.heat ?? 0) - (a.heat ?? 0);
+}
+
+function sortNew(a: Publication, b: Publication) {
+  return (b.publishedAt || "").localeCompare(a.publishedAt || "");
+}
+
 export default async function HomePage({ searchParams }: Props) {
   const sp = await searchParams;
   const tab = sp.tab ?? "for-you";
 
-  let items = trendingPublications(12);
-  if (tab === "new") items = newestPublications(12);
-  if (tab === "music") items = publicationsByType("music");
-  if (tab === "articles") items = publicationsByType("article");
-  if (tab === "trending") items = trendingPublications(12);
-  if (tab === "for-you") {
-    items = trendingPublications(12);
+  const supabase = await tryClient();
+  const mixed = await listLivePublications(supabase, 40);
+
+  let items: Publication[] = mixed;
+  if (tab === "new") {
+    items = [...mixed].sort(sortNew).slice(0, 16);
+  } else if (tab === "music") {
+    items = mixed.filter((p) => p.type === "music");
+    if (items.length < 3) items = publicationsByType("music");
+  } else if (tab === "articles") {
+    items = mixed.filter((p) => p.type === "article");
+    if (items.length < 3) items = publicationsByType("article");
+  } else if (tab === "trending") {
+    items = [...mixed].sort(sortHeat).slice(0, 16);
+  } else {
+    // for-you: heat-ranked mix, fall back to seed trending
+    items = [...mixed].sort(sortHeat).slice(0, 16);
+    if (items.length === 0) items = trendingPublications(12);
+  }
+
+  // ensure density from seed if live is sparse
+  if (items.length < 6 && tab !== "music" && tab !== "articles") {
+    const seed =
+      tab === "new" ? newestPublications(12) : trendingPublications(12);
+    const slugs = new Set(items.map((p) => p.slug));
+    for (const s of seed) {
+      if (!slugs.has(s.slug)) items.push(s);
+      if (items.length >= 14) break;
+    }
   }
 
   const featured = items[0];
@@ -55,7 +97,7 @@ export default async function HomePage({ searchParams }: Props) {
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <header className="sticky top-0 z-40 border-b border-white/5 bg-[#050505]/95 backdrop-blur-sm md:border-b-0">
+        <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-sm">
           <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 md:max-w-2xl md:px-6">
             <Link href="/home" className="flex items-center gap-2 md:hidden">
               <Image
@@ -120,7 +162,7 @@ export default async function HomePage({ searchParams }: Props) {
                   className={`shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition ${
                     active
                       ? "bg-omniv-gold text-black"
-                      : "border border-white/12 text-zinc-400 hover:border-white/25 hover:text-white"
+                      : "text-zinc-400 ring-1 ring-white/12 hover:text-white"
                   }`}
                 >
                   {t.label}
