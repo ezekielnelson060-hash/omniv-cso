@@ -144,82 +144,58 @@ export default function ProfilePage() {
 
           {editing ? (
             <div className="mt-5 space-y-3">
-              <Field
-                label="Display name"
-                value={draft.displayName}
-                onChange={(v) => setDraft({ ...draft, displayName: v })}
-              />
-              <Field
-                label="Handle"
-                value={draft.handle}
-                onChange={(v) => setDraft({ ...draft, handle: v })}
-                prefix="@"
-              />
-              <Field
-                label="Bio"
-                value={draft.bio}
-                onChange={(v) => setDraft({ ...draft, bio: v })}
-                multiline
-              />
-              <Field
-                label="Location"
-                value={draft.location}
-                onChange={(v) => setDraft({ ...draft, location: v })}
-              />
+              <Field label="Display name" value={draft.displayName} onChange={(v) => setDraft({ ...draft, displayName: v })} />
+              <Field label="Handle" value={draft.handle} onChange={(v) => setDraft({ ...draft, handle: v })} prefix="@" />
+              <Field label="Bio" value={draft.bio} onChange={(v) => setDraft({ ...draft, bio: v })} multiline />
+              <Field label="Location" value={draft.location} onChange={(v) => setDraft({ ...draft, location: v })} />
             </div>
           ) : (
             <>
-              <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white">
-                {profile.displayName}
-              </h1>
+              <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white">{profile.displayName}</h1>
               <p className="text-[14px] text-zinc-500">@{profile.handle}</p>
-              <p className="mt-3 text-[14px] leading-relaxed text-zinc-300">
-                {profile.bio}
-              </p>
+              <p className="mt-3 text-[14px] leading-relaxed text-zinc-300">{profile.bio}</p>
               <div className="mt-3 flex flex-wrap gap-3 text-[13px] text-zinc-500">
                 {profile.location && <span>📍 {profile.location}</span>}
                 <span>
                   Joined{" "}
-                  {new Date(profile.joinedAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    year: "numeric",
-                  })}
+                  {new Date(profile.joinedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                 </span>
               </div>
 
               <div className="mt-5 flex gap-6">
                 <Link href="/following" className="hover:opacity-90">
-                  <span className="text-[16px] font-semibold text-white">
-                    {follows.length}
-                  </span>{" "}
+                  <span className="text-[16px] font-semibold text-white">{follows.length}</span>{" "}
                   <span className="text-[13px] text-zinc-500">Following</span>
                 </Link>
                 <Link href="/saved" className="hover:opacity-90">
-                  <span className="text-[16px] font-semibold text-white">
-                    {saved.length}
-                  </span>{" "}
+                  <span className="text-[16px] font-semibold text-white">{saved.length}</span>{" "}
                   <span className="text-[13px] text-zinc-500">Saved</span>
                 </Link>
               </div>
+
+              <Link
+                href="/accounts"
+                className="mt-5 flex items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3.5 ring-1 ring-white/[0.08] transition hover:ring-white/15"
+              >
+                <div>
+                  <p className="text-[14px] font-medium text-white">Your accounts</p>
+                  <p className="text-[12px] text-zinc-500">
+                    Person, company, brand, project — publish as any of them
+                  </p>
+                </div>
+                <span className="text-omniv-gold">›</span>
+              </Link>
             </>
           )}
 
           <div className="mt-8 flex gap-1">
-            {(
-              [
-                { id: "posts" as const, label: "Posts" },
-                { id: "saved" as const, label: "Saved" },
-                { id: "activity" as const, label: "Activity" },
-              ] as const
-            ).map((t) => (
+            {([{ id: "posts" as const, label: "Posts" }, { id: "saved" as const, label: "Saved" }, { id: "activity" as const, label: "Activity" }] as const).map((t) => (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
                 className={`rounded-full px-4 py-2 text-[13px] font-medium transition ${
-                  tab === t.id
-                    ? "bg-omniv-gold text-black"
-                    : "text-zinc-500 ring-1 ring-white/10"
+                  tab === t.id ? "bg-omniv-gold text-black" : "text-zinc-500 ring-1 ring-white/10"
                 }`}
               >
                 {t.label}
@@ -229,92 +205,56 @@ export default function ProfilePage() {
 
           <div className="mt-5">
             {tab === "posts" && <ProfilePosts />}
-
             {tab === "saved" &&
               (saved.length === 0 ? (
                 <p className="py-8 text-center text-[14px] text-zinc-500">
-                  Nothing saved.{" "}
-                  <Link href="/explore" className="text-omniv-gold">
-                    Explore
-                  </Link>
+                  Nothing saved. <Link href="/explore" className="text-omniv-gold">Explore</Link>
                 </p>
               ) : (
                 <ul className="space-y-2">
                   {saved.slice(0, 20).map((x) => (
                     <li key={`${x.kind}-${x.slug}`}>
                       <Link
-                        href={
-                          x.kind === "publication"
-                            ? `/p/${x.slug}`
-                            : `/e/${x.type}/${x.slug}`
-                        }
+                        href={x.kind === "publication" ? `/p/${x.slug}` : `/e/${x.type}/${x.slug}`}
                         className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/[0.06] transition hover:ring-white/15"
                       >
-                        <span className="truncate text-[14px] text-white">
-                          {x.name}
-                        </span>
+                        <span className="truncate text-[14px] text-white">{x.name}</span>
                         <span className="shrink-0 text-[11px] capitalize text-zinc-500">
-                          {x.kind === "publication"
-                            ? x.pubType ?? x.type
-                            : x.type}
+                          {x.kind === "publication" ? x.pubType ?? x.type : x.type}
                         </span>
                       </Link>
                     </li>
                   ))}
                   <li>
-                    <Link
-                      href="/saved"
-                      className="block py-2 text-center text-[13px] text-omniv-gold"
-                    >
-                      See all saved →
-                    </Link>
+                    <Link href="/saved" className="block py-2 text-center text-[13px] text-omniv-gold">See all saved →</Link>
                   </li>
                 </ul>
               ))}
-
             {tab === "activity" &&
               (follows.length === 0 ? (
                 <p className="py-8 text-center text-[14px] text-zinc-500">
-                  Follow publishers to build your network.{" "}
-                  <Link href="/explore" className="text-omniv-gold">
-                    Explore
-                  </Link>
+                  Follow publishers to build your network. <Link href="/explore" className="text-omniv-gold">Explore</Link>
                 </p>
               ) : (
                 <ul className="space-y-2">
                   {follows.map((f) => (
                     <li key={`${f.type}-${f.slug}`}>
-                      <Link
-                        href={`/e/${f.type}/${f.slug}`}
-                        className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-3 ring-1 ring-white/[0.06] transition hover:ring-white/15"
-                      >
-                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
-                          {f.name.charAt(0)}
-                        </span>
+                      <Link href={`/e/${f.type}/${f.slug}`} className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-3 ring-1 ring-white/[0.06] transition hover:ring-white/15">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">{f.name.charAt(0)}</span>
                         <div>
-                          <p className="text-[14px] font-medium text-white">
-                            {f.name}
-                          </p>
-                          <p className="text-[12px] capitalize text-zinc-500">
-                            {f.type}
-                          </p>
+                          <p className="text-[14px] font-medium text-white">{f.name}</p>
+                          <p className="text-[12px] capitalize text-zinc-500">{f.type}</p>
                         </div>
                       </Link>
                     </li>
                   ))}
                   <li>
-                    <Link
-                      href="/activity"
-                      className="block py-2 text-center text-[13px] text-omniv-gold"
-                    >
-                      Open activity feed →
-                    </Link>
+                    <Link href="/activity" className="block py-2 text-center text-[13px] text-omniv-gold">Open activity feed →</Link>
                   </li>
                 </ul>
               ))}
           </div>
         </main>
-
         <BottomNav />
       </div>
     </DiscoveryShell>
@@ -336,26 +276,13 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-        {label}
-      </span>
+      <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">{label}</span>
       <div className="mt-1 flex items-center rounded-xl bg-white/[0.04] ring-1 ring-white/[0.08] focus-within:ring-omniv-gold/50">
-        {prefix && (
-          <span className="pl-3 text-[14px] text-zinc-500">{prefix}</span>
-        )}
+        {prefix && <span className="pl-3 text-[14px] text-zinc-500">{prefix}</span>}
         {multiline ? (
-          <textarea
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            rows={3}
-            className="w-full resize-none bg-transparent px-3 py-2.5 text-[14px] text-white outline-none"
-          />
+          <textarea value={value} onChange={(e) => onChange(e.target.value)} rows={3} className="w-full resize-none bg-transparent px-3 py-2.5 text-[14px] text-white outline-none" />
         ) : (
-          <input
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="w-full bg-transparent px-3 py-2.5 text-[14px] text-white outline-none"
-          />
+          <input value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-transparent px-3 py-2.5 text-[14px] text-white outline-none" />
         )}
       </div>
     </label>
