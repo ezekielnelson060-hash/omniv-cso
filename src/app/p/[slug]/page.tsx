@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SaveButton } from "@/components/discovery/save-button";
+import { ShareButton } from "@/components/discovery/share-button";
 import { FollowButton } from "@/components/discovery/follow-button";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { createClient } from "@/lib/supabase/server";
@@ -60,7 +61,6 @@ export default async function PublicationPage({ params }: Props) {
     ? publicationsByPublisher(publisher.id).filter((x) => x.id !== p.id)
     : [];
 
-  // tag-overlap related
   const tagSet = new Set(p.tags.map((t) => t.toLowerCase()));
   const byTags = SEED_PUBLICATIONS.filter((x) => {
     if (x.id === p.id) return false;
@@ -72,13 +72,13 @@ export default async function PublicationPage({ params }: Props) {
     ...byTags.filter((x) => !fromPublisher.some((f) => f.id === x.id)),
   ].slice(0, 5);
 
-  // related entities by shared tags
   const relatedEntities = SEED_ENTITIES.filter((e) => {
     if (publisher && e.id === publisher.id) return false;
     return e.tags.some((t) => tagSet.has(t.toLowerCase()));
   }).slice(0, 3);
 
   const hero = HERO[p.type] ?? "from-zinc-800 to-[#050505]";
+  const path = publicationPath(p);
 
   return (
     <div className="min-h-dvh bg-[#050505] text-zinc-100">
@@ -93,14 +93,17 @@ export default async function PublicationPage({ params }: Props) {
             >
               ←
             </Link>
-            <SaveButton
-              kind="publication"
-              type={p.type}
-              slug={p.slug}
-              name={p.title}
-              pubType={p.type}
-              variant="icon"
-            />
+            <div className="flex items-center gap-1">
+              <SaveButton
+                kind="publication"
+                type={p.type}
+                slug={p.slug}
+                name={p.title}
+                pubType={p.type}
+                variant="icon"
+              />
+              <ShareButton title={p.title} path={path} />
+            </div>
           </div>
 
           <span className="mt-8 inline-block rounded-full bg-black/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90">
