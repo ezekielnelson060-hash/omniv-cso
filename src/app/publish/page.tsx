@@ -81,6 +81,7 @@ export default function PublishPage() {
   const [summary, setSummary] = useState("");
   const [body, setBody] = useState("");
   const [publisherName, setPublisherName] = useState("");
+  const [publisherId, setPublisherId] = useState<string | null>(null);
   const [tags, setTags] = useState("");
   const [meta, setMeta] = useState("");
   const [ctaHref, setCtaHref] = useState("");
@@ -169,26 +170,9 @@ export default function PublishPage() {
     }, 800);
     return () => clearTimeout(t);
   }, [
-    pubType,
-    step,
-    title,
-    summary,
-    body,
-    publisherName,
-    tags,
-    meta,
-    ctaHref,
-    genre,
-    releaseDate,
-    priceMode,
-    category,
-    eventDate,
-    eventTime,
-    location,
-    oppType,
-    deadline,
-    requirements,
-    coverUrl,
+    pubType, step, title, summary, body, publisherName, tags, meta, ctaHref,
+    genre, releaseDate, priceMode, category, eventDate, eventTime, location,
+    oppType, deadline, requirements, coverUrl,
   ]);
 
   function clearDraft() {
@@ -206,7 +190,6 @@ export default function PublishPage() {
     setTitle("");
     setSummary("");
     setBody("");
-    setPublisherName("");
     setTags("");
     setMeta("");
     setCoverUrl(null);
@@ -253,6 +236,7 @@ export default function PublishPage() {
             (requirements ? `\n\nRequirements:\n${requirements}` : "") +
             (ctaHref ? `\n\nCTA: ${ctaHref}` : ""),
           publisherName: publisherName || "Publisher",
+          publisherId,
           tags,
           meta: buildMeta(),
           coverUrl,
@@ -412,6 +396,15 @@ export default function PublishPage() {
             {draftRestored && (
               <p className="rounded-xl bg-omniv-gold/10 px-3 py-2 text-[12px] text-omniv-gold">Draft restored from last session</p>
             )}
+
+            {/* Account switch — mockup style */}
+            <div>
+              <p className={labelCls}>Publishing as</p>
+              <div className="mt-1.5">
+                <PublishAsPicker value={publisherName} onChange={setPublisherName} onEntityId={setPublisherId} />
+              </div>
+            </div>
+
             <CoverUpload label="Cover image" value={coverUrl} onChange={setCoverUrl} />
             <Field label="Title *">
               <input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" className={inputCls} />
@@ -468,9 +461,6 @@ export default function PublishPage() {
             {(pubType === "product" || pubType === "event" || pubType === "announcement") && (
               <Field label="Link / CTA"><input value={ctaHref} onChange={(e) => setCtaHref(e.target.value)} placeholder="https://…" className={inputCls} /></Field>
             )}
-            <Field label="Publishing as *">
-              <PublishAsPicker value={publisherName} onChange={setPublisherName} />
-            </Field>
             <Field label="Tags"><input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="AI, Africa, Language" className={inputCls} /></Field>
             {savedAgo && <p className="text-center text-[11px] text-zinc-600">{savedAgo}</p>}
             <button type="submit" className="flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black">Preview</button>
