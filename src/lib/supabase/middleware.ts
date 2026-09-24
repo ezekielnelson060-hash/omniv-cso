@@ -60,6 +60,7 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/explore") ||
     path.startsWith("/home") ||
     path.startsWith("/activity") ||
+    path.startsWith("/profile") ||
     path.startsWith("/e/") ||
     path.startsWith("/p/") ||
     path.startsWith("/publish") ||
