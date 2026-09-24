@@ -7,7 +7,11 @@ import { SaveButton } from "@/components/discovery/save-button";
 import { PublicationCard } from "@/components/discovery/publication-card";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
-import { getDiscoveryEntity, listLivePublications } from "@/lib/discovery/db";
+import {
+  getDiscoveryEntity,
+  listLivePublications,
+  type LivePublication,
+} from "@/lib/discovery/db";
 import { publicationsByPublisher } from "@/lib/discovery/seed";
 import {
   ENTITY_TYPES,
@@ -50,20 +54,13 @@ export default async function EntityPage({ params, searchParams }: Props) {
 
   const seedPubs = publicationsByPublisher(e.id);
   const liveAll = await listLivePublications(supabase, 80);
-  const livePubs = liveAll.filter(
-    (p) =>
-      p.publisherId === e.id ||
-      p.publisherId === e.slug ||
-      (p as Publication & { publisherName?: string }).publisherId === e.name
-  );
-  // Prefer live by publisher_name match when publisherId is uuid
-  const byName = liveAll.filter(
-    (p) =>
-      (p as { publisherName?: string }).publisherName?.toLowerCase() ===
-      e.name.toLowerCase()
-  );
+  const liveForEntity = liveAll.filter((p: LivePublication) => {
+    if (p.publisherId === e.id) return true;
+    if (p.publisherName?.toLowerCase() === e.name.toLowerCase()) return true;
+    return false;
+  });
   const pubsMap = new Map<string, Publication>();
-  for (const p of [...seedPubs, ...livePubs, ...byName]) {
+  for (const p of [...seedPubs, ...liveForEntity]) {
     pubsMap.set(p.slug || p.id, p);
   }
   const pubs = Array.from(pubsMap.values()).sort(
@@ -78,11 +75,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
     { id: "research", label: "Research", types: ["research", "file"] },
     { id: "products", label: "Products", types: ["product"] },
     { id: "media", label: "Media", types: ["music", "video"] },
-    {
-      id: "more",
-      label: "More",
-      types: ["opportunity", "event"],
-    },
+    { id: "more", label: "More", types: ["opportunity", "event"] },
     { id: "about", label: "About" },
   ];
 
@@ -153,7 +146,6 @@ export default async function EntityPage({ params, searchParams }: Props) {
             <p className="mt-1.5 text-[13px] text-zinc-500">📍 {e.location}</p>
           )}
 
-          {/* Stat row — mockup style */}
           <div className="mt-5 grid grid-cols-4 gap-2">
             {(
               [
@@ -236,7 +228,9 @@ export default async function EntityPage({ params, searchParams }: Props) {
           ) : (
             <div className="mt-6 space-y-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
-                {activeTab === "overview" ? "Latest" : tabs.find((t) => t.id === activeTab)?.label}
+                {activeTab === "overview"
+                  ? "Latest"
+                  : tabs.find((t) => t.id === activeTab)?.label}
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {filtered.map((p) => (
