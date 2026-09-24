@@ -5,6 +5,7 @@ import { PublicationCard } from "@/components/discovery/publication-card";
 import { EntityCard } from "@/components/discovery/entity-card";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { ProfileAvatarLink } from "@/components/discovery/profile-avatar-link";
 import { listLivePublications } from "@/lib/discovery/db";
 import {
   SEED_ENTITIES,
@@ -103,7 +104,6 @@ export default async function ExplorePage({ searchParams }: Props) {
       ? mixed
       : [...mixed];
 
-  // if search returned seed-only and we have live, prefer merge
   if (q) {
     const liveHits = mixed.filter(
       (p) =>
@@ -199,13 +199,7 @@ function Shell({
                 </p>
               </div>
             </div>
-            <Link
-              href="/profile"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-omniv-gold/20 text-[12px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/30"
-              aria-label="Profile"
-            >
-              ·
-            </Link>
+            <ProfileAvatarLink />
           </div>
         </header>
 
@@ -268,7 +262,11 @@ function Shell({
                 return (
                   <Link
                     key={name}
-                    href={active ? "/explore" : `/explore?interest=${encodeURIComponent(name)}`}
+                    href={
+                      active
+                        ? "/explore"
+                        : `/explore?interest=${encodeURIComponent(name)}`
+                    }
                     className={`rounded-full px-3 py-1.5 text-[12px] font-medium ${
                       active
                         ? "bg-omniv-gold text-black"
@@ -284,7 +282,11 @@ function Shell({
 
           <div className="mt-3 flex gap-2">
             <Link
-              href={type ? `/explore?type=${type}&sort=trending` : "/explore?sort=trending"}
+              href={
+                type
+                  ? `/explore?type=${type}&sort=trending`
+                  : "/explore?sort=trending"
+              }
               className={`rounded-full px-3 py-1 text-[12px] ${
                 sort !== "new"
                   ? "text-white ring-1 ring-white/20"
