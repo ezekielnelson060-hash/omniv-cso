@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export function FollowerCount({
   type,
@@ -13,23 +13,33 @@ export function FollowerCount({
 }) {
   const [count, setCount] = useState<number | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/discovery/followers?type=${encodeURIComponent(type)}&slug=${encodeURIComponent(slug)}`
-        );
-        const data = await res.json();
-        if (!cancelled) setCount(typeof data.count === "number" ? data.count : 0);
-      } catch {
-        if (!cancelled) setCount(0);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/discovery/followers?type=${encodeURIComponent(type)}&slug=${encodeURIComponent(slug)}`
+      );
+      const data = await res.json();
+      setCount(typeof data.count === "number" ? data.count : 0);
+    } catch {
+      setCount(0);
+    }
   }, [type, slug]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    function onFollow(e: Event) {
+      const ce = e as CustomEvent<{ type: string; slug: string }>;
+      if (ce.detail?.type === type && ce.detail?.slug === slug) {
+        // brief delay so DB write lands
+        setTimeout(() => void load(), 200);
+      }
+    }
+    window.addEventListener("omniv-follow-change", onFollow);
+    return () => window.removeEventListener("omniv-follow-change", onFollow);
+  }, [type, slug, load]);
 
   return (
     <span className={className}>
