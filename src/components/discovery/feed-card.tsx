@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   PUBLICATION_LABELS,
-  entityPath,
   publicationPath,
   type Publication,
 } from "@/lib/discovery/types";
@@ -136,15 +135,7 @@ export function FeedCard({ pub }: { pub: Publication }) {
           {pub.summary}
         </p>
         <div className="mt-auto flex items-center gap-2 pt-3 text-[12px] text-zinc-500">
-          {publisher && (
-            <Link
-              href={entityPath(publisher)}
-              onClick={(e) => e.stopPropagation()}
-              className="truncate hover:text-zinc-300"
-            >
-              {publisher.name}
-            </Link>
-          )}
+          {publisher && <span className="truncate">{publisher.name}</span>}
           {pub.meta && (
             <>
               <span className="text-zinc-700">·</span>
