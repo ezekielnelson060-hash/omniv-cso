@@ -6,6 +6,11 @@ import {
 } from "@/lib/discovery/types";
 import { getEntityById } from "@/lib/discovery/seed";
 
+type PubWithCover = Publication & {
+  coverUrl?: string;
+  publisherName?: string;
+};
+
 const TONE: Record<string, string> = {
   article: "from-sky-700/80 via-slate-900 to-black",
   music: "from-fuchsia-600/70 via-purple-950 to-black",
@@ -18,19 +23,41 @@ const TONE: Record<string, string> = {
   file: "from-cyan-700/50 via-slate-900 to-black",
 };
 
-/** Large hero — articles / research / video */
-export function FeedFeaturedCard({ pub }: { pub: Publication }) {
-  const publisher = getEntityById(pub.publisherId);
+function CoverBg({
+  pub,
+  className,
+}: {
+  pub: PubWithCover;
+  className?: string;
+}) {
   const cover = TONE[pub.type] ?? "from-zinc-700 to-black";
+  if (pub.coverUrl) {
+    return (
+      <div
+        className={className}
+        style={{
+          backgroundImage: `url(${pub.coverUrl})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
+    );
+  }
+  return <div className={`${className} bg-gradient-to-br ${cover}`} />;
+}
+
+/** Large hero — articles / research / video */
+export function FeedFeaturedCard({ pub }: { pub: PubWithCover }) {
+  const publisher = getEntityById(pub.publisherId);
+  const name = pub.publisherName || publisher?.name;
 
   return (
     <Link
       href={publicationPath(pub)}
       className="group block overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06] transition hover:ring-white/15"
     >
-      <div
-        className={`relative aspect-[4/3] bg-gradient-to-br ${cover} sm:aspect-[16/10]`}
-      >
+      <div className="relative aspect-[4/3] sm:aspect-[16/10]">
+        <CoverBg pub={pub} className="absolute inset-0" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(255,255,255,0.12),transparent_50%)]" />
         <div className="absolute left-3 top-3">
           <span className="rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90">
@@ -42,12 +69,12 @@ export function FeedFeaturedCard({ pub }: { pub: Publication }) {
             {pub.title}
           </h2>
           <div className="mt-2 flex items-center gap-2 text-[13px] text-zinc-300">
-            {publisher && (
+            {name && (
               <span className="flex items-center gap-1.5">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-omniv-gold/20 text-[9px] font-bold text-omniv-gold">
-                  {publisher.name.charAt(0)}
+                  {name.charAt(0)}
                 </span>
-                {publisher.name}
+                {name}
               </span>
             )}
             {pub.meta && (
@@ -64,9 +91,9 @@ export function FeedFeaturedCard({ pub }: { pub: Publication }) {
 }
 
 /** Compact — music (play), product, opportunity */
-export function FeedCompactCard({ pub }: { pub: Publication }) {
+export function FeedCompactCard({ pub }: { pub: PubWithCover }) {
   const publisher = getEntityById(pub.publisherId);
-  const cover = TONE[pub.type] ?? "from-zinc-700 to-black";
+  const name = pub.publisherName || publisher?.name;
   const isMusic = pub.type === "music";
   const isProduct = pub.type === "product";
 
@@ -75,22 +102,23 @@ export function FeedCompactCard({ pub }: { pub: Publication }) {
       href={publicationPath(pub)}
       className="group flex items-center gap-3 overflow-hidden rounded-2xl bg-[#0c0c0c] p-2.5 ring-1 ring-white/[0.06] transition hover:ring-white/15"
     >
-      <div
-        className={`relative flex h-[68px] w-[68px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${cover}`}
-      >
-        {isMusic ? (
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </span>
-        ) : isProduct ? (
-          <span className="text-2xl text-omniv-gold/90">◎</span>
-        ) : (
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-white/80">
-            {PUBLICATION_LABELS[pub.type].slice(0, 3)}
-          </span>
-        )}
+      <div className="relative h-[68px] w-[68px] shrink-0 overflow-hidden rounded-xl">
+        <CoverBg pub={pub} className="absolute inset-0" />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+          {isMusic ? (
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </span>
+          ) : isProduct ? (
+            <span className="text-2xl text-omniv-gold/90">◎</span>
+          ) : (
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-white/80">
+              {PUBLICATION_LABELS[pub.type].slice(0, 3)}
+            </span>
+          )}
+        </div>
       </div>
       <div className="min-w-0 flex-1">
         <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
@@ -100,7 +128,7 @@ export function FeedCompactCard({ pub }: { pub: Publication }) {
           {pub.title}
         </p>
         <p className="truncate text-[12px] text-zinc-500">
-          {publisher?.name}
+          {name}
           {pub.meta ? ` · ${pub.meta}` : ""}
           {publisher?.location ? ` · ${publisher.location}` : ""}
         </p>
@@ -130,16 +158,17 @@ export function FeedCompactCard({ pub }: { pub: Publication }) {
 }
 
 /** Standard card */
-export function FeedCard({ pub }: { pub: Publication }) {
+export function FeedCard({ pub }: { pub: PubWithCover }) {
   const publisher = getEntityById(pub.publisherId);
-  const cover = TONE[pub.type] ?? "from-zinc-700 to-black";
+  const name = pub.publisherName || publisher?.name;
 
   return (
     <Link
       href={publicationPath(pub)}
       className="group flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06] transition hover:ring-white/15"
     >
-      <div className={`relative aspect-[16/10] bg-gradient-to-br ${cover}`}>
+      <div className="relative aspect-[16/10]">
+        <CoverBg pub={pub} className="absolute inset-0" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1),transparent_55%)]" />
         <span className="absolute left-2.5 top-2.5 rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90">
           {PUBLICATION_LABELS[pub.type]}
@@ -153,7 +182,7 @@ export function FeedCard({ pub }: { pub: Publication }) {
           {pub.summary}
         </p>
         <div className="mt-auto flex items-center gap-2 pt-3 text-[12px] text-zinc-500">
-          {publisher && <span className="truncate">{publisher.name}</span>}
+          {name && <span className="truncate">{name}</span>}
           {pub.meta && (
             <>
               <span className="text-zinc-700">·</span>
