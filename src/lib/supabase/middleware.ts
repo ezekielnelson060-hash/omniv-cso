@@ -82,6 +82,13 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirect);
   }
 
+  // Spec: logged-in landing is /home
+  if (user && path === "/") {
+    const redirect = request.nextUrl.clone();
+    redirect.pathname = "/home";
+    return NextResponse.redirect(redirect);
+  }
+
   if (user && isAuthRoute) {
     const redirect = request.nextUrl.clone();
     const next = request.nextUrl.searchParams.get("next");
