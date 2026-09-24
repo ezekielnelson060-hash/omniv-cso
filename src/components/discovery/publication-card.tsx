@@ -6,6 +6,11 @@ import {
 } from "@/lib/discovery/types";
 import { getEntityById } from "@/lib/discovery/seed";
 
+type PubWithCover = Publication & {
+  coverUrl?: string;
+  publisherName?: string;
+};
+
 const TONE: Record<string, string> = {
   article: "from-sky-600/70 to-slate-900",
   music: "from-fuchsia-500/70 to-purple-950",
@@ -18,8 +23,9 @@ const TONE: Record<string, string> = {
   file: "from-cyan-600/50 to-slate-900",
 };
 
-export function PublicationCard({ pub }: { pub: Publication }) {
+export function PublicationCard({ pub }: { pub: PubWithCover }) {
   const publisher = getEntityById(pub.publisherId);
+  const name = pub.publisherName || publisher?.name || "Publisher";
   const cover = TONE[pub.type] ?? "from-zinc-600 to-zinc-900";
   const isMusic = pub.type === "music";
   const isEvent = pub.type === "event";
@@ -30,9 +36,17 @@ export function PublicationCard({ pub }: { pub: Publication }) {
       href={publicationPath(pub)}
       className="group flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06] transition hover:ring-white/15"
     >
-      <div
-        className={`relative flex aspect-[16/9] items-end bg-gradient-to-br ${cover} p-3`}
-      >
+      <div className="relative flex aspect-[16/9] items-end overflow-hidden p-3">
+        {pub.coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={pub.coverUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <div className={`absolute inset-0 bg-gradient-to-br ${cover}`} />
+        )}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1),transparent_55%)]" />
         {isMusic && (
           <span className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white">
@@ -64,7 +78,7 @@ export function PublicationCard({ pub }: { pub: Publication }) {
         </p>
         <div className="mt-auto flex items-center justify-between gap-2 pt-3">
           <p className="truncate text-[12px] text-zinc-500">
-            {publisher?.name ?? "Publisher"}
+            {name}
             {pub.meta ? ` · ${pub.meta}` : ""}
           </p>
         </div>
