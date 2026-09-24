@@ -4,9 +4,60 @@ import { slugify } from "@/lib/discovery/db";
 import {
   ENTITY_TYPES,
   INTENT_KINDS,
+  PUBLISHER_TYPES,
   type EntityType,
   type IntentKind,
 } from "@/lib/discovery/types";
+
+export async function GET() {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ auth: false, entities: [] });
+    }
+
+    const { data, error } = await supabase
+      .from("discovery_entities")
+      .select(
+        "id, type, slug, name, tagline, location, about, intents, tags, heat, published_at"
+      )
+      .eq("owner_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("entities list", error);
+      return NextResponse.json({
+        auth: true,
+        entities: [],
+        error: error.message,
+      });
+    }
+
+    const entities = (data || []).map((r) => ({
+      id: r.id,
+      type: r.type,
+      slug: r.slug,
+      name: r.name,
+      tagline: r.tagline,
+      location: r.location,
+      about: r.about,
+      intents: r.intents || [],
+      tags: r.tags || [],
+      heat: r.heat,
+      publishedAt: r.published_at?.slice?.(0, 10),
+      path: `/e/${r.type}/${r.slug}`,
+    }));
+
+    return NextResponse.json({ auth: true, entities });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ auth: false, entities: [] });
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -36,9 +87,15 @@ export async function POST(req: Request) {
     if (!name || name.length < 2) {
       return NextResponse.json({ error: "Name required" }, { status: 400 });
     }
-    if (!tagline) {
-      return NextResponse.json({ error: "Tagline required" }, { status: 400 });
-    }
+
+    const isPublisher = (PUBLISHER_TYPES as readonly string[]).includes(type);
+    const finalTagline =
+      tagline ||
+      (isPublisher
+        ? type === "person"
+          ? "On Omniv"
+          : "Publisher on Omniv"
+        : "On Omniv");
 
     let slug = slugify(name) || `entity-${Date.now()}`;
     const intents =
@@ -51,10 +108,16 @@ export async function POST(req: Request) {
       .filter(Boolean)
       .slice(0, 8);
     const links = linkHref
-      ? [{ label: "Website", href: linkHref.startsWith("http") ? linkHref : `https://${linkHref}` }]
+      ? [
+          {
+            label: "Website",
+            href: linkHref.startsWith("http")
+              ? linkHref
+              : `https://${linkHref}`,
+          },
+        ]
       : [];
 
-    // Ensure unique slug
     for (let i = 0; i < 5; i++) {
       const trySlug = i === 0 ? slug : `${slug}-${i + 1}`;
       const { data: existing } = await supabase
@@ -76,15 +139,15 @@ export async function POST(req: Request) {
         type,
         slug,
         name,
-        tagline,
+        tagline: finalTagline,
         location,
-        about: about || tagline,
+        about: about || finalTagline,
         intents,
         tags,
         links,
         heat: 10,
       })
-      .select("type, slug")
+      .select("id, type, slug, name")
       .single();
 
     if (error) {
@@ -102,6 +165,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
+      entity: data,
       path: `/e/${data.type}/${data.slug}`,
     });
   } catch (e) {
