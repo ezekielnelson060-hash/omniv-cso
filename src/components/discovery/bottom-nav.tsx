@@ -2,14 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ComponentType } from "react";
 
-const ITEMS = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: ComponentType<{ active?: boolean }> | null;
+  primary?: boolean;
+};
+
+const ITEMS: NavItem[] = [
   { href: "/home", label: "Home", icon: HomeIcon },
   { href: "/explore", label: "Explore", icon: ExploreIcon },
   { href: "/publish", label: "Publish", icon: null, primary: true },
   { href: "/saved", label: "Saved", icon: SavedIcon },
   { href: "/activity", label: "Activity", icon: ActivityIcon },
-] as const;
+];
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -33,7 +41,8 @@ export function BottomNav() {
           const active =
             pathname === item.href ||
             (item.href !== "/home" && pathname.startsWith(item.href));
-          const Icon = item.icon!;
+          const Icon = item.icon;
+          if (!Icon) return null;
           return (
             <Link
               key={item.href}
