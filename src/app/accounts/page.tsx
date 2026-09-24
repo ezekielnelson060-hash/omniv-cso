@@ -11,6 +11,10 @@ import {
   PUBLISHER_TYPES,
   type PublisherType,
 } from "@/lib/discovery/types";
+import {
+  readActiveAccount,
+  writeActiveAccount,
+} from "@/lib/discovery/active-account";
 
 type EntityRow = {
   id: string;
@@ -34,6 +38,7 @@ export default function AccountsPage() {
   const [about, setAbout] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   async function load() {
     try {
@@ -49,7 +54,19 @@ export default function AccountsPage() {
 
   useEffect(() => {
     void load();
+    setActiveId(readActiveAccount()?.id ?? null);
   }, []);
+
+  function switchTo(e: EntityRow) {
+    writeActiveAccount({
+      id: e.id,
+      type: e.type,
+      slug: e.slug,
+      name: e.name,
+      path: e.path,
+    });
+    setActiveId(e.id);
+  }
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -75,6 +92,16 @@ export default function AccountsPage() {
       setTagline("");
       setLocation("");
       setAbout("");
+      if (data.entity) {
+        writeActiveAccount({
+          id: data.entity.id,
+          type: data.entity.type,
+          slug: data.entity.slug,
+          name: data.entity.name,
+          path: data.path || `/e/${data.entity.type}/${data.entity.slug}`,
+        });
+        setActiveId(data.entity.id);
+      }
       await load();
       if (data.path) router.push(data.path);
     } catch {
@@ -112,8 +139,8 @@ export default function AccountsPage() {
 
         <main className="mx-auto max-w-lg px-4 pb-28 pt-5 md:max-w-2xl md:px-6">
           <p className="text-[14px] leading-relaxed text-zinc-400">
-            One login. Multiple presence on Omniv — your personal profile,
-            company, brand, or project. Publish under the right one every time.
+            Switch like Instagram or X. Everything you publish stays under the
+            active account — person, company, brand, or project.
           </p>
 
           {auth === false && (
@@ -139,27 +166,51 @@ export default function AccountsPage() {
                   </p>
                 )}
 
-                {entities.map((e) => (
-                  <Link
-                    key={e.id}
-                    href={e.path}
-                    className="flex items-center gap-3 rounded-2xl bg-white/[0.03] p-3.5 ring-1 ring-white/[0.08] transition hover:ring-white/15"
-                  >
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold/20 text-base font-semibold text-omniv-gold">
-                      {e.name.charAt(0)}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[15px] font-semibold text-white">
-                        {e.name}
-                      </p>
-                      <p className="truncate text-[12px] text-zinc-500">
-                        <span className="capitalize">{e.type}</span>
-                        {e.tagline ? ` · ${e.tagline}` : ""}
-                      </p>
+                {entities.map((e) => {
+                  const isActive = activeId === e.id;
+                  return (
+                    <div
+                      key={e.id}
+                      className={`flex items-center gap-3 rounded-2xl p-3.5 ring-1 transition ${
+                        isActive
+                          ? "bg-omniv-gold/10 ring-omniv-gold/35"
+                          : "bg-white/[0.03] ring-white/[0.08]"
+                      }`}
+                    >
+                      <Link
+                        href={e.path}
+                        className="flex min-w-0 flex-1 items-center gap-3"
+                      >
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold/20 text-base font-semibold text-omniv-gold">
+                          {e.name.charAt(0)}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[15px] font-semibold text-white">
+                            {e.name}
+                            {isActive && (
+                              <span className="ml-2 text-[11px] font-medium text-omniv-gold">
+                                Active
+                              </span>
+                            )}
+                          </p>
+                          <p className="truncate text-[12px] text-zinc-500">
+                            <span className="capitalize">{e.type}</span>
+                            {e.tagline ? ` · ${e.tagline}` : ""}
+                          </p>
+                        </div>
+                      </Link>
+                      {!isActive && (
+                        <button
+                          type="button"
+                          onClick={() => switchTo(e)}
+                          className="shrink-0 rounded-full bg-omniv-gold px-3 py-1.5 text-[12px] font-semibold text-black"
+                        >
+                          Switch
+                        </button>
+                      )}
                     </div>
-                    <span className="text-zinc-600">›</span>
-                  </Link>
-                ))}
+                  );
+                })}
               </div>
 
               {!showForm ? (
@@ -178,7 +229,6 @@ export default function AccountsPage() {
                   <p className="text-[13px] font-medium text-white">
                     New account
                   </p>
-
                   <div>
                     <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
                       Type
@@ -200,24 +250,16 @@ export default function AccountsPage() {
                       ))}
                     </div>
                   </div>
-
                   <label className="block">
                     <span className="text-[12px] text-zinc-400">Name *</span>
                     <input
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder={
-                        type === "person"
-                          ? "Your name"
-                          : type === "company"
-                            ? "Company name"
-                            : "Name"
-                      }
+                      placeholder={type === "person" ? "Your name" : "Name"}
                       className="mt-1.5 h-11 w-full rounded-xl bg-white/[0.04] px-3.5 text-[14px] text-white outline-none ring-1 ring-white/[0.08] focus:ring-omniv-gold/40"
                     />
                   </label>
-
                   <label className="block">
                     <span className="text-[12px] text-zinc-400">Tagline</span>
                     <input
@@ -227,7 +269,6 @@ export default function AccountsPage() {
                       className="mt-1.5 h-11 w-full rounded-xl bg-white/[0.04] px-3.5 text-[14px] text-white outline-none ring-1 ring-white/[0.08] focus:ring-omniv-gold/40"
                     />
                   </label>
-
                   <label className="block">
                     <span className="text-[12px] text-zinc-400">Location</span>
                     <input
@@ -237,7 +278,6 @@ export default function AccountsPage() {
                       className="mt-1.5 h-11 w-full rounded-xl bg-white/[0.04] px-3.5 text-[14px] text-white outline-none ring-1 ring-white/[0.08] focus:ring-omniv-gold/40"
                     />
                   </label>
-
                   <label className="block">
                     <span className="text-[12px] text-zinc-400">About</span>
                     <textarea
@@ -248,11 +288,9 @@ export default function AccountsPage() {
                       className="mt-1.5 w-full rounded-xl bg-white/[0.04] px-3.5 py-2.5 text-[14px] text-white outline-none ring-1 ring-white/[0.08] focus:ring-omniv-gold/40"
                     />
                   </label>
-
                   {error && (
                     <p className="text-[13px] text-red-400">{error}</p>
                   )}
-
                   <div className="flex gap-2">
                     <button
                       type="button"
