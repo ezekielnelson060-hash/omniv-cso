@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { NetworkHeader } from "@/components/discovery/network-header";
 import { SiteFooter } from "@/components/site-footer";
+import { SaveButton } from "@/components/discovery/save-button";
+import { FollowButton } from "@/components/discovery/follow-button";
 import { getEntityById, getPublication } from "@/lib/discovery/seed";
 import {
   PUBLICATION_LABELS,
@@ -28,12 +30,22 @@ export default async function PublicationPage({ params }: Props) {
     <div className="min-h-dvh bg-[#050505] text-zinc-100">
       <NetworkHeader />
       <main className="mx-auto max-w-2xl px-4 pb-20 pt-10">
-        <Link
-          href="/explore"
-          className="text-[12px] text-zinc-500 hover:text-omniv-gold"
-        >
-          ← Explore
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link
+            href="/explore"
+            className="text-[12px] text-zinc-500 hover:text-omniv-gold"
+          >
+            ← Explore
+          </Link>
+          <SaveButton
+            kind="publication"
+            type={p.type}
+            slug={p.slug}
+            name={p.title}
+            pubType={p.type}
+            variant="icon"
+          />
+        </div>
 
         <p className="mt-8 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
           {PUBLICATION_LABELS[p.type]}
@@ -48,18 +60,30 @@ export default async function PublicationPage({ params }: Props) {
         </p>
 
         {publisher && (
-          <Link
-            href={entityPath(publisher)}
-            className="mt-6 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 transition hover:border-white/25"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
-              {publisher.name.slice(0, 1)}
-            </div>
-            <div>
-              <p className="text-[14px] font-medium text-white">{publisher.name}</p>
-              <p className="text-[12px] text-zinc-500">{publisher.tagline}</p>
-            </div>
-          </Link>
+          <div className="mt-6 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+            <Link
+              href={entityPath(publisher)}
+              className="flex min-w-0 flex-1 items-center gap-3 transition hover:opacity-90"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
+                {publisher.name.slice(0, 1)}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-[14px] font-medium text-white">
+                  {publisher.name}
+                </p>
+                <p className="truncate text-[12px] text-zinc-500">
+                  {publisher.tagline}
+                </p>
+              </div>
+            </Link>
+            <FollowButton
+              type={publisher.type}
+              slug={publisher.slug}
+              name={publisher.name}
+              id={publisher.id}
+            />
+          </div>
         )}
 
         {p.body && (
