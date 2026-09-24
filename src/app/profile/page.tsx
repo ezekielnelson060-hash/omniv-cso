@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
+import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import {
   readFollows,
   readSaved,
@@ -30,15 +31,45 @@ export default function ProfilePage() {
     const p = readProfile();
     setProfile(p);
     setDraft(p);
-    setFollows(readFollows());
-    setSaved(readSaved());
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const [fRes, sRes] = await Promise.all([
+          fetch("/api/discovery/follow"),
+          fetch("/api/discovery/save"),
+        ]);
+        const fData = await fRes.json();
+        const sData = await sRes.json();
+        if (cancelled) return;
+        if (fData.auth && Array.isArray(fData.follows) && fData.follows.length) {
+          setFollows(fData.follows as FollowedRef[]);
+        } else {
+          setFollows(readFollows());
+        }
+        if (sData.auth && Array.isArray(sData.saves) && sData.saves.length) {
+          setSaved(sData.saves as SavedItem[]);
+        } else {
+          setSaved(readSaved());
+        }
+      } catch {
+        if (!cancelled) {
+          setFollows(readFollows());
+          setSaved(readSaved());
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function saveEdit() {
     if (!draft) return;
     const clean: LocalProfile = {
       ...draft,
-      handle: draft.handle.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase() || "explorer",
+      handle:
+        draft.handle.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase() || "explorer",
       displayName: draft.displayName.trim() || "Explorer",
     };
     writeProfile(clean);
@@ -58,246 +89,246 @@ export default function ProfilePage() {
   const initial = profile.displayName.charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-dvh bg-[#050505] text-zinc-100">
-      {/* Cover */}
-      <div className="relative h-36 overflow-hidden bg-gradient-to-br from-omniv-gold/30 via-zinc-900 to-black sm:h-44">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_30%,rgba(255,200,50,0.25),transparent_55%)]" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA0KSIvPjwvc3ZnPg==')] opacity-60" />
-        <Link
-          href="/home"
-          className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm"
-          aria-label="Back"
-        >
-          ←
-        </Link>
-        <div className="absolute right-4 top-4">
-          <Image src="/logo.svg" alt="" width={24} height={24} className="opacity-80" />
-        </div>
-      </div>
-
-      <main className="relative mx-auto max-w-lg px-4 pb-28 md:max-w-2xl">
-        {/* Avatar overlaps cover */}
-        <div className="-mt-12 flex items-end justify-between">
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 text-3xl font-semibold text-black ring-4 ring-[#050505]">
-            {initial}
+    <DiscoveryShell>
+      <div className="min-h-dvh bg-[#050505] text-zinc-100">
+        <div className="relative h-36 overflow-hidden bg-gradient-to-br from-omniv-gold/30 via-zinc-900 to-black sm:h-44">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_30%,rgba(255,200,50,0.25),transparent_55%)]" />
+          <Link
+            href="/home"
+            className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm md:hidden"
+            aria-label="Back"
+          >
+            ←
+          </Link>
+          <div className="absolute right-4 top-4 md:hidden">
+            <Image src="/logo.svg" alt="" width={24} height={24} className="opacity-80" />
           </div>
-          {!editing ? (
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="mb-1 rounded-full border border-white/20 px-4 py-2 text-[13px] font-medium text-white transition hover:border-white/40"
-            >
-              Edit Profile
-            </button>
+        </div>
+
+        <main className="relative mx-auto max-w-lg px-4 pb-28 md:max-w-2xl md:px-6">
+          <div className="-mt-12 flex items-end justify-between">
+            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 text-3xl font-semibold text-black ring-4 ring-[#050505]">
+              {initial}
+            </div>
+            {!editing ? (
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                className="mb-1 rounded-full border border-white/20 px-4 py-2 text-[13px] font-medium text-white transition hover:border-white/40"
+              >
+                Edit Profile
+              </button>
+            ) : (
+              <div className="mb-1 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDraft(profile);
+                    setEditing(false);
+                  }}
+                  className="rounded-full border border-white/15 px-3 py-2 text-[13px] text-zinc-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveEdit}
+                  className="rounded-full bg-omniv-gold px-4 py-2 text-[13px] font-semibold text-black"
+                >
+                  Save
+                </button>
+              </div>
+            )}
+          </div>
+
+          {editing ? (
+            <div className="mt-5 space-y-3">
+              <Field
+                label="Display name"
+                value={draft.displayName}
+                onChange={(v) => setDraft({ ...draft, displayName: v })}
+              />
+              <Field
+                label="Handle"
+                value={draft.handle}
+                onChange={(v) => setDraft({ ...draft, handle: v })}
+                prefix="@"
+              />
+              <Field
+                label="Bio"
+                value={draft.bio}
+                onChange={(v) => setDraft({ ...draft, bio: v })}
+                multiline
+              />
+              <Field
+                label="Location"
+                value={draft.location}
+                onChange={(v) => setDraft({ ...draft, location: v })}
+              />
+            </div>
           ) : (
-            <div className="mb-1 flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setDraft(profile);
-                  setEditing(false);
-                }}
-                className="rounded-full border border-white/15 px-3 py-2 text-[13px] text-zinc-400"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={saveEdit}
-                className="rounded-full bg-omniv-gold px-4 py-2 text-[13px] font-semibold text-black"
-              >
-                Save
-              </button>
-            </div>
-          )}
-        </div>
+            <>
+              <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white">
+                {profile.displayName}
+              </h1>
+              <p className="text-[14px] text-zinc-500">@{profile.handle}</p>
+              <p className="mt-3 text-[14px] leading-relaxed text-zinc-300">
+                {profile.bio}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-3 text-[13px] text-zinc-500">
+                {profile.location && <span>📍 {profile.location}</span>}
+                <span>
+                  Joined{" "}
+                  {new Date(profile.joinedAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
 
-        {editing ? (
-          <div className="mt-5 space-y-3">
-            <Field
-              label="Display name"
-              value={draft.displayName}
-              onChange={(v) => setDraft({ ...draft, displayName: v })}
-            />
-            <Field
-              label="Handle"
-              value={draft.handle}
-              onChange={(v) => setDraft({ ...draft, handle: v })}
-              prefix="@"
-            />
-            <Field
-              label="Bio"
-              value={draft.bio}
-              onChange={(v) => setDraft({ ...draft, bio: v })}
-              multiline
-            />
-            <Field
-              label="Location"
-              value={draft.location}
-              onChange={(v) => setDraft({ ...draft, location: v })}
-            />
+              <div className="mt-5 flex gap-6">
+                <Link href="/following" className="hover:opacity-90">
+                  <span className="text-[16px] font-semibold text-white">
+                    {follows.length}
+                  </span>{" "}
+                  <span className="text-[13px] text-zinc-500">Following</span>
+                </Link>
+                <Link href="/saved" className="hover:opacity-90">
+                  <span className="text-[16px] font-semibold text-white">
+                    {saved.length}
+                  </span>{" "}
+                  <span className="text-[13px] text-zinc-500">Saved</span>
+                </Link>
+              </div>
+            </>
+          )}
+
+          <div className="mt-8 flex gap-1 border-b border-white/10">
+            {(
+              [
+                { id: "posts" as const, label: "Posts" },
+                { id: "saved" as const, label: "Saved" },
+                { id: "activity" as const, label: "Activity" },
+              ] as const
+            ).map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={`border-b-2 px-4 py-2.5 text-[13px] font-medium transition ${
+                  tab === t.id
+                    ? "border-omniv-gold text-white"
+                    : "border-transparent text-zinc-500"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
-        ) : (
-          <>
-            <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white">
-              {profile.displayName}
-            </h1>
-            <p className="text-[14px] text-zinc-500">@{profile.handle}</p>
-            <p className="mt-3 text-[14px] leading-relaxed text-zinc-300">
-              {profile.bio}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-3 text-[13px] text-zinc-500">
-              {profile.location && <span>📍 {profile.location}</span>}
-              <span>
-                Joined{" "}
-                {new Date(profile.joinedAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  year: "numeric",
-                })}
-              </span>
-            </div>
 
-            <div className="mt-5 flex gap-6">
-              <div>
-                <span className="text-[16px] font-semibold text-white">
-                  {follows.length}
-                </span>{" "}
-                <span className="text-[13px] text-zinc-500">Following</span>
-              </div>
-              <div>
-                <span className="text-[16px] font-semibold text-white">
-                  {saved.length}
-                </span>{" "}
-                <span className="text-[13px] text-zinc-500">Saved</span>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Tabs */}
-        <div className="mt-8 flex gap-1 border-b border-white/10">
-          {(
-            [
-              { id: "posts" as const, label: "Posts" },
-              { id: "saved" as const, label: "Saved" },
-              { id: "activity" as const, label: "Activity" },
-            ] as const
-          ).map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={`border-b-2 px-4 py-2.5 text-[13px] font-medium transition ${
-                tab === t.id
-                  ? "border-omniv-gold text-white"
-                  : "border-transparent text-zinc-500"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-5">
-          {tab === "posts" && (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 text-center">
-              <p className="text-[14px] text-zinc-400">
-                You haven't published yet.
-              </p>
-              <Link
-                href="/publish"
-                className="mt-4 inline-flex h-10 items-center rounded-full bg-omniv-gold px-5 text-[13px] font-semibold text-black"
-              >
-                Publish something
-              </Link>
-            </div>
-          )}
-
-          {tab === "saved" &&
-            (saved.length === 0 ? (
-              <p className="py-8 text-center text-[14px] text-zinc-500">
-                Nothing saved.{" "}
-                <Link href="/explore" className="text-omniv-gold">
-                  Explore
+          <div className="mt-5">
+            {tab === "posts" && (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 text-center">
+                <p className="text-[14px] text-zinc-400">
+                  You haven't published yet.
+                </p>
+                <Link
+                  href="/publish"
+                  className="mt-4 inline-flex h-10 items-center rounded-full bg-omniv-gold px-5 text-[13px] font-semibold text-black"
+                >
+                  Publish something
                 </Link>
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {saved.slice(0, 20).map((x) => (
-                  <li key={`${x.kind}-${x.slug}`}>
+              </div>
+            )}
+
+            {tab === "saved" &&
+              (saved.length === 0 ? (
+                <p className="py-8 text-center text-[14px] text-zinc-500">
+                  Nothing saved.{" "}
+                  <Link href="/explore" className="text-omniv-gold">
+                    Explore
+                  </Link>
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {saved.slice(0, 20).map((x) => (
+                    <li key={`${x.kind}-${x.slug}`}>
+                      <Link
+                        href={
+                          x.kind === "publication"
+                            ? `/p/${x.slug}`
+                            : `/e/${x.type}/${x.slug}`
+                        }
+                        className="flex items-center justify-between rounded-xl border border-white/10 px-4 py-3 transition hover:border-white/25"
+                      >
+                        <span className="truncate text-[14px] text-white">
+                          {x.name}
+                        </span>
+                        <span className="shrink-0 text-[11px] capitalize text-zinc-500">
+                          {x.kind === "publication"
+                            ? x.pubType ?? x.type
+                            : x.type}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                  <li>
                     <Link
-                      href={
-                        x.kind === "publication"
-                          ? `/p/${x.slug}`
-                          : `/e/${x.type}/${x.slug}`
-                      }
-                      className="flex items-center justify-between rounded-xl border border-white/10 px-4 py-3 transition hover:border-white/25"
+                      href="/saved"
+                      className="block py-2 text-center text-[13px] text-omniv-gold"
                     >
-                      <span className="truncate text-[14px] text-white">
-                        {x.name}
-                      </span>
-                      <span className="shrink-0 text-[11px] capitalize text-zinc-500">
-                        {x.kind === "publication" ? x.pubType ?? x.type : x.type}
-                      </span>
+                      See all saved →
                     </Link>
                   </li>
-                ))}
-                <li>
-                  <Link
-                    href="/saved"
-                    className="block py-2 text-center text-[13px] text-omniv-gold"
-                  >
-                    See all saved →
-                  </Link>
-                </li>
-              </ul>
-            ))}
+                </ul>
+              ))}
 
-          {tab === "activity" &&
-            (follows.length === 0 ? (
-              <p className="py-8 text-center text-[14px] text-zinc-500">
-                Follow publishers to build your network.{" "}
-                <Link href="/explore" className="text-omniv-gold">
-                  Explore
-                </Link>
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {follows.map((f) => (
-                  <li key={`${f.type}-${f.slug}`}>
+            {tab === "activity" &&
+              (follows.length === 0 ? (
+                <p className="py-8 text-center text-[14px] text-zinc-500">
+                  Follow publishers to build your network.{" "}
+                  <Link href="/explore" className="text-omniv-gold">
+                    Explore
+                  </Link>
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {follows.map((f) => (
+                    <li key={`${f.type}-${f.slug}`}>
+                      <Link
+                        href={`/e/${f.type}/${f.slug}`}
+                        className="flex items-center gap-3 rounded-xl border border-white/10 px-3 py-3 transition hover:border-white/25"
+                      >
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
+                          {f.name.charAt(0)}
+                        </span>
+                        <div>
+                          <p className="text-[14px] font-medium text-white">
+                            {f.name}
+                          </p>
+                          <p className="text-[12px] capitalize text-zinc-500">
+                            {f.type}
+                          </p>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                  <li>
                     <Link
-                      href={`/e/${f.type}/${f.slug}`}
-                      className="flex items-center gap-3 rounded-xl border border-white/10 px-3 py-3 transition hover:border-white/25"
+                      href="/activity"
+                      className="block py-2 text-center text-[13px] text-omniv-gold"
                     >
-                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
-                        {f.name.charAt(0)}
-                      </span>
-                      <div>
-                        <p className="text-[14px] font-medium text-white">
-                          {f.name}
-                        </p>
-                        <p className="text-[12px] capitalize text-zinc-500">
-                          {f.type}
-                        </p>
-                      </div>
+                      Open activity feed →
                     </Link>
                   </li>
-                ))}
-                <li>
-                  <Link
-                    href="/activity"
-                    className="block py-2 text-center text-[13px] text-omniv-gold"
-                  >
-                    Open activity feed →
-                  </Link>
-                </li>
-              </ul>
-            ))}
-        </div>
-      </main>
+                </ul>
+              ))}
+          </div>
+        </main>
 
-      <BottomNav />
-    </div>
+        <BottomNav />
+      </div>
+    </DiscoveryShell>
   );
 }
 
