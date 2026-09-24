@@ -448,6 +448,16 @@ export default function PublishPage() {
                 <Field label="Release date"><input type="date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} className={inputCls} /></Field>
               </>
             )}
+            {pubType === "video" && (
+              <Field label="Video URL (YouTube / Vimeo / MP4)">
+                <input
+                  value={mediaUrl || ""}
+                  onChange={(e) => setMediaUrl(e.target.value || null)}
+                  placeholder="https://…"
+                  className={inputCls}
+                />
+              </Field>
+            )}
             {pubType === "product" && (
               <div>
                 <p className={labelCls}>Price</p>
