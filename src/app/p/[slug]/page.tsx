@@ -57,8 +57,7 @@ export default async function PublicationPage({ params }: Props) {
   if (!p) notFound();
 
   const publisher = getEntityById(p.publisherId);
-  const publisherName =
-    p.publisherName || publisher?.name || "Publisher";
+  const publisherName = p.publisherName || publisher?.name || "Publisher";
   const fromPublisher = publisher
     ? publicationsByPublisher(publisher.id).filter((x) => x.id !== p.id)
     : [];
@@ -83,11 +82,28 @@ export default async function PublicationPage({ params }: Props) {
   const path = publicationPath(p);
   const mediaUrl = p.mediaUrl;
   const isPdf = mediaUrl?.toLowerCase().includes(".pdf");
+  const ytMatch = mediaUrl?.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{6,})/i
+  );
+  const vimeoMatch = mediaUrl?.match(/vimeo\.com\/(?:video\/)?(\d+)/i);
+  const isEmbed = Boolean(ytMatch || vimeoMatch);
+  const embedSrc = ytMatch
+    ? `https://www.youtube.com/embed/${ytMatch[1]}`
+    : vimeoMatch
+      ? `https://player.vimeo.com/video/${vimeoMatch[1]}`
+      : null;
   const isAudio =
     mediaUrl &&
     !isPdf &&
+    !isEmbed &&
     (p.type === "music" ||
       /\.(mp3|wav|m4a|ogg|aac)(\?|$)/i.test(mediaUrl));
+  const isDirectVideo =
+    mediaUrl &&
+    !isPdf &&
+    !isEmbed &&
+    !isAudio &&
+    (p.type === "video" || /\.(mp4|webm)(\?|$)/i.test(mediaUrl));
 
   return (
     <div className="min-h-dvh bg-[#050505] text-zinc-100">
@@ -158,6 +174,28 @@ export default async function PublicationPage({ params }: Props) {
       </div>
 
       <main className="mx-auto max-w-2xl px-4 pb-28 pt-6">
+        {isEmbed && embedSrc && (
+          <div className="mb-8 overflow-hidden rounded-2xl ring-1 ring-white/[0.08]">
+            <div className="aspect-video w-full">
+              <iframe
+                src={embedSrc}
+                title={p.title}
+                className="h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        )}
+
+        {isDirectVideo && mediaUrl && (
+          <div className="mb-8 overflow-hidden rounded-2xl ring-1 ring-white/[0.08]">
+            <video controls className="w-full" src={mediaUrl} preload="metadata">
+              Your browser does not support video.
+            </video>
+          </div>
+        )}
+
         {isAudio && mediaUrl && (
           <div className="mb-8 overflow-hidden rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/[0.08]">
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
