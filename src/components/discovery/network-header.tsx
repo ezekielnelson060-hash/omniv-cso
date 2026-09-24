@@ -32,6 +32,12 @@ export function NetworkHeader() {
             Explore
           </Link>
           <Link
+            href="/following"
+            className="hidden rounded-full px-3 py-1.5 text-[13px] text-zinc-400 transition hover:text-white md:inline"
+          >
+            Following
+          </Link>
+          <Link
             href="/saved"
             className="hidden rounded-full px-3 py-1.5 text-[13px] text-zinc-400 transition hover:text-white sm:inline"
           >
