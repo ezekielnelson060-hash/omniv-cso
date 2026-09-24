@@ -5,11 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { readFollows, type FollowedRef } from "@/lib/discovery/local-graph";
-import {
-  SEED_ENTITIES,
-  SEED_PUBLICATIONS,
-  publicationsByPublisher,
-} from "@/lib/discovery/seed";
+import { SEED_ENTITIES, SEED_PUBLICATIONS } from "@/lib/discovery/seed";
 import { PUBLICATION_LABELS, publicationPath } from "@/lib/discovery/types";
 
 export default function ActivityPage() {
