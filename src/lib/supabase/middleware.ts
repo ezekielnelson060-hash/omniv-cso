@@ -58,6 +58,8 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/audit") ||
     path.startsWith("/verify") ||
     path.startsWith("/explore") ||
+    path.startsWith("/home") ||
+    path.startsWith("/activity") ||
     path.startsWith("/e/") ||
     path.startsWith("/p/") ||
     path.startsWith("/publish") ||
@@ -83,7 +85,7 @@ export async function updateSession(request: NextRequest) {
     const redirect = request.nextUrl.clone();
     const next = request.nextUrl.searchParams.get("next");
     redirect.pathname =
-      next && next.startsWith("/") && !next.startsWith("//") ? next : "/publish";
+      next && next.startsWith("/") && !next.startsWith("//") ? next : "/home";
     redirect.search = "";
     return NextResponse.redirect(redirect);
   }
