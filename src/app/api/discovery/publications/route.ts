@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     const meta = String(body.meta || "").trim() || null;
     const tagsRaw = String(body.tags || "");
     const coverUrl = body.coverUrl ? String(body.coverUrl).trim() : null;
+    const mediaUrl = body.mediaUrl ? String(body.mediaUrl).trim() : null;
 
     if (!(PUBLICATION_TYPES as readonly string[]).includes(type)) {
       return NextResponse.json({ error: "Invalid type" }, { status: 400 });
@@ -62,7 +63,6 @@ export async function POST(req: Request) {
 
     let publisherId: string | null = null;
 
-    // Prefer explicit active-account entity (must be owned by user)
     if (requestedPublisherId) {
       const { data: owned } = await supabase
         .from("discovery_entities")
@@ -132,6 +132,7 @@ export async function POST(req: Request) {
       heat: 10,
     };
     if (coverUrl) insertRow.cover_url = coverUrl;
+    if (mediaUrl) insertRow.media_url = mediaUrl;
 
     const { data, error } = await supabase
       .from("discovery_publications")
