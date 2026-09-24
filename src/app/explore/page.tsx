@@ -4,6 +4,7 @@ import Image from "next/image";
 import { PublicationCard } from "@/components/discovery/publication-card";
 import { EntityCard } from "@/components/discovery/entity-card";
 import { BottomNav } from "@/components/discovery/bottom-nav";
+import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import {
   SEED_ENTITIES,
   SEED_PUBLICATIONS,
@@ -14,7 +15,6 @@ import {
 } from "@/lib/discovery/seed";
 import {
   EXPLORE_NAV,
-  PUBLICATION_LABELS,
   PUBLICATION_TYPES,
   type PublicationType,
 } from "@/lib/discovery/types";
@@ -121,72 +121,38 @@ function Shell({
   sort: string;
 }) {
   return (
-    <div className="min-h-dvh bg-[#050505] text-zinc-100">
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-[#050505]/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 md:max-w-2xl lg:max-w-6xl">
-          <div className="flex items-center gap-2">
-            <Image
-              src="/logo.svg"
-              alt="Omniv"
-              width={28}
-              height={28}
-              className="rounded-md md:hidden"
-            />
-            <div>
-              <h1 className="text-lg font-semibold tracking-tight text-white md:text-xl">
-                Explore
-              </h1>
-              <p className="hidden text-[12px] text-zinc-500 sm:block">
-                Find what you're interested in.
-              </p>
+    <DiscoveryShell>
+      <div className="min-h-dvh bg-[#050505] text-zinc-100">
+        <header className="sticky top-0 z-40 border-b border-white/5 bg-[#050505]/95 backdrop-blur-sm md:border-b-0">
+          <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 md:max-w-2xl md:px-6 lg:max-w-4xl">
+            <div className="flex items-center gap-2">
+              <Image
+                src="/logo.svg"
+                alt="Omniv"
+                width={28}
+                height={28}
+                className="rounded-md md:hidden"
+              />
+              <div>
+                <h1 className="text-lg font-semibold tracking-tight text-white md:text-xl">
+                  Explore
+                </h1>
+                <p className="hidden text-[12px] text-zinc-500 sm:block">
+                  Find what you're interested in.
+                </p>
+              </div>
             </div>
+            <Link
+              href="/profile"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-omniv-gold/20 text-[12px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/30"
+              aria-label="Profile"
+            >
+              ·
+            </Link>
           </div>
-          <Link
-            href="/profile"
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-omniv-gold/20 text-[12px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/30"
-            aria-label="Profile"
-          >
-            ·
-          </Link>
-        </div>
-      </header>
+        </header>
 
-      <div className="mx-auto flex max-w-6xl gap-8 px-4 pb-24 pt-4 lg:pb-16">
-        <aside className="hidden w-44 shrink-0 lg:block">
-          <div className="sticky top-20 space-y-1">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              Explore
-            </p>
-            {EXPLORE_NAV.map((item) => {
-              const active =
-                (item.href === "/explore" &&
-                  !type &&
-                  !q &&
-                  sort === "trending" &&
-                  !item.href.includes("?")) ||
-                (type && item.href.includes(`type=${type}`)) ||
-                (sort === "new" && item.href.includes("sort=new")) ||
-                (sort === "trending" &&
-                  item.href.includes("sort=trending") &&
-                  !type);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`block rounded-lg px-2 py-1.5 text-[13px] ${
-                    active
-                      ? "bg-white/10 text-white"
-                      : "text-zinc-400 hover:text-white"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        </aside>
-
-        <main className="mx-auto min-w-0 flex-1 max-w-lg md:max-w-2xl lg:max-w-none">
+        <main className="mx-auto max-w-lg px-4 pb-24 pt-4 md:max-w-2xl md:px-6 lg:max-w-4xl">
           <form action="/explore" method="get" className="flex gap-2">
             {type && <input type="hidden" name="type" value={type} />}
             <input
@@ -199,10 +165,11 @@ function Shell({
             <button
               type="submit"
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 text-zinc-400 transition hover:text-white"
-              aria-label="Filter"
+              aria-label="Search"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M4 6h16M7 12h10M10 18h4" strokeLinecap="round" />
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" strokeLinecap="round" />
               </svg>
             </button>
           </form>
@@ -227,11 +194,24 @@ function Shell({
             })}
           </div>
 
+          {/* desktop sort row */}
+          <div className="mt-3 hidden gap-2 md:flex">
+            {EXPLORE_NAV.slice(0, 6).map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-full border border-white/10 px-3 py-1 text-[12px] text-zinc-500 hover:text-white"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+
           <div className="mt-5">{children}</div>
         </main>
-      </div>
 
-      <BottomNav />
-    </div>
+        <BottomNav />
+      </div>
+    </DiscoveryShell>
   );
 }
