@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { ContactForm } from "@/components/discovery/contact-form";
 import { FollowButton } from "@/components/discovery/follow-button";
 import { SaveButton } from "@/components/discovery/save-button";
+import { FollowerCount } from "@/components/discovery/follower-count";
 import { PublicationCard } from "@/components/discovery/publication-card";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
@@ -145,6 +146,10 @@ export default async function EntityPage({ params, searchParams }: Props) {
           {e.location && (
             <p className="mt-1.5 text-[13px] text-zinc-500">📍 {e.location}</p>
           )}
+
+          <div className="mt-3">
+            <FollowerCount type={e.type} slug={e.slug} />
+          </div>
 
           <div className="mt-5 grid grid-cols-4 gap-2">
             {(
