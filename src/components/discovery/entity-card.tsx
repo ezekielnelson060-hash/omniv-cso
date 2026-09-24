@@ -24,7 +24,7 @@ export function EntityCard({ entity }: { entity: DiscoveryEntity }) {
   return (
     <Link
       href={entityPath(entity)}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0c0c0c] transition hover:border-white/25"
+      className="group flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06] transition hover:ring-white/15"
     >
       <div
         className={`relative flex aspect-[16/10] items-end bg-gradient-to-br ${cover} p-3`}
@@ -33,7 +33,7 @@ export function EntityCard({ entity }: { entity: DiscoveryEntity }) {
         <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-black/35 text-[17px] font-semibold text-white ring-1 ring-white/20">
           {initial}
         </div>
-        <span className="absolute right-3 top-3 rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90 ring-1 ring-white/15">
+        <span className="absolute right-3 top-3 rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90">
           {ENTITY_LABELS[entity.type]}
         </span>
       </div>
@@ -45,7 +45,7 @@ export function EntityCard({ entity }: { entity: DiscoveryEntity }) {
           {entity.tagline}
         </p>
         {entity.location && (
-          <p className="mt-2 text-[11px] text-zinc-600">{entity.location}</p>
+          <p className="mt-2 text-[11px] text-zinc-600">📍 {entity.location}</p>
         )}
         {primaryIntent && (
           <p className="mt-2 text-[11px] font-medium text-omniv-gold/90">
