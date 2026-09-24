@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { NetworkHeader } from "@/components/discovery/network-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ContactForm } from "@/components/discovery/contact-form";
+import { FollowButton } from "@/components/discovery/follow-button";
 import { SaveButton } from "@/components/discovery/save-button";
 import { PublicationCard } from "@/components/discovery/publication-card";
 import { getDiscoveryEntity } from "@/lib/discovery/db";
@@ -13,7 +14,6 @@ import {
   ENTITY_TYPES,
   INTENT_LABELS,
   entityPath,
-  type EntityType,
   type PublicationType,
 } from "@/lib/discovery/types";
 
@@ -75,6 +75,14 @@ export default async function EntityPage({ params, searchParams }: Props) {
   const initial = e.name.slice(0, 1).toUpperCase();
   const path = entityPath(e);
 
+  const counts = {
+    posts: pubs.length,
+    products: pubs.filter((p) => p.type === "product").length,
+    research: pubs.filter((p) => p.type === "research" || p.type === "file")
+      .length,
+    events: pubs.filter((p) => p.type === "event").length,
+  };
+
   return (
     <div className="min-h-dvh bg-[#050505] text-zinc-100">
       <NetworkHeader />
@@ -84,22 +92,53 @@ export default async function EntityPage({ params, searchParams }: Props) {
           href="/explore"
           className="text-[12px] text-zinc-500 hover:text-omniv-gold"
         >
-          \u2190 Explore
+          ← Explore
         </Link>
 
-        <div className="mt-8 flex items-start gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-omniv-gold/40 to-zinc-800 text-2xl font-semibold text-white ring-1 ring-white/10">
+        <div className="mt-8 flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-omniv-gold/50 to-zinc-800 text-3xl font-semibold text-white ring-2 ring-white/10 sm:h-16 sm:w-16 sm:rounded-2xl sm:text-2xl">
             {initial}
           </div>
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
-              {ENTITY_LABELS[e.type]}
-              {e.location ? ` \u00b7 ${e.location}` : ""}
-            </p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-white">
+          <div className="mt-4 min-w-0 sm:ml-4 sm:mt-0">
+            <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
               {e.name}
             </h1>
-            <p className="mt-2 text-[16px] text-zinc-400">{e.tagline}</p>
+            <p className="mt-1 text-[15px] text-zinc-400">{e.tagline}</p>
+            {e.location && (
+              <p className="mt-1.5 text-[13px] text-zinc-500">
+                📍 {e.location}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:justify-start">
+          <FollowButton type={e.type} slug={e.slug} name={e.name} id={e.id} />
+          <a
+            href="#contact"
+            className="inline-flex h-11 items-center rounded-full border border-white/20 px-5 text-[13px] font-medium text-white transition hover:border-white/35"
+          >
+            Contact
+          </a>
+          <SaveButton type={e.type} slug={e.slug} name={e.name} variant="icon" />
+        </div>
+
+        <div className="mt-8 flex justify-center gap-8 border-y border-white/10 py-4 sm:justify-start sm:gap-10">
+          <div className="text-center">
+            <p className="text-lg font-semibold text-white">{counts.posts}</p>
+            <p className="text-[11px] text-zinc-500">Posts</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-semibold text-white">{counts.products}</p>
+            <p className="text-[11px] text-zinc-500">Products</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-semibold text-white">{counts.research}</p>
+            <p className="text-[11px] text-zinc-500">Research</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-semibold text-white">{counts.events}</p>
+            <p className="text-[11px] text-zinc-500">Events</p>
           </div>
         </div>
 
@@ -111,23 +150,13 @@ export default async function EntityPage({ params, searchParams }: Props) {
                 className="rounded-full border border-omniv-gold/35 bg-omniv-gold/10 px-3 py-1 text-[12px] text-omniv-gold"
               >
                 {INTENT_LABELS[i.kind]}
-                {i.detail ? ` \u00b7 ${i.detail}` : ""}
+                {i.detail ? ` · ${i.detail}` : ""}
               </span>
             ))}
           </div>
         )}
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          <SaveButton type={e.type} slug={e.slug} name={e.name} />
-          <Link
-            href="/publish"
-            className="inline-flex h-11 items-center rounded-full border border-white/15 px-5 text-[13px] text-zinc-300"
-          >
-            Publish
-          </Link>
-        </div>
-
-        <div className="mt-10 flex gap-1 overflow-x-auto border-b border-white/10 pb-px">
+        <div className="mt-8 flex gap-1 overflow-x-auto border-b border-white/10 pb-px">
           {tabs.map((t) => (
             <Link
               key={t.id}
@@ -166,10 +195,10 @@ export default async function EntityPage({ params, searchParams }: Props) {
                 rel="noopener noreferrer"
                 className="block text-[14px] text-omniv-gold hover:underline"
               >
-                {l.label} \u2192
+                {l.label} →
               </a>
             ))}
-            <div className="border-t border-white/10 pt-8">
+            <div id="contact" className="border-t border-white/10 pt-8">
               <ContactForm entityName={e.name} entityPath={path} />
             </div>
           </div>
@@ -184,6 +213,12 @@ export default async function EntityPage({ params, searchParams }: Props) {
                 yet.
               </p>
             )}
+          </div>
+        )}
+
+        {activeTab !== "about" && (
+          <div id="contact" className="mt-12 border-t border-white/10 pt-8">
+            <ContactForm entityName={e.name} entityPath={path} />
           </div>
         )}
       </main>
