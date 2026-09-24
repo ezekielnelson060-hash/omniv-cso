@@ -12,6 +12,7 @@ const NAV = [
   { href: "/activity", label: "Activity" },
   { href: "/publish", label: "Publish" },
   { href: "/profile", label: "Profile" },
+  { href: "/accounts", label: "Accounts" },
 ] as const;
 
 const EXPLORE = [
