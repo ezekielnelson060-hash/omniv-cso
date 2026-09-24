@@ -60,6 +60,7 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/explore") ||
     path.startsWith("/home") ||
     path.startsWith("/activity") ||
+    path.startsWith("/following") ||
     path.startsWith("/profile") ||
     path.startsWith("/e/") ||
     path.startsWith("/p/") ||
@@ -82,7 +83,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirect);
   }
 
-  // Spec: logged-in landing is /home
   if (user && path === "/") {
     const redirect = request.nextUrl.clone();
     redirect.pathname = "/home";
