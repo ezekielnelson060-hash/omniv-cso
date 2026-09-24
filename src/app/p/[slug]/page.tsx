@@ -6,7 +6,7 @@ import { ShareButton } from "@/components/discovery/share-button";
 import { FollowButton } from "@/components/discovery/follow-button";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { createClient } from "@/lib/supabase/server";
-import { getLivePublication } from "@/lib/discovery/db";
+import { getLivePublication, type LivePublication } from "@/lib/discovery/db";
 import {
   getEntityById,
   publicationsByPublisher,
@@ -53,10 +53,12 @@ export default async function PublicationPage({ params }: Props) {
   } catch {
     /* no env */
   }
-  const p = await getLivePublication(supabase, slug);
+  const p = (await getLivePublication(supabase, slug)) as LivePublication | null;
   if (!p) notFound();
 
   const publisher = getEntityById(p.publisherId);
+  const publisherName =
+    p.publisherName || publisher?.name || "Publisher";
   const fromPublisher = publisher
     ? publicationsByPublisher(publisher.id).filter((x) => x.id !== p.id)
     : [];
@@ -79,6 +81,13 @@ export default async function PublicationPage({ params }: Props) {
 
   const hero = HERO[p.type] ?? "from-zinc-800 to-[#050505]";
   const path = publicationPath(p);
+  const mediaUrl = p.mediaUrl;
+  const isPdf = mediaUrl?.toLowerCase().includes(".pdf");
+  const isAudio =
+    mediaUrl &&
+    !isPdf &&
+    (p.type === "music" ||
+      /\.(mp3|wav|m4a|ogg|aac)(\?|$)/i.test(mediaUrl));
 
   return (
     <div className="min-h-dvh bg-[#050505] text-zinc-100">
@@ -113,7 +122,7 @@ export default async function PublicationPage({ params }: Props) {
             {p.title}
           </h1>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-zinc-300">
-            {publisher && (
+            {publisher ? (
               <Link
                 href={entityPath(publisher)}
                 className="flex items-center gap-1.5 font-medium hover:text-white"
@@ -123,6 +132,8 @@ export default async function PublicationPage({ params }: Props) {
                 </span>
                 {publisher.name}
               </Link>
+            ) : (
+              <span className="font-medium">{publisherName}</span>
             )}
             {p.meta && (
               <>
@@ -147,6 +158,33 @@ export default async function PublicationPage({ params }: Props) {
       </div>
 
       <main className="mx-auto max-w-2xl px-4 pb-28 pt-6">
+        {isAudio && mediaUrl && (
+          <div className="mb-8 overflow-hidden rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/[0.08]">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+              Listen
+            </p>
+            <audio controls className="w-full" src={mediaUrl} preload="metadata">
+              Your browser does not support audio.
+            </audio>
+          </div>
+        )}
+
+        {isPdf && mediaUrl && (
+          <a
+            href={mediaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-8 flex items-center gap-3 rounded-2xl bg-white/[0.04] px-4 py-4 ring-1 ring-white/[0.08] transition hover:ring-white/15"
+          >
+            <span className="text-2xl">📄</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-medium text-white">Open document</p>
+              <p className="truncate text-[12px] text-zinc-500">PDF</p>
+            </div>
+            <span className="text-omniv-gold">↓</span>
+          </a>
+        )}
+
         <p className="text-[16px] leading-relaxed text-zinc-400">{p.summary}</p>
 
         {p.body && (
