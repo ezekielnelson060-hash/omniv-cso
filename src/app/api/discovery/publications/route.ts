@@ -22,7 +22,10 @@ export async function POST(req: Request) {
     const title = String(body.title || "").trim();
     const summary = String(body.summary || "").trim();
     const content = String(body.body || "").trim();
-    const publisherName = String(body.publisherName || "").trim();
+    let publisherName = String(body.publisherName || "").trim();
+    const requestedPublisherId = body.publisherId
+      ? String(body.publisherId).trim()
+      : null;
     const meta = String(body.meta || "").trim() || null;
     const tagsRaw = String(body.tags || "");
     const coverUrl = body.coverUrl ? String(body.coverUrl).trim() : null;
@@ -35,12 +38,6 @@ export async function POST(req: Request) {
     }
     if (!summary) {
       return NextResponse.json({ error: "Summary required" }, { status: 400 });
-    }
-    if (!publisherName) {
-      return NextResponse.json(
-        { error: "Publisher name required" },
-        { status: 400 }
-      );
     }
 
     let slug = slugify(title) || `pub-${Date.now()}`;
@@ -63,46 +60,68 @@ export async function POST(req: Request) {
       }
     }
 
-    const pubSlug =
-      slugify(publisherName) || `publisher-${user.id.slice(0, 8)}`;
     let publisherId: string | null = null;
 
-    const { data: existingPub } = await supabase
-      .from("discovery_entities")
-      .select("id")
-      .eq("owner_id", user.id)
-      .eq("slug", pubSlug)
-      .maybeSingle();
-
-    if (existingPub?.id) {
-      publisherId = existingPub.id;
-    } else {
-      const { data: created, error: entErr } = await supabase
+    // Prefer explicit active-account entity (must be owned by user)
+    if (requestedPublisherId) {
+      const { data: owned } = await supabase
         .from("discovery_entities")
-        .insert({
-          owner_id: user.id,
-          type: "company",
-          slug: pubSlug,
-          name: publisherName,
-          tagline: "Publisher on Omniv",
-          about: "",
-          intents: [],
-          tags: [],
-          heat: 5,
-        })
+        .select("id, name")
+        .eq("id", requestedPublisherId)
+        .eq("owner_id", user.id)
+        .maybeSingle();
+      if (owned?.id) {
+        publisherId = owned.id;
+        publisherName = owned.name || publisherName;
+      }
+    }
+
+    if (!publisherId) {
+      if (!publisherName) {
+        return NextResponse.json(
+          { error: "Select an account to publish as" },
+          { status: 400 }
+        );
+      }
+      const pubSlug =
+        slugify(publisherName) || `publisher-${user.id.slice(0, 8)}`;
+      const { data: existingPub } = await supabase
+        .from("discovery_entities")
         .select("id")
-        .single();
-      if (entErr) {
-        console.error("publisher entity", entErr);
+        .eq("owner_id", user.id)
+        .eq("slug", pubSlug)
+        .maybeSingle();
+
+      if (existingPub?.id) {
+        publisherId = existingPub.id;
       } else {
-        publisherId = created.id;
+        const { data: created, error: entErr } = await supabase
+          .from("discovery_entities")
+          .insert({
+            owner_id: user.id,
+            type: "company",
+            slug: pubSlug,
+            name: publisherName,
+            tagline: "Publisher on Omniv",
+            about: "",
+            intents: [],
+            tags: [],
+            heat: 5,
+          })
+          .select("id")
+          .single();
+        if (entErr) {
+          console.error("publisher entity", entErr);
+        } else {
+          publisherId = created.id;
+        }
       }
     }
 
     const insertRow: Record<string, unknown> = {
       owner_id: user.id,
       publisher_id: publisherId,
-      publisher_name: publisherName,
+      publisher_name: publisherName || "Publisher",
       type,
       slug,
       title,
