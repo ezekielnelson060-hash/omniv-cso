@@ -25,6 +25,7 @@ export async function POST(req: Request) {
     const publisherName = String(body.publisherName || "").trim();
     const meta = String(body.meta || "").trim() || null;
     const tagsRaw = String(body.tags || "");
+    const coverUrl = body.coverUrl ? String(body.coverUrl).trim() : null;
 
     if (!(PUBLICATION_TYPES as readonly string[]).includes(type)) {
       return NextResponse.json({ error: "Invalid type" }, { status: 400 });
@@ -98,21 +99,24 @@ export async function POST(req: Request) {
       }
     }
 
+    const insertRow: Record<string, unknown> = {
+      owner_id: user.id,
+      publisher_id: publisherId,
+      publisher_name: publisherName,
+      type,
+      slug,
+      title,
+      summary,
+      body: content || null,
+      tags,
+      meta,
+      heat: 10,
+    };
+    if (coverUrl) insertRow.cover_url = coverUrl;
+
     const { data, error } = await supabase
       .from("discovery_publications")
-      .insert({
-        owner_id: user.id,
-        publisher_id: publisherId,
-        publisher_name: publisherName,
-        type,
-        slug,
-        title,
-        summary,
-        body: content || null,
-        tags,
-        meta,
-        heat: 10,
-      })
+      .insert(insertRow)
       .select("slug")
       .single();
 
