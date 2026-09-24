@@ -9,6 +9,8 @@ import { getLivePublication } from "@/lib/discovery/db";
 import {
   getEntityById,
   publicationsByPublisher,
+  SEED_PUBLICATIONS,
+  SEED_ENTITIES,
 } from "@/lib/discovery/seed";
 import {
   PUBLICATION_LABELS,
@@ -54,11 +56,28 @@ export default async function PublicationPage({ params }: Props) {
   if (!p) notFound();
 
   const publisher = getEntityById(p.publisherId);
-  const related = publisher
-    ? publicationsByPublisher(publisher.id)
-        .filter((x) => x.id !== p.id)
-        .slice(0, 3)
+  const fromPublisher = publisher
+    ? publicationsByPublisher(publisher.id).filter((x) => x.id !== p.id)
     : [];
+
+  // tag-overlap related
+  const tagSet = new Set(p.tags.map((t) => t.toLowerCase()));
+  const byTags = SEED_PUBLICATIONS.filter((x) => {
+    if (x.id === p.id) return false;
+    return x.tags.some((t) => tagSet.has(t.toLowerCase()));
+  }).slice(0, 4);
+
+  const relatedPubs = [
+    ...fromPublisher.slice(0, 3),
+    ...byTags.filter((x) => !fromPublisher.some((f) => f.id === x.id)),
+  ].slice(0, 5);
+
+  // related entities by shared tags
+  const relatedEntities = SEED_ENTITIES.filter((e) => {
+    if (publisher && e.id === publisher.id) return false;
+    return e.tags.some((t) => tagSet.has(t.toLowerCase()));
+  }).slice(0, 3);
+
   const hero = HERO[p.type] ?? "from-zinc-800 to-[#050505]";
 
   return (
@@ -84,7 +103,7 @@ export default async function PublicationPage({ params }: Props) {
             />
           </div>
 
-          <span className="mt-8 inline-block rounded-full bg-black/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90 ring-1 ring-white/15">
+          <span className="mt-8 inline-block rounded-full bg-black/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90">
             {PUBLICATION_LABELS[p.type]}
           </span>
           <h1 className="mt-3 text-3xl font-semibold leading-tight tracking-tight text-white md:text-4xl">
@@ -101,9 +120,6 @@ export default async function PublicationPage({ params }: Props) {
                 </span>
                 {publisher.name}
               </Link>
-            )}
-            {!publisher && p.publisherId === "live" && (
-              <span className="font-medium text-zinc-400">Publisher</span>
             )}
             {p.meta && (
               <>
@@ -131,7 +147,7 @@ export default async function PublicationPage({ params }: Props) {
         <p className="text-[16px] leading-relaxed text-zinc-400">{p.summary}</p>
 
         {p.body && (
-          <div className="mt-8 space-y-4 border-t border-white/10 pt-8">
+          <div className="mt-8 space-y-4 pt-6">
             {p.body.split("\n\n").map((para, i) => (
               <p key={i} className="text-[15px] leading-relaxed text-zinc-300">
                 {para}
@@ -146,7 +162,7 @@ export default async function PublicationPage({ params }: Props) {
               <Link
                 key={t}
                 href={`/explore?q=${encodeURIComponent(t)}`}
-                className="rounded-full border border-white/10 px-3 py-1 text-[12px] text-zinc-500 hover:text-zinc-300"
+                className="rounded-full bg-white/[0.04] px-3 py-1 text-[12px] text-zinc-500 ring-1 ring-white/[0.06] hover:text-zinc-300"
               >
                 {t}
               </Link>
@@ -164,7 +180,7 @@ export default async function PublicationPage({ params }: Props) {
         )}
 
         {publisher && (
-          <div className="mt-12 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="mt-12 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.08]">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
               Publisher
             </p>
@@ -195,17 +211,32 @@ export default async function PublicationPage({ params }: Props) {
           </div>
         )}
 
-        {related.length > 0 && (
-          <div className="mt-10">
+        {(relatedPubs.length > 0 || relatedEntities.length > 0) && (
+          <div className="mt-12">
             <h2 className="text-[13px] font-semibold uppercase tracking-wide text-zinc-500">
-              More from {publisher?.name}
+              Related
             </h2>
+
+            {relatedEntities.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {relatedEntities.map((ent) => (
+                  <Link
+                    key={ent.id}
+                    href={entityPath(ent)}
+                    className="rounded-full bg-white/[0.04] px-3 py-1.5 text-[12px] text-zinc-300 ring-1 ring-white/[0.08] hover:text-white"
+                  >
+                    {ent.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+
             <ul className="mt-3 space-y-2">
-              {related.map((r) => (
+              {relatedPubs.map((r) => (
                 <li key={r.id}>
                   <Link
                     href={publicationPath(r)}
-                    className="flex items-center justify-between rounded-xl border border-white/10 px-3 py-3 transition hover:border-white/25"
+                    className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-3 ring-1 ring-white/[0.06] transition hover:ring-white/15"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-[14px] font-medium text-white">
