@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { ProfilePosts } from "@/components/discovery/profile-posts";
 import {
   readFollows,
   readSaved,
@@ -114,7 +115,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setEditing(true)}
-                className="mb-1 rounded-full border border-white/20 px-4 py-2 text-[13px] font-medium text-white transition hover:border-white/40"
+                className="mb-1 rounded-full bg-white/[0.06] px-4 py-2 text-[13px] font-medium text-white ring-1 ring-white/15 transition hover:ring-white/30"
               >
                 Edit Profile
               </button>
@@ -126,7 +127,7 @@ export default function ProfilePage() {
                     setDraft(profile);
                     setEditing(false);
                   }}
-                  className="rounded-full border border-white/15 px-3 py-2 text-[13px] text-zinc-400"
+                  className="rounded-full px-3 py-2 text-[13px] text-zinc-400 ring-1 ring-white/10"
                 >
                   Cancel
                 </button>
@@ -203,7 +204,7 @@ export default function ProfilePage() {
             </>
           )}
 
-          <div className="mt-8 flex gap-1 border-b border-white/10">
+          <div className="mt-8 flex gap-1">
             {(
               [
                 { id: "posts" as const, label: "Posts" },
@@ -215,10 +216,10 @@ export default function ProfilePage() {
                 key={t.id}
                 type="button"
                 onClick={() => setTab(t.id)}
-                className={`border-b-2 px-4 py-2.5 text-[13px] font-medium transition ${
+                className={`rounded-full px-4 py-2 text-[13px] font-medium transition ${
                   tab === t.id
-                    ? "border-omniv-gold text-white"
-                    : "border-transparent text-zinc-500"
+                    ? "bg-omniv-gold text-black"
+                    : "text-zinc-500 ring-1 ring-white/10"
                 }`}
               >
                 {t.label}
@@ -227,19 +228,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="mt-5">
-            {tab === "posts" && (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 text-center">
-                <p className="text-[14px] text-zinc-400">
-                  You haven't published yet.
-                </p>
-                <Link
-                  href="/publish"
-                  className="mt-4 inline-flex h-10 items-center rounded-full bg-omniv-gold px-5 text-[13px] font-semibold text-black"
-                >
-                  Publish something
-                </Link>
-              </div>
-            )}
+            {tab === "posts" && <ProfilePosts />}
 
             {tab === "saved" &&
               (saved.length === 0 ? (
@@ -259,7 +248,7 @@ export default function ProfilePage() {
                             ? `/p/${x.slug}`
                             : `/e/${x.type}/${x.slug}`
                         }
-                        className="flex items-center justify-between rounded-xl border border-white/10 px-4 py-3 transition hover:border-white/25"
+                        className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/[0.06] transition hover:ring-white/15"
                       >
                         <span className="truncate text-[14px] text-white">
                           {x.name}
@@ -297,7 +286,7 @@ export default function ProfilePage() {
                     <li key={`${f.type}-${f.slug}`}>
                       <Link
                         href={`/e/${f.type}/${f.slug}`}
-                        className="flex items-center gap-3 rounded-xl border border-white/10 px-3 py-3 transition hover:border-white/25"
+                        className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-3 ring-1 ring-white/[0.06] transition hover:ring-white/15"
                       >
                         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
                           {f.name.charAt(0)}
@@ -350,7 +339,7 @@ function Field({
       <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
         {label}
       </span>
-      <div className="mt-1 flex items-center rounded-xl border border-white/15 bg-white/[0.04] focus-within:border-omniv-gold/50">
+      <div className="mt-1 flex items-center rounded-xl bg-white/[0.04] ring-1 ring-white/[0.08] focus-within:ring-omniv-gold/50">
         {prefix && (
           <span className="pl-3 text-[14px] text-zinc-500">{prefix}</span>
         )}
