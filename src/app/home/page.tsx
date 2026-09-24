@@ -7,6 +7,7 @@ import {
 } from "@/components/discovery/feed-card";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { ProfileAvatarLink } from "@/components/discovery/profile-avatar-link";
 import { listLivePublications } from "@/lib/discovery/db";
 import {
   newestPublications,
@@ -69,12 +70,10 @@ export default async function HomePage({ searchParams }: Props) {
   } else if (tab === "trending") {
     items = [...mixed].sort(sortHeat).slice(0, 16);
   } else {
-    // for-you: heat-ranked mix, fall back to seed trending
     items = [...mixed].sort(sortHeat).slice(0, 16);
     if (items.length === 0) items = trendingPublications(12);
   }
 
-  // ensure density from seed if live is sparse
   if (items.length < 6 && tab !== "music" && tab !== "articles") {
     const seed =
       tab === "new" ? newestPublications(12) : trendingPublications(12);
@@ -131,13 +130,7 @@ export default async function HomePage({ searchParams }: Props) {
                   <path d="m20 20-3.5-3.5" strokeLinecap="round" />
                 </svg>
               </Link>
-              <Link
-                href="/profile"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-omniv-gold/20 text-[12px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/30"
-                aria-label="Profile"
-              >
-                ·
-              </Link>
+              <ProfileAvatarLink />
             </div>
           </div>
         </header>
