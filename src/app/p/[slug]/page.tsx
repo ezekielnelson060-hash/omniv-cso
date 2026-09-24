@@ -80,6 +80,7 @@ export default async function PublicationPage({ params }: Props) {
 
   const hero = HERO[p.type] ?? "from-zinc-800 to-[#050505]";
   const path = publicationPath(p);
+  const coverUrl = p.coverUrl;
   const mediaUrl = p.mediaUrl;
   const isPdf = mediaUrl?.toLowerCase().includes(".pdf");
   const ytMatch = mediaUrl?.match(
@@ -107,7 +108,18 @@ export default async function PublicationPage({ params }: Props) {
 
   return (
     <div className="min-h-dvh bg-[#050505] text-zinc-100">
-      <div className={`relative bg-gradient-to-b ${hero} pb-8 pt-4`}>
+      <div
+        className={`relative bg-gradient-to-b ${hero} pb-8 pt-4`}
+        style={
+          coverUrl
+            ? {
+                backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.35), #050505), url(${coverUrl})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center top",
+              }
+            : undefined
+        }
+      >
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,255,255,0.08),transparent_55%)]" />
         <div className="relative mx-auto max-w-2xl px-4">
           <div className="flex items-center justify-between">
