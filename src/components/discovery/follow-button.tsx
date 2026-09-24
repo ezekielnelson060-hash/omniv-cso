@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { isFollowing, toggleFollow } from "@/lib/discovery/local-graph";
 
 export function FollowButton({
@@ -14,24 +15,79 @@ export function FollowButton({
   name: string;
   id?: string;
 }) {
+  const router = useRouter();
   const [following, setFollowing] = useState(false);
   const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    setFollowing(isFollowing(type, slug));
-    setReady(true);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/discovery/follow");
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.auth && Array.isArray(data.follows)) {
+          setFollowing(
+            data.follows.some(
+              (x: { type: string; slug: string }) =>
+                x.type === type && x.slug === slug
+            )
+          );
+        } else {
+          setFollowing(isFollowing(type, slug));
+        }
+      } catch {
+        if (!cancelled) setFollowing(isFollowing(type, slug));
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [type, slug]);
 
-  function onClick() {
-    const next = toggleFollow({ type, slug, name, id });
-    setFollowing(next);
+  async function onClick() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/discovery/follow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, slug, name, id }),
+      });
+      if (res.status === 401) {
+        // local fallback for guests
+        const next = toggleFollow({ type, slug, name, id });
+        setFollowing(next);
+        return;
+      }
+      const data = await res.json();
+      if (res.ok) {
+        setFollowing(Boolean(data.following));
+        // keep local mirror
+        const local = isFollowing(type, slug);
+        if (data.following !== local) {
+          toggleFollow({ type, slug, name, id });
+        }
+      } else {
+        const next = toggleFollow({ type, slug, name, id });
+        setFollowing(next);
+      }
+    } catch {
+      const next = toggleFollow({ type, slug, name, id });
+      setFollowing(next);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={!ready}
+      disabled={!ready || busy}
       className={`inline-flex h-11 min-w-[100px] items-center justify-center rounded-full px-5 text-[13px] font-semibold transition ${
         following
           ? "border border-white/20 bg-transparent text-white hover:border-white/35"
