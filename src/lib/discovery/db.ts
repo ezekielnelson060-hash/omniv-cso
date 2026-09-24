@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DiscoveryEntity, EntityIntent, EntityType } from "./types";
-import { SEED_ENTITIES } from "./seed";
+import type {
+  DiscoveryEntity,
+  EntityIntent,
+  EntityType,
+  Publication,
+  PublicationType,
+} from "./types";
+import { SEED_ENTITIES, SEED_PUBLICATIONS, getPublication as seedGetPub } from "./seed";
 
 type Row = {
   id: string;
@@ -15,6 +21,22 @@ type Row = {
   links: { label: string; href: string }[] | null;
   heat: number | null;
   published_at: string;
+};
+
+type PubRow = {
+  id: string;
+  type: PublicationType;
+  slug: string;
+  title: string;
+  summary: string;
+  body: string | null;
+  tags: string[] | null;
+  meta: string | null;
+  cover_url: string | null;
+  heat: number | null;
+  published_at: string;
+  publisher_id: string | null;
+  publisher_name: string | null;
 };
 
 function rowToEntity(r: Row): DiscoveryEntity {
@@ -34,6 +56,22 @@ function rowToEntity(r: Row): DiscoveryEntity {
   };
 }
 
+function rowToPublication(r: PubRow): Publication {
+  return {
+    id: r.id,
+    type: r.type,
+    slug: r.slug,
+    title: r.title,
+    summary: r.summary,
+    body: r.body ?? undefined,
+    publisherId: r.publisher_id || "live",
+    tags: Array.isArray(r.tags) ? r.tags : [],
+    meta: r.meta ?? undefined,
+    publishedAt: (r.published_at || "").slice(0, 10),
+    heat: r.heat ?? 10,
+  };
+}
+
 /** Live rows + seed demos (seed fills empty network). */
 export async function listDiscoveryEntities(
   supabase: SupabaseClient | null
@@ -50,13 +88,14 @@ export async function listDiscoveryEntities(
       .limit(200);
 
     if (error || !data?.length) {
-      // Table missing or empty — show seed so product isn't blank
       return SEED_ENTITIES;
     }
 
     const live = (data as Row[]).map(rowToEntity);
     const liveKeys = new Set(live.map((e) => `${e.type}:${e.slug}`));
-    const extras = SEED_ENTITIES.filter((e) => !liveKeys.has(`${e.type}:${e.slug}`));
+    const extras = SEED_ENTITIES.filter(
+      (e) => !liveKeys.has(`${e.type}:${e.slug}`)
+    );
     return [...live, ...extras];
   } catch {
     return SEED_ENTITIES;
@@ -86,6 +125,56 @@ export async function getDiscoveryEntity(
   }
 
   return SEED_ENTITIES.find((e) => e.type === type && e.slug === slug) ?? null;
+}
+
+export async function getLivePublication(
+  supabase: SupabaseClient | null,
+  slug: string
+): Promise<Publication | null> {
+  if (supabase) {
+    try {
+      const { data } = await supabase
+        .from("discovery_publications")
+        .select(
+          "id, type, slug, title, summary, body, tags, meta, cover_url, heat, published_at, publisher_id, publisher_name"
+        )
+        .eq("slug", slug)
+        .maybeSingle();
+
+      if (data) return rowToPublication(data as PubRow);
+    } catch {
+      /* fall through */
+    }
+  }
+  return seedGetPub(slug) ?? null;
+}
+
+export async function listLivePublications(
+  supabase: SupabaseClient | null,
+  limit = 50
+): Promise<Publication[]> {
+  if (!supabase) return SEED_PUBLICATIONS;
+
+  try {
+    const { data, error } = await supabase
+      .from("discovery_publications")
+      .select(
+        "id, type, slug, title, summary, body, tags, meta, cover_url, heat, published_at, publisher_id, publisher_name"
+      )
+      .order("published_at", { ascending: false })
+      .limit(limit);
+
+    if (error || !data?.length) {
+      return SEED_PUBLICATIONS;
+    }
+
+    const live = (data as PubRow[]).map(rowToPublication);
+    const liveSlugs = new Set(live.map((p) => p.slug));
+    const extras = SEED_PUBLICATIONS.filter((p) => !liveSlugs.has(p.slug));
+    return [...live, ...extras];
+  } catch {
+    return SEED_PUBLICATIONS;
+  }
 }
 
 export function slugify(name: string): string {
