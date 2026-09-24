@@ -33,13 +33,18 @@ type PubRow = {
   tags: string[] | null;
   meta: string | null;
   cover_url: string | null;
+  media_url: string | null;
   heat: number | null;
   published_at: string;
   publisher_id: string | null;
   publisher_name: string | null;
 };
 
-export type LivePublication = Publication & { publisherName?: string };
+export type LivePublication = Publication & {
+  publisherName?: string;
+  mediaUrl?: string;
+  coverUrl?: string;
+};
 
 function rowToEntity(r: Row): DiscoveryEntity {
   return {
@@ -68,12 +73,17 @@ function rowToPublication(r: PubRow): LivePublication {
     body: r.body ?? undefined,
     publisherId: r.publisher_id || "live",
     publisherName: r.publisher_name ?? undefined,
+    mediaUrl: r.media_url ?? undefined,
+    coverUrl: r.cover_url ?? undefined,
     tags: Array.isArray(r.tags) ? r.tags : [],
     meta: r.meta ?? undefined,
     publishedAt: (r.published_at || "").slice(0, 10),
     heat: r.heat ?? 10,
   };
 }
+
+const PUB_SELECT =
+  "id, type, slug, title, summary, body, tags, meta, cover_url, media_url, heat, published_at, publisher_id, publisher_name";
 
 export async function listDiscoveryEntities(
   supabase: SupabaseClient | null
@@ -137,9 +147,7 @@ export async function getLivePublication(
     try {
       const { data } = await supabase
         .from("discovery_publications")
-        .select(
-          "id, type, slug, title, summary, body, tags, meta, cover_url, heat, published_at, publisher_id, publisher_name"
-        )
+        .select(PUB_SELECT)
         .eq("slug", slug)
         .maybeSingle();
 
@@ -160,9 +168,7 @@ export async function listLivePublications(
   try {
     const { data, error } = await supabase
       .from("discovery_publications")
-      .select(
-        "id, type, slug, title, summary, body, tags, meta, cover_url, heat, published_at, publisher_id, publisher_name"
-      )
+      .select(PUB_SELECT)
       .order("published_at", { ascending: false })
       .limit(limit);
 
