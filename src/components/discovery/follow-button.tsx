@@ -46,6 +46,15 @@ export function FollowButton({
     };
   }, [type, slug]);
 
+  function notify(next: boolean) {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("omniv-follow-change", {
+        detail: { type, slug, following: next },
+      })
+    );
+  }
+
   async function onClick() {
     if (busy) return;
     setBusy(true);
@@ -58,22 +67,27 @@ export function FollowButton({
       if (res.status === 401) {
         const next = toggleFollow({ type, slug, name, id });
         setFollowing(next);
+        notify(next);
         return;
       }
       const data = await res.json();
       if (res.ok) {
-        setFollowing(Boolean(data.following));
+        const next = Boolean(data.following);
+        setFollowing(next);
         const local = isFollowing(type, slug);
-        if (data.following !== local) {
+        if (next !== local) {
           toggleFollow({ type, slug, name, id });
         }
+        notify(next);
       } else {
         const next = toggleFollow({ type, slug, name, id });
         setFollowing(next);
+        notify(next);
       }
     } catch {
       const next = toggleFollow({ type, slug, name, id });
       setFollowing(next);
+      notify(next);
     } finally {
       setBusy(false);
     }
