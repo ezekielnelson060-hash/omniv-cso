@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { ProfileAvatarLink } from "@/components/discovery/profile-avatar-link";
 import { readFollows, type FollowedRef } from "@/lib/discovery/local-graph";
 import { SEED_ENTITIES, SEED_PUBLICATIONS } from "@/lib/discovery/seed";
 import { PUBLICATION_LABELS, publicationPath } from "@/lib/discovery/types";
@@ -37,10 +38,10 @@ export default function ActivityPage() {
   }, []);
 
   const feed = useMemo(() => {
-    // Always show a dense network activity surface from seed +
-    // prefer followed publishers when the user has follows
     const ids = new Set<string>();
+    const names = new Set<string>();
     for (const f of follows) {
+      names.add(f.name.toLowerCase());
       const e =
         SEED_ENTITIES.find((x) => x.type === f.type && x.slug === f.slug) ??
         (f.id ? SEED_ENTITIES.find((x) => x.id === f.id) : undefined);
@@ -67,16 +68,8 @@ export default function ActivityPage() {
         <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-sm">
           <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3 md:max-w-2xl md:px-6">
             <div className="flex items-center gap-2">
-              <Image
-                src="/logo.svg"
-                alt="Omniv"
-                width={28}
-                height={28}
-                className="rounded-md"
-              />
-              <span className="text-[17px] font-semibold tracking-tight text-white">
-                Activity
-              </span>
+              <Image src="/logo.svg" alt="Omniv" width={28} height={28} className="rounded-md" />
+              <span className="text-[17px] font-semibold tracking-tight text-white">Activity</span>
             </div>
             <div className="flex items-center gap-2">
               <Link
@@ -89,13 +82,7 @@ export default function ActivityPage() {
                   <path d="m20 20-3.5-3.5" strokeLinecap="round" />
                 </svg>
               </Link>
-              <Link
-                href="/profile"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-omniv-gold/20 text-[12px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/30"
-                aria-label="Profile"
-              >
-                ·
-              </Link>
+              <ProfileAvatarLink />
             </div>
           </div>
         </header>
@@ -120,9 +107,7 @@ export default function ActivityPage() {
               {follows.length === 0 && (
                 <p className="mb-4 text-[13px] text-zinc-500">
                   Network pulse.{" "}
-                  <Link href="/explore" className="text-omniv-gold hover:underline">
-                    Follow people
-                  </Link>{" "}
+                  <Link href="/explore" className="text-omniv-gold hover:underline">Follow people</Link>{" "}
                   to personalize this feed.
                 </p>
               )}
@@ -141,8 +126,7 @@ export default function ActivityPage() {
                           <span className="font-medium text-zinc-300">
                             {publisher?.name ?? "Publisher"}
                           </span>{" "}
-                          published a{" "}
-                          {PUBLICATION_LABELS[pub.type].toLowerCase()}
+                          published a {PUBLICATION_LABELS[pub.type].toLowerCase()}
                         </p>
                       </div>
                       <p className="mt-2 text-[15px] font-semibold leading-snug text-white">
