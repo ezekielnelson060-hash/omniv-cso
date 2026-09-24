@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { isFollowing, toggleFollow } from "@/lib/discovery/local-graph";
 
 export function FollowButton({
@@ -15,7 +14,6 @@ export function FollowButton({
   name: string;
   id?: string;
 }) {
-  const router = useRouter();
   const [following, setFollowing] = useState(false);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -58,7 +56,6 @@ export function FollowButton({
         body: JSON.stringify({ type, slug, name, id }),
       });
       if (res.status === 401) {
-        // local fallback for guests
         const next = toggleFollow({ type, slug, name, id });
         setFollowing(next);
         return;
@@ -66,7 +63,6 @@ export function FollowButton({
       const data = await res.json();
       if (res.ok) {
         setFollowing(Boolean(data.following));
-        // keep local mirror
         const local = isFollowing(type, slug);
         if (data.following !== local) {
           toggleFollow({ type, slug, name, id });
@@ -88,9 +84,9 @@ export function FollowButton({
       type="button"
       onClick={onClick}
       disabled={!ready || busy}
-      className={`inline-flex h-11 min-w-[100px] items-center justify-center rounded-full px-5 text-[13px] font-semibold transition ${
+      className={`inline-flex h-10 min-w-[96px] items-center justify-center rounded-full px-5 text-[13px] font-semibold transition active:scale-[0.98] ${
         following
-          ? "border border-white/20 bg-transparent text-white hover:border-white/35"
+          ? "bg-transparent text-white ring-1 ring-white/20 hover:ring-white/35"
           : "bg-omniv-gold text-black hover:bg-omniv-gold/90"
       }`}
     >
