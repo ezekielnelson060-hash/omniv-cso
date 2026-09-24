@@ -19,7 +19,9 @@ export function ProfilePosts() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/discovery/publications/list?owner=me&limit=20");
+        const res = await fetch(
+          "/api/discovery/publications/list?owner=me&limit=20"
+        );
         const data = await res.json();
         if (cancelled) return;
         setPubs(Array.isArray(data.publications) ? data.publications : []);
@@ -58,10 +60,13 @@ export function ProfilePosts() {
         <li key={p.id}>
           <Link
             href={`/p/${p.slug}`}
-            className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/[0.06] transition hover:ring-white/15"
+            className="flex items-center gap-3 rounded-2xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.08] transition hover:ring-white/15"
           >
-            <div className="min-w-0">
-              <p className="truncate text-[14px] font-medium text-white">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-omniv-gold/15 text-[10px] font-bold uppercase text-omniv-gold">
+              {(p.type || "post").slice(0, 3)}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[14px] font-semibold text-white">
                 {p.title}
               </p>
               <p className="text-[11px] capitalize text-zinc-500">
