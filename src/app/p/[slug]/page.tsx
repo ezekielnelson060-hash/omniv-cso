@@ -4,9 +4,10 @@ import type { Metadata } from "next";
 import { SaveButton } from "@/components/discovery/save-button";
 import { FollowButton } from "@/components/discovery/follow-button";
 import { BottomNav } from "@/components/discovery/bottom-nav";
+import { createClient } from "@/lib/supabase/server";
+import { getLivePublication } from "@/lib/discovery/db";
 import {
   getEntityById,
-  getPublication,
   publicationsByPublisher,
 } from "@/lib/discovery/seed";
 import {
@@ -31,15 +32,27 @@ const HERO: Record<string, string> = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const p = getPublication(slug);
-  if (!p) return { title: "Not found" };
-  return { title: p.title, description: p.summary };
+  try {
+    const supabase = await createClient();
+    const p = await getLivePublication(supabase, slug);
+    if (!p) return { title: "Not found" };
+    return { title: p.title, description: p.summary };
+  } catch {
+    return { title: "Omniv" };
+  }
 }
 
 export default async function PublicationPage({ params }: Props) {
   const { slug } = await params;
-  const p = getPublication(slug);
+  let supabase = null;
+  try {
+    supabase = await createClient();
+  } catch {
+    /* no env */
+  }
+  const p = await getLivePublication(supabase, slug);
   if (!p) notFound();
+
   const publisher = getEntityById(p.publisherId);
   const related = publisher
     ? publicationsByPublisher(publisher.id)
@@ -50,7 +63,6 @@ export default async function PublicationPage({ params }: Props) {
 
   return (
     <div className="min-h-dvh bg-[#050505] text-zinc-100">
-      {/* Immersive header */}
       <div className={`relative bg-gradient-to-b ${hero} pb-8 pt-4`}>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,255,255,0.08),transparent_55%)]" />
         <div className="relative mx-auto max-w-2xl px-4">
@@ -62,16 +74,14 @@ export default async function PublicationPage({ params }: Props) {
             >
               ←
             </Link>
-            <div className="flex items-center gap-1">
-              <SaveButton
-                kind="publication"
-                type={p.type}
-                slug={p.slug}
-                name={p.title}
-                pubType={p.type}
-                variant="icon"
-              />
-            </div>
+            <SaveButton
+              kind="publication"
+              type={p.type}
+              slug={p.slug}
+              name={p.title}
+              pubType={p.type}
+              variant="icon"
+            />
           </div>
 
           <span className="mt-8 inline-block rounded-full bg-black/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90 ring-1 ring-white/15">
@@ -91,6 +101,9 @@ export default async function PublicationPage({ params }: Props) {
                 </span>
                 {publisher.name}
               </Link>
+            )}
+            {!publisher && p.publisherId === "live" && (
+              <span className="font-medium text-zinc-400">Publisher</span>
             )}
             {p.meta && (
               <>
