@@ -21,17 +21,37 @@ const TONE: Record<string, string> = {
 export function PublicationCard({ pub }: { pub: Publication }) {
   const publisher = getEntityById(pub.publisherId);
   const cover = TONE[pub.type] ?? "from-zinc-600 to-zinc-900";
+  const isMusic = pub.type === "music";
+  const isEvent = pub.type === "event";
+  const isOpp = pub.type === "opportunity";
 
   return (
     <Link
       href={publicationPath(pub)}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0c0c0c] transition hover:border-white/25"
+      className="group flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06] transition hover:ring-white/15"
     >
       <div
         className={`relative flex aspect-[16/9] items-end bg-gradient-to-br ${cover} p-3`}
       >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1),transparent_55%)]" />
-        <span className="relative rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90 ring-1 ring-white/15">
+        {isMusic && (
+          <span className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </span>
+        )}
+        {isEvent && pub.meta && (
+          <span className="absolute right-3 top-3 rounded-lg bg-black/50 px-2 py-1 text-center text-[10px] font-semibold leading-tight text-white">
+            {pub.meta.split(" · ")[0]}
+          </span>
+        )}
+        {isOpp && (
+          <span className="absolute right-3 top-3 rounded-full bg-omniv-gold/90 px-2 py-0.5 text-[10px] font-bold uppercase text-black">
+            Open
+          </span>
+        )}
+        <span className="relative rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90">
           {PUBLICATION_LABELS[pub.type]}
         </span>
       </div>
