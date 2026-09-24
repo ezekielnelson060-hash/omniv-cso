@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -11,22 +11,12 @@ import {
   type PublicationType,
 } from "@/lib/discovery/types";
 
-const GROUPS: {
-  label: string;
-  types: PublicationType[];
-}[] = [
-  {
-    label: "Content",
-    types: ["article", "music", "video", "research"],
-  },
-  {
-    label: "Things",
-    types: ["product", "event", "file"],
-  },
-  {
-    label: "Signals",
-    types: ["announcement", "opportunity"],
-  },
+const DRAFT_KEY = "omniv-create-draft";
+
+const GROUPS: { label: string; types: PublicationType[] }[] = [
+  { label: "Content", types: ["article", "music", "video", "research"] },
+  { label: "Things", types: ["product", "event", "file"] },
+  { label: "Signals", types: ["announcement", "opportunity"] },
 ];
 
 const TYPE_ICONS: Record<PublicationType, string> = {
@@ -59,9 +49,32 @@ const labelCls = "text-[12px] font-medium text-zinc-400";
 const areaCls =
   "mt-1.5 w-full rounded-xl bg-white/[0.04] px-3.5 py-2.5 text-[14px] text-white outline-none ring-1 ring-white/[0.08] placeholder:text-zinc-600 focus:ring-omniv-gold/40";
 
+type Draft = {
+  pubType: PublicationType;
+  title: string;
+  summary: string;
+  body: string;
+  publisherName: string;
+  tags: string;
+  meta: string;
+  ctaHref: string;
+  genre: string;
+  releaseDate: string;
+  priceMode: "paid" | "contact";
+  category: string;
+  eventDate: string;
+  eventTime: string;
+  location: string;
+  oppType: string;
+  deadline: string;
+  requirements: string;
+  coverUrl: string | null;
+  savedAt: number;
+};
+
 export default function PublishPage() {
   const router = useRouter();
-  const [step, setStep] = useState<"pick" | "form" | "done">("pick");
+  const [step, setStep] = useState<"pick" | "form" | "preview" | "done">("pick");
   const [pubType, setPubType] = useState<PublicationType | null>(null);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -69,7 +82,6 @@ export default function PublishPage() {
   const [publisherName, setPublisherName] = useState("");
   const [tags, setTags] = useState("");
   const [meta, setMeta] = useState("");
-  const [ctaLabel, setCtaLabel] = useState("");
   const [ctaHref, setCtaHref] = useState("");
   const [genre, setGenre] = useState("");
   const [releaseDate, setReleaseDate] = useState("");
@@ -81,13 +93,112 @@ export default function PublishPage() {
   const [oppType, setOppType] = useState("Funding");
   const [deadline, setDeadline] = useState("");
   const [requirements, setRequirements] = useState("");
-  const [fileType, setFileType] = useState("Documentation");
-  const [visibility, setVisibility] = useState("Public");
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [publishedPath, setPublishedPath] = useState("");
   const [copied, setCopied] = useState(false);
+  const [savedAgo, setSavedAgo] = useState<string | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  // restore draft once
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw) as Draft;
+      if (!d?.pubType) return;
+      setPubType(d.pubType);
+      setTitle(d.title || "");
+      setSummary(d.summary || "");
+      setBody(d.body || "");
+      setPublisherName(d.publisherName || "");
+      setTags(d.tags || "");
+      setMeta(d.meta || "");
+      setCtaHref(d.ctaHref || "");
+      setGenre(d.genre || "");
+      setReleaseDate(d.releaseDate || "");
+      setPriceMode(d.priceMode || "contact");
+      setCategory(d.category || "");
+      setEventDate(d.eventDate || "");
+      setEventTime(d.eventTime || "");
+      setLocation(d.location || "");
+      setOppType(d.oppType || "Funding");
+      setDeadline(d.deadline || "");
+      setRequirements(d.requirements || "");
+      setCoverUrl(d.coverUrl);
+      setStep("form");
+      setDraftRestored(true);
+      setSavedAgo("Draft restored");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // autosave
+  useEffect(() => {
+    if (!pubType || step === "pick" || step === "done") return;
+    const t = setTimeout(() => {
+      const d: Draft = {
+        pubType,
+        title,
+        summary,
+        body,
+        publisherName,
+        tags,
+        meta,
+        ctaHref,
+        genre,
+        releaseDate,
+        priceMode,
+        category,
+        eventDate,
+        eventTime,
+        location,
+        oppType,
+        deadline,
+        requirements,
+        coverUrl,
+        savedAt: Date.now(),
+      };
+      try {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+        setSavedAgo("Saved just now");
+      } catch {
+        /* ignore */
+      }
+    }, 800);
+    return () => clearTimeout(t);
+  }, [
+    pubType,
+    step,
+    title,
+    summary,
+    body,
+    publisherName,
+    tags,
+    meta,
+    ctaHref,
+    genre,
+    releaseDate,
+    priceMode,
+    category,
+    eventDate,
+    eventTime,
+    location,
+    oppType,
+    deadline,
+    requirements,
+    coverUrl,
+  ]);
+
+  function clearDraft() {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      /* ignore */
+    }
+  }
 
   function pickType(t: PublicationType) {
     setPubType(t);
@@ -100,6 +211,8 @@ export default function PublishPage() {
     setTags("");
     setMeta("");
     setCoverUrl(null);
+    setDraftRestored(false);
+    clearDraft();
   }
 
   function buildMeta(): string {
@@ -118,19 +231,13 @@ export default function PublishPage() {
     } else if (pubType === "opportunity") {
       if (oppType) parts.push(oppType);
       if (deadline) parts.push(`Due ${deadline}`);
-    } else if (pubType === "file") {
-      if (fileType) parts.push(fileType);
-      if (visibility) parts.push(visibility);
-    } else if (pubType === "research" && category) {
-      parts.push(category);
     } else if (meta) {
       parts.push(meta);
     }
     return parts.filter(Boolean).join(" · ") || meta;
   }
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function onPublish() {
     if (!pubType) return;
     setError(null);
     setLoading(true);
@@ -145,7 +252,7 @@ export default function PublishPage() {
           body:
             body +
             (requirements ? `\n\nRequirements:\n${requirements}` : "") +
-            (ctaHref ? `\n\nCTA: ${ctaLabel || "Link"} — ${ctaHref}` : ""),
+            (ctaHref ? `\n\nCTA: ${ctaHref}` : ""),
           publisherName: publisherName || "Publisher",
           tags,
           meta: buildMeta(),
@@ -161,6 +268,7 @@ export default function PublishPage() {
         setError(data.error || "Could not publish");
         return;
       }
+      clearDraft();
       setPublishedPath(data.path || `/p/${data.slug || ""}`);
       setStep("done");
     } catch {
@@ -189,16 +297,19 @@ export default function PublishPage() {
       <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3 md:max-w-2xl">
           <div className="flex items-center gap-2">
-            {step === "form" ? (
+            {(step === "form" || step === "preview") && (
               <button
                 type="button"
-                onClick={() => setStep("pick")}
+                onClick={() =>
+                  setStep(step === "preview" ? "form" : "pick")
+                }
                 className="flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 hover:text-white"
                 aria-label="Back"
               >
                 ←
               </button>
-            ) : (
+            )}
+            {step === "pick" && (
               <Image
                 src="/logo.svg"
                 alt="Omniv"
@@ -208,7 +319,13 @@ export default function PublishPage() {
               />
             )}
             <span className="text-[15px] font-semibold text-white">
-              {step === "done" ? "Published" : step === "pick" ? "Create" : formTitle}
+              {step === "done"
+                ? "Published"
+                : step === "preview"
+                  ? "Preview"
+                  : step === "pick"
+                    ? "Create"
+                    : formTitle}
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -238,7 +355,6 @@ export default function PublishPage() {
             <p className="mt-1 text-[14px] text-zinc-500">
               Share your work with the world.
             </p>
-
             {GROUPS.map((g) => (
               <div key={g.label} className="mt-8">
                 <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
@@ -263,7 +379,6 @@ export default function PublishPage() {
                 </div>
               </div>
             ))}
-
             <p className="mt-10 text-center text-[13px] text-zinc-600">
               Already published?{" "}
               <Link href="/explore" className="text-omniv-gold hover:underline">
@@ -271,6 +386,79 @@ export default function PublishPage() {
               </Link>
             </p>
           </>
+        )}
+
+        {step === "preview" && pubType && (
+          <div className="space-y-6">
+            <p className="text-center text-[12px] font-medium uppercase tracking-wide text-zinc-600">
+              Public view
+            </p>
+            <div className="overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.08]">
+              <div
+                className="relative aspect-[16/10] bg-gradient-to-br from-omniv-gold/30 via-zinc-900 to-black"
+                style={
+                  coverUrl
+                    ? {
+                        backgroundImage: `url(${coverUrl})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }
+                    : undefined
+                }
+              >
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <span className="rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-semibold uppercase text-white/90">
+                    {PUBLICATION_LABELS[pubType]}
+                  </span>
+                  <h2 className="mt-2 text-xl font-semibold text-white">
+                    {title || "Untitled"}
+                  </h2>
+                  <p className="mt-1 text-[13px] text-zinc-400">
+                    {publisherName || "Publisher"}
+                    {buildMeta() ? ` · ${buildMeta()}` : ""}
+                  </p>
+                </div>
+              </div>
+              <div className="p-4">
+                <p className="text-[14px] leading-relaxed text-zinc-400">
+                  {summary || body.slice(0, 200) || "No description yet."}
+                </p>
+                {tags && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {tags.split(",").map((t) => (
+                      <span
+                        key={t}
+                        className="rounded-full bg-white/5 px-2.5 py-1 text-[11px] text-zinc-500"
+                      >
+                        {t.trim()}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {error && <p className="text-[13px] text-red-400">{error}</p>}
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setStep("form")}
+                className="flex h-12 flex-1 items-center justify-center rounded-full bg-white/[0.06] text-[14px] font-medium text-white ring-1 ring-white/10"
+              >
+                Back to edit
+              </button>
+              <button
+                type="button"
+                disabled={loading || !title.trim()}
+                onClick={() => void onPublish()}
+                className="flex h-12 flex-1 items-center justify-center rounded-full bg-omniv-gold text-[14px] font-semibold text-black disabled:opacity-50"
+              >
+                {loading ? "Publishing…" : "Publish"}
+              </button>
+            </div>
+          </div>
         )}
 
         {step === "done" && (
@@ -285,7 +473,6 @@ export default function PublishPage() {
               {title}
             </p>
             <p className="mt-2 text-[13px] text-zinc-500">{publisherName}</p>
-
             <div className="mt-8 w-full max-w-sm rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.08]">
               <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-600">
                 Public URL
@@ -301,7 +488,6 @@ export default function PublishPage() {
                 {copied ? "Copied" : "Copy link"}
               </button>
             </div>
-
             <div className="mt-8 flex w-full max-w-sm flex-col gap-3">
               <Link
                 href={publishedPath || "/explore"}
@@ -325,7 +511,19 @@ export default function PublishPage() {
         )}
 
         {step === "form" && pubType && (
-          <form onSubmit={onSubmit} className="space-y-5">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              setStep("preview");
+            }}
+            className="space-y-5"
+          >
+            {draftRestored && (
+              <p className="rounded-xl bg-omniv-gold/10 px-3 py-2 text-[12px] text-omniv-gold">
+                Draft restored from last session
+              </p>
+            )}
+
             <CoverUpload
               label="Cover image"
               value={coverUrl}
@@ -393,28 +591,20 @@ export default function PublishPage() {
               <div>
                 <p className={labelCls}>Price</p>
                 <div className="mt-1.5 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPriceMode("paid")}
-                    className={`h-10 flex-1 rounded-xl text-[13px] font-medium ring-1 ${
-                      priceMode === "paid"
-                        ? "bg-omniv-gold/15 text-omniv-gold ring-omniv-gold/40"
-                        : "text-zinc-400 ring-white/10"
-                    }`}
-                  >
-                    Paid
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPriceMode("contact")}
-                    className={`h-10 flex-1 rounded-xl text-[13px] font-medium ring-1 ${
-                      priceMode === "contact"
-                        ? "bg-omniv-gold/15 text-omniv-gold ring-omniv-gold/40"
-                        : "text-zinc-400 ring-white/10"
-                    }`}
-                  >
-                    Contact
-                  </button>
+                  {(["paid", "contact"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setPriceMode(m)}
+                      className={`h-10 flex-1 rounded-xl text-[13px] font-medium capitalize ring-1 ${
+                        priceMode === m
+                          ? "bg-omniv-gold/15 text-omniv-gold ring-omniv-gold/40"
+                          : "text-zinc-400 ring-white/10"
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -520,16 +710,15 @@ export default function PublishPage() {
               />
             </Field>
 
-            {error && (
-              <p className="text-[13px] text-red-400">{error}</p>
+            {savedAgo && (
+              <p className="text-center text-[11px] text-zinc-600">{savedAgo}</p>
             )}
 
             <button
               type="submit"
-              disabled={loading}
-              className="flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black disabled:opacity-60"
+              className="flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black"
             >
-              {loading ? "Publishing…" : "Publish"}
+              Preview
             </button>
           </form>
         )}
