@@ -8,23 +8,39 @@ import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { ProfileAvatarLink } from "@/components/discovery/profile-avatar-link";
 import { readFollows, type FollowedRef } from "@/lib/discovery/local-graph";
 import { SEED_ENTITIES, SEED_PUBLICATIONS } from "@/lib/discovery/seed";
-import { PUBLICATION_LABELS, publicationPath } from "@/lib/discovery/types";
+import {
+  PUBLICATION_LABELS,
+  publicationPath,
+  type Publication,
+} from "@/lib/discovery/types";
+
+type LivePub = Publication & {
+  publisherName?: string;
+};
 
 export default function ActivityPage() {
   const [follows, setFollows] = useState<FollowedRef[]>([]);
+  const [live, setLive] = useState<LivePub[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/discovery/follow");
-        const data = await res.json();
+        const [fRes, pRes] = await Promise.all([
+          fetch("/api/discovery/follow"),
+          fetch("/api/discovery/publications/list?limit=40"),
+        ]);
+        const fData = await fRes.json();
+        const pData = await pRes.json().catch(() => ({ publications: [] }));
         if (cancelled) return;
-        if (data.auth && Array.isArray(data.follows) && data.follows.length > 0) {
-          setFollows(data.follows as FollowedRef[]);
+        if (fData.auth && Array.isArray(fData.follows) && fData.follows.length > 0) {
+          setFollows(fData.follows as FollowedRef[]);
         } else {
           setFollows(readFollows());
+        }
+        if (Array.isArray(pData.publications)) {
+          setLive(pData.publications as LivePub[]);
         }
       } catch {
         if (!cancelled) setFollows(readFollows());
@@ -46,21 +62,51 @@ export default function ActivityPage() {
         SEED_ENTITIES.find((x) => x.type === f.type && x.slug === f.slug) ??
         (f.id ? SEED_ENTITIES.find((x) => x.id === f.id) : undefined);
       if (e) ids.add(e.id);
+      if (f.id) ids.add(f.id);
     }
 
+    const pool: LivePub[] = [
+      ...live,
+      ...SEED_PUBLICATIONS.filter(
+        (p) => !live.some((l) => l.slug === p.slug)
+      ),
+    ];
+
     let pubs =
-      ids.size > 0
-        ? SEED_PUBLICATIONS.filter((p) => ids.has(p.publisherId))
-        : [...SEED_PUBLICATIONS];
+      follows.length > 0
+        ? pool.filter(
+            (p) =>
+              ids.has(p.publisherId) ||
+              (p.publisherName &&
+                names.has(p.publisherName.toLowerCase()))
+          )
+        : pool;
+
+    // If follow filter empties the feed, show network pulse
+    if (follows.length > 0 && pubs.length === 0) {
+      pubs = pool;
+    }
 
     return pubs
-      .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
+      .sort((a, b) =>
+        (b.publishedAt || "").localeCompare(a.publishedAt || "")
+      )
       .slice(0, 40)
       .map((p) => {
-        const publisher = SEED_ENTITIES.find((e) => e.id === p.publisherId);
-        return { pub: p, publisher };
+        const publisher =
+          SEED_ENTITIES.find((e) => e.id === p.publisherId) ||
+          SEED_ENTITIES.find(
+            (e) =>
+              p.publisherName &&
+              e.name.toLowerCase() === p.publisherName.toLowerCase()
+          );
+        return {
+          pub: p,
+          publisherName: p.publisherName || publisher?.name || "Publisher",
+          publisher,
+        };
       });
-  }, [follows]);
+  }, [follows, live]);
 
   return (
     <DiscoveryShell>
@@ -68,8 +114,16 @@ export default function ActivityPage() {
         <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-sm">
           <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3 md:max-w-2xl md:px-6">
             <div className="flex items-center gap-2">
-              <Image src="/logo.svg" alt="Omniv" width={28} height={28} className="rounded-md" />
-              <span className="text-[17px] font-semibold tracking-tight text-white">Activity</span>
+              <Image
+                src="/logo.svg"
+                alt="Omniv"
+                width={28}
+                height={28}
+                className="rounded-md"
+              />
+              <span className="text-[17px] font-semibold tracking-tight text-white">
+                Activity
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <Link
@@ -77,7 +131,14 @@ export default function ActivityPage() {
                 className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 hover:bg-white/5 hover:text-white"
                 aria-label="Search"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
                   <circle cx="11" cy="11" r="7" />
                   <path d="m20 20-3.5-3.5" strokeLinecap="round" />
                 </svg>
@@ -89,7 +150,9 @@ export default function ActivityPage() {
 
         <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl md:px-6">
           {!ready ? (
-            <p className="pt-10 text-center text-[14px] text-zinc-600">Loading…</p>
+            <p className="pt-10 text-center text-[14px] text-zinc-600">
+              Loading…
+            </p>
           ) : feed.length === 0 ? (
             <div className="pt-10 text-center">
               <p className="text-[15px] text-zinc-400">
@@ -107,12 +170,17 @@ export default function ActivityPage() {
               {follows.length === 0 && (
                 <p className="mb-4 text-[13px] text-zinc-500">
                   Network pulse.{" "}
-                  <Link href="/explore" className="text-omniv-gold hover:underline">Follow people</Link>{" "}
+                  <Link
+                    href="/explore"
+                    className="text-omniv-gold hover:underline"
+                  >
+                    Follow people
+                  </Link>{" "}
                   to personalize this feed.
                 </p>
               )}
               <ul className="space-y-2.5">
-                {feed.map(({ pub, publisher }) => (
+                {feed.map(({ pub, publisherName, publisher }) => (
                   <li key={pub.id}>
                     <Link
                       href={publicationPath(pub)}
@@ -120,13 +188,15 @@ export default function ActivityPage() {
                     >
                       <div className="flex items-center gap-2">
                         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-omniv-gold/20 text-[10px] font-bold text-omniv-gold">
-                          {(publisher?.name ?? "P").charAt(0)}
+                          {publisherName.charAt(0)}
                         </span>
                         <p className="min-w-0 truncate text-[12px] text-zinc-500">
                           <span className="font-medium text-zinc-300">
-                            {publisher?.name ?? "Publisher"}
+                            {publisherName}
                           </span>{" "}
-                          published a {PUBLICATION_LABELS[pub.type].toLowerCase()}
+                          published a{" "}
+                          {PUBLICATION_LABELS[pub.type]?.toLowerCase() ??
+                            pub.type}
                         </p>
                       </div>
                       <p className="mt-2 text-[15px] font-semibold leading-snug text-white">
