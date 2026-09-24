@@ -15,17 +15,13 @@ const TYPE_ICONS: Record<PublicationType, string> = {
   article: "📄",
   music: "♪",
   video: "▶",
-  image: "◻",
-  file: "📁",
+  research: "▣",
   product: "◇",
   event: "📅",
   opportunity: "◎",
   announcement: "📣",
-  research: "▣",
+  file: "📁",
 };
-
-// image may not be in PUBLICATION_TYPES — guard
-const CREATE_TYPES = PUBLICATION_TYPES.filter((t) => t !== "image" as PublicationType);
 
 export default function PublishPage() {
   const router = useRouter();
@@ -128,7 +124,7 @@ export default function PublishPage() {
             </p>
 
             <div className="mt-8 grid grid-cols-3 gap-3">
-              {CREATE_TYPES.map((t) => (
+              {PUBLICATION_TYPES.map((t) => (
                 <button
                   key={t}
                   type="button"
@@ -136,7 +132,7 @@ export default function PublishPage() {
                   className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-2 py-5 transition hover:border-omniv-gold/40 hover:bg-omniv-gold/5"
                 >
                   <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/5 text-xl text-zinc-300">
-                    {TYPE_ICONS[t] ?? "·"}
+                    {TYPE_ICONS[t]}
                   </span>
                   <span className="text-[12px] font-medium text-zinc-300">
                     {PUBLICATION_LABELS[t]}
@@ -260,7 +256,7 @@ export default function PublishPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="h-13 w-full rounded-full bg-omniv-gold py-3.5 text-[15px] font-semibold text-black shadow-lg shadow-omniv-gold/15 transition hover:bg-omniv-gold/90 disabled:opacity-60"
+                className="w-full rounded-full bg-omniv-gold py-3.5 text-[15px] font-semibold text-black shadow-lg shadow-omniv-gold/15 transition hover:bg-omniv-gold/90 disabled:opacity-60"
               >
                 {loading ? "Publishing…" : "Publish"}
               </button>
