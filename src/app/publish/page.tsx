@@ -7,6 +7,7 @@ import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { CoverUpload } from "@/components/discovery/cover-upload";
 import { PublishAsPicker } from "@/components/discovery/publish-as-picker";
+import { TagChips } from "@/components/discovery/tag-chips";
 import {
   PUBLICATION_LABELS,
   type PublicationType,
@@ -163,7 +164,7 @@ export default function PublishPage() {
       };
       try {
         localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
-        setSavedAgo("Saved just now");
+        setSavedAgo("Saved as draft");
       } catch {
         /* ignore */
       }
@@ -339,10 +340,6 @@ export default function PublishPage() {
                 </div>
               </div>
             ))}
-            <p className="mt-10 text-center text-[13px] text-zinc-600">
-              Already published?{" "}
-              <Link href="/explore" className="text-omniv-gold hover:underline">Explore the network</Link>
-            </p>
           </>
         )}
 
@@ -397,7 +394,6 @@ export default function PublishPage() {
               <p className="rounded-xl bg-omniv-gold/10 px-3 py-2 text-[12px] text-omniv-gold">Draft restored from last session</p>
             )}
 
-            {/* Account switch — mockup style */}
             <div>
               <p className={labelCls}>Publishing as</p>
               <div className="mt-1.5">
@@ -461,9 +457,34 @@ export default function PublishPage() {
             {(pubType === "product" || pubType === "event" || pubType === "announcement") && (
               <Field label="Link / CTA"><input value={ctaHref} onChange={(e) => setCtaHref(e.target.value)} placeholder="https://…" className={inputCls} /></Field>
             )}
-            <Field label="Tags"><input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="AI, Africa, Language" className={inputCls} /></Field>
-            {savedAgo && <p className="text-center text-[11px] text-zinc-600">{savedAgo}</p>}
-            <button type="submit" className="flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black">Preview</button>
+
+            <div>
+              <p className={labelCls}>Tags</p>
+              <div className="mt-1.5 rounded-xl bg-white/[0.04] px-3 py-2.5 ring-1 ring-white/[0.08]">
+                <TagChips value={tags} onChange={setTags} />
+              </div>
+            </div>
+
+            <div className="sticky bottom-20 z-30 -mx-4 border-t border-white/5 bg-[#050505]/95 px-4 py-3 backdrop-blur-sm md:static md:mx-0 md:border-0 md:bg-transparent md:px-0 md:py-0">
+              <div className="flex items-center gap-3">
+                <p className="flex-1 text-[12px] text-zinc-500">
+                  {savedAgo ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-omniv-gold" />
+                      {savedAgo}
+                    </span>
+                  ) : (
+                    "Draft autosaves"
+                  )}
+                </p>
+                <button
+                  type="submit"
+                  className="flex h-11 min-w-[140px] items-center justify-center rounded-full bg-omniv-gold px-6 text-[14px] font-semibold text-black"
+                >
+                  Preview
+                </button>
+              </div>
+            </div>
           </form>
         )}
       </main>
