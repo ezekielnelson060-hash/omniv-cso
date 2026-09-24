@@ -38,20 +38,37 @@ export default function FollowingPage() {
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <header className="sticky top-0 z-40 border-b border-white/5 bg-[#050505]/95 backdrop-blur-sm md:border-b-0">
-          <div className="mx-auto flex max-w-lg items-center gap-2 px-4 py-3 md:max-w-2xl md:px-6">
-            <Image
-              src="/logo.svg"
-              alt="Omniv"
-              width={28}
-              height={28}
-              className="rounded-md md:hidden"
-            />
-            <span className="text-[15px] font-semibold text-white">Following</span>
+        <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-sm">
+          <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3 md:max-w-2xl md:px-6">
+            <div className="flex items-center gap-2">
+              <Image src="/logo.svg" alt="Omniv" width={28} height={28} className="rounded-md" />
+              <span className="text-[17px] font-semibold tracking-tight text-white">
+                Following
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/explore"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 hover:bg-white/5 hover:text-white"
+                aria-label="Search"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+                </svg>
+              </Link>
+              <Link
+                href="/profile"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-omniv-gold/20 text-[12px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/30"
+                aria-label="Profile"
+              >
+                ·
+              </Link>
+            </div>
           </div>
         </header>
 
-        <main className="mx-auto max-w-lg px-4 pb-24 pt-5 md:max-w-2xl md:px-6">
+        <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl md:px-6">
           <p className="text-[13px] text-zinc-500">
             Publishers you follow. Their new work shows up in Activity.
           </p>
@@ -71,7 +88,7 @@ export default function FollowingPage() {
               </Link>
             </div>
           ) : (
-            <ul className="mt-6 space-y-3">
+            <ul className="mt-5 space-y-2.5">
               {follows.map((f) => {
                 const entity = SEED_ENTITIES.find(
                   (e) => e.type === f.type && e.slug === f.slug
@@ -83,7 +100,7 @@ export default function FollowingPage() {
                   <li key={`${f.type}-${f.slug}`}>
                     <Link
                       href={`/e/${f.type}/${f.slug}`}
-                      className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 transition hover:border-white/25"
+                      className="flex items-center gap-3 rounded-2xl bg-white/[0.03] p-3 ring-1 ring-white/[0.08] transition hover:ring-white/15"
                     >
                       <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold/20 text-base font-semibold text-omniv-gold">
                         {f.name.charAt(0)}
