@@ -38,18 +38,21 @@ export default async function HomePage({ searchParams }: Props) {
   if (tab === "music") items = publicationsByType("music");
   if (tab === "articles") items = publicationsByType("article");
   if (tab === "trending") items = trendingPublications(12);
-  // for-you: mix — top heat as featured, rest interleave types
   if (tab === "for-you") {
     items = trendingPublications(12);
   }
 
   const featured = items[0];
   const rest = items.slice(1);
-  const compactTypes = new Set(["music", "product", "opportunity", "announcement"]);
+  const compactTypes = new Set([
+    "music",
+    "product",
+    "opportunity",
+    "announcement",
+  ]);
 
   return (
     <div className="min-h-dvh bg-[#050505] text-zinc-100">
-      {/* Top bar — matches mockup */}
       <header className="sticky top-0 z-40 border-b border-white/5 bg-[#050505]/95 backdrop-blur-sm">
         <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 md:max-w-2xl">
           <Link href="/home" className="flex items-center gap-2">
@@ -71,14 +74,21 @@ export default async function HomePage({ searchParams }: Props) {
               className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/5 hover:text-white"
               aria-label="Search"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              >
                 <circle cx="11" cy="11" r="7" />
                 <path d="m20 20-3.5-3.5" strokeLinecap="round" />
               </svg>
             </Link>
             <Link
-              href="/login"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-[12px] font-semibold text-zinc-300"
+              href="/profile"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-omniv-gold/20 text-[12px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/30"
               aria-label="Profile"
             >
               ·
@@ -97,7 +107,6 @@ export default async function HomePage({ searchParams }: Props) {
           </p>
         </div>
 
-        {/* Tabs */}
         <div className="mt-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {TABS.map((t) => {
             const active = tab === t.id;
@@ -117,7 +126,6 @@ export default async function HomePage({ searchParams }: Props) {
           })}
         </div>
 
-        {/* Feed */}
         <div className="mt-5 space-y-3">
           {featured && <FeedFeaturedCard pub={featured} />}
 
