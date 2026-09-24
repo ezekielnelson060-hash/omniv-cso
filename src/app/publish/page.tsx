@@ -8,6 +8,7 @@ import { BottomNav } from "@/components/discovery/bottom-nav";
 import { CoverUpload } from "@/components/discovery/cover-upload";
 import { PublishAsPicker } from "@/components/discovery/publish-as-picker";
 import { TagChips } from "@/components/discovery/tag-chips";
+import { MediaUpload } from "@/components/discovery/media-upload";
 import {
   PUBLICATION_LABELS,
   type PublicationType,
@@ -71,6 +72,7 @@ type Draft = {
   deadline: string;
   requirements: string;
   coverUrl: string | null;
+  mediaUrl: string | null;
   savedAt: number;
 };
 
@@ -97,6 +99,7 @@ export default function PublishPage() {
   const [deadline, setDeadline] = useState("");
   const [requirements, setRequirements] = useState("");
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [publishedPath, setPublishedPath] = useState("");
@@ -129,6 +132,7 @@ export default function PublishPage() {
       setDeadline(d.deadline || "");
       setRequirements(d.requirements || "");
       setCoverUrl(d.coverUrl);
+      setMediaUrl(d.mediaUrl ?? null);
       setStep("form");
       setDraftRestored(true);
       setSavedAgo("Draft restored");
@@ -160,6 +164,7 @@ export default function PublishPage() {
         deadline,
         requirements,
         coverUrl,
+        mediaUrl,
         savedAt: Date.now(),
       };
       try {
@@ -173,7 +178,7 @@ export default function PublishPage() {
   }, [
     pubType, step, title, summary, body, publisherName, tags, meta, ctaHref,
     genre, releaseDate, priceMode, category, eventDate, eventTime, location,
-    oppType, deadline, requirements, coverUrl,
+    oppType, deadline, requirements, coverUrl, mediaUrl,
   ]);
 
   function clearDraft() {
@@ -194,6 +199,7 @@ export default function PublishPage() {
     setTags("");
     setMeta("");
     setCoverUrl(null);
+    setMediaUrl(null);
     setDraftRestored(false);
     clearDraft();
   }
@@ -241,6 +247,7 @@ export default function PublishPage() {
           tags,
           meta: buildMeta(),
           coverUrl,
+          mediaUrl,
         }),
       });
       const data = await res.json();
@@ -360,6 +367,7 @@ export default function PublishPage() {
               </div>
               <div className="p-4">
                 <p className="text-[14px] leading-relaxed text-zinc-400">{summary || body.slice(0, 200) || "No description yet."}</p>
+                {mediaUrl && <p className="mt-2 text-[12px] text-omniv-gold">Media attached</p>}
               </div>
             </div>
             {error && <p className="text-[13px] text-red-400">{error}</p>}
@@ -402,6 +410,25 @@ export default function PublishPage() {
             </div>
 
             <CoverUpload label="Cover image" value={coverUrl} onChange={setCoverUrl} />
+
+            {(pubType === "music" || pubType === "file") && (
+              <div>
+                <p className={labelCls}>{pubType === "music" ? "Audio file" : "Document"}</p>
+                <div className="mt-1.5">
+                  <MediaUpload
+                    label={pubType === "music" ? "Upload track (MP3 / WAV)" : "Upload PDF"}
+                    accept={
+                      pubType === "music"
+                        ? "audio/mpeg,audio/mp3,audio/wav,audio/m4a,.mp3,.wav,.m4a"
+                        : "application/pdf,.pdf"
+                    }
+                    value={mediaUrl}
+                    onChange={setMediaUrl}
+                  />
+                </div>
+              </div>
+            )}
+
             <Field label="Title *">
               <input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" className={inputCls} />
             </Field>
@@ -477,10 +504,7 @@ export default function PublishPage() {
                     "Draft autosaves"
                   )}
                 </p>
-                <button
-                  type="submit"
-                  className="flex h-11 min-w-[140px] items-center justify-center rounded-full bg-omniv-gold px-6 text-[14px] font-semibold text-black"
-                >
+                <button type="submit" className="flex h-11 min-w-[140px] items-center justify-center rounded-full bg-omniv-gold px-6 text-[14px] font-semibold text-black">
                   Preview
                 </button>
               </div>
