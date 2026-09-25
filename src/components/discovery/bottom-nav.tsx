@@ -11,20 +11,20 @@ type NavItem = {
   primary?: boolean;
 };
 
+/** Home · Explore · + · Saved · Profile — Activity lives in the menu */
 const ITEMS: NavItem[] = [
   { href: "/home", label: "Home", icon: HomeIcon },
   { href: "/explore", label: "Explore", icon: ExploreIcon },
   { href: "/publish", label: "Publish", icon: null, primary: true },
   { href: "/saved", label: "Saved", icon: SavedIcon },
-  { href: "/activity", label: "Activity", icon: ActivityIcon },
+  { href: "/profile", label: "Profile", icon: ProfileIcon },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 bg-[#0a0a0a]/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
-      {/* soft top edge — no hard line */}
+    <nav className="fixed inset-x-0 bottom-0 z-50 bg-[#0a0a0a]/92 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
       <div className="mx-auto flex h-[64px] max-w-lg items-end justify-around px-1 pb-2">
         {ITEMS.map((item) => {
@@ -124,7 +124,7 @@ function SavedIcon({ active }: { active?: boolean }) {
   );
 }
 
-function ActivityIcon({ active }: { active?: boolean }) {
+function ProfileIcon({ active }: { active?: boolean }) {
   return (
     <svg
       width="24"
@@ -134,11 +134,12 @@ function ActivityIcon({ active }: { active?: boolean }) {
       stroke="currentColor"
       strokeWidth="1.7"
     >
-      <circle cx="12" cy="12" r="3.2" fill={active ? "currentColor" : "none"} />
+      <circle cx="12" cy="8" r="3.2" fill={active ? "currentColor" : "none"} />
       <path
-        d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M5.4 18.6l1.6-1.6M17 7l1.6-1.6"
+        d="M5 19.5c1.5-3.2 4-4.8 7-4.8s5.5 1.6 7 4.8"
         strokeLinecap="round"
-        opacity={active ? 1 : 0.85}
+        fill={active ? "currentColor" : "none"}
+        opacity={active ? 0.35 : 1}
       />
     </svg>
   );
