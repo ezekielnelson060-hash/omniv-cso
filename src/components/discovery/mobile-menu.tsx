@@ -24,11 +24,14 @@ type EntityRow = {
 const LINKS: { href: string; label: string; gold?: boolean }[] = [
   { href: "/profile", label: "Profile" },
   { href: "/accounts", label: "All entities" },
+  { href: "/accounts/switch", label: "Switch entity" },
   { href: "/activity", label: "Activity" },
   { href: "/following", label: "Following" },
   { href: "/saved", label: "Saved" },
   { href: "/analytics", label: "Analytics" },
+  { href: "/promote", label: "Promote" },
   { href: "/pricing", label: "Upgrade to Pro", gold: true },
+  { href: "/verify", label: "Get Verified" },
   { href: "/publish", label: "Publish" },
 ];
 
@@ -73,7 +76,6 @@ export function MobileMenuButton() {
         if (!cancelled) setAuth(false);
       }
     })();
-    // lock body scroll
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -88,14 +90,13 @@ export function MobileMenuButton() {
   }
 
   function switchEntity(e: EntityRow) {
-    const a: ActiveAccount = {
+    writeActiveAccount({
       id: e.id,
       type: e.type,
       slug: e.slug,
       name: e.name,
       path: e.path,
-    };
-    writeActiveAccount(a);
+    });
     setActive(a);
   }
 
@@ -103,20 +104,16 @@ export function MobileMenuButton() {
     open && mounted
       ? createPortal(
           <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true">
-            {/* Backdrop */}
             <button
               type="button"
               className="absolute inset-0 bg-black/75"
               aria-label="Close menu"
               onClick={() => setOpen(false)}
             />
-
-            {/* Full-height left panel */}
             <aside
               className="absolute left-0 top-0 flex h-[100dvh] w-[min(100vw-48px,300px)] flex-col bg-[#0a0a0a] shadow-[8px_0_40px_rgba(0,0,0,0.6)]"
               style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
             >
-              {/* Header */}
               <div className="shrink-0 border-b border-white/10 px-4 pb-3 pt-[max(1.25rem,env(safe-area-inset-top))]">
                 <div className="flex items-center justify-between">
                   <p className="text-[15px] font-semibold text-white">
@@ -138,9 +135,7 @@ export function MobileMenuButton() {
                 </p>
               </div>
 
-              {/* Scrollable body */}
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3">
-                {/* Personal */}
                 <button
                   type="button"
                   onClick={switchPersonal}
@@ -227,7 +222,6 @@ export function MobileMenuButton() {
                   </Link>
                 )}
 
-                {/* + Create entity */}
                 <Link
                   href="/accounts"
                   onClick={() => setOpen(false)}
@@ -264,7 +258,6 @@ export function MobileMenuButton() {
                 </nav>
               </div>
 
-              {/* Footer */}
               <div className="shrink-0 border-t border-white/10 px-4 py-3">
                 <div className="flex items-center gap-2">
                   <Image src="/logo.svg" alt="" width={20} height={20} />
