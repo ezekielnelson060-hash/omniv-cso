@@ -1,11 +1,13 @@
 import { track } from "@/lib/analytics";
 
-export type CheckoutPlan = "pro" | "business" | "starter" | "label";
+export type CheckoutPlan = "pro" | "business" | "starter" | "label" | "promote";
 
 export async function startFlutterwaveCheckout(opts: {
   plan: CheckoutPlan;
+  amount?: number;
   email?: string;
   name?: string;
+  meta?: Record<string, string>;
 }): Promise<{ ok: true; link: string } | { ok: false; error: string }> {
   try {
     track("checkout_start", { plan: opts.plan });
