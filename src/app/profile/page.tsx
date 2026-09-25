@@ -74,6 +74,7 @@ export default function ProfilePage() {
       handle:
         draft.handle.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase() || "explorer",
       displayName: draft.displayName.trim() || "Explorer",
+      website: (draft.website || "").trim(),
     };
     writeProfile(clean);
     setProfile(clean);
@@ -85,7 +86,6 @@ export default function ProfilePage() {
     if (!draft || !profile) return;
     const next = { ...draft, [field]: url };
     setDraft(next);
-    // Stick immediately so photos survive cancel / refresh
     const stuck = { ...profile, [field]: url };
     writeProfile(stuck);
     setProfile(stuck);
@@ -105,7 +105,6 @@ export default function ProfilePage() {
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        {/* Cover — X style */}
         <div className="relative h-36 overflow-hidden bg-zinc-900 sm:h-44">
           {show.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -145,7 +144,6 @@ export default function ProfilePage() {
         </div>
 
         <main className="relative mx-auto max-w-lg px-4 pb-28 md:max-w-2xl md:px-6">
-          {/* Avatar + actions */}
           <div className="-mt-12 flex items-end justify-between">
             <div className="relative">
               <div className="h-[88px] w-[88px] overflow-hidden rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 ring-4 ring-[#050505]">
@@ -230,6 +228,11 @@ export default function ProfilePage() {
                 value={draft.location}
                 onChange={(v) => setDraft({ ...draft, location: v })}
               />
+              <EditField
+                label="Website"
+                value={draft.website || ""}
+                onChange={(v) => setDraft({ ...draft, website: v })}
+              />
               <p className="pt-4 text-[12px] text-zinc-600">
                 Tap the camera on the cover or photo to change images. They save
                 immediately.
@@ -246,6 +249,20 @@ export default function ProfilePage() {
               </p>
               <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-zinc-500">
                 {profile.location && <span>📍 {profile.location}</span>}
+                {profile.website ? (
+                  <a
+                    href={
+                      profile.website.startsWith("http")
+                        ? profile.website
+                        : `https://${profile.website}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-omniv-gold hover:underline"
+                  >
+                    {profile.website.replace(/^https?:\/\//, "")}
+                  </a>
+                ) : null}
                 <span>
                   Joined{" "}
                   {new Date(profile.joinedAt).toLocaleDateString("en-US", {
