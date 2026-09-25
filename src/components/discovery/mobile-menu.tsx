@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { readProfile } from "@/lib/discovery/local-profile";
@@ -18,28 +18,34 @@ const LINKS = [
 /** X-style menu for mobile — differentiates Profile vs Entities */
 export function MobileMenuButton() {
   const [open, setOpen] = useState(false);
-  const profile =
-    typeof window !== "undefined"
-      ? readProfile()
-      : { displayName: "You", handle: "you", avatarUrl: null as string | null };
+  const [displayName, setDisplayName] = useState("You");
+  const [handle, setHandle] = useState("you");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const p = readProfile();
+      setDisplayName(p.displayName || "You");
+      setHandle(p.handle || "you");
+      setAvatarUrl(p.avatarUrl || null);
+    } catch {
+      /* ignore */
+    }
+  }, [open]);
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/20 text-[13px] font-semibold text-omniv-gold ring-1 ring-white/10 md:hidden"
+        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/20 text-[13px] font-semibold text-omniv-gold ring-1 ring-white/10"
         aria-label="Menu"
       >
-        {profile.avatarUrl ? (
+        {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={profile.avatarUrl}
-            alt=""
-            className="h-full w-full object-cover"
-          />
+          <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          (profile.displayName || "Y").charAt(0).toUpperCase()
+          displayName.charAt(0).toUpperCase()
         )}
       </button>
 
@@ -47,32 +53,30 @@ export function MobileMenuButton() {
         <>
           <button
             type="button"
-            className="fixed inset-0 z-[60] bg-black/60 md:hidden"
+            className="fixed inset-0 z-[60] bg-black/60"
             aria-label="Close menu"
             onClick={() => setOpen(false)}
           />
-          <div className="fixed inset-y-0 left-0 z-[70] flex w-[min(100%,300px)] flex-col bg-[#0a0a0a] shadow-2xl ring-1 ring-white/10 md:hidden">
+          <div className="fixed inset-y-0 left-0 z-[70] flex w-[min(100%,300px)] flex-col bg-[#0a0a0a] shadow-2xl ring-1 ring-white/10">
             <div className="border-b border-white/[0.06] px-4 pb-4 pt-5">
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/20 text-lg font-semibold text-omniv-gold">
-                  {profile.avatarUrl ? (
+                  {avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={profile.avatarUrl}
+                      src={avatarUrl}
                       alt=""
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    (profile.displayName || "Y").charAt(0).toUpperCase()
+                    displayName.charAt(0).toUpperCase()
                   )}
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-[15px] font-semibold text-white">
-                    {profile.displayName || "You"}
+                    {displayName}
                   </p>
-                  <p className="text-[13px] text-zinc-500">
-                    @{profile.handle || "you"}
-                  </p>
+                  <p className="text-[13px] text-zinc-500">@{handle}</p>
                 </div>
               </div>
               <p className="mt-3 text-[11px] leading-relaxed text-zinc-600">
@@ -86,7 +90,7 @@ export function MobileMenuButton() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
-                  className="flex flex-col rounded-xl px-3 py-3 transition hover:bg-white/5"
+                  className="flex flex-col rounded-xl px-3 py-3 transition active:bg-white/5"
                 >
                   <span className="text-[15px] font-medium text-white">
                     {item.label}
