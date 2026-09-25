@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -14,28 +14,49 @@ import {
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const existing = typeof window !== "undefined" ? readProfile() : null;
-  const [name, setName] = useState(existing?.displayName || "");
-  const [handle, setHandle] = useState(existing?.handle || "");
-  const [bio, setBio] = useState(existing?.bio || "");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(
-    existing?.avatarUrl || null
-  );
-  const [location, setLocation] = useState(existing?.location || "");
+  const [name, setName] = useState("");
+  const [handle, setHandle] = useState("");
+  const [bio, setBio] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [location, setLocation] = useState("");
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    try {
+      const existing = readProfile();
+      if (existing?.displayName) setName(existing.displayName);
+      if (existing?.handle) setHandle(existing.handle);
+      if (existing?.bio) setBio(existing.bio);
+      if (existing?.avatarUrl) setAvatarUrl(existing.avatarUrl);
+      if (existing?.location) setLocation(existing.location);
+    } catch {
+      /* ignore */
+    }
+    setReady(true);
+  }, []);
 
   function saveAndNext() {
     writeProfile({
       displayName: name.trim() || "You",
-      handle: (handle || name || "you")
-        .toLowerCase()
-        .replace(/[^a-z0-9_]/g, "")
-        .slice(0, 24) || "you",
+      handle:
+        (handle || name || "you")
+          .toLowerCase()
+          .replace(/[^a-z0-9_]/g, "")
+          .slice(0, 24) || "you",
       bio: bio.trim(),
       location: location.trim(),
       avatarUrl: avatarUrl || undefined,
     });
     if (step < 3) setStep(step + 1);
     else router.push("/accounts");
+  }
+
+  if (!ready) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-[#050505] text-zinc-600">
+        Loading…
+      </div>
+    );
   }
 
   return (
