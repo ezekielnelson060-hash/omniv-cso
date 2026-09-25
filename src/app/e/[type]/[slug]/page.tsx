@@ -6,6 +6,7 @@ import { FollowButton } from "@/components/discovery/follow-button";
 import { SaveButton } from "@/components/discovery/save-button";
 import { FollowerCount } from "@/components/discovery/follower-count";
 import { PublicationCard } from "@/components/discovery/publication-card";
+import { EntityLatestRow } from "@/components/discovery/entity-latest-row";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import {
@@ -237,11 +238,19 @@ export default async function EntityPage({ params, searchParams }: Props) {
                   ? "Latest"
                   : tabs.find((t) => t.id === activeTab)?.label}
               </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {filtered.map((p) => (
-                  <PublicationCard key={p.id} pub={p} />
-                ))}
-              </div>
+              {activeTab === "overview" ? (
+                <div className="space-y-2.5">
+                  {filtered.slice(0, 8).map((p) => (
+                    <EntityLatestRow key={p.id} pub={p} />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {filtered.map((p) => (
+                    <PublicationCard key={p.id} pub={p} />
+                  ))}
+                </div>
+              )}
               {filtered.length === 0 && (
                 <p className="py-12 text-center text-[14px] text-zinc-500">
                   Nothing in this tab yet.
