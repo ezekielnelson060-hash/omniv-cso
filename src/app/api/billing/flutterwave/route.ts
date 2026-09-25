@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * Flutterwave standard checkout.
- * Plans: pro ($29), business ($99). starter kept as alias of pro.
+ * Plans: pro ($29), business ($99), promote (custom $20–500).
  * Requires FLW_SECRET_KEY. Optional: FLW_CURRENCY (default USD).
  */
 export async function POST(req: Request) {
@@ -20,9 +20,11 @@ export async function POST(req: Request) {
 
   try {
     const body = (await req.json()) as {
-      plan?: "starter" | "pro" | "business" | "label";
+      plan?: "starter" | "pro" | "business" | "label" | "promote";
+      amount?: number;
       email?: string;
       name?: string;
+      meta?: Record<string, string>;
     };
 
     const prices: Record<string, number> = {
@@ -30,11 +32,16 @@ export async function POST(req: Request) {
       pro: 29,
       business: 99,
       label: 99,
+      promote: 50,
     };
     let plan = body.plan || "pro";
     if (plan === "starter") plan = "pro";
     if (plan === "label") plan = "business";
-    const amount = prices[plan] ?? 29;
+
+    let amount = prices[plan] ?? 29;
+    if (plan === "promote" && typeof body.amount === "number") {
+      amount = Math.min(500, Math.max(10, Math.round(body.amount)));
+    }
 
     let userId: string | null = null;
     let email = body.email || "";
@@ -69,6 +76,11 @@ export async function POST(req: Request) {
       req.headers.get("origin") ||
       "https://omniv.media";
 
+    const redirect =
+      plan === "promote"
+        ? `${origin}/promote?billing=success`
+        : `${origin}/pricing?billing=success&plan=${plan}`;
+
     const tx_ref = userId
       ? `omniv_${plan}_${userId}_${Date.now()}`
       : `omniv_${plan}_anon_${Date.now()}`;
@@ -77,7 +89,7 @@ export async function POST(req: Request) {
       tx_ref,
       amount,
       currency: process.env.FLW_CURRENCY || "USD",
-      redirect_url: `${origin}/pricing?billing=success&plan=${plan}`,
+      redirect_url: redirect,
       customer: {
         email,
         name,
@@ -85,15 +97,18 @@ export async function POST(req: Request) {
       customizations: {
         title: "Omniv",
         description:
-          plan === "business"
-            ? "Omniv Business — verified + team tools"
-            : "Omniv Pro — verified publisher",
+          plan === "promote"
+            ? `Promote publication — $${amount}`
+            : plan === "business"
+              ? "Omniv Business — verified + team tools"
+              : "Omniv Pro — verified publisher",
         logo: `${origin}/logo.svg`,
       },
       meta: {
         plan,
         user_id: userId || "",
-        product: "discovery",
+        product: plan === "promote" ? "promote" : "discovery",
+        ...(body.meta || {}),
       },
     };
 
