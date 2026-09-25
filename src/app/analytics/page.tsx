@@ -5,7 +5,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
-import { readActiveAccount } from "@/lib/discovery/active-account";
+import { CurrentIdentityBanner } from "@/components/discovery/current-identity";
+import {
+  readActiveAccount,
+  onAccountSwitch,
+  type ActiveAccount,
+} from "@/lib/discovery/active-account";
+import { readProfile } from "@/lib/discovery/local-profile";
 
 type Pub = {
   id: string;
@@ -13,6 +19,8 @@ type Pub = {
   type: string;
   slug: string;
   heat?: number;
+  publisherId?: string;
+  publisherName?: string;
 };
 
 type Range = "7d" | "30d" | "90d" | "1y";
@@ -29,18 +37,26 @@ export default function AnalyticsPage() {
   const [pubs, setPubs] = useState<Pub[]>([]);
   const [auth, setAuth] = useState<boolean | null>(null);
   const [range, setRange] = useState<Range>("30d");
-  const [entityName, setEntityName] = useState("Your account");
+  const [active, setActive] = useState<ActiveAccount | null>(null);
+  const [personalName, setPersonalName] = useState("You");
   const [follows, setFollows] = useState(0);
   const [saves, setSaves] = useState(0);
 
   useEffect(() => {
-    const active = readActiveAccount();
-    if (active?.name) setEntityName(active.name);
+    try {
+      setPersonalName(readProfile().displayName || "You");
+      setActive(readActiveAccount());
+    } catch {
+      /* ignore */
+    }
+    return onAccountSwitch((a) => setActive(a));
+  }, []);
 
+  useEffect(() => {
     (async () => {
       try {
         const [pRes, fRes, sRes] = await Promise.all([
-          fetch("/api/discovery/publications/list?owner=me&limit=50"),
+          fetch("/api/discovery/publications/list?owner=me&limit=80"),
           fetch("/api/discovery/follow"),
           fetch("/api/discovery/save"),
         ]);
@@ -57,14 +73,27 @@ export default function AnalyticsPage() {
     })();
   }, []);
 
+  const scopedPubs = useMemo(() => {
+    if (!active?.id) return pubs;
+    return pubs.filter(
+      (p) =>
+        p.publisherId === active.id ||
+        (p.publisherName &&
+          p.publisherName.toLowerCase() === active.name.toLowerCase())
+    );
+  }, [pubs, active]);
+
+  const entityName = active?.name || personalName;
   const totalHeat = useMemo(
-    () => pubs.reduce((s, p) => s + (p.heat || 0), 0),
-    [pubs]
+    () => scopedPubs.reduce((s, p) => s + (p.heat || 0), 0),
+    [scopedPubs]
   );
 
-  // Lightweight derived metrics until event tracking ships
-  const discoveries = Math.max(totalHeat * 12, pubs.length * 40);
-  const profileViews = Math.max(Math.round(discoveries * 0.26), pubs.length * 8);
+  const discoveries = Math.max(totalHeat * 12, scopedPubs.length * 40);
+  const profileViews = Math.max(
+    Math.round(discoveries * 0.26),
+    scopedPubs.length * 8
+  );
   const saveCount = Math.max(saves, Math.round(discoveries * 0.07));
   const followCount = Math.max(follows, Math.round(profileViews * 0.05));
 
@@ -98,7 +127,10 @@ export default function AnalyticsPage() {
         </header>
 
         <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl md:px-6">
-          {/* Range chips — mockup 12 */}
+          <div className="mb-4">
+            <CurrentIdentityBanner action="Analytics for" />
+          </div>
+
           <div className="flex gap-2">
             {(
               [
@@ -137,7 +169,6 @@ export default function AnalyticsPage() {
 
           {auth && (
             <>
-              {/* Stat cards */}
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <Stat
                   label="Total Discoveries"
@@ -161,7 +192,6 @@ export default function AnalyticsPage() {
                 />
               </div>
 
-              {/* Top sources */}
               <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wide text-zinc-500">
                 Top Sources
               </h2>
@@ -186,19 +216,19 @@ export default function AnalyticsPage() {
                 Publications
               </h2>
               <p className="mt-1 text-[12px] text-zinc-600">
-                {pubs.length} published · heat {totalHeat}
+                {scopedPubs.length} for this identity · heat {totalHeat}
               </p>
 
-              {pubs.length === 0 ? (
+              {scopedPubs.length === 0 ? (
                 <p className="mt-6 text-center text-[14px] text-zinc-500">
-                  No publications yet.{" "}
+                  No publications for this identity.{" "}
                   <Link href="/publish" className="text-omniv-gold">
-                    Publish something
+                    Publish as {entityName}
                   </Link>
                 </p>
               ) : (
                 <ul className="mt-3 space-y-2">
-                  {pubs.slice(0, 12).map((p) => (
+                  {scopedPubs.slice(0, 12).map((p) => (
                     <li key={p.id}>
                       <Link
                         href={`/p/${p.slug}`}
@@ -226,7 +256,7 @@ export default function AnalyticsPage() {
                   Full Pro analytics
                 </p>
                 <p className="mt-1 text-[13px] text-zinc-400">
-                  City-level demand, save trends, verified badge, and export.
+                  Per-identity demand, sources, and export.
                 </p>
                 <Link
                   href="/pricing"
