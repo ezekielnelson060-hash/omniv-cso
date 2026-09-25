@@ -26,7 +26,7 @@ export function VerifiedBadge({
   );
 }
 
-/** CTA for non-verified entity owners — Pro */
+/** CTA for non-verified entities — Pro apply flow */
 export function GetVerifiedCard() {
   return (
     <div className="mt-6 rounded-2xl bg-omniv-gold/10 p-4 ring-1 ring-omniv-gold/30">
@@ -37,15 +37,23 @@ export function GetVerifiedCard() {
             Verified Publisher
           </p>
           <p className="mt-1 text-[12px] leading-relaxed text-zinc-400">
-            Verified accounts get higher visibility, more trust, and access to
-            Pro features. Available on Omniv Pro.
+            Verified is a Pro feature. Higher visibility, more trust, and the
+            blue badge on your profile.
           </p>
-          <Link
-            href="/pricing"
-            className="mt-3 inline-flex h-10 items-center rounded-full bg-omniv-gold px-4 text-[13px] font-semibold text-black"
-          >
-            Get Verified
-          </Link>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href="/verify"
+              className="inline-flex h-10 items-center rounded-full bg-omniv-gold px-4 text-[13px] font-semibold text-black"
+            >
+              Apply for verification
+            </Link>
+            <Link
+              href="/pricing"
+              className="inline-flex h-10 items-center rounded-full px-4 text-[13px] font-medium text-zinc-300 ring-1 ring-white/15"
+            >
+              See Pro
+            </Link>
+          </div>
         </div>
       </div>
     </div>
