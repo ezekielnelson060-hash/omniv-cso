@@ -9,6 +9,7 @@ import { CoverUpload } from "@/components/discovery/cover-upload";
 import { PublishAsPicker } from "@/components/discovery/publish-as-picker";
 import { TagChips } from "@/components/discovery/tag-chips";
 import { MediaUpload } from "@/components/discovery/media-upload";
+import { BodyEditor } from "@/components/discovery/body-editor";
 import {
   PUBLICATION_LABELS,
   type PublicationType,
@@ -391,13 +392,14 @@ export default function PublishPage() {
             </div>
             <div className="mt-8 flex w-full max-w-sm flex-col gap-3">
               <Link href={publishedPath || "/explore"} className="flex h-12 items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black">View publication</Link>
+              <Link href={publishedPath ? `/promote?slug=${publishedPath.replace("/p/","")}` : "/promote"} className="flex h-12 items-center justify-center rounded-full bg-white/[0.06] text-[15px] font-medium text-white ring-1 ring-white/10">Promote this</Link>
               <button type="button" onClick={() => { setStep("pick"); setPubType(null); setTitle(""); }} className="flex h-12 items-center justify-center rounded-full bg-white/[0.06] text-[15px] font-medium text-white ring-1 ring-white/10">Publish another</button>
             </div>
           </div>
         )}
 
         {step === "form" && pubType && (
-          <form onSubmit={(e) => { e.preventDefault(); setStep("preview"); }} className="space-y-5">
+          <form onSubmit={(e) => { e.preventDefault(); if ((pubType === "article" || pubType === "announcement") && !body.trim()) { setError("Body required"); return; } setError(null); setStep("preview"); }} className="space-y-5">
             {draftRestored && (
               <p className="rounded-xl bg-omniv-gold/10 px-3 py-2 text-[12px] text-omniv-gold">Draft restored from last session</p>
             )}
@@ -433,9 +435,12 @@ export default function PublishPage() {
               <input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" className={inputCls} />
             </Field>
             {(pubType === "article" || pubType === "announcement") && (
-              <Field label="Body *">
-                <textarea required value={body} onChange={(e) => setBody(e.target.value)} rows={8} placeholder="Write…" className={areaCls} />
-              </Field>
+              <div>
+                <p className={labelCls}>Body *</p>
+                <div className="mt-1.5">
+                  <BodyEditor value={body} onChange={setBody} placeholder="Write…" rows={8} />
+                </div>
+              </div>
             )}
             {pubType !== "article" && pubType !== "announcement" && (
               <Field label="Description *">
@@ -450,12 +455,7 @@ export default function PublishPage() {
             )}
             {pubType === "video" && (
               <Field label="Video URL (YouTube / Vimeo / MP4)">
-                <input
-                  value={mediaUrl || ""}
-                  onChange={(e) => setMediaUrl(e.target.value || null)}
-                  placeholder="https://…"
-                  className={inputCls}
-                />
+                <input value={mediaUrl || ""} onChange={(e) => setMediaUrl(e.target.value || null)} placeholder="https://…" className={inputCls} />
               </Field>
             )}
             {pubType === "product" && (
@@ -463,65 +463,49 @@ export default function PublishPage() {
                 <p className={labelCls}>Price</p>
                 <div className="mt-1.5 flex gap-2">
                   {(["paid", "contact"] as const).map((m) => (
-                    <button key={m} type="button" onClick={() => setPriceMode(m)} className={`h-10 flex-1 rounded-xl text-[13px] font-medium capitalize ring-1 ${priceMode === m ? "bg-omniv-gold/15 text-omniv-gold ring-omniv-gold/40" : "text-zinc-400 ring-white/10"}`}>{m}</button>
+                    <button key={m} type="button" onClick={() => setPriceMode(m)} className={`flex-1 rounded-xl py-2.5 text-[13px] font-medium capitalize ${priceMode === m ? "bg-omniv-gold/15 text-omniv-gold ring-1 ring-omniv-gold/40" : "text-zinc-400 ring-1 ring-white/10"}`}>{m}</button>
                   ))}
                 </div>
+                <Field label="Category"><input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Developer Tools" className={inputCls} /></Field>
+                <Field label="Website / CTA"><input value={ctaHref} onChange={(e) => setCtaHref(e.target.value)} placeholder="https://…" className={inputCls} /></Field>
               </div>
             )}
             {pubType === "event" && (
               <>
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Date *"><input required type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} className={inputCls} /></Field>
-                  <Field label="Time"><input value={eventTime} onChange={(e) => setEventTime(e.target.value)} placeholder="9:00 AM" className={inputCls} /></Field>
-                </div>
-                <Field label="Location *"><input required value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City, venue" className={inputCls} /></Field>
+                <Field label="Date"><input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} className={inputCls} /></Field>
+                <Field label="Time"><input value={eventTime} onChange={(e) => setEventTime(e.target.value)} placeholder="9:00 AM – 6:00 PM" className={inputCls} /></Field>
+                <Field label="Location"><input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City" className={inputCls} /></Field>
+                <Field label="Ticket / Registration"><input value={ctaHref} onChange={(e) => setCtaHref(e.target.value)} placeholder="https://…" className={inputCls} /></Field>
               </>
             )}
             {pubType === "opportunity" && (
               <>
-                <Field label="Type">
-                  <select value={oppType} onChange={(e) => setOppType(e.target.value)} className={inputCls}>
-                    <option value="Funding">Funding</option>
-                    <option value="Job">Job</option>
-                    <option value="Grant">Grant</option>
-                    <option value="Collaboration">Collaboration</option>
-                  </select>
-                </Field>
+                <Field label="Type"><input value={oppType} onChange={(e) => setOppType(e.target.value)} placeholder="Funding" className={inputCls} /></Field>
                 <Field label="Deadline"><input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className={inputCls} /></Field>
-                <Field label="Requirements"><textarea value={requirements} onChange={(e) => setRequirements(e.target.value)} rows={3} className={areaCls} /></Field>
+                <Field label="Requirements"><textarea value={requirements} onChange={(e) => setRequirements(e.target.value)} rows={3} placeholder="Who should apply…" className={areaCls} /></Field>
               </>
             )}
-            {(pubType === "product" || pubType === "event" || pubType === "announcement") && (
-              <Field label="Link / CTA"><input value={ctaHref} onChange={(e) => setCtaHref(e.target.value)} placeholder="https://…" className={inputCls} /></Field>
+            {pubType === "research" && (
+              <Field label="Authors / Publisher"><input value={publisherName} onChange={(e) => setPublisherName(e.target.value)} className={inputCls} /></Field>
             )}
 
             <div>
               <p className={labelCls}>Tags</p>
-              <div className="mt-1.5 rounded-xl bg-white/[0.04] px-3 py-2.5 ring-1 ring-white/[0.08]">
+              <div className="mt-1.5">
                 <TagChips value={tags} onChange={setTags} />
               </div>
             </div>
 
-            <div className="sticky bottom-20 z-30 -mx-4 border-t border-white/5 bg-[#050505]/95 px-4 py-3 backdrop-blur-sm md:static md:mx-0 md:border-0 md:bg-transparent md:px-0 md:py-0">
-              <div className="flex items-center gap-3">
-                <p className="flex-1 text-[12px] text-zinc-500">
-                  {savedAgo ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-omniv-gold" />
-                      {savedAgo}
-                    </span>
-                  ) : (
-                    "Draft autosaves"
-                  )}
-                </p>
-                <button type="submit" className="flex h-11 min-w-[140px] items-center justify-center rounded-full bg-omniv-gold px-6 text-[14px] font-semibold text-black">
-                  Preview
-                </button>
-              </div>
-            </div>
+            {error && <p className="text-[13px] text-red-400">{error}</p>}
+            {savedAgo && <p className="text-[12px] text-zinc-600">{savedAgo}</p>}
+
+            <button type="submit" className="flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black">
+              Preview
+            </button>
           </form>
         )}
       </main>
+
       <BottomNav />
     </div>
   );
