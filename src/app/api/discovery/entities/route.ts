@@ -23,18 +23,46 @@ export async function GET() {
     const { data, error } = await supabase
       .from("discovery_entities")
       .select(
-        "id, type, slug, name, tagline, location, about, intents, tags, heat, published_at"
+        "id, type, slug, name, tagline, location, about, intents, tags, heat, published_at, verified"
       )
       .eq("owner_id", user.id)
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("entities list", error);
-      return NextResponse.json({
-        auth: true,
-        entities: [],
-        error: error.message,
-      });
+      // Fallback without verified if column missing
+      const retry = await supabase
+        .from("discovery_entities")
+        .select(
+          "id, type, slug, name, tagline, location, about, intents, tags, heat, published_at"
+        )
+        .eq("owner_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (retry.error) {
+        return NextResponse.json({
+          auth: true,
+          entities: [],
+          error: error.message,
+        });
+      }
+
+      const entities = (retry.data || []).map((r) => ({
+        id: r.id,
+        type: r.type,
+        slug: r.slug,
+        name: r.name,
+        tagline: r.tagline,
+        location: r.location,
+        about: r.about,
+        intents: r.intents || [],
+        tags: r.tags || [],
+        heat: r.heat,
+        publishedAt: r.published_at?.slice?.(0, 10),
+        verified: false,
+        path: `/e/${r.type}/${r.slug}`,
+      }));
+      return NextResponse.json({ auth: true, entities });
     }
 
     const entities = (data || []).map((r) => ({
@@ -49,6 +77,7 @@ export async function GET() {
       tags: r.tags || [],
       heat: r.heat,
       publishedAt: r.published_at?.slice?.(0, 10),
+      verified: Boolean(r.verified),
       path: `/e/${r.type}/${r.slug}`,
     }));
 
@@ -146,12 +175,41 @@ export async function POST(req: Request) {
         tags,
         links,
         heat: 10,
+        verified: false,
       })
       .select("id, type, slug, name")
       .single();
 
     if (error) {
       console.error("discovery insert", error);
+      // Retry without verified column if migration not run
+      if (error.message?.includes("verified")) {
+        const retry = await supabase
+          .from("discovery_entities")
+          .insert({
+            owner_id: user.id,
+            type,
+            slug,
+            name,
+            tagline: finalTagline,
+            location,
+            about: about || finalTagline,
+            intents,
+            tags,
+            links,
+            heat: 10,
+          })
+          .select("id, type, slug, name")
+          .single();
+        if (retry.error) {
+          return NextResponse.json({ error: retry.error.message }, { status: 500 });
+        }
+        return NextResponse.json({
+          ok: true,
+          entity: retry.data,
+          path: `/e/${retry.data.type}/${retry.data.slug}`,
+        });
+      }
       return NextResponse.json(
         {
           error:
