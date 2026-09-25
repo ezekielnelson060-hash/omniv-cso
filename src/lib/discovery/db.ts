@@ -21,6 +21,7 @@ type Row = {
   links: { label: string; href: string }[] | null;
   heat: number | null;
   published_at: string;
+  verified?: boolean | null;
 };
 
 type PubRow = {
@@ -60,6 +61,7 @@ function rowToEntity(r: Row): DiscoveryEntity {
     links: Array.isArray(r.links) ? r.links : undefined,
     publishedAt: r.published_at.slice(0, 10),
     heat: r.heat ?? 0,
+    verified: Boolean(r.verified),
   };
 }
 
@@ -85,6 +87,9 @@ function rowToPublication(r: PubRow): LivePublication {
 const PUB_SELECT =
   "id, type, slug, title, summary, body, tags, meta, cover_url, media_url, heat, published_at, publisher_id, publisher_name";
 
+const ENT_SELECT =
+  "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified";
+
 export async function listDiscoveryEntities(
   supabase: SupabaseClient | null
 ): Promise<DiscoveryEntity[]> {
@@ -93,9 +98,7 @@ export async function listDiscoveryEntities(
   try {
     const { data, error } = await supabase
       .from("discovery_entities")
-      .select(
-        "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at"
-      )
+      .select(ENT_SELECT)
       .order("heat", { ascending: false })
       .limit(200);
 
@@ -123,9 +126,7 @@ export async function getDiscoveryEntity(
     try {
       const { data } = await supabase
         .from("discovery_entities")
-        .select(
-          "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at"
-        )
+        .select(ENT_SELECT)
         .eq("type", type)
         .eq("slug", slug)
         .maybeSingle();
