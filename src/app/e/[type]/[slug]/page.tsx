@@ -91,6 +91,10 @@ export default async function EntityPage({ params, searchParams }: Props) {
 
   const initial = e.name.slice(0, 1).toUpperCase();
   const path = entityPath(e);
+  const editPath = `${path}/edit`;
+  // optional media fields if migration applied
+  const coverUrl = (e as { coverUrl?: string | null }).coverUrl;
+  const avatarUrl = (e as { avatarUrl?: string | null }).avatarUrl;
 
   const counts = {
     posts: pubs.filter((p) => p.type === "article" || p.type === "announcement")
@@ -104,8 +108,21 @@ export default async function EntityPage({ params, searchParams }: Props) {
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <div className="relative h-40 overflow-hidden bg-gradient-to-br from-omniv-gold/30 via-zinc-900 to-black sm:h-48">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,rgba(255,200,50,0.22),transparent_55%)]" />
+        <div
+          className="relative h-40 overflow-hidden bg-gradient-to-br from-omniv-gold/30 via-zinc-900 to-black sm:h-48"
+          style={
+            coverUrl
+              ? {
+                  backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.15), #050505), url(${coverUrl})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }
+              : undefined
+          }
+        >
+          {!coverUrl && (
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,rgba(255,200,50,0.22),transparent_55%)]" />
+          )}
           <Link
             href="/explore"
             className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm"
@@ -116,19 +133,23 @@ export default async function EntityPage({ params, searchParams }: Props) {
           <div className="absolute right-4 top-4 flex gap-1">
             <SaveButton type={e.type} slug={e.slug} name={e.name} variant="icon" />
             <Link
-              href="/profile"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-zinc-300 backdrop-blur-sm"
-              aria-label="Profile"
+              href={editPath}
+              className="flex h-9 items-center rounded-full bg-black/40 px-3 text-[12px] font-medium text-white backdrop-blur-sm"
             >
-              ·
+              Edit
             </Link>
           </div>
         </div>
 
         <main className="relative mx-auto max-w-lg px-4 pb-28 md:max-w-2xl md:px-6">
           <div className="-mt-12 flex flex-col sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 text-3xl font-semibold text-black ring-4 ring-[#050505]">
-              {initial}
+            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 text-3xl font-semibold text-black ring-4 ring-[#050505]">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                initial
+              )}
             </div>
             <div className="mt-4 flex flex-wrap gap-2 sm:mb-1 sm:mt-0">
               <FollowButton type={e.type} slug={e.slug} name={e.name} id={e.id} />
@@ -138,6 +159,12 @@ export default async function EntityPage({ params, searchParams }: Props) {
               >
                 Contact
               </a>
+              <Link
+                href={editPath}
+                className="inline-flex h-10 items-center rounded-full px-4 text-[13px] font-medium text-zinc-400 ring-1 ring-white/12"
+              >
+                Edit
+              </Link>
             </div>
           </div>
 
