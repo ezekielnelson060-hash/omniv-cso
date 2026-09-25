@@ -1,6 +1,6 @@
 import { track } from "@/lib/analytics";
 
-export type CheckoutPlan = "starter" | "pro" | "label";
+export type CheckoutPlan = "pro" | "business" | "starter" | "label";
 
 export async function startFlutterwaveCheckout(opts: {
   plan: CheckoutPlan;
@@ -22,7 +22,9 @@ export async function startFlutterwaveCheckout(opts: {
       });
       return {
         ok: false,
-        error: data.error || "Could not start checkout. Check FLW_SECRET_KEY.",
+        error:
+          data.error ||
+          "Could not start checkout. Check FLW_SECRET_KEY in Vercel.",
       };
     }
     track("checkout_redirect", { plan: opts.plan });
