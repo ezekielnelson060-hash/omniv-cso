@@ -8,6 +8,7 @@ import {
   onAccountSwitch,
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
+import { readProfile } from "@/lib/discovery/local-profile";
 
 type EntityRow = {
   id: string;
@@ -15,70 +16,57 @@ type EntityRow = {
   slug: string;
   name: string;
   path: string;
+  verified?: boolean;
 };
 
+/**
+ * Personal profile ≠ entity accounts.
+ * Switch like Instagram / X. null active = personal.
+ */
 export function AccountSwitcher({
-  compact = false,
-  onPicked,
+  onClose,
 }: {
+  onClose?: () => void;
   compact?: boolean;
   onPicked?: (a: ActiveAccount) => void;
 }) {
   const [entities, setEntities] = useState<EntityRow[]>([]);
   const [active, setActive] = useState<ActiveAccount | null>(null);
-  const [open, setOpen] = useState(false);
+  const [displayName, setDisplayName] = useState("You");
+  const [handle, setHandle] = useState("you");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [auth, setAuth] = useState(false);
 
   useEffect(() => {
+    const p = readProfile();
+    setDisplayName(p.displayName || "You");
+    setHandle(p.handle || "you");
+    setAvatarUrl(p.avatarUrl || null);
     setActive(readActiveAccount());
+
     const unsub = onAccountSwitch((a) => setActive(a));
-    let cancelled = false;
+
     (async () => {
       try {
         const res = await fetch("/api/discovery/entities");
         const data = await res.json();
-        if (cancelled) return;
         setAuth(Boolean(data.auth));
-        const list = (data.entities || []) as EntityRow[];
-        setEntities(list);
-        // auto-select first if none
-        const current = readActiveAccount();
-        if (!current && list.length > 0) {
-          const first: ActiveAccount = {
-            id: list[0].id,
-            type: list[0].type,
-            slug: list[0].slug,
-            name: list[0].name,
-            path: list[0].path,
-          };
-          writeActiveAccount(first);
-          setActive(first);
-        } else if (current && list.length) {
-          // refresh name if changed
-          const match = list.find((e) => e.id === current.id);
-          if (match) {
-            const refreshed: ActiveAccount = {
-              id: match.id,
-              type: match.type,
-              slug: match.slug,
-              name: match.name,
-              path: match.path,
-            };
-            writeActiveAccount(refreshed);
-            setActive(refreshed);
-          }
-        }
+        setEntities(data.entities || []);
       } catch {
-        /* ignore */
+        setAuth(false);
       }
     })();
-    return () => {
-      cancelled = true;
-      unsub();
-    };
+
+    return unsub;
   }, []);
 
-  function pick(e: EntityRow) {
+  function switchPersonal() {
+    writeActiveAccount(null);
+    setActive(null);
+    onClose?.();
+  }
+
+  function switchEntity(e: EntityRow) {
     const a: ActiveAccount = {
       id: e.id,
       type: e.type,
@@ -88,109 +76,124 @@ export function AccountSwitcher({
     };
     writeActiveAccount(a);
     setActive(a);
-    setOpen(false);
-    onPicked?.(a);
+    onClose?.();
   }
 
-  if (!auth) {
-    return (
-      <Link
-        href="/signup?next=/accounts"
-        className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2.5 text-[13px] text-zinc-400 ring-1 ring-white/[0.08]"
-      >
-        Sign in to choose account
-      </Link>
-    );
-  }
-
-  if (entities.length === 0) {
-    return (
-      <Link
-        href="/accounts"
-        className="flex items-center justify-between rounded-xl bg-white/[0.04] px-3 py-2.5 ring-1 ring-white/[0.08]"
-      >
-        <span className="text-[13px] text-zinc-400">Create an account first</span>
-        <span className="text-omniv-gold text-[12px]">Add →</span>
-      </Link>
-    );
-  }
+  const personalActive = !active;
 
   return (
-    <div className="relative">
+    <div className="space-y-1">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={`flex w-full items-center gap-3 rounded-xl bg-white/[0.04] ring-1 ring-white/[0.08] transition hover:ring-white/20 ${
-          compact ? "px-3 py-2" : "px-3.5 py-3"
+        onClick={switchPersonal}
+        className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${
+          personalActive
+            ? "bg-omniv-gold/15 ring-1 ring-omniv-gold/30"
+            : "hover:bg-white/5"
         }`}
       >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-omniv-gold/20 text-[13px] font-semibold text-omniv-gold">
-          {(active?.name || entities[0].name).charAt(0)}
-        </span>
-        <div className="min-w-0 flex-1 text-left">
-          {!compact && (
-            <p className="text-[11px] text-zinc-500">Publishing as</p>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/25 text-sm font-semibold text-omniv-gold">
+          {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            displayName.charAt(0).toUpperCase()
           )}
-          <p className="truncate text-[14px] font-medium text-white">
-            {active?.name || entities[0].name}
-          </p>
         </div>
-        <span className="text-zinc-500">▾</span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-semibold text-white">
+            {displayName}
+          </p>
+          <p className="text-[12px] text-zinc-500">Personal · @{handle}</p>
+        </div>
+        {personalActive && <span className="text-omniv-gold">✓</span>}
       </button>
 
-      {open && (
-        <>
+      <p className="px-3 pt-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+        Publish as
+      </p>
+
+      {entities.map((e) => {
+        const isActive = active?.id === e.id;
+        return (
           <button
+            key={e.id}
             type="button"
-            className="fixed inset-0 z-40"
-            aria-label="Close"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl bg-[#141414] shadow-2xl ring-1 ring-white/15">
-            <p className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-              Switch account
-            </p>
-            <ul className="max-h-64 overflow-y-auto py-1">
-              {entities.map((e) => {
-                const isActive = active?.id === e.id;
-                return (
-                  <li key={e.id}>
-                    <button
-                      type="button"
-                      onClick={() => pick(e)}
-                      className={`flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/5 ${
-                        isActive ? "bg-omniv-gold/10" : ""
-                      }`}
-                    >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-omniv-gold/15 text-[13px] font-semibold text-omniv-gold">
-                        {e.name.charAt(0)}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-medium text-white">
-                          {e.name}
-                        </p>
-                        <p className="text-[11px] capitalize text-zinc-500">
-                          {e.type}
-                        </p>
-                      </div>
-                      {isActive && (
-                        <span className="text-omniv-gold text-[12px]">✓</span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            <Link
-              href="/accounts"
-              className="block border-t border-white/10 px-4 py-3 text-[13px] text-omniv-gold hover:bg-white/5"
-              onClick={() => setOpen(false)}
-            >
-              Manage accounts →
-            </Link>
-          </div>
-        </>
+            onClick={() => switchEntity(e)}
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${
+              isActive
+                ? "bg-omniv-gold/15 ring-1 ring-omniv-gold/30"
+                : "hover:bg-white/5"
+            }`}
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
+              {e.name.charAt(0)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[14px] font-semibold text-white">
+                {e.name}
+                {e.verified && <span className="ml-1 text-sky-400">✓</span>}
+              </p>
+              <p className="text-[12px] capitalize text-zinc-500">{e.type}</p>
+            </div>
+            {isActive && <span className="text-omniv-gold">✓</span>}
+          </button>
+        );
+      })}
+
+      {auth && entities.length === 0 && (
+        <p className="px-3 py-2 text-[12px] text-zinc-500">
+          No entities yet. Create one to publish as a brand or company.
+        </p>
       )}
+
+      {!auth && (
+        <Link
+          href="/signup?next=/accounts"
+          onClick={onClose}
+          className="block px-3 py-2 text-[13px] text-omniv-gold"
+        >
+          Sign in to create entities →
+        </Link>
+      )}
+
+      <Link
+        href="/accounts"
+        onClick={onClose}
+        className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-white/5"
+      >
+        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-dashed border-omniv-gold/50 text-lg text-omniv-gold">
+          +
+        </div>
+        <div>
+          <p className="text-[14px] font-semibold text-omniv-gold">
+            Create entity
+          </p>
+          <p className="text-[12px] text-zinc-500">
+            Company, artist, brand, project…
+          </p>
+        </div>
+      </Link>
     </div>
+  );
+}
+
+export function ActiveAccountChip() {
+  const [active, setActive] = useState<ActiveAccount | null>(null);
+
+  useEffect(() => {
+    setActive(readActiveAccount());
+    return onAccountSwitch((a) => setActive(a));
+  }, []);
+
+  if (!active) return null;
+
+  return (
+    <Link
+      href="/accounts"
+      className="inline-flex max-w-[140px] items-center gap-1.5 truncate rounded-full bg-omniv-gold/15 px-2.5 py-1 text-[11px] font-medium text-omniv-gold"
+    >
+      <span className="truncate">As {active.name}</span>
+    </Link>
   );
 }
