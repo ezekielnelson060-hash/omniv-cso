@@ -7,6 +7,7 @@ import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { ProfilePosts } from "@/components/discovery/profile-posts";
 import { FirstAccountNudge } from "@/components/discovery/first-account-nudge";
+import { CoverUpload } from "@/components/discovery/cover-upload";
 import {
   readFollows,
   readSaved,
@@ -80,6 +81,14 @@ export default function ProfilePage() {
     setEditing(false);
   }
 
+  function persistPhotos(next: Partial<LocalProfile>) {
+    if (!profile) return;
+    const clean = { ...profile, ...next };
+    writeProfile(clean);
+    setProfile(clean);
+    setDraft(clean);
+  }
+
   if (!profile || !draft) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-[#050505] text-zinc-500">
@@ -93,8 +102,19 @@ export default function ProfilePage() {
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <div className="relative h-36 overflow-hidden bg-gradient-to-br from-omniv-gold/30 via-zinc-900 to-black sm:h-44">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_30%,rgba(255,200,50,0.25),transparent_55%)]" />
+        {/* Cover — photo sticks via localStorage + upload URL */}
+        <div className="relative h-40 overflow-hidden bg-gradient-to-br from-omniv-gold/30 via-zinc-900 to-black sm:h-48">
+          {profile.coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profile.coverUrl}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_30%,rgba(255,200,50,0.25),transparent_55%)]" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050505]/80 to-transparent" />
           <Link
             href="/home"
             className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm md:hidden"
@@ -109,8 +129,19 @@ export default function ProfilePage() {
 
         <main className="relative mx-auto max-w-lg px-4 pb-28 md:max-w-2xl md:px-6">
           <div className="-mt-12 flex items-end justify-between">
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 text-3xl font-semibold text-black ring-4 ring-[#050505]">
-              {initial}
+            <div className="relative">
+              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 text-3xl font-semibold text-black ring-4 ring-[#050505]">
+                {profile.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={profile.avatarUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  initial
+                )}
+              </div>
             </div>
             {!editing ? (
               <button
@@ -133,8 +164,7 @@ export default function ProfilePage() {
                   Cancel
                 </button>
                 <button
-                  type="button"
-                  onClick={saveEdit}
+                  type="button"	def onClick={saveEdit}
                   className="rounded-full bg-omniv-gold px-4 py-2 text-[13px] font-semibold text-black"
                 >
                   Save
@@ -144,15 +174,56 @@ export default function ProfilePage() {
           </div>
 
           {editing ? (
-            <div className="mt-5 space-y-3">
-              <Field label="Display name" value={draft.displayName} onChange={(v) => setDraft({ ...draft, displayName: v })} />
-              <Field label="Handle" value={draft.handle} onChange={(v) => setDraft({ ...draft, handle: v })} prefix="@" />
-              <Field label="Bio" value={draft.bio} onChange={(v) => setDraft({ ...draft, bio: v })} multiline />
-              <Field label="Location" value={draft.location} onChange={(v) => setDraft({ ...draft, location: v })} />
+            <div className="mt-5 space-y-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                Personal profile photos
+              </p>
+              <CoverUpload
+                label="Change cover photo"
+                value={draft.coverUrl}
+                onChange={(url) => {
+                  setDraft({ ...draft, coverUrl: url });
+                  persistPhotos({ coverUrl: url });
+                }}
+              />
+              <CoverUpload
+                label="Change profile photo"
+                tall
+                value={draft.avatarUrl}
+                onChange={(url) => {
+                  setDraft({ ...draft, avatarUrl: url });
+                  persistPhotos({ avatarUrl: url });
+                }}
+              />
+              <Field
+                label="Display name"
+                value={draft.displayName}
+                onChange={(v) => setDraft({ ...draft, displayName: v })}
+              />
+              <Field
+                label="Handle"
+                value={draft.handle}
+                onChange={(v) => setDraft({ ...draft, handle: v })}
+                prefix="@"
+              />
+              <Field
+                label="Bio"
+                value={draft.bio}
+                onChange={(v) => setDraft({ ...draft, bio: v })}
+                multiline
+              />
+              <Field
+                label="Location"
+                value={draft.location}
+                onChange={(v) => setDraft({ ...draft, location: v })}
+              />
             </div>
           ) : (
             <>
-              <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white">
+              <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
+                Personal profile
+              </p>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white">
                 {profile.displayName}
               </h1>
               <p className="text-[14px] text-zinc-500">@{profile.handle}</p>
@@ -196,9 +267,12 @@ export default function ProfilePage() {
                 className="mt-5 flex items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3.5 ring-1 ring-white/[0.08] transition hover:ring-white/15"
               >
                 <div>
-                  <p className="text-[14px] font-medium text-white">Your accounts</p>
+                  <p className="text-[14px] font-medium text-white">
+                    Your entities
+                  </p>
                   <p className="text-[12px] text-zinc-500">
-                    Person, company, brand, project — publish as any of them
+                    Companies, artists, brands — publish as any of them. Separate
+                    from this personal profile.
                   </p>
                 </div>
                 <span className="text-omniv-gold">›</span>
@@ -230,7 +304,14 @@ export default function ProfilePage() {
           </div>
 
           <div className="mt-5">
-            {tab === "posts" && <ProfilePosts />}
+            {tab === "posts" && (
+              <>
+                <p className="mb-3 text-[12px] text-zinc-500">
+                  Everything you published across your entities.
+                </p>
+                <ProfilePosts />
+              </>
+            )}
             {tab === "saved" &&
               (saved.length === 0 ? (
                 <p className="py-8 text-center text-[14px] text-zinc-500">
@@ -296,7 +377,7 @@ export default function ProfilePage() {
                             {f.name}
                           </p>
                           <p className="text-[12px] capitalize text-zinc-500">
-                            {f.type}
+                            Entity · {f.type}
                           </p>
                         </div>
                       </Link>
