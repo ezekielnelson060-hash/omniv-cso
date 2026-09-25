@@ -6,6 +6,7 @@ import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { ProfilePosts } from "@/components/discovery/profile-posts";
+import { FirstAccountNudge } from "@/components/discovery/first-account-nudge";
 import {
   readFollows,
   readSaved,
@@ -187,6 +188,8 @@ export default function ProfilePage() {
                   <span className="text-[13px] text-zinc-500">Saved</span>
                 </Link>
               </div>
+
+              <FirstAccountNudge />
 
               <Link
                 href="/accounts"
