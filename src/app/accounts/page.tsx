@@ -24,6 +24,7 @@ type EntityRow = {
   tagline: string;
   location?: string;
   path: string;
+  verified?: boolean;
 };
 
 export default function AccountsPage() {
@@ -124,7 +125,7 @@ export default function AccountsPage() {
                 ←
               </Link>
               <span className="text-[15px] font-semibold text-white">
-                Your accounts
+                Your entities
               </span>
             </div>
             <Image
@@ -139,14 +140,14 @@ export default function AccountsPage() {
 
         <main className="mx-auto max-w-lg px-4 pb-28 pt-5 md:max-w-2xl md:px-6">
           <p className="text-[14px] leading-relaxed text-zinc-400">
-            Switch like Instagram or X. Everything you publish stays under the
-            active account — person, company, brand, or project.
+            One person. Multiple identities. Switch who you publish as — person,
+            artist, company, brand, or project.
           </p>
 
           {auth === false && (
             <div className="mt-8 rounded-2xl bg-white/[0.03] p-5 text-center ring-1 ring-white/[0.08]">
               <p className="text-[14px] text-zinc-400">
-                Sign in to manage accounts.
+                Sign in to manage entities.
               </p>
               <Link
                 href="/signup?next=/accounts"
@@ -159,10 +160,25 @@ export default function AccountsPage() {
 
           {auth && (
             <>
-              <div className="mt-8 space-y-3">
+              <div className="mt-6 flex items-center justify-between">
+                <p className="text-[13px] text-zinc-500">
+                  Your entities ({entities.length})
+                </p>
+                {!showForm && (
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(true)}
+                    className="rounded-full bg-omniv-gold/15 px-3 py-1.5 text-[12px] font-semibold text-omniv-gold"
+                  >
+                    + Create
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-4 space-y-3">
                 {entities.length === 0 && !showForm && (
                   <p className="py-6 text-center text-[14px] text-zinc-500">
-                    No accounts yet. Create a personal profile or a company.
+                    No entities yet. Create a personal profile or a company.
                   </p>
                 )}
 
@@ -187,6 +203,11 @@ export default function AccountsPage() {
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[15px] font-semibold text-white">
                             {e.name}
+                            {e.verified && (
+                              <span className="ml-1.5 text-[11px] font-medium text-sky-400">
+                                · Verified
+                              </span>
+                            )}
                             {isActive && (
                               <span className="ml-2 text-[11px] font-medium text-omniv-gold">
                                 Active
@@ -214,20 +235,22 @@ export default function AccountsPage() {
               </div>
 
               {!showForm ? (
-                <button
-                  type="button"
-                  onClick={() => setShowForm(true)}
-                  className="mt-8 flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black"
-                >
-                  Add account
-                </button>
+                entities.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(true)}
+                    className="mt-8 flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black"
+                  >
+                    Add entity
+                  </button>
+                )
               ) : (
                 <form
                   onSubmit={onCreate}
                   className="mt-8 space-y-4 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.08]"
                 >
                   <p className="text-[13px] font-medium text-white">
-                    New account
+                    New entity
                   </p>
                   <div>
                     <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
