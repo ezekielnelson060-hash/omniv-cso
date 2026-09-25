@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { ProfileAvatarLink } from "@/components/discovery/profile-avatar-link";
 import { readFollows, type FollowedRef } from "@/lib/discovery/local-graph";
 import { SEED_ENTITIES, publicationsByPublisher } from "@/lib/discovery/seed";
 
@@ -41,7 +42,13 @@ export default function FollowingPage() {
         <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-sm">
           <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3 md:max-w-2xl md:px-6">
             <div className="flex items-center gap-2">
-              <Image src="/logo.svg" alt="Omniv" width={28} height={28} className="rounded-md" />
+              <Image
+                src="/logo.svg"
+                alt="Omniv"
+                width={28}
+                height={28}
+                className="rounded-md"
+              />
               <span className="text-[17px] font-semibold tracking-tight text-white">
                 Following
               </span>
@@ -52,18 +59,19 @@ export default function FollowingPage() {
                 className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 hover:bg-white/5 hover:text-white"
                 aria-label="Search"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                >
                   <circle cx="11" cy="11" r="7" />
                   <path d="m20 20-3.5-3.5" strokeLinecap="round" />
                 </svg>
               </Link>
-              <Link
-                href="/profile"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-omniv-gold/20 text-[12px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/30"
-                aria-label="Profile"
-              >
-                ·
-              </Link>
+              <ProfileAvatarLink />
             </div>
           </div>
         </header>
@@ -74,7 +82,9 @@ export default function FollowingPage() {
           </p>
 
           {!ready ? (
-            <p className="mt-16 text-center text-[14px] text-zinc-600">Loading…</p>
+            <p className="mt-16 text-center text-[14px] text-zinc-600">
+              Loading…
+            </p>
           ) : follows.length === 0 ? (
             <div className="mt-16 text-center">
               <p className="text-[14px] text-zinc-500">
@@ -109,7 +119,7 @@ export default function FollowingPage() {
                         <p className="truncate text-[15px] font-semibold text-white">
                           {f.name}
                         </p>
-                        <p className="truncate text-[12px] text-zinc-500">
+                        <p className="truncate text-[12px] capitalize text-zinc-500">
                           {entity?.tagline ?? f.type}
                           {pubCount > 0 ? ` · ${pubCount} posts` : ""}
                         </p>
