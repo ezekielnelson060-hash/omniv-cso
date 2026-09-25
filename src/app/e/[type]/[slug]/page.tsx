@@ -7,6 +7,7 @@ import { SaveButton } from "@/components/discovery/save-button";
 import { FollowerCount } from "@/components/discovery/follower-count";
 import { PublicationCard } from "@/components/discovery/publication-card";
 import { EntityLatestRow } from "@/components/discovery/entity-latest-row";
+import { VerifiedBadge, GetVerifiedCard } from "@/components/discovery/verified-badge";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import {
@@ -140,9 +141,15 @@ export default async function EntityPage({ params, searchParams }: Props) {
             </div>
           </div>
 
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white">
+          <h1 className="mt-4 flex items-center gap-2 text-2xl font-semibold tracking-tight text-white">
             {e.name}
+            {e.verified && <VerifiedBadge />}
           </h1>
+          {e.verified && (
+            <p className="mt-1 text-[12px] font-medium text-sky-400">
+              Verified Publisher
+            </p>
+          )}
           <p className="mt-1 text-[14px] text-zinc-400">{e.tagline}</p>
           {e.location && (
             <p className="mt-1.5 text-[13px] text-zinc-500">📍 {e.location}</p>
@@ -227,6 +234,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
                   {l.label} →
                 </a>
               ))}
+              {!e.verified && <GetVerifiedCard />}
               <div id="contact" className="pt-4">
                 <ContactForm entityName={e.name} entityPath={path} />
               </div>
@@ -256,6 +264,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
                   Nothing in this tab yet.
                 </p>
               )}
+              {!e.verified && <GetVerifiedCard />}
               <div id="contact" className="pt-8">
                 <ContactForm entityName={e.name} entityPath={path} />
               </div>
