@@ -22,6 +22,8 @@ type Row = {
   heat: number | null;
   published_at: string;
   verified?: boolean | null;
+  avatar_url?: string | null;
+  cover_url?: string | null;
 };
 
 type PubRow = {
@@ -47,7 +49,13 @@ export type LivePublication = Publication & {
   coverUrl?: string;
 };
 
-function rowToEntity(r: Row): DiscoveryEntity {
+/** Entity with optional media (after migration) */
+export type LiveEntity = DiscoveryEntity & {
+  avatarUrl?: string;
+  coverUrl?: string;
+};
+
+function rowToEntity(r: Row): LiveEntity {
   return {
     id: r.id,
     type: r.type,
@@ -62,6 +70,8 @@ function rowToEntity(r: Row): DiscoveryEntity {
     publishedAt: r.published_at.slice(0, 10),
     heat: r.heat ?? 0,
     verified: Boolean(r.verified),
+    avatarUrl: r.avatar_url ?? undefined,
+    coverUrl: r.cover_url ?? undefined,
   };
 }
 
@@ -88,6 +98,9 @@ const PUB_SELECT =
   "id, type, slug, title, summary, body, tags, meta, cover_url, media_url, heat, published_at, publisher_id, publisher_name";
 
 const ENT_SELECT =
+  "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified, avatar_url, cover_url";
+
+const ENT_SELECT_SAFE =
   "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified";
 
 export async function listDiscoveryEntities(
@@ -96,11 +109,21 @@ export async function listDiscoveryEntities(
   if (!supabase) return SEED_ENTITIES;
 
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("discovery_entities")
       .select(ENT_SELECT)
       .order("heat", { ascending: false })
       .limit(200);
+
+    if (error) {
+      const retry = await supabase
+        .from("discovery_entities")
+        .select(ENT_SELECT_SAFE)
+        .order("heat", { ascending: false })
+        .limit(200);
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error || !data?.length) {
       return SEED_ENTITIES;
@@ -121,15 +144,25 @@ export async function getDiscoveryEntity(
   supabase: SupabaseClient | null,
   type: string,
   slug: string
-): Promise<DiscoveryEntity | null> {
+): Promise<LiveEntity | null> {
   if (supabase) {
     try {
-      const { data } = await supabase
+      let { data } = await supabase
         .from("discovery_entities")
         .select(ENT_SELECT)
         .eq("type", type)
         .eq("slug", slug)
         .maybeSingle();
+
+      if (!data) {
+        const retry = await supabase
+          .from("discovery_entities")
+          .select(ENT_SELECT_SAFE)
+          .eq("type", type)
+          .eq("slug", slug)
+          .maybeSingle();
+        data = retry.data;
+      }
 
       if (data) return rowToEntity(data as Row);
     } catch {
