@@ -40,7 +40,12 @@ export function PublishAsPicker({
           onEntityId?.(a.id);
         }}
       />
-      {!value && (
+      {value ? (
+        <p className="text-[12px] leading-relaxed text-zinc-500">
+          Your publication will appear on the{" "}
+          <span className="font-medium text-zinc-300">{value}</span> profile.
+        </p>
+      ) : (
         <p className="text-[12px] text-zinc-600">
           Switch account above — everything you publish stays under that profile.
         </p>
