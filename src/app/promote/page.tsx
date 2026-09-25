@@ -2,10 +2,10 @@
 
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { startFlutterwaveCheckout } from "@/lib/checkout";
 
 type Pub = {
   id: string;
@@ -50,6 +50,7 @@ function PromoteInner() {
   const sp = useSearchParams();
   const router = useRouter();
   const preSlug = sp.get("slug") || "";
+  const billingOk = sp.get("billing") === "success";
 
   const [pubs, setPubs] = useState<Pub[]>([]);
   const [slug, setSlug] = useState(preSlug);
@@ -59,13 +60,20 @@ function PromoteInner() {
   const [budget, setBudget] = useState("50");
   const [customBudget, setCustomBudget] = useState("");
   const [auth, setAuth] = useState<boolean | null>(null);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState(billingOk);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (billingOk) setDone(true);
+  }, [billingOk]);
 
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/discovery/publications/list?owner=me&limit=30");
+        const res = await fetch(
+          "/api/discovery/publications/list?owner=me&limit=30"
+        );
         const data = await res.json();
         setAuth(data.auth !== false);
         const list = data.publications || [];
@@ -80,9 +88,18 @@ function PromoteInner() {
 
   const selected = pubs.find((p) => p.slug === slug);
 
+  function budgetAmount() {
+    if (budget === "custom") {
+      const n = parseInt(customBudget, 10);
+      return Number.isFinite(n) ? n : 50;
+    }
+    return parseInt(budget, 10) || 50;
+  }
+
   async function onContinue() {
+    setError(null);
     setLoading(true);
-    // Store intent locally until ad billing is wired
+    const amount = budgetAmount();
     try {
       const payload = {
         slug,
@@ -90,16 +107,31 @@ function PromoteInner() {
         audience,
         location,
         duration,
-        budget: budget === "custom" ? customBudget : budget,
+        budget: amount,
         at: Date.now(),
       };
       localStorage.setItem("omniv_promote_draft", JSON.stringify(payload));
     } catch {
       /* ignore */
     }
-    // Route to pricing / pro if they want full promote; mark done for now
-    setDone(true);
-    setLoading(false);
+
+    const result = await startFlutterwaveCheckout({
+      plan: "promote",
+      amount,
+      meta: {
+        slug,
+        audience,
+        location,
+        duration,
+      },
+    });
+
+    if (!result.ok) {
+      setError(result.error);
+      setLoading(false);
+      return;
+    }
+    window.location.href = result.link;
   }
 
   return (
@@ -136,21 +168,16 @@ function PromoteInner() {
           {auth && done && (
             <div className="mt-8 rounded-2xl bg-emerald-500/10 p-6 text-center ring-1 ring-emerald-500/25">
               <p className="text-[16px] font-semibold text-emerald-300">
-                Promotion request saved
+                {billingOk ? "Payment received" : "Promotion ready"}
               </p>
               <p className="mt-2 text-[13px] text-zinc-400">
-                Targeted discovery for “{selected?.title || slug}”. Full paid
-                boost ships with Pro billing — your settings are ready.
+                Targeted discovery for “{selected?.title || slug}”. Your boost
+                settings are saved. Visibility lift runs over the selected
+                duration.
               </p>
               <Link
-                href="/pricing"
-                className="mt-5 inline-flex h-11 items-center rounded-full bg-omniv-gold px-5 text-[14px] font-semibold text-black"
-              >
-                Unlock with Pro
-              </Link>
-              <Link
                 href={slug ? `/p/${slug}` : "/home"}
-                className="mt-3 block text-[13px] text-zinc-500"
+                className="mt-5 inline-flex h-11 items-center rounded-full bg-omniv-gold px-5 text-[14px] font-semibold text-black"
               >
                 Back to publication
               </Link>
@@ -159,7 +186,6 @@ function PromoteInner() {
 
           {auth && !done && (
             <div className="space-y-6">
-              {/* Selected pub card */}
               {selected && (
                 <div className="flex items-center gap-3 rounded-2xl bg-white/[0.04] p-3 ring-1 ring-white/[0.08]">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-omniv-gold/20 text-omniv-gold">
@@ -268,18 +294,34 @@ function PromoteInner() {
                 )}
               </Field>
 
+              {error && (
+                <p className="text-center text-[13px] text-rose-400">
+                  {error}
+                  {error.includes("Sign in") && (
+                    <>
+                      {" "}
+                      <Link href="/signup?next=/promote" className="underline">
+                        Sign in
+                      </Link>
+                    </>
+                  )}
+                </p>
+              )}
+
               <button
                 type="button"
                 disabled={loading || !slug}
                 onClick={() => void onContinue()}
                 className="flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black disabled:opacity-50"
               >
-                {loading ? "Saving…" : "Continue"}
+                {loading
+                  ? "Opening checkout…"
+                  : `Pay $${budgetAmount()} & promote`}
               </button>
 
               <p className="text-center text-[12px] text-zinc-600">
-                Get more visibility with targeted discovery. Paid boost completes
-                with Pro.
+                Secure card payment via Flutterwave. Requires FLW_SECRET_KEY in
+                Vercel.
               </p>
             </div>
           )}
