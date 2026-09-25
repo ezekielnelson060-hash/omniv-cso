@@ -2,6 +2,7 @@ import Link from "next/link";
 import { NetworkHeader } from "@/components/discovery/network-header";
 import { PublicationCard } from "@/components/discovery/publication-card";
 import { SiteFooter } from "@/components/site-footer";
+import { listLivePublications } from "@/lib/discovery/db";
 import {
   newestPublications,
   trendingPublications,
@@ -10,11 +11,47 @@ import {
   EXPLORE_NAV,
   PUBLICATION_LABELS,
   PUBLICATION_TYPES,
+  type Publication,
 } from "@/lib/discovery/types";
 
-export default function DiscoveryHomePage() {
-  const trend = trendingPublications(8);
-  const fresh = newestPublications(6);
+async function tryClient() {
+  try {
+    const { createClient } = await import("@/lib/supabase/server");
+    return await createClient();
+  } catch {
+    return null;
+  }
+}
+
+export default async function DiscoveryHomePage() {
+  const supabase = await tryClient();
+  const live = await listLivePublications(supabase, 24);
+
+  let trend: Publication[] = [...live].sort(
+    (a, b) => (b.heat ?? 0) - (a.heat ?? 0)
+  );
+  if (trend.length < 4) {
+    const seed = trendingPublications(8);
+    const slugs = new Set(trend.map((p) => p.slug));
+    for (const s of seed) {
+      if (!slugs.has(s.slug)) trend.push(s);
+      if (trend.length >= 8) break;
+    }
+  }
+  trend = trend.slice(0, 8);
+
+  let fresh: Publication[] = [...live].sort((a, b) =>
+    (b.publishedAt || "").localeCompare(a.publishedAt || "")
+  );
+  if (fresh.length < 3) {
+    const seed = newestPublications(6);
+    const slugs = new Set(fresh.map((p) => p.slug));
+    for (const s of seed) {
+      if (!slugs.has(s.slug)) fresh.push(s);
+      if (fresh.length >= 6) break;
+    }
+  }
+  fresh = fresh.slice(0, 6);
 
   return (
     <div className="min-h-dvh bg-[#050505] text-zinc-100">
@@ -26,7 +63,7 @@ export default function DiscoveryHomePage() {
             Discovery network
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Discover what&apos;s being published
+            Discover what's being published
           </h1>
           <p className="mt-2 text-[15px] text-zinc-400">
             Articles, music, research, products, events, and opportunities —
@@ -62,6 +99,21 @@ export default function DiscoveryHomePage() {
                 {PUBLICATION_LABELS[t]}
               </Link>
             ))}
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/home"
+              className="inline-flex h-11 items-center rounded-full bg-white px-5 text-[14px] font-semibold text-black"
+            >
+              Open For You
+            </Link>
+            <Link
+              href="/publish"
+              className="inline-flex h-11 items-center rounded-full bg-omniv-gold px-5 text-[14px] font-semibold text-black"
+            >
+              Publish
+            </Link>
           </div>
         </section>
 
