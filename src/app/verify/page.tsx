@@ -6,6 +6,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { CurrentIdentityBanner } from "@/components/discovery/current-identity";
+import { readActiveAccount } from "@/lib/discovery/active-account";
 
 type EntityRow = {
   id: string;
@@ -49,9 +51,21 @@ export default function VerifyPage() {
         const rData = await rRes.json();
         if (cancelled) return;
         setAuth(Boolean(eData.auth));
-        setEntities(eData.entities || []);
+        const list: EntityRow[] = eData.entities || [];
+        setEntities(list);
         setRequests(rData.requests || []);
-        if (eData.entities?.[0]) setEntityId(eData.entities[0].id);
+
+        const active = readActiveAccount();
+        if (active?.id && list.some((x) => x.id === active.id)) {
+          setEntityId(active.id);
+          setVerifyType(
+            active.type === "person" || active.type === "artist"
+              ? "individual"
+              : "organization"
+          );
+        } else if (list[0]) {
+          setEntityId(list[0].id);
+        }
       } catch {
         if (!cancelled) setAuth(false);
       }
@@ -125,14 +139,17 @@ export default function VerifyPage() {
         </header>
 
         <main className="mx-auto max-w-lg px-4 pb-28 pt-6 md:max-w-2xl">
+          <div className="mb-5">
+            <CurrentIdentityBanner action="Verify identity" />
+          </div>
+
           <h1 className="text-2xl font-semibold text-white">
             Apply for verification
           </h1>
           <p className="mt-2 text-[14px] leading-relaxed text-zinc-400">
-            Verified is a <span className="text-omniv-gold">Pro</span> feature.
-            When billing is live, Pro unlocks the badge automatically after
-            review. For launch, submit an application and we activate approved
-            accounts.
+            Verification is a <span className="text-omniv-gold">Pro</span>{" "}
+            feature per entity — ongoing trust, not a one-time badge purchase.
+            Each entity has its own verification status.
           </p>
 
           <ul className="mt-5 space-y-2 text-[13px] text-zinc-400">
@@ -166,8 +183,8 @@ export default function VerifyPage() {
                 Request submitted
               </p>
               <p className="mt-2 text-[13px] text-zinc-400">
-                We'll turn on the badge after review. Upgrade to Pro when
-                payments go live.
+                Review applies to this entity only. Pro unlocks the badge after
+                approval.
               </p>
               <Link
                 href="/pricing"
@@ -210,11 +227,7 @@ export default function VerifyPage() {
                   </select>
                   {selected && (
                     <p className="mt-1.5 text-[11px] text-zinc-600">
-                      Slug:{" "}
-                      <span className="text-zinc-400">{selected.slug}</span>
-                      {" · "}
-                      Page:{" "}
-                      <span className="text-zinc-400">{selected.path}</span>
+                      Independent identity · {selected.path}
                     </p>
                   )}
                 </div>
@@ -255,7 +268,7 @@ export default function VerifyPage() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   rows={3}
-                  placeholder="Website, social proof, company registration…"
+                  placeholder="Website, social proof, registration…"
                   className="mt-1.5 w-full rounded-xl bg-white/[0.04] px-3.5 py-2.5 text-[14px] text-white outline-none ring-1 ring-white/[0.08]"
                 />
               </label>
