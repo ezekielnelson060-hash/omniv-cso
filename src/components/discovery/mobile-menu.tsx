@@ -90,14 +90,15 @@ export function MobileMenuButton() {
   }
 
   function switchEntity(e: EntityRow) {
-    writeActiveAccount({
+    const next: ActiveAccount = {
       id: e.id,
       type: e.type,
       slug: e.slug,
       name: e.name,
       path: e.path,
-    });
-    setActive(a);
+    };
+    writeActiveAccount(next);
+    setActive(next);
   }
 
   const drawer =
