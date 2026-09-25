@@ -23,6 +23,19 @@ const TONE: Record<string, string> = {
   file: "from-cyan-700/50 via-slate-900 to-black",
 };
 
+/** Subtle type identity — not gold */
+const TYPE_MARK: Record<string, string> = {
+  article: "●",
+  music: "♫",
+  video: "▶",
+  research: "▣",
+  product: "◇",
+  event: "▦",
+  opportunity: "◎",
+  announcement: "◦",
+  file: "▤",
+};
+
 function CoverBg({
   pub,
   className,
@@ -46,6 +59,15 @@ function CoverBg({
   return <div className={`${className} bg-gradient-to-br ${cover}`} />;
 }
 
+function TypeLabel({ type }: { type: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90">
+      <span className="opacity-80">{TYPE_MARK[type] ?? "·"}</span>
+      {PUBLICATION_LABELS[type as keyof typeof PUBLICATION_LABELS] ?? type}
+    </span>
+  );
+}
+
 /** Large hero — articles / research / video */
 export function FeedFeaturedCard({ pub }: { pub: PubWithCover }) {
   const publisher = getEntityById(pub.publisherId);
@@ -60,9 +82,7 @@ export function FeedFeaturedCard({ pub }: { pub: PubWithCover }) {
         <CoverBg pub={pub} className="absolute inset-0" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(255,255,255,0.12),transparent_50%)]" />
         <div className="absolute left-3 top-3">
-          <span className="rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90">
-            {PUBLICATION_LABELS[pub.type]}
-          </span>
+          <TypeLabel type={pub.type} />
         </div>
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/70 to-transparent p-4 pt-16">
           <h2 className="text-xl font-semibold leading-snug tracking-tight text-white sm:text-2xl">
@@ -90,39 +110,54 @@ export function FeedFeaturedCard({ pub }: { pub: PubWithCover }) {
   );
 }
 
-/** Compact — music (play), product, opportunity */
+/** Compact — music (play), product, opportunity, event */
 export function FeedCompactCard({ pub }: { pub: PubWithCover }) {
   const publisher = getEntityById(pub.publisherId);
   const name = pub.publisherName || publisher?.name;
   const isMusic = pub.type === "music";
   const isProduct = pub.type === "product";
+  const isEvent = pub.type === "event";
+
+  // Event date block from meta (often "2026-10-12 · Lagos")
+  const datePart = isEvent && pub.meta ? pub.meta.split("·")[0]?.trim() : null;
 
   return (
     <Link
       href={publicationPath(pub)}
       className="group flex items-center gap-3 overflow-hidden rounded-2xl bg-[#0c0c0c] p-2.5 ring-1 ring-white/[0.06] transition hover:ring-white/15"
     >
-      <div className="relative h-[68px] w-[68px] shrink-0 overflow-hidden rounded-xl">
-        <CoverBg pub={pub} className="absolute inset-0" />
-        <div className="absolute inset-0 flex items-center justify-center bg-black/25">
-          {isMusic ? (
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </span>
-          ) : isProduct ? (
-            <span className="text-2xl text-omniv-gold/90">◎</span>
-          ) : (
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-white/80">
-              {PUBLICATION_LABELS[pub.type].slice(0, 3)}
-            </span>
-          )}
+      {isEvent && datePart ? (
+        <div className="flex h-[68px] w-[68px] shrink-0 flex-col items-center justify-center rounded-xl bg-violet-950/80 ring-1 ring-violet-500/30">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-violet-300">
+            Event
+          </span>
+          <span className="mt-0.5 text-center text-[11px] font-semibold leading-tight text-white">
+            {datePart.slice(0, 12)}
+          </span>
         </div>
-      </div>
+      ) : (
+        <div className="relative h-[68px] w-[68px] shrink-0 overflow-hidden rounded-xl">
+          <CoverBg pub={pub} className="absolute inset-0" />
+          <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+            {isMusic ? (
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </span>
+            ) : isProduct ? (
+              <span className="text-2xl text-omniv-gold/90">◇</span>
+            ) : (
+              <span className="text-[12px] text-white/80">
+                {TYPE_MARK[pub.type] ?? "·"}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
       <div className="min-w-0 flex-1">
         <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-          {PUBLICATION_LABELS[pub.type]}
+          {TYPE_MARK[pub.type]} {PUBLICATION_LABELS[pub.type]}
         </span>
         <p className="mt-0.5 truncate text-[14px] font-semibold text-white group-hover:text-omniv-gold">
           {pub.title}
@@ -170,8 +205,8 @@ export function FeedCard({ pub }: { pub: PubWithCover }) {
       <div className="relative aspect-[16/10]">
         <CoverBg pub={pub} className="absolute inset-0" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1),transparent_55%)]" />
-        <span className="absolute left-2.5 top-2.5 rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90">
-          {PUBLICATION_LABELS[pub.type]}
+        <span className="absolute left-2.5 top-2.5">
+          <TypeLabel type={pub.type} />
         </span>
       </div>
       <div className="flex flex-1 flex-col p-3.5">
