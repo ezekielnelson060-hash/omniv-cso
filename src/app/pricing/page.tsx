@@ -2,66 +2,22 @@ import Link from "next/link";
 import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { PricingCheckoutButton } from "@/components/discovery/pricing-checkout";
 
 export const metadata = {
   title: "Pricing",
-  description: "Free publishing. Pro for verified badge and advanced tools.",
+  description: "Free publishing. Pro for verified badge. Pay with card from day 1.",
 };
 
-const PLANS = [
-  {
-    id: "free",
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    cta: "Get started",
-    href: "/signup",
-    features: [
-      "Public profile",
-      "Basic publishing",
-      "Basic analytics",
-      "Follow & contact",
-      "Search & discovery",
-    ],
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    price: "$29",
-    period: "/ month",
-    cta: "Upgrade",
-    href: "/signup?plan=pro",
-    popular: true,
-    features: [
-      "Everything in Free",
-      "Verified publisher badge",
-      "Advanced analytics",
-      "Audience insights",
-      "Custom profile",
-      "Lead capture",
-      "Scheduling & collections",
-    ],
-  },
-  {
-    id: "business",
-    name: "Business",
-    price: "$99",
-    period: "/ month",
-    cta: "Upgrade",
-    href: "/signup?plan=business",
-    features: [
-      "Everything in Pro",
-      "Multi-team members",
-      "Multiple entities",
-      "CRM & lead management",
-      "Private publications",
-      "API access",
-      "Advanced analytics",
-    ],
-  },
-] as const;
+type Props = {
+  searchParams: Promise<{ billing?: string; plan?: string }>;
+};
 
-export default function PricingPage() {
+export default async function PricingPage({ searchParams }: Props) {
+  const sp = await searchParams;
+  const success = sp.billing === "success";
+  const paidPlan = sp.plan;
+
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
@@ -79,70 +35,146 @@ export default function PricingPage() {
                 Pricing
               </span>
             </div>
-            <Link href="/home" className="text-[13px] text-zinc-500 hover:text-white">
+            <Link
+              href="/home"
+              className="text-[13px] text-zinc-500 hover:text-white"
+            >
               Home
             </Link>
           </div>
         </header>
 
         <main className="mx-auto max-w-lg px-4 pb-28 pt-8 md:max-w-3xl md:px-6">
+          {success && (
+            <div className="mb-6 rounded-2xl bg-emerald-500/15 px-4 py-3 text-center ring-1 ring-emerald-500/30">
+              <p className="text-[14px] font-semibold text-emerald-300">
+                Payment received
+                {paidPlan ? ` · ${paidPlan}` : ""}
+              </p>
+              <p className="mt-1 text-[12px] text-zinc-400">
+                Your entities will show the verified badge once the webhook
+                confirms. Usually under a minute.
+              </p>
+              <Link
+                href="/accounts"
+                className="mt-2 inline-block text-[13px] text-omniv-gold"
+              >
+                View your entities →
+              </Link>
+            </div>
+          )}
+
           <h1 className="text-2xl font-semibold tracking-tight text-white">
             Choose the plan that fits your goals
           </h1>
           <p className="mt-2 text-[14px] text-zinc-500">
-            Publish free. Upgrade for verification, analytics, and growth tools.
+            Publish free. Upgrade for verification and growth tools. Card
+            payments via Flutterwave — live from day 1.
           </p>
 
           <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {PLANS.map((p) => (
-              <div
-                key={p.id}
-                className={`relative rounded-2xl p-5 ring-1 ${
-                  "popular" in p && p.popular
-                    ? "bg-omniv-gold/10 ring-omniv-gold/40"
-                    : "bg-white/[0.03] ring-white/[0.08]"
-                }`}
+            {/* Free */}
+            <div className="relative rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.08]">
+              <p className="text-[15px] font-semibold text-white">Free</p>
+              <p className="mt-2">
+                <span className="text-2xl font-semibold text-white">$0</span>
+                <span className="text-[13px] text-zinc-500"> forever</span>
+              </p>
+              <ul className="mt-4 space-y-2">
+                {[
+                  "Public profile",
+                  "Basic publishing",
+                  "Follow & contact",
+                  "Search & discovery",
+                  "Multiple entities",
+                ].map((f) => (
+                  <li
+                    key={f}
+                    className="flex items-start gap-2 text-[13px] text-zinc-400"
+                  >
+                    <span className="text-omniv-gold">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/signup"
+                className="mt-6 flex h-11 items-center justify-center rounded-full bg-white/10 text-[14px] font-semibold text-white"
               >
-                {"popular" in p && p.popular && (
-                  <span className="absolute -top-2.5 right-4 rounded-full bg-omniv-gold px-2.5 py-0.5 text-[10px] font-bold uppercase text-black">
-                    Most popular
-                  </span>
-                )}
-                <p className="text-[15px] font-semibold text-white">{p.name}</p>
-                <p className="mt-2">
-                  <span className="text-2xl font-semibold text-white">
-                    {p.price}
-                  </span>
-                  <span className="text-[13px] text-zinc-500">{p.period}</span>
-                </p>
-                <ul className="mt-4 space-y-2">
-                  {p.features.map((f) => (
-                    <li
-                      key={f}
-                      className="flex items-start gap-2 text-[13px] text-zinc-400"
-                    >
-                      <span className="text-omniv-gold">✓</span>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href={p.href}
-                  className={`mt-6 flex h-11 items-center justify-center rounded-full text-[14px] font-semibold ${
-                    "popular" in p && p.popular
-                      ? "bg-omniv-gold text-black"
-                      : "bg-white/10 text-white"
-                  }`}
-                >
-                  {p.cta}
-                </Link>
+                Get started
+              </Link>
+            </div>
+
+            {/* Pro */}
+            <div className="relative rounded-2xl bg-omniv-gold/10 p-5 ring-1 ring-omniv-gold/40">
+              <span className="absolute -top-2.5 right-4 rounded-full bg-omniv-gold px-2.5 py-0.5 text-[10px] font-bold uppercase text-black">
+                Most popular
+              </span>
+              <p className="text-[15px] font-semibold text-white">Pro</p>
+              <p className="mt-2">
+                <span className="text-2xl font-semibold text-white">$29</span>
+                <span className="text-[13px] text-zinc-500"> / month</span>
+              </p>
+              <ul className="mt-4 space-y-2">
+                {[
+                  "Everything in Free",
+                  "Verified publisher badge",
+                  "Higher search visibility",
+                  "Audience insights",
+                  "Priority support",
+                ].map((f) => (
+                  <li
+                    key={f}
+                    className="flex items-start gap-2 text-[13px] text-zinc-400"
+                  >
+                    <span className="text-omniv-gold">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6">
+                <PricingCheckoutButton plan="pro" label="Upgrade to Pro" popular />
               </div>
-            ))}
+            </div>
+
+            {/* Business */}
+            <div className="relative rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.08]">
+              <p className="text-[15px] font-semibold text-white">Business</p>
+              <p className="mt-2">
+                <span className="text-2xl font-semibold text-white">$99</span>
+                <span className="text-[13px] text-zinc-500"> / month</span>
+              </p>
+              <ul className="mt-4 space-y-2">
+                {[
+                  "Everything in Pro",
+                  "Verified on all entities",
+                  "Team-ready",
+                  "Private publications",
+                  "Priority onboarding",
+                ].map((f) => (
+                  <li
+                    key={f}
+                    className="flex items-start gap-2 text-[13px] text-zinc-400"
+                  >
+                    <span className="text-omniv-gold">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6">
+                <PricingCheckoutButton plan="business" label="Upgrade to Business" />
+              </div>
+            </div>
           </div>
 
           <p className="mt-10 text-center text-[12px] text-zinc-600">
-            Verification is a Pro feature. Billing checkout ships next — plans
-            above describe the product direction.
+            Secure card payments via Flutterwave. You must be signed in so we
+            can attach Pro to your account and turn on verified badges.
+          </p>
+          <p className="mt-2 text-center text-[12px] text-zinc-600">
+            <Link href="/signup?next=/pricing" className="text-omniv-gold">
+              Sign in to pay →
+            </Link>
           </p>
         </main>
 
