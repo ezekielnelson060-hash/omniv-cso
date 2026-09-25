@@ -1,6 +1,7 @@
 /**
- * Active publisher account (X / Instagram style).
- * Everything you publish, follow-as, and present as uses this entity.
+ * Active identity context (personal | entity).
+ * Switching changes the entire app context: publish, analytics,
+ * followers, promote, verification, public profile.
  */
 
 export type ActiveAccount = {
@@ -9,6 +10,9 @@ export type ActiveAccount = {
   slug: string;
   name: string;
   path: string;
+  verified?: boolean;
+  handle?: string;
+  avatarUrl?: string | null;
 };
 
 const KEY = "omniv_active_account";
@@ -28,10 +32,12 @@ export function writeActiveAccount(a: ActiveAccount | null) {
   if (typeof window === "undefined") return;
   if (!a) {
     localStorage.removeItem(KEY);
+    window.dispatchEvent(
+      new CustomEvent("omniv-account-switch", { detail: null })
+    );
     return;
   }
   localStorage.setItem(KEY, JSON.stringify(a));
-  // notify other components in this tab
   window.dispatchEvent(new CustomEvent("omniv-account-switch", { detail: a }));
 }
 
@@ -42,4 +48,9 @@ export function onAccountSwitch(cb: (a: ActiveAccount | null) => void) {
   };
   window.addEventListener("omniv-account-switch", handler);
   return () => window.removeEventListener("omniv-account-switch", handler);
+}
+
+/** True when an entity identity is selected (not personal) */
+export function isEntityContext(a: ActiveAccount | null): boolean {
+  return Boolean(a?.id);
 }
