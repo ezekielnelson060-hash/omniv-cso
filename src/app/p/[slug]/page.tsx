@@ -110,7 +110,6 @@ export default async function PublicationPage({ params }: Props) {
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        {/* Immersive hero */}
         <div
           className={`relative min-h-[280px] bg-gradient-to-b ${hero} sm:min-h-[340px]`}
           style={
@@ -245,10 +244,7 @@ export default async function PublicationPage({ params }: Props) {
           {p.body && (
             <div className="mt-8 space-y-5">
               {p.body.split("\n\n").map((para, i) => (
-                <p
-                  key={i}
-                  className="text-[16px] leading-[1.75] text-zinc-300"
-                >
+                <p key={i} className="text-[16px] leading-[1.75] text-zinc-300">
                   {para}
                 </p>
               ))}
@@ -277,6 +273,22 @@ export default async function PublicationPage({ params }: Props) {
               {p.cta.label}
             </a>
           )}
+
+          {/* Promote — mockup growth loop */}
+          <div className="mt-10 flex flex-wrap gap-2">
+            <Link
+              href={`/promote?slug=${p.slug}`}
+              className="inline-flex h-11 items-center rounded-full bg-omniv-gold/15 px-5 text-[13px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/30"
+            >
+              Promote this
+            </Link>
+            <Link
+              href="/publish"
+              className="inline-flex h-11 items-center rounded-full px-5 text-[13px] font-medium text-zinc-400 ring-1 ring-white/12"
+            >
+              Publish more
+            </Link>
+          </div>
 
           {publisher && (
             <div className="mt-12 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.08]">
