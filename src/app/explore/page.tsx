@@ -41,6 +41,7 @@ const TYPE_CHIPS: { id: string; label: string; href: string }[] = [
   { id: "product", label: "Products", href: "/explore?type=product" },
   { id: "event", label: "Events", href: "/explore?type=event" },
   { id: "research", label: "Research", href: "/explore?type=research" },
+  { id: "file", label: "Files", href: "/explore?type=file" },
   { id: "opportunity", label: "Opportunities", href: "/explore?type=opportunity" },
 ];
 
@@ -180,7 +181,7 @@ function Shell({
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-sm">
+        <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-md">
           <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 md:max-w-2xl md:px-6 lg:max-w-4xl">
             <div className="flex items-center gap-2">
               <Image
@@ -211,11 +212,11 @@ function Shell({
               type="search"
               defaultValue={q}
               placeholder="Search anything…"
-              className="h-11 flex-1 rounded-full bg-white/[0.04] px-4 text-[14px] text-white outline-none ring-1 ring-white/15 placeholder:text-zinc-600 focus:ring-omniv-gold/40"
+              className="h-11 flex-1 rounded-full bg-white/[0.05] px-4 text-[14px] text-white outline-none ring-1 ring-white/[0.1] placeholder:text-zinc-600 focus:ring-omniv-gold/40"
             />
             <button
               type="submit"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-zinc-400 ring-1 ring-white/15 transition hover:text-white"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/[0.05] text-zinc-400 ring-1 ring-white/[0.1] transition hover:text-white"
               aria-label="Search"
             >
               <svg
@@ -232,7 +233,7 @@ function Shell({
             </button>
           </form>
 
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             {TYPE_CHIPS.map((c) => {
               const active =
                 (c.id === "all" && !type) || (type && c.id === type);
@@ -240,10 +241,10 @@ function Shell({
                 <Link
                   key={c.id}
                   href={c.href}
-                  className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-medium ${
+                  className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-medium transition ${
                     active
-                      ? "bg-white text-black"
-                      : "text-zinc-400 ring-1 ring-white/15"
+                      ? "bg-omniv-gold text-black"
+                      : "text-zinc-400 ring-1 ring-white/12 hover:text-white"
                   }`}
                 >
                   {c.label}
@@ -267,7 +268,7 @@ function Shell({
                         ? "/explore"
                         : `/explore?interest=${encodeURIComponent(name)}`
                     }
-                    className={`rounded-full px-3 py-1.5 text-[12px] font-medium ${
+                    className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
                       active
                         ? "bg-omniv-gold text-black"
                         : "text-zinc-400 ring-1 ring-white/12 hover:text-white"
@@ -280,16 +281,16 @@ function Shell({
             </div>
           </div>
 
-          <div className="mt-3 flex gap-2">
+          <div className="mt-4 flex gap-2">
             <Link
               href={
                 type
                   ? `/explore?type=${type}&sort=trending`
                   : "/explore?sort=trending"
               }
-              className={`rounded-full px-3 py-1 text-[12px] ${
+              className={`rounded-full px-3 py-1 text-[12px] font-medium ${
                 sort !== "new"
-                  ? "text-white ring-1 ring-white/20"
+                  ? "bg-white/10 text-white"
                   : "text-zinc-500"
               }`}
             >
@@ -297,9 +298,9 @@ function Shell({
             </Link>
             <Link
               href={type ? `/explore?type=${type}&sort=new` : "/explore?sort=new"}
-              className={`rounded-full px-3 py-1 text-[12px] ${
+              className={`rounded-full px-3 py-1 text-[12px] font-medium ${
                 sort === "new"
-                  ? "text-white ring-1 ring-white/20"
+                  ? "bg-white/10 text-white"
                   : "text-zinc-500"
               }`}
             >
