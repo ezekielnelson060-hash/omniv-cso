@@ -8,6 +8,7 @@ export type LocalProfile = {
   handle: string;
   bio: string;
   location: string;
+  website?: string;
   joinedAt: string;
   avatarUrl?: string | null;
   coverUrl?: string | null;
@@ -20,6 +21,7 @@ const DEFAULT: LocalProfile = {
   handle: "explorer",
   bio: "Discovering what people and organizations are putting into the world.",
   location: "",
+  website: "",
   joinedAt: new Date().toISOString().slice(0, 10),
   avatarUrl: null,
   coverUrl: null,
