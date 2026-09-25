@@ -1,34 +1,19 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { readProfile } from "@/lib/discovery/local-profile";
+import { MobileMenuButton } from "@/components/discovery/mobile-menu";
 
-/** Top-right avatar — primary path to personal profile */
+/**
+ * Top-right control: on mobile opens drawer (Profile vs Entities).
+ * Desktop still has full sidebar.
+ */
 export function ProfileAvatarLink({
   className = "",
 }: {
   className?: string;
 }) {
-  const [initial, setInitial] = useState("·");
-
-  useEffect(() => {
-    try {
-      const p = readProfile();
-      setInitial((p.displayName || "E").charAt(0).toUpperCase());
-    } catch {
-      setInitial("E");
-    }
-  }, []);
-
   return (
-    <Link
-      href="/profile"
-      className={`flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 text-[12px] font-semibold text-black ring-1 ring-omniv-gold/40 ${className}`}
-      aria-label="Your profile"
-      title="Your profile"
-    >
-      {initial}
-    </Link>
+    <span className={className}>
+      <MobileMenuButton />
+    </span>
   );
 }
