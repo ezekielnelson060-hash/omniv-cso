@@ -7,6 +7,7 @@
 /** Who publishes (the profile / home base) */
 export const PUBLISHER_TYPES = [
   "person",
+  "artist",
   "company",
   "brand",
   "project",
@@ -16,6 +17,7 @@ export type PublisherType = (typeof PUBLISHER_TYPES)[number];
 
 export const PUBLISHER_LABELS: Record<PublisherType, string> = {
   person: "Person",
+  artist: "Artist",
   company: "Company",
   brand: "Brand",
   project: "Project",
@@ -60,6 +62,7 @@ export type EntityType = (typeof ENTITY_TYPES)[number];
 
 export const ENTITY_LABELS: Record<EntityType, string> = {
   person: "Person",
+  artist: "Artist",
   company: "Company",
   brand: "Brand",
   product: "Product",
@@ -117,6 +120,8 @@ export type DiscoveryEntity = {
   links?: { label: string; href: string }[];
   publishedAt: string;
   heat?: number;
+  /** Pro: Verified Publisher badge */
+  verified?: boolean;
 };
 
 /** A thing published into the world — primary discovery unit */
@@ -160,5 +165,6 @@ export const EXPLORE_NAV: { label: string; href: string }[] = [
   { label: "Opportunities", href: "/explore?type=opportunity" },
   { label: "Companies", href: "/explore?publisher=company" },
   { label: "People", href: "/explore?publisher=person" },
+  { label: "Artists", href: "/explore?publisher=artist" },
   { label: "Projects", href: "/explore?publisher=project" },
 ];
