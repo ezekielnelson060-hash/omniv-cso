@@ -7,7 +7,7 @@ import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { ProfilePosts } from "@/components/discovery/profile-posts";
 import { FirstAccountNudge } from "@/components/discovery/first-account-nudge";
-import { CoverUpload } from "@/components/discovery/cover-upload";
+import { PhotoPicker } from "@/components/discovery/photo-picker";
 import {
   readFollows,
   readSaved,
@@ -81,12 +81,14 @@ export default function ProfilePage() {
     setEditing(false);
   }
 
-  function persistPhotos(next: Partial<LocalProfile>) {
-    if (!profile) return;
-    const clean = { ...profile, ...next };
-    writeProfile(clean);
-    setProfile(clean);
-    setDraft(clean);
+  function setPhoto(field: "coverUrl" | "avatarUrl", url: string | null) {
+    if (!draft || !profile) return;
+    const next = { ...draft, [field]: url };
+    setDraft(next);
+    // Stick immediately so photos survive cancel / refresh
+    const stuck = { ...profile, [field]: url };
+    writeProfile(stuck);
+    setProfile(stuck);
   }
 
   if (!profile || !draft) {
@@ -97,59 +99,90 @@ export default function ProfilePage() {
     );
   }
 
-  const initial = profile.displayName.charAt(0).toUpperCase();
+  const show = editing ? draft : profile;
+  const initial = show.displayName.charAt(0).toUpperCase();
 
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <div className="relative h-40 overflow-hidden bg-gradient-to-br from-omniv-gold/30 via-zinc-900 to-black sm:h-48">
-          {profile.coverUrl ? (
+        {/* Cover — X style */}
+        <div className="relative h-36 overflow-hidden bg-zinc-900 sm:h-44">
+          {show.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={profile.coverUrl}
+              src={show.coverUrl}
               alt=""
               className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_30%,rgba(255,200,50,0.25),transparent_55%)]" />
+            <div className="absolute inset-0 bg-gradient-to-br from-omniv-gold/25 via-zinc-900 to-black" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050505]/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050505]/70 to-transparent" />
+
           <Link
             href="/home"
-            className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm md:hidden"
+            className="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm md:hidden"
             aria-label="Back"
           >
             ←
           </Link>
-          <div className="absolute right-4 top-4 md:hidden">
-            <Image src="/logo.svg" alt="" width={24} height={24} className="opacity-80" />
-          </div>
+
+          {editing && (
+            <div className="absolute right-3 top-3">
+              <PhotoPicker
+                kind="cover"
+                value={draft.coverUrl}
+                onChange={(url) => setPhoto("coverUrl", url)}
+              />
+            </div>
+          )}
+
+          {!editing && (
+            <div className="absolute right-3 top-3 md:hidden">
+              <Image src="/logo.svg" alt="" width={22} height={22} className="opacity-80" />
+            </div>
+          )}
         </div>
 
         <main className="relative mx-auto max-w-lg px-4 pb-28 md:max-w-2xl md:px-6">
+          {/* Avatar + actions */}
           <div className="-mt-12 flex items-end justify-between">
             <div className="relative">
-              <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 text-3xl font-semibold text-black ring-4 ring-[#050505]">
-                {profile.avatarUrl ? (
+              <div className="h-[88px] w-[88px] overflow-hidden rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 ring-4 ring-[#050505]">
+                {show.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={profile.avatarUrl}
+                    src={show.avatarUrl}
                     alt=""
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  initial
+                  <span className="flex h-full w-full items-center justify-center text-3xl font-semibold text-black">
+                    {initial}
+                  </span>
                 )}
               </div>
+              {editing && (
+                <div className="absolute bottom-0 right-0">
+                  <PhotoPicker
+                    kind="avatar"
+                    value={draft.avatarUrl}
+                    onChange={(url) => setPhoto("avatarUrl", url)}
+                  />
+                </div>
+              )}
             </div>
+
             {!editing ? (
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="mb-1 rounded-full bg-white/[0.06] px-4 py-2 text-[13px] font-medium text-white ring-1 ring-white/15 transition hover:ring-white/30"
-              >
-                Edit Profile
-              </button>
+              <div className="mb-1 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="rounded-full bg-transparent px-4 py-2 text-[13px] font-semibold text-white ring-1 ring-white/25 transition hover:bg-white/5"
+                >
+                  Edit profile
+                </button>
+              </div>
             ) : (
               <div className="mb-1 flex gap-2">
                 <button
@@ -158,7 +191,7 @@ export default function ProfilePage() {
                     setDraft(profile);
                     setEditing(false);
                   }}
-                  className="rounded-full px-3 py-2 text-[13px] text-zinc-400 ring-1 ring-white/10"
+                  className="rounded-full px-3 py-2 text-[13px] text-zinc-400 ring-1 ring-white/15"
                 >
                   Cancel
                 </button>
@@ -174,63 +207,44 @@ export default function ProfilePage() {
           </div>
 
           {editing ? (
-            <div className="mt-5 space-y-4">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-                Personal profile photos
-              </p>
-              <CoverUpload
-                label="Change cover photo"
-                value={draft.coverUrl}
-                onChange={(url) => {
-                  setDraft({ ...draft, coverUrl: url });
-                  persistPhotos({ coverUrl: url });
-                }}
-              />
-              <CoverUpload
-                label="Change profile photo"
-                tall
-                value={draft.avatarUrl}
-                onChange={(url) => {
-                  setDraft({ ...draft, avatarUrl: url });
-                  persistPhotos({ avatarUrl: url });
-                }}
-              />
-              <Field
-                label="Display name"
+            <div className="mt-6 space-y-0 divide-y divide-white/[0.08]">
+              <EditField
+                label="Name"
                 value={draft.displayName}
                 onChange={(v) => setDraft({ ...draft, displayName: v })}
               />
-              <Field
+              <EditField
                 label="Handle"
                 value={draft.handle}
                 onChange={(v) => setDraft({ ...draft, handle: v })}
                 prefix="@"
               />
-              <Field
+              <EditField
                 label="Bio"
                 value={draft.bio}
                 onChange={(v) => setDraft({ ...draft, bio: v })}
                 multiline
               />
-              <Field
+              <EditField
                 label="Location"
                 value={draft.location}
                 onChange={(v) => setDraft({ ...draft, location: v })}
               />
+              <p className="pt-4 text-[12px] text-zinc-600">
+                Tap the camera on the cover or photo to change images. They save
+                immediately.
+              </p>
             </div>
           ) : (
             <>
-              <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
-                Personal profile
-              </p>
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-white">
+              <h1 className="mt-3 text-[20px] font-bold tracking-tight text-white">
                 {profile.displayName}
               </h1>
               <p className="text-[14px] text-zinc-500">@{profile.handle}</p>
-              <p className="mt-3 text-[14px] leading-relaxed text-zinc-300">
+              <p className="mt-3 text-[15px] leading-relaxed text-zinc-200">
                 {profile.bio}
               </p>
-              <div className="mt-3 flex flex-wrap gap-3 text-[13px] text-zinc-500">
+              <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-zinc-500">
                 {profile.location && <span>📍 {profile.location}</span>}
                 <span>
                   Joined{" "}
@@ -241,22 +255,18 @@ export default function ProfilePage() {
                 </span>
               </div>
 
-              <div className="mt-5 flex gap-6">
-                <Link href="/following" className="hover:opacity-90">
-                  <span className="text-[16px] font-semibold text-white">
-                    {follows.length}
-                  </span>{" "}
-                  <span className="text-[13px] text-zinc-500">Following</span>
+              <div className="mt-4 flex gap-5 text-[14px]">
+                <Link href="/following" className="hover:underline">
+                  <span className="font-bold text-white">{follows.length}</span>{" "}
+                  <span className="text-zinc-500">Following</span>
                 </Link>
                 <span>
-                  <span className="text-[16px] font-semibold text-white">0</span>{" "}
-                  <span className="text-[13px] text-zinc-500">Followers</span>
+                  <span className="font-bold text-white">0</span>{" "}
+                  <span className="text-zinc-500">Followers</span>
                 </span>
-                <Link href="/saved" className="hover:opacity-90">
-                  <span className="text-[16px] font-semibold text-white">
-                    {saved.length}
-                  </span>{" "}
-                  <span className="text-[13px] text-zinc-500">Saved</span>
+                <Link href="/saved" className="hover:underline">
+                  <span className="font-bold text-white">{saved.length}</span>{" "}
+                  <span className="text-zinc-500">Saved</span>
                 </Link>
               </div>
 
@@ -264,15 +274,14 @@ export default function ProfilePage() {
 
               <Link
                 href="/accounts"
-                className="mt-5 flex items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3.5 ring-1 ring-white/[0.08] transition hover:ring-white/15"
+                className="mt-5 flex items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3.5 ring-1 ring-white/[0.08]"
               >
                 <div>
                   <p className="text-[14px] font-medium text-white">
                     Your entities
                   </p>
                   <p className="text-[12px] text-zinc-500">
-                    Companies, artists, brands — publish as any of them. Separate
-                    from this personal profile.
+                    Publish as company, artist, brand — separate from this profile
                   </p>
                 </div>
                 <span className="text-omniv-gold">›</span>
@@ -280,120 +289,99 @@ export default function ProfilePage() {
             </>
           )}
 
-          <div className="mt-8 flex gap-1">
-            {(
-              [
-                { id: "posts" as const, label: "Posts" },
-                { id: "saved" as const, label: "Saved" },
-                { id: "activity" as const, label: "Activity" },
-              ] as const
-            ).map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTab(t.id)}
-                className={`rounded-full px-4 py-2 text-[13px] font-medium transition ${
-                  tab === t.id
-                    ? "bg-omniv-gold text-black"
-                    : "text-zinc-500 ring-1 ring-white/10"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          {!editing && (
+            <>
+              <div className="mt-7 flex border-b border-white/[0.08]">
+                {(
+                  [
+                    { id: "posts" as const, label: "Posts" },
+                    { id: "saved" as const, label: "Saved" },
+                    { id: "activity" as const, label: "Activity" },
+                  ] as const
+                ).map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setTab(t.id)}
+                    className={`relative flex-1 py-3 text-[14px] font-medium transition ${
+                      tab === t.id ? "text-white" : "text-zinc-500"
+                    }`}
+                  >
+                    {t.label}
+                    {tab === t.id && (
+                      <span className="absolute bottom-0 left-1/2 h-1 w-12 -translate-x-1/2 rounded-full bg-omniv-gold" />
+                    )}
+                  </button>
+                ))}
+              </div>
 
-          <div className="mt-5">
-            {tab === "posts" && (
-              <>
-                <p className="mb-3 text-[12px] text-zinc-500">
-                  Everything you published across your entities.
-                </p>
-                <ProfilePosts />
-              </>
-            )}
-            {tab === "saved" &&
-              (saved.length === 0 ? (
-                <p className="py-8 text-center text-[14px] text-zinc-500">
-                  Nothing saved.{" "}
-                  <Link href="/explore" className="text-omniv-gold">
-                    Explore
-                  </Link>
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {saved.slice(0, 20).map((x) => (
-                    <li key={`${x.kind}-${x.slug}`}>
-                      <Link
-                        href={
-                          x.kind === "publication"
-                            ? `/p/${x.slug}`
-                            : `/e/${x.type}/${x.slug}`
-                        }
-                        className="flex items-center justify-between rounded-xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/[0.06] transition hover:ring-white/15"
-                      >
-                        <span className="truncate text-[14px] text-white">
-                          {x.name}
-                        </span>
-                        <span className="shrink-0 text-[11px] capitalize text-zinc-500">
-                          {x.kind === "publication"
-                            ? x.pubType ?? x.type
-                            : x.type}
-                        </span>
+              <div className="mt-1">
+                {tab === "posts" && <ProfilePosts />}
+                {tab === "saved" &&
+                  (saved.length === 0 ? (
+                    <p className="py-10 text-center text-[14px] text-zinc-500">
+                      Nothing saved.{" "}
+                      <Link href="/explore" className="text-omniv-gold">
+                        Explore
                       </Link>
-                    </li>
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-white/[0.06]">
+                      {saved.slice(0, 20).map((x) => (
+                        <li key={`${x.kind}-${x.slug}`}>
+                          <Link
+                            href={
+                              x.kind === "publication"
+                                ? `/p/${x.slug}`
+                                : `/e/${x.type}/${x.slug}`
+                            }
+                            className="flex items-center justify-between py-3.5"
+                          >
+                            <span className="truncate text-[14px] text-white">
+                              {x.name}
+                            </span>
+                            <span className="shrink-0 text-[11px] capitalize text-zinc-500">
+                              {x.kind === "publication"
+                                ? x.pubType ?? x.type
+                                : x.type}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
                   ))}
-                  <li>
-                    <Link
-                      href="/saved"
-                      className="block py-2 text-center text-[13px] text-omniv-gold"
-                    >
-                      See all saved →
-                    </Link>
-                  </li>
-                </ul>
-              ))}
-            {tab === "activity" &&
-              (follows.length === 0 ? (
-                <p className="py-8 text-center text-[14px] text-zinc-500">
-                  Follow publishers to build your network.{" "}
-                  <Link href="/explore" className="text-omniv-gold">
-                    Explore
-                  </Link>
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {follows.map((f) => (
-                    <li key={`${f.type}-${f.slug}`}>
-                      <Link
-                        href={`/e/${f.type}/${f.slug}`}
-                        className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-3 ring-1 ring-white/[0.06] transition hover:ring-white/15"
-                      >
-                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
-                          {f.name.charAt(0)}
-                        </span>
-                        <div>
-                          <p className="text-[14px] font-medium text-white">
-                            {f.name}
-                          </p>
-                          <p className="text-[12px] capitalize text-zinc-500">
-                            Entity · {f.type}
-                          </p>
-                        </div>
-                      </Link>
-                    </li>
+                {tab === "activity" &&
+                  (follows.length === 0 ? (
+                    <p className="py-10 text-center text-[14px] text-zinc-500">
+                      Follow publishers to build your network.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-white/[0.06]">
+                      {follows.map((f) => (
+                        <li key={`${f.type}-${f.slug}`}>
+                          <Link
+                            href={`/e/${f.type}/${f.slug}`}
+                            className="flex items-center gap-3 py-3.5"
+                          >
+                            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-omniv-gold/15 text-sm font-semibold text-omniv-gold">
+                              {f.name.charAt(0)}
+                            </span>
+                            <div>
+                              <p className="text-[14px] font-medium text-white">
+                                {f.name}
+                              </p>
+                              <p className="text-[12px] capitalize text-zinc-500">
+                                Entity · {f.type}
+                              </p>
+                            </div>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
                   ))}
-                  <li>
-                    <Link
-                      href="/activity"
-                      className="block py-2 text-center text-[13px] text-omniv-gold"
-                    >
-                      Open activity feed →
-                    </Link>
-                  </li>
-                </ul>
-              ))}
-          </div>
+              </div>
+            </>
+          )}
         </main>
         <BottomNav />
       </div>
@@ -401,7 +389,7 @@ export default function ProfilePage() {
   );
 }
 
-function Field({
+function EditField({
   label,
   value,
   onChange,
@@ -415,26 +403,24 @@ function Field({
   multiline?: boolean;
 }) {
   return (
-    <label className="block">
-      <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-        {label}
-      </span>
-      <div className="mt-1 flex items-center rounded-xl bg-white/[0.04] ring-1 ring-white/[0.08] focus-within:ring-omniv-gold/50">
+    <label className="block py-3">
+      <span className="text-[13px] text-zinc-500">{label}</span>
+      <div className="mt-1 flex items-start">
         {prefix && (
-          <span className="pl-3 text-[14px] text-zinc-500">{prefix}</span>
+          <span className="pt-1 text-[16px] text-zinc-500">{prefix}</span>
         )}
         {multiline ? (
           <textarea
             value={value}
             onChange={(e) => onChange(e.target.value)}
             rows={3}
-            className="w-full resize-none bg-transparent px-3 py-2.5 text-[14px] text-white outline-none"
+            className="w-full resize-none bg-transparent text-[16px] leading-relaxed text-white outline-none"
           />
         ) : (
           <input
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="w-full bg-transparent px-3 py-2.5 text-[14px] text-white outline-none"
+            className="w-full bg-transparent py-1 text-[16px] text-white outline-none"
           />
         )}
       </div>
