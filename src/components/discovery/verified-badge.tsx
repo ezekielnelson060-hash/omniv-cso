@@ -26,32 +26,30 @@ export function VerifiedBadge({
   );
 }
 
-/** CTA for non-verified entities — Pro apply flow */
+/** Mockup 8 — Verified Publisher card + Get Verified CTA */
 export function GetVerifiedCard() {
   return (
-    <div className="mt-6 rounded-2xl bg-omniv-gold/10 p-4 ring-1 ring-omniv-gold/30">
-      <div className="flex items-start gap-3">
-        <span className="text-2xl">🛡</span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[14px] font-semibold text-white">
-            Verified Publisher
-          </p>
-          <p className="mt-1 text-[12px] leading-relaxed text-zinc-400">
-            Verified is a Pro feature. Higher visibility, more trust, and the
-            blue badge on your profile.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+    <div className="mt-8 overflow-hidden rounded-2xl ring-1 ring-white/[0.1]">
+      <div className="bg-gradient-to-br from-sky-500/20 via-omniv-gold/10 to-transparent p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-sky-400">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l2.4 2.4L18 3l.6 3.6L22 9l-2.4 2.4L21 15l-3.6.6L15 19l-2.4-2.4L9 19l-.6-3.6L5 15l2.4-2.4L5 9l3.6-.6L9 5l2.4 2.4L12 2z" />
+            </svg>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-semibold text-white">
+              Verified Publisher
+            </p>
+            <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-400">
+              This entity has been verified by Omniv. Verified accounts get
+              higher visibility, more trust, and access to premium features.
+            </p>
             <Link
               href="/verify"
-              className="inline-flex h-10 items-center rounded-full bg-omniv-gold px-4 text-[13px] font-semibold text-black"
+              className="mt-4 inline-flex h-11 items-center rounded-full bg-omniv-gold px-5 text-[14px] font-semibold text-black"
             >
-              Apply for verification
-            </Link>
-            <Link
-              href="/pricing"
-              className="inline-flex h-10 items-center rounded-full px-4 text-[13px] font-medium text-zinc-300 ring-1 ring-white/15"
-            >
-              See Pro
+              Get Verified
             </Link>
           </div>
         </div>
