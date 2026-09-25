@@ -4,46 +4,53 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { IdentitySwitcher } from "@/components/discovery/identity-switcher";
 import { readProfile } from "@/lib/discovery/local-profile";
 import {
   readActiveAccount,
-  writeActiveAccount,
   onAccountSwitch,
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
 
-type EntityRow = {
-  id: string;
-  type: string;
-  slug: string;
-  name: string;
-  path: string;
-  verified?: boolean;
-};
+type NavItem = { href: string; label: string; badge?: string };
 
-const LINKS: { href: string; label: string; gold?: boolean }[] = [
-  { href: "/profile", label: "Profile" },
-  { href: "/accounts", label: "All entities" },
-  { href: "/accounts/switch", label: "Switch entity" },
-  { href: "/activity", label: "Activity" },
+const MAIN: NavItem[] = [
+  { href: "/home", label: "Home" },
+  { href: "/explore", label: "Explore" },
   { href: "/following", label: "Following" },
   { href: "/saved", label: "Saved" },
-  { href: "/analytics", label: "Analytics" },
-  { href: "/promote", label: "Promote" },
-  { href: "/pricing", label: "Upgrade to Pro", gold: true },
-  { href: "/verify", label: "Get Verified" },
-  { href: "/publish", label: "Publish" },
 ];
 
+const PUBLISH: NavItem[] = [
+  { href: "/publish", label: "Publications" },
+  { href: "/publish", label: "Drafts" },
+];
+
+const GROW: NavItem[] = [
+  { href: "/analytics", label: "Analytics" },
+  { href: "/promote", label: "Promote" },
+  { href: "/verify", label: "Get Verified" },
+];
+
+const MONETIZE: NavItem[] = [
+  { href: "/pricing", label: "Pro", badge: "New" },
+  { href: "/explore?type=opportunity", label: "Opportunities" },
+];
+
+/**
+ * Mobile full-height drawer — identity-first nav per production spec.
+ * No duplicate Profile / All entities / Switch entity list items.
+ */
 export function MobileMenuButton() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [mode, setMode] = useState<"nav" | "switch">("nav");
+  const [active, setActive] = useState<ActiveAccount | null>(null);
   const [displayName, setDisplayName] = useState("You");
   const [handle, setHandle] = useState("you");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [active, setActive] = useState<ActiveAccount | null>(null);
-  const [entities, setEntities] = useState<EntityRow[]>([]);
-  const [auth, setAuth] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -63,42 +70,52 @@ export function MobileMenuButton() {
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/discovery/entities");
-        const data = await res.json();
-        if (cancelled) return;
-        setAuth(Boolean(data.auth));
-        setEntities(data.entities || []);
-      } catch {
-        if (!cancelled) setAuth(false);
-      }
-    })();
+    if (!open) {
+      setMode("nav");
+      return;
+    }
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      cancelled = true;
       document.body.style.overflow = prev;
     };
   }, [open]);
 
-  function switchPersonal() {
-    writeActiveAccount(null);
-    setActive(null);
+  const identityName = active?.name || displayName;
+  const identityType = active
+    ? `${active.type}${active.verified ? " · Verified" : ""}`
+    : "Personal";
+  const identityHandle = active?.handle || active?.slug || handle;
+  const identityAvatar = active?.avatarUrl || avatarUrl;
+
+  function close() {
+    setOpen(false);
   }
 
-  function switchEntity(e: EntityRow) {
-    const next: ActiveAccount = {
-      id: e.id,
-      type: e.type,
-      slug: e.slug,
-      name: e.name,
-      path: e.path,
-    };
-    writeActiveAccount(next);
-    setActive(next);
+  function NavLink({ item }: { item: NavItem }) {
+    const base = item.href.split("?")[0];
+    const isActive =
+      pathname === item.href ||
+      (base !== "/home" && pathname.startsWith(base));
+    return (
+      <Link
+        href={item.href}
+        onClick={close}
+        className={`relative flex min-h-[44px] items-center rounded-xl px-3 text-[15px] font-medium ${
+          isActive ? "bg-white/[0.06] text-white" : "text-zinc-300"
+        }`}
+      >
+        {isActive && (
+          <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-omniv-gold" />
+        )}
+        {item.label}
+        {item.badge && (
+          <span className="ml-auto rounded-full bg-omniv-gold/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-omniv-gold">
+            {item.badge}
+          </span>
+        )}
+      </Link>
+    );
   }
 
   const drawer =
@@ -107,46 +124,119 @@ export function MobileMenuButton() {
           <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true">
             <button
               type="button"
-              className="absolute inset-0 bg-black/75"
+              className="absolute inset-0 bg-black/70"
               aria-label="Close menu"
-              onClick={() => setOpen(false)}
+              onClick={close}
             />
             <aside
-              className="absolute left-0 top-0 flex h-[100dvh] w-[min(100vw-48px,300px)] flex-col bg-[#0a0a0a] shadow-[8px_0_40px_rgba(0,0,0,0.6)]"
+              className="absolute left-0 top-0 flex h-[100dvh] w-[min(100vw-40px,300px)] flex-col bg-[#080808] shadow-[12px_0_48px_rgba(0,0,0,0.65)]"
               style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
             >
-              <div className="shrink-0 border-b border-white/10 px-4 pb-3 pt-[max(1.25rem,env(safe-area-inset-top))]">
-                <div className="flex items-center justify-between">
-                  <p className="text-[15px] font-semibold text-white">
-                    Switch account
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setOpen(false)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 hover:bg-white/10"
-                    aria-label="Close"
-                  >
-                    ✕
-                  </button>
+              {/* Header */}
+              <div className="shrink-0 px-4 pb-2 pt-[max(1rem,env(safe-area-inset-top))]">
+                <div className="mb-3 flex items-center gap-2">
+                  <Image src="/logo.svg" alt="" width={22} height={22} />
+                  <span className="text-[13px] font-semibold tracking-wide text-white">
+                    OMNIV
+                  </span>
                 </div>
-                <p className="mt-1 text-[12px] text-zinc-500">
-                  {active
-                    ? `Publishing as ${active.name}`
-                    : "On personal profile"}
-                </p>
-              </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3">
+                {/* Current identity — opens switcher */}
                 <button
                   type="button"
-                  onClick={switchPersonal}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left ${
-                    !active
-                      ? "bg-omniv-gold/15 ring-1 ring-omniv-gold/30"
-                      : "hover:bg-white/5"
-                  }`}
+                  onClick={() => setMode(mode === "switch" ? "nav" : "switch")}
+                  className="flex w-full items-center gap-3 rounded-xl bg-white/[0.04] px-3 py-2.5 text-left ring-1 ring-white/[0.08]"
                 >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/25 text-sm font-semibold text-omniv-gold">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
+                    {identityAvatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={identityAvatar}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      identityName.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="flex items-center gap-1 truncate text-[14px] font-semibold text-white">
+                      {identityName}
+                      {active?.verified && (
+                        <span className="text-sky-400">✓</span>
+                      )}
+                    </p>
+                    <p className="truncate text-[11px] capitalize text-zinc-500">
+                      {identityType} · @{identityHandle}
+                    </p>
+                  </div>
+                  <span className="text-zinc-500">›</span>
+                </button>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
+                {mode === "switch" ? (
+                  <IdentitySwitcher
+                    onClose={() => {
+                      setMode("nav");
+                    }}
+                  />
+                ) : (
+                  <>
+                    <Section label="Home">
+                      {MAIN.map((item) => (
+                        <NavLink key={item.label} item={item} />
+                      ))}
+                    </Section>
+                    <Section label="Publish">
+                      {PUBLISH.map((item) => (
+                        <NavLink key={item.label} item={item} />
+                      ))}
+                    </Section>
+                    <Section label="Grow">
+                      {GROW.map((item) => (
+                        <NavLink key={item.label} item={item} />
+                      ))}
+                    </Section>
+                    <Section label="Monetize">
+                      {MONETIZE.map((item) => (
+                        <NavLink key={item.label} item={item} />
+                      ))}
+                    </Section>
+                    <Section label="Identity">
+                      <button
+                        type="button"
+                        onClick={() => setMode("switch")}
+                        className="flex min-h-[44px] w-full items-center rounded-xl px-3 text-[15px] font-medium text-zinc-300"
+                      >
+                        Switch identity
+                      </button>
+                      <Link
+                        href={active ? `${active.path}/edit` : "/accounts"}
+                        onClick={close}
+                        className="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] font-medium text-zinc-300"
+                      >
+                        Manage entity
+                      </Link>
+                    </Section>
+                  </>
+                )}
+              </div>
+
+              <div className="shrink-0 space-y-2 border-t border-white/[0.06] px-3 py-3">
+                <Link
+                  href="/publish"
+                  onClick={close}
+                  className="flex h-11 w-full items-center justify-center rounded-full bg-omniv-gold text-[14px] font-semibold text-black"
+                >
+                  + Publish
+                </Link>
+                <Link
+                  href="/profile"
+                  onClick={close}
+                  className="flex items-center gap-2.5 rounded-xl px-2 py-2"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[11px] font-semibold text-white">
                     {avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -158,112 +248,13 @@ export function MobileMenuButton() {
                       displayName.charAt(0).toUpperCase()
                     )}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14px] font-semibold text-white">
+                  <div className="min-w-0">
+                    <p className="truncate text-[12px] font-medium text-white">
                       {displayName}
                     </p>
-                    <p className="text-[12px] text-zinc-500">
-                      Personal · @{handle}
-                    </p>
-                  </div>
-                  {!active && <span className="text-omniv-gold">✓</span>}
-                </button>
-
-                <p className="mt-4 px-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
-                  Publish as
-                </p>
-
-                {entities.map((e) => {
-                  const isActive = active?.id === e.id;
-                  return (
-                    <button
-                      key={e.id}
-                      type="button"
-                      onClick={() => switchEntity(e)}
-                      className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left ${
-                        isActive
-                          ? "bg-omniv-gold/15 ring-1 ring-omniv-gold/30"
-                          : "hover:bg-white/5"
-                      }`}
-                    >
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
-                        {e.name.charAt(0)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14px] font-semibold text-white">
-                          {e.name}
-                          {e.verified && (
-                            <span className="ml-1 text-sky-400">✓</span>
-                          )}
-                        </p>
-                        <p className="text-[12px] capitalize text-zinc-500">
-                          {e.type}
-                        </p>
-                      </div>
-                      {isActive && (
-                        <span className="text-omniv-gold">✓</span>
-                      )}
-                    </button>
-                  );
-                })}
-
-                {auth && entities.length === 0 && (
-                  <p className="px-3 py-2 text-[12px] text-zinc-500">
-                    No entities yet.
-                  </p>
-                )}
-
-                {!auth && (
-                  <Link
-                    href="/signup?next=/accounts"
-                    onClick={() => setOpen(false)}
-                    className="mt-2 block px-3 py-2 text-[13px] text-omniv-gold"
-                  >
-                    Sign in to create entities →
-                  </Link>
-                )}
-
-                <Link
-                  href="/accounts"
-                  onClick={() => setOpen(false)}
-                  className="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-3 hover:bg-white/5"
-                >
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-omniv-gold/50 text-xl text-omniv-gold">
-                    +
-                  </div>
-                  <div>
-                    <p className="text-[14px] font-semibold text-omniv-gold">
-                      Create entity
-                    </p>
-                    <p className="text-[12px] text-zinc-500">
-                      Company, artist, brand…
-                    </p>
+                    <p className="text-[10px] text-zinc-600">Personal account</p>
                   </div>
                 </Link>
-
-                <div className="my-4 border-t border-white/10" />
-
-                <nav className="space-y-0.5 pb-4">
-                  {LINKS.map((item) => (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setOpen(false)}
-                      className={`flex min-h-[48px] items-center rounded-xl px-3 text-[15px] font-medium ${
-                        item.gold ? "text-omniv-gold" : "text-white"
-                      } active:bg-white/10`}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-
-              <div className="shrink-0 border-t border-white/10 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <Image src="/logo.svg" alt="" width={20} height={20} />
-                  <span className="text-[12px] text-zinc-600">Omniv</span>
-                </div>
               </div>
             </aside>
           </div>,
@@ -279,14 +270,35 @@ export function MobileMenuButton() {
         className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/20 text-[13px] font-semibold text-omniv-gold ring-1 ring-white/15"
         aria-label="Open menu"
       >
-        {avatarUrl ? (
+        {identityAvatar ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+          <img
+            src={identityAvatar}
+            alt=""
+            className="h-full w-full object-cover"
+          />
         ) : (
-          displayName.charAt(0).toUpperCase()
+          identityName.charAt(0).toUpperCase()
         )}
       </button>
       {drawer}
     </>
+  );
+}
+
+function Section({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mb-3">
+      <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
+        {label}
+      </p>
+      <div className="space-y-0.5">{children}</div>
+    </div>
   );
 }
