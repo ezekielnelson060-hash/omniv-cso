@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SaveButton } from "@/components/discovery/save-button";
+import { PublicationActions } from "@/components/discovery/publication-actions";
 import type { DiscoveryEntity, Publication } from "@/lib/discovery/types";
 import {
   ENTITY_LABELS,
@@ -179,11 +180,17 @@ export function KeepExploring({
                           {publication.summary}
                         </p>
                       </Link>
-                      <div className="mt-2 flex items-center justify-between gap-2">
+                      <div className="mt-2">
                         <p className="truncate text-[11px] text-zinc-600">{publisher}{publicationMeta(publication).replace(PUBLICATION_LABELS[publication.type], "")}</p>
-                        <div className="flex shrink-0 items-center gap-1">
-                          <SaveButton kind="publication" type={publication.type} slug={publication.slug} name={publication.title} pubType={publication.type} variant="icon" />
-                          <Link href={publicationPath(publication)} className="px-2 text-[11px] font-medium text-omniv-gold">Open →</Link>
+                        <div className="mt-1">
+                          <PublicationActions
+                            slug={publication.slug}
+                            type={publication.type}
+                            title={publication.title}
+                            publishedAt={publication.publishedAt}
+                            initialLikes={publication.heat ?? 0}
+                            compact
+                          />
                         </div>
                       </div>
                     </div>
