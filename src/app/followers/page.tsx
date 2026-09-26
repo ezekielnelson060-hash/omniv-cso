@@ -32,13 +32,13 @@ export default function FollowersPage() {
         const res = await fetch("/api/discovery/follow");
         const data = await res.json();
         const follows = Array.isArray(data.follows) ? data.follows : [];
-        const set = new Set(
-          follows.map((f: { type: string; slug: string }) => `${f.type}/${f.slug}`)
+        const set = new Set<string>(
+          follows.map(
+            (f: { type: string; slug: string }) => `${f.type}/${f.slug}`
+          )
         );
         setFollowingSlugs(set);
 
-        // Until inbound follower graph is live, show mutual network from seeds
-        // you follow + sample explorers so UI is usable
         const fromFollows: Follower[] = follows.map(
           (f: { type: string; slug: string; name: string }) => {
             const entity = SEED_ENTITIES.find(
