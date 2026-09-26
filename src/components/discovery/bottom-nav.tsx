@@ -40,8 +40,8 @@ export function BottomNav() {
     Boolean(active?.path) && pathname.startsWith(active!.path);
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.04] bg-[#050505]/94 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
-      <div className="mx-auto flex h-[60px] max-w-lg items-center justify-around px-2">
+    <nav className="fixed inset-x-0 bottom-0 z-[60] border-t border-white/[0.06] bg-[#050505] pb-[env(safe-area-inset-bottom)] md:hidden">
+      <div className="mx-auto flex h-[56px] max-w-lg items-center justify-between px-1">
         {ITEMS.map((item) => {
           if (item.primary) {
             return (
@@ -49,7 +49,7 @@ export function BottomNav() {
                 key={item.href}
                 href={item.href}
                 aria-label="Create"
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-omniv-gold text-black transition active:scale-[0.96]"
+                className="-mt-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold text-black shadow-lg shadow-omniv-gold/20 transition active:scale-[0.96]"
               >
                 <PlusIcon />
               </Link>
@@ -66,12 +66,12 @@ export function BottomNav() {
             <Link
               key={item.label}
               href={href}
-              className={`flex min-w-[52px] flex-col items-center gap-0.5 py-1 transition ${
+              className={`flex w-[18%] min-w-0 flex-col items-center gap-0.5 py-1 transition ${
                 activeNav ? "text-white" : "text-zinc-600"
               }`}
             >
               <Icon active={activeNav} />
-              <span className="text-[10px] font-medium tracking-wide">
+              <span className="truncate text-[10px] font-medium tracking-wide">
                 {item.label}
               </span>
             </Link>
