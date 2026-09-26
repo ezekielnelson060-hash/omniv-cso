@@ -8,6 +8,7 @@ import {
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { ProfileAvatarLink } from "@/components/discovery/profile-avatar-link";
+import { NotificationBell } from "@/components/discovery/notification-bell";
 import { listLivePublications } from "@/lib/discovery/db";
 import {
   newestPublications,
@@ -131,7 +132,7 @@ export default async function HomePage({ searchParams }: Props) {
               </span>
             </Link>
             <div className="hidden md:block" />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <Link
                 href="/explore"
                 className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/5 hover:text-white"
@@ -149,6 +150,7 @@ export default async function HomePage({ searchParams }: Props) {
                   <path d="m20 20-3.5-3.5" strokeLinecap="round" />
                 </svg>
               </Link>
+              <NotificationBell />
               <ProfileAvatarLink />
             </div>
           </div>
