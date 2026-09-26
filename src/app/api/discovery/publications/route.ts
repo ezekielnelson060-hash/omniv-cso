@@ -84,45 +84,12 @@ export async function POST(req: Request) {
     }
 
     if (!publisherId) {
-      if (!publisherName) {
-        return NextResponse.json(
-          { error: "Select an account to publish as" },
-          { status: 400 }
-        );
-      }
-      const pubSlug =
-        slugify(publisherName) || `publisher-${user.id.slice(0, 8)}`;
-      const { data: existingPub } = await supabase
-        .from("discovery_entities")
-        .select("id")
-        .eq("owner_id", user.id)
-        .eq("slug", pubSlug)
-        .maybeSingle();
-
-      if (existingPub?.id) {
-        publisherId = existingPub.id;
-      } else {
-        const { data: created, error: entErr } = await supabase
-          .from("discovery_entities")
-          .insert({
-            owner_id: user.id,
-            type: "company",
-            slug: pubSlug,
-            name: publisherName,
-            tagline: "Publisher on Omniv",
-            about: "",
-            intents: [],
-            tags: [],
-            heat: 5,
-          })
-          .select("id")
-          .single();
-        if (entErr) {
-          console.error("publisher entity", entErr);
-        } else {
-          publisherId = created.id;
-        }
-      }
+      publisherName = String(
+        user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.email?.split("@")[0] ||
+          "Personal"
+      );
     }
 
     const insertRow: Record<string, unknown> = {
@@ -190,6 +157,107 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, path: `/p/${data.slug}` });
   } catch (e) {
     console.error(e);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+export async function GET(req: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ publications: [], auth: false }, { status: 401 });
+    const { searchParams } = new URL(req.url);
+    const publisherId = searchParams.get("publisherId");
+    const id = searchParams.get("id");
+    const status = searchParams.get("status");
+    let query = supabase
+      .from("discovery_publications")
+      .select("id, type, slug, title, summary, body, subtitle, publisher_id, publisher_name, status, updated_at, published_at, heat, tags, cover_url, media_url, entity_refs, seo_title, seo_description, category_id")
+      .eq("owner_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(100);
+    if (!id) query = publisherId ? query.eq("publisher_id", publisherId) : query.is("publisher_id", null);
+    if (id) query = query.eq("id", id);
+    if (["draft", "published", "archived"].includes(status || "")) query = query.eq("status", status);
+    const { data, error } = await query;
+    if (error) return NextResponse.json({ publications: [], error: error.message }, { status: 500 });
+    return NextResponse.json({
+      auth: true,
+      publications: (data || []).map((publication) => ({
+        id: publication.id,
+        type: publication.type,
+        slug: publication.slug,
+        title: publication.title,
+        summary: publication.summary,
+        body: publication.body,
+        subtitle: publication.subtitle,
+        publisherId: publication.publisher_id,
+        publisherName: publication.publisher_name,
+        status: publication.status || "published",
+        updatedAt: publication.updated_at,
+        publishedAt: publication.published_at,
+        heat: publication.heat,
+        tags: publication.tags || [],
+        coverUrl: publication.cover_url,
+        mediaUrl: publication.media_url,
+        entityRefs: publication.entity_refs || [],
+        seoTitle: publication.seo_title,
+        seoDescription: publication.seo_description,
+        categoryId: publication.category_id,
+      })),
+    });
+  } catch (error) {
+    console.error("publication list", error);
+    return NextResponse.json({ publications: [] }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
+    const body = await req.json();
+    const id = String(body.id || "").trim();
+    const status = String(body.status || "");
+    if (!id || !["draft", "published", "archived"].includes(status)) {
+      return NextResponse.json({ error: "Publication id and valid status required" }, { status: 400 });
+    }
+    const updates: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
+    if (status === "published") updates.published_at = new Date().toISOString();
+    const { data, error } = await supabase
+      .from("discovery_publications")
+      .update(updates)
+      .eq("id", id)
+      .eq("owner_id", user.id)
+      .select("id, slug, status")
+      .maybeSingle();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!data) return NextResponse.json({ error: "Publication not found" }, { status: 404 });
+    return NextResponse.json({ ok: true, publication: data, path: `/p/${data.slug}` });
+  } catch (error) {
+    console.error("publication update", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
+    const id = new URL(req.url).searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "Publication id required" }, { status: 400 });
+    const { error } = await supabase
+      .from("discovery_publications")
+      .delete()
+      .eq("id", id)
+      .eq("owner_id", user.id)
+      .eq("status", "draft");
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("publication delete", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

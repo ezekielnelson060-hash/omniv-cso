@@ -29,9 +29,9 @@ const GROUPS: NavGroup[] = [
   {
     id: "publish",
     label: "Publish",
-    items: [
-      { href: "/publish", label: "Publications" },
-      { href: "/publish", label: "Drafts" },
+      items: [
+      { href: "/publications", label: "Publications" },
+      { href: "/drafts", label: "Drafts" },
     ],
   },
   {
@@ -86,7 +86,6 @@ export function DesktopSidebar() {
     : "Personal";
   const identityHandle = active?.handle || active?.slug || handle;
   const identityAvatar = active?.avatarUrl || avatarUrl;
-  const identityPath = active?.path || "/profile";
 
   function toggleGroup(id: string) {
     setOpenGroups((g) => ({ ...g, [id]: !g[id] }));

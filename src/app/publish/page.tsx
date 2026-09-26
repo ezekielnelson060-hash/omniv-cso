@@ -57,6 +57,7 @@ type Draft = {
   pubType: PublicationType;
   title: string;
   summary: string;
+  subtitle: string;
   body: string;
   publisherName: string;
   tags: string;
@@ -66,6 +67,9 @@ type Draft = {
   releaseDate: string;
   priceMode: "paid" | "contact";
   category: string;
+  relatedEntities: string;
+  seoTitle: string;
+  seoDescription: string;
   eventDate: string;
   eventTime: string;
   location: string;
@@ -83,6 +87,7 @@ export default function PublishPage() {
   const [pubType, setPubType] = useState<PublicationType | null>(null);
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
+  const [subtitle, setSubtitle] = useState("");
   const [body, setBody] = useState("");
   const [publisherName, setPublisherName] = useState("");
   const [publisherId, setPublisherId] = useState<string | null>(null);
@@ -93,6 +98,9 @@ export default function PublishPage() {
   const [releaseDate, setReleaseDate] = useState("");
   const [priceMode, setPriceMode] = useState<"paid" | "contact">("contact");
   const [category, setCategory] = useState("");
+  const [relatedEntities, setRelatedEntities] = useState("");
+  const [seoTitle, setSeoTitle] = useState("");
+  const [seoDescription, setSeoDescription] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [eventTime, setEventTime] = useState("");
   const [location, setLocation] = useState("");
@@ -117,6 +125,7 @@ export default function PublishPage() {
       setPubType(d.pubType);
       setTitle(d.title || "");
       setSummary(d.summary || "");
+      setSubtitle(d.subtitle || "");
       setBody(d.body || "");
       setPublisherName(d.publisherName || "");
       setTags(d.tags || "");
@@ -126,6 +135,9 @@ export default function PublishPage() {
       setReleaseDate(d.releaseDate || "");
       setPriceMode(d.priceMode || "contact");
       setCategory(d.category || "");
+      setRelatedEntities(d.relatedEntities || "");
+      setSeoTitle(d.seoTitle || "");
+      setSeoDescription(d.seoDescription || "");
       setEventDate(d.eventDate || "");
       setEventTime(d.eventTime || "");
       setLocation(d.location || "");
@@ -143,12 +155,41 @@ export default function PublishPage() {
   }, []);
 
   useEffect(() => {
+    const draftId = new URLSearchParams(window.location.search).get("draft");
+    if (!draftId) return;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/discovery/publications?id=${encodeURIComponent(draftId)}`);
+        const data = await res.json();
+        const draft = data.publications?.[0];
+        if (!res.ok || !draft) return;
+        setPubType(draft.type);
+        setTitle(draft.title || "");
+        setSummary(draft.summary || "");
+        setSubtitle(draft.subtitle || "");
+        setBody(draft.body || "");
+        setTags((draft.tags || []).join(", "));
+        setCoverUrl(draft.coverUrl || null);
+        setMediaUrl(draft.mediaUrl || null);
+        setSeoTitle(draft.seoTitle || "");
+        setSeoDescription(draft.seoDescription || "");
+        setStep("form");
+        setDraftRestored(true);
+        setSavedAgo("Draft loaded");
+      } catch {
+        setError("Could not load draft");
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
     if (!pubType || step === "pick" || step === "done") return;
     const t = setTimeout(() => {
       const d: Draft = {
         pubType,
         title,
         summary,
+        subtitle,
         body,
         publisherName,
         tags,
@@ -158,6 +199,9 @@ export default function PublishPage() {
         releaseDate,
         priceMode,
         category,
+        relatedEntities,
+        seoTitle,
+        seoDescription,
         eventDate,
         eventTime,
         location,
@@ -177,9 +221,9 @@ export default function PublishPage() {
     }, 800);
     return () => clearTimeout(t);
   }, [
-    pubType, step, title, summary, body, publisherName, tags, meta, ctaHref,
+    pubType, step, title, summary, subtitle, body, publisherName, tags, meta, ctaHref,
     genre, releaseDate, priceMode, category, eventDate, eventTime, location,
-    oppType, deadline, requirements, coverUrl, mediaUrl,
+    relatedEntities, seoTitle, seoDescription, oppType, deadline, requirements, coverUrl, mediaUrl,
   ]);
 
   function clearDraft() {
@@ -196,11 +240,15 @@ export default function PublishPage() {
     setError(null);
     setTitle("");
     setSummary("");
+    setSubtitle("");
     setBody("");
     setTags("");
     setMeta("");
     setCoverUrl(null);
     setMediaUrl(null);
+    setRelatedEntities("");
+    setSeoTitle("");
+    setSeoDescription("");
     setDraftRestored(false);
     clearDraft();
   }
@@ -227,6 +275,67 @@ export default function PublishPage() {
     return parts.filter(Boolean).join(" · ") || meta;
   }
 
+  function buildPayload(status: "draft" | "published") {
+    const refs = relatedEntities
+      .split(",")
+      .map((label) => label.trim())
+      .filter(Boolean)
+      .slice(0, 12)
+      .map((label) => ({
+        type: "company",
+        slug: label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+        label,
+      }));
+    return {
+      type: pubType,
+      title: title || "Untitled draft",
+      summary: summary || body.slice(0, 160) || "Draft publication",
+      subtitle,
+      body:
+        body +
+        (requirements ? `\n\nRequirements:\n${requirements}` : "") +
+        (ctaHref ? `\n\nCTA: ${ctaHref}` : ""),
+      publisherName,
+      publisherId,
+      tags,
+      meta: buildMeta(),
+      coverUrl,
+      mediaUrl,
+      categoryId: category,
+      entityRefs: refs,
+      seoTitle,
+      seoDescription,
+      status,
+    };
+  }
+
+  async function saveDraft() {
+    if (!pubType) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/discovery/publications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(buildPayload("draft")),
+      });
+      const data = await res.json();
+      if (res.status === 401) {
+        router.push("/signup?from=publish&next=/publish");
+        return;
+      }
+      if (!res.ok) {
+        setError(data.error || "Could not save draft");
+        return;
+      }
+      setSavedAgo("Draft saved to your publications");
+    } catch {
+      setError("Network error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function onPublish() {
     if (!pubType) return;
     setError(null);
@@ -235,21 +344,7 @@ export default function PublishPage() {
       const res = await fetch("/api/discovery/publications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: pubType,
-          title,
-          summary: summary || body.slice(0, 160) || title,
-          body:
-            body +
-            (requirements ? `\n\nRequirements:\n${requirements}` : "") +
-            (ctaHref ? `\n\nCTA: ${ctaHref}` : ""),
-          publisherName: publisherName || "Publisher",
-          publisherId,
-          tags,
-          meta: buildMeta(),
-          coverUrl,
-          mediaUrl,
-        }),
+        body: JSON.stringify(buildPayload("published")),
       });
       const data = await res.json();
       if (res.status === 401) {
@@ -328,8 +423,8 @@ export default function PublishPage() {
       <main className="mx-auto max-w-lg px-4 pb-32 pt-5 md:max-w-2xl">
         {step === "pick" && (
           <>
-            <h1 className="text-2xl font-semibold tracking-tight text-white">Create</h1>
-            <p className="mt-1 text-[14px] text-zinc-500">Share your work with the world.</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-white">What do you want to publish?</h1>
+            <p className="mt-1 text-[14px] text-zinc-500">Choose a format. You can shape the details after.</p>
             {GROUPS.map((g) => (
               <div key={g.label} className="mt-8">
                 <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">{g.label}</p>
@@ -434,6 +529,11 @@ export default function PublishPage() {
             <Field label="Title *">
               <input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" className={inputCls} />
             </Field>
+            {pubType === "article" && (
+              <Field label="Subtitle">
+                <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="The sentence that earns the next paragraph" className={inputCls} />
+              </Field>
+            )}
             {(pubType === "article" || pubType === "announcement") && (
               <div>
                 <p className={labelCls}>Body *</p>
@@ -496,12 +596,22 @@ export default function PublishPage() {
               </div>
             </div>
 
+            {pubType === "article" && (
+              <div className="space-y-4 rounded-2xl bg-white/[0.025] p-4 ring-1 ring-white/[0.07]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">Publication settings</p>
+                <Field label="Related entities"><input value={relatedEntities} onChange={(e) => setRelatedEntities(e.target.value)} placeholder="Nokanda AI, Lagos, Africa" className={inputCls} /></Field>
+                <Field label="SEO title"><input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} placeholder="Optional search title" className={inputCls} /></Field>
+                <Field label="SEO description"><textarea value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} rows={3} placeholder="Optional search description" className={areaCls} /></Field>
+              </div>
+            )}
+
             {error && <p className="text-[13px] text-red-400">{error}</p>}
             {savedAgo && <p className="text-[12px] text-zinc-600">{savedAgo}</p>}
 
-            <button type="submit" className="flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black">
-              Preview
-            </button>
+            <div className="flex gap-3">
+              <button type="button" disabled={loading} onClick={() => void saveDraft()} className="flex h-12 flex-1 items-center justify-center rounded-full bg-white/[0.06] text-[14px] font-medium text-white ring-1 ring-white/10 disabled:opacity-50">{loading ? "Saving…" : "Save draft"}</button>
+              <button type="submit" className="flex h-12 flex-1 items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black">Preview</button>
+            </div>
           </form>
         )}
       </main>
