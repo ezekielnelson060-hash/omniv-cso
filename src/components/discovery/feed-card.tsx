@@ -5,6 +5,7 @@ import {
   type Publication,
 } from "@/lib/discovery/types";
 import { getEntityById } from "@/lib/discovery/seed";
+import { PublicationActions } from "@/components/discovery/publication-actions";
 
 type PubWithCover = Publication & {
   coverUrl?: string;
@@ -54,7 +55,6 @@ function TypeLabel({ type }: { type: string }) {
   );
 }
 
-/** Large hero — articles / research / video */
 export function FeedFeaturedCard({
   pub,
   showExplore,
@@ -94,6 +94,15 @@ export function FeedFeaturedCard({
           </div>
         </div>
       </Link>
+      <div className="border-t border-white/[0.04] px-4 py-1.5">
+        <PublicationActions
+          slug={pub.slug}
+          type={pub.type}
+          title={pub.title}
+          publishedAt={pub.publishedAt}
+          initialLikes={pub.heat ?? 0}
+        />
+      </div>
       {showExplore && tags.length > 0 && (
         <div className="border-t border-white/[0.04] px-5 py-3.5">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
@@ -116,7 +125,6 @@ export function FeedFeaturedCard({
   );
 }
 
-/** Compact — music, product, opportunity, event */
 export function FeedCompactCard({ pub }: { pub: PubWithCover }) {
   const publisher = getEntityById(pub.publisherId);
   const name = pub.publisherName || publisher?.name;
@@ -125,83 +133,98 @@ export function FeedCompactCard({ pub }: { pub: PubWithCover }) {
   const datePart = isEvent && pub.meta ? pub.meta.split("·")[0]?.trim() : null;
 
   return (
-    <Link
-      href={publicationPath(pub)}
-      className="group flex items-center gap-3.5 rounded-2xl bg-[#0c0c0c] p-2.5 transition-colors duration-200 hover:bg-[#101010]"
-    >
-      {isEvent && datePart ? (
-        <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-white/[0.04]">
-          <span className="text-[9px] font-semibold uppercase tracking-wide text-zinc-500">
-            Event
+    <div className="rounded-2xl bg-[#0c0c0c] p-2.5 transition-colors duration-200 hover:bg-[#101010]">
+      <Link href={publicationPath(pub)} className="group flex items-center gap-3.5">
+        {isEvent && datePart ? (
+          <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-white/[0.04]">
+            <span className="text-[9px] font-semibold uppercase tracking-wide text-zinc-500">
+              Event
+            </span>
+            <span className="mt-0.5 text-center text-[11px] font-semibold leading-tight text-white">
+              {datePart.slice(0, 12)}
+            </span>
+          </div>
+        ) : (
+          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
+            <CoverBg pub={pub} className="absolute inset-0" />
+            {isMusic && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-black">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600">
+            {PUBLICATION_LABELS[pub.type]}
           </span>
-          <span className="mt-0.5 text-center text-[11px] font-semibold leading-tight text-white">
-            {datePart.slice(0, 12)}
-          </span>
+          <p className="mt-0.5 truncate text-[15px] font-semibold tracking-tight text-white group-hover:text-omniv-gold">
+            {pub.title}
+          </p>
+          <p className="truncate text-[12px] text-zinc-500">
+            {name}
+            {pub.meta ? ` · ${pub.meta}` : ""}
+          </p>
         </div>
-      ) : (
-        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
-          <CoverBg pub={pub} className="absolute inset-0" />
-          {isMusic && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-black">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600">
-          {PUBLICATION_LABELS[pub.type]}
-        </span>
-        <p className="mt-0.5 truncate text-[15px] font-semibold tracking-tight text-white group-hover:text-omniv-gold">
-          {pub.title}
-        </p>
-        <p className="truncate text-[12px] text-zinc-500">
-          {name}
-          {pub.meta ? ` · ${pub.meta}` : ""}
-        </p>
-      </div>
-    </Link>
+      </Link>
+      <PublicationActions
+        slug={pub.slug}
+        type={pub.type}
+        title={pub.title}
+        publishedAt={pub.publishedAt}
+        initialLikes={pub.heat ?? 0}
+        compact
+      />
+    </div>
   );
 }
 
-/** Standard card */
 export function FeedCard({ pub }: { pub: PubWithCover }) {
   const publisher = getEntityById(pub.publisherId);
   const name = pub.publisherName || publisher?.name;
 
   return (
-    <Link
-      href={publicationPath(pub)}
-      className="group flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] transition-colors duration-200 hover:bg-[#101010]"
-    >
-      <div className="relative aspect-[16/10]">
-        <CoverBg pub={pub} className="absolute inset-0" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-        <span className="absolute left-3 top-3">
-          <TypeLabel type={pub.type} />
-        </span>
-      </div>
-      <div className="flex flex-1 flex-col px-4 py-3.5">
-        <p className="text-[16px] font-semibold leading-snug tracking-tight text-white group-hover:text-omniv-gold">
-          {pub.title}
-        </p>
-        <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-zinc-500">
-          {pub.summary}
-        </p>
-        <div className="mt-auto flex items-center gap-2 pt-3 text-[12px] text-zinc-600">
-          {name && <span className="truncate text-zinc-500">{name}</span>}
-          {pub.meta && (
-            <>
-              <span>·</span>
-              <span>{pub.meta}</span>
-            </>
-          )}
+    <div className="flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] transition-colors duration-200 hover:bg-[#101010]">
+      <Link href={publicationPath(pub)} className="group flex flex-1 flex-col">
+        <div className="relative aspect-[16/10]">
+          <CoverBg pub={pub} className="absolute inset-0" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+          <span className="absolute left-3 top-3">
+            <TypeLabel type={pub.type} />
+          </span>
         </div>
+        <div className="flex flex-1 flex-col px-4 pt-3.5">
+          <p className="text-[16px] font-semibold leading-snug tracking-tight text-white group-hover:text-omniv-gold">
+            {pub.title}
+          </p>
+          <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-zinc-500">
+            {pub.summary}
+          </p>
+          <div className="mt-auto flex items-center gap-2 pt-3 text-[12px] text-zinc-600">
+            {name && <span className="truncate text-zinc-500">{name}</span>}
+            {pub.meta && (
+              <>
+                <span>·</span>
+                <span>{pub.meta}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </Link>
+      <div className="px-3 pb-2">
+        <PublicationActions
+          slug={pub.slug}
+          type={pub.type}
+          title={pub.title}
+          publishedAt={pub.publishedAt}
+          initialLikes={pub.heat ?? 0}
+          compact
+        />
       </div>
-    </Link>
+    </div>
   );
 }
