@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SaveButton } from "@/components/discovery/save-button";
 import { ShareButton } from "@/components/discovery/share-button";
+import { PublicationPageActions } from "@/components/discovery/publication-page-actions";
 import { FollowButton } from "@/components/discovery/follow-button";
 import { StructuredData } from "@/components/StructuredData";
 import { ArticleContent, ArticleSources } from "@/components/discovery/article-content";
@@ -210,14 +211,6 @@ export default async function PublicationPage({ params }: Props) {
                 ←
               </Link>
               <div className="flex items-center gap-1">
-                <SaveButton
-                  kind="publication"
-                  type={p.type}
-                  slug={p.slug}
-                  name={p.title}
-                  pubType={p.type}
-                  variant="icon"
-                />
                 <ShareButton title={p.title} path={path} />
               </div>
             </div>
@@ -262,6 +255,16 @@ export default async function PublicationPage({ params }: Props) {
                     </span>
                   </>
                 )}
+              </div>
+              <div className="mt-4 -mx-1 rounded-xl bg-black/25 px-1 py-0.5 backdrop-blur-sm">
+                <PublicationPageActions
+                  slug={p.slug}
+                  type={p.type}
+                  title={p.title}
+                  path={path}
+                  publishedAt={p.publishedAt}
+                  heat={p.heat}
+                />
               </div>
             </div>
           </div>
