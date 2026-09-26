@@ -35,7 +35,6 @@ const TABS = [
   { id: "research", label: "Research" },
 ] as const;
 
-/** Editorial categories from master spec */
 const CATEGORIES = [
   "World",
   "Technology",
@@ -89,7 +88,12 @@ export default async function HomePage({ searchParams }: Props) {
     if (items.length === 0) items = trendingPublications(12);
   }
 
-  if (items.length < 6 && tab !== "music" && tab !== "articles" && tab !== "research") {
+  if (
+    items.length < 6 &&
+    tab !== "music" &&
+    tab !== "articles" &&
+    tab !== "research"
+  ) {
     const seed =
       tab === "new" ? newestPublications(12) : trendingPublications(12);
     const slugs = new Set(items.map((p) => p.slug));
@@ -150,27 +154,27 @@ export default async function HomePage({ searchParams }: Props) {
           </div>
         </header>
 
-        <main className="mx-auto max-w-lg px-4 pb-24 pt-5 md:max-w-2xl md:px-6">
+        <main className="mx-auto max-w-lg px-4 pb-28 pt-5 md:max-w-2xl md:px-6">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-white">
               Discover
             </h1>
-            <p className="mt-1 text-[14px] leading-snug text-zinc-500">
-              Things worth finding — not a feed of noise.
+            <p className="mt-1 text-[14px] text-zinc-500">
+              Things worth finding.
             </p>
           </div>
 
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <div className="mt-4 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
             {TABS.map((t) => {
               const active = tab === t.id;
               return (
                 <Link
                   key={t.id}
                   href={t.id === "for-you" ? "/home" : `/home?tab=${t.id}`}
-                  className={`shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition ${
+                  className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-medium transition ${
                     active
                       ? "bg-omniv-gold text-black"
-                      : "text-zinc-400 ring-1 ring-white/12 hover:text-white"
+                      : "bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1] hover:text-white"
                   }`}
                 >
                   {t.label}
@@ -179,13 +183,12 @@ export default async function HomePage({ searchParams }: Props) {
             })}
           </div>
 
-          {/* Editorial topic strip */}
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <div className="mt-3 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
             {CATEGORIES.map((c) => (
               <Link
                 key={c}
                 href={`/explore?interest=${encodeURIComponent(c)}`}
-                className="shrink-0 rounded-full px-3 py-1 text-[12px] font-medium text-zinc-500 ring-1 ring-white/[0.08] transition hover:text-zinc-200"
+                className="shrink-0 rounded-full bg-white/[0.04] px-3.5 py-1.5 text-[12px] font-medium text-zinc-500 transition hover:bg-white/[0.08] hover:text-zinc-200"
               >
                 {c}
               </Link>
@@ -213,7 +216,7 @@ export default async function HomePage({ searchParams }: Props) {
             )}
           </div>
 
-          <div className="mt-10 rounded-2xl bg-white/[0.03] p-5 text-center ring-1 ring-white/[0.06]">
+          <div className="mt-10 rounded-2xl bg-white/[0.03] p-5 text-center">
             <p className="text-[15px] font-medium text-white">
               Looking for something specific?
             </p>
