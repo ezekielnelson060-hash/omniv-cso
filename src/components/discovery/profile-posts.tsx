@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ProfileEngagement } from "@/components/discovery/profile-engagement";
+import { PublicationActions } from "@/components/discovery/publication-actions";
 import { readProfile } from "@/lib/discovery/local-profile";
 
 type LivePub = {
@@ -14,6 +14,7 @@ type LivePub = {
   publishedAt?: string;
   publisherName?: string;
   coverUrl?: string;
+  heat?: number;
 };
 
 export function ProfilePosts() {
@@ -109,8 +110,15 @@ export function ProfilePosts() {
                     />
                   )}
                 </Link>
-                <div className="mt-2">
-                  <ProfileEngagement slug={p.slug} seedLikes={0} />
+                <div className="mt-1.5">
+                  <PublicationActions
+                    slug={p.slug}
+                    type={p.type}
+                    title={p.title}
+                    publishedAt={p.publishedAt}
+                    initialLikes={p.heat ?? 0}
+                    compact
+                  />
                 </div>
               </div>
             </div>
