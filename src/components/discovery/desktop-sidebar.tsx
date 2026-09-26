@@ -207,7 +207,6 @@ export function DesktopSidebar() {
           </span>
         </div>
 
-        {/* Publishing as — identity switcher */}
         <div className="relative px-3 pb-3">
           <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600">
             Publishing as
@@ -257,7 +256,8 @@ export function DesktopSidebar() {
                     Switch identity
                   </p>
                   <button
-                    type="button"enewcommand": "onClick={() => setSwitchOpen(false)}"
+                    type="button"
+                    onClick={() => setSwitchOpen(false)}
                     className="text-zinc-500 hover:text-white"
                   >
                     ✕
