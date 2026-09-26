@@ -9,6 +9,7 @@ import {
   onAccountSwitch,
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
+import { PublishSheet } from "@/components/discovery/publish-sheet";
 
 type NavItem = {
   href: string;
@@ -29,6 +30,7 @@ const ITEMS: NavItem[] = [
 export function BottomNav() {
   const pathname = usePathname();
   const [active, setActive] = useState<ActiveAccount | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
     setActive(readActiveAccount());
@@ -40,45 +42,49 @@ export function BottomNav() {
     Boolean(active?.path) && pathname.startsWith(active!.path);
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-[60] border-t border-white/[0.06] bg-[#050505] pb-[env(safe-area-inset-bottom)] md:hidden">
-      <div className="mx-auto flex h-[56px] max-w-lg items-center justify-between px-1">
-        {ITEMS.map((item) => {
-          if (item.primary) {
+    <>
+      <nav className="fixed inset-x-0 bottom-0 z-[60] border-t border-white/[0.06] bg-[#050505] pb-[env(safe-area-inset-bottom)] md:hidden">
+        <div className="mx-auto flex h-[56px] max-w-lg items-center justify-between px-1">
+          {ITEMS.map((item) => {
+            if (item.primary) {
+              return (
+                <button
+                  key={item.href}
+                  type="button"
+                  onClick={() => setSheetOpen(true)}
+                  aria-label="Publish"
+                  className="-mt-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold text-black shadow-lg shadow-omniv-gold/20 transition active:scale-[0.96]"
+                >
+                  <PlusIcon />
+                </button>
+              );
+            }
+            const href = item.profile ? profileHref : item.href;
+            const activeNav = item.profile
+              ? pathname === "/profile" || onEntityProfile
+              : pathname === item.href ||
+                (item.href !== "/home" && pathname.startsWith(item.href));
+            const Icon = item.icon;
+            if (!Icon) return null;
             return (
               <Link
-                key={item.href}
-                href={item.href}
-                aria-label="Create"
-                className="-mt-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold text-black shadow-lg shadow-omniv-gold/20 transition active:scale-[0.96]"
+                key={item.label}
+                href={href}
+                className={`flex w-[18%] min-w-0 flex-col items-center gap-0.5 py-1 transition ${
+                  activeNav ? "text-white" : "text-zinc-600"
+                }`}
               >
-                <PlusIcon />
+                <Icon active={activeNav} />
+                <span className="truncate text-[10px] font-medium tracking-wide">
+                  {item.label}
+                </span>
               </Link>
             );
-          }
-          const href = item.profile ? profileHref : item.href;
-          const activeNav = item.profile
-            ? pathname === "/profile" || onEntityProfile
-            : pathname === item.href ||
-              (item.href !== "/home" && pathname.startsWith(item.href));
-          const Icon = item.icon;
-          if (!Icon) return null;
-          return (
-            <Link
-              key={item.label}
-              href={href}
-              className={`flex w-[18%] min-w-0 flex-col items-center gap-0.5 py-1 transition ${
-                activeNav ? "text-white" : "text-zinc-600"
-              }`}
-            >
-              <Icon active={activeNav} />
-              <span className="truncate text-[10px] font-medium tracking-wide">
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+          })}
+        </div>
+      </nav>
+      <PublishSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
+    </>
   );
 }
 
