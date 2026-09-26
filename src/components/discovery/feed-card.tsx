@@ -23,7 +23,6 @@ const TONE: Record<string, string> = {
   file: "from-cyan-700/50 via-slate-900 to-black",
 };
 
-/** Subtle type identity — not gold */
 const TYPE_MARK: Record<string, string> = {
   article: "●",
   music: "♫",
@@ -69,56 +68,81 @@ function TypeLabel({ type }: { type: string }) {
 }
 
 /** Large hero — articles / research / video */
-export function FeedFeaturedCard({ pub }: { pub: PubWithCover }) {
+export function FeedFeaturedCard({
+  pub,
+  showExplore,
+}: {
+  pub: PubWithCover;
+  showExplore?: boolean;
+}) {
   const publisher = getEntityById(pub.publisherId);
   const name = pub.publisherName || publisher?.name;
+  const tags = (pub.tags || []).slice(0, 5);
 
   return (
-    <Link
-      href={publicationPath(pub)}
-      className="group block overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06] transition hover:ring-white/15"
-    >
-      <div className="relative aspect-[4/3] sm:aspect-[16/10]">
-        <CoverBg pub={pub} className="absolute inset-0" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(255,255,255,0.12),transparent_50%)]" />
-        <div className="absolute left-3 top-3">
-          <TypeLabel type={pub.type} />
-        </div>
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/70 to-transparent p-4 pt-16">
-          <h2 className="text-xl font-semibold leading-snug tracking-tight text-white sm:text-2xl">
-            {pub.title}
-          </h2>
-          <div className="mt-2 flex items-center gap-2 text-[13px] text-zinc-300">
-            {name && (
-              <span className="flex items-center gap-1.5">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-omniv-gold/20 text-[9px] font-bold text-omniv-gold">
-                  {name.charAt(0)}
+    <article className="overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06]">
+      <Link
+        href={publicationPath(pub)}
+        className="group block transition hover:opacity-[0.98]"
+      >
+        <div className="relative aspect-[4/3] sm:aspect-[16/10]">
+          <CoverBg pub={pub} className="absolute inset-0" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,rgba(255,255,255,0.12),transparent_50%)]" />
+          <div className="absolute left-3 top-3">
+            <TypeLabel type={pub.type} />
+          </div>
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/70 to-transparent p-4 pt-16">
+            <h2 className="text-xl font-semibold leading-snug tracking-tight text-white sm:text-2xl">
+              {pub.title}
+            </h2>
+            <div className="mt-2 flex items-center gap-2 text-[13px] text-zinc-300">
+              {name && (
+                <span className="flex items-center gap-1.5">
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-omniv-gold/20 text-[9px] font-bold text-omniv-gold">
+                    {name.charAt(0)}
+                  </span>
+                  {name}
                 </span>
-                {name}
-              </span>
-            )}
-            {pub.meta && (
-              <>
-                <span className="text-zinc-600">·</span>
-                <span className="text-zinc-400">{pub.meta}</span>
-              </>
-            )}
+              )}
+              {pub.meta && (
+                <>
+                  <span className="text-zinc-600">·</span>
+                  <span className="text-zinc-400">{pub.meta}</span>
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+      {showExplore && tags.length > 0 && (
+        <div className="border-t border-white/[0.06] px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-600">
+            Explore
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {tags.map((t) => (
+              <Link
+                key={t}
+                href={`/explore?q=${encodeURIComponent(t)}`}
+                className="rounded-full bg-white/[0.04] px-2.5 py-1 text-[11px] text-zinc-400 ring-1 ring-white/[0.08] hover:text-white"
+              >
+                {t}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </article>
   );
 }
 
-/** Compact — music (play), product, opportunity, event */
+/** Compact — music, product, opportunity, event */
 export function FeedCompactCard({ pub }: { pub: PubWithCover }) {
   const publisher = getEntityById(pub.publisherId);
   const name = pub.publisherName || publisher?.name;
   const isMusic = pub.type === "music";
   const isProduct = pub.type === "product";
   const isEvent = pub.type === "event";
-
-  // Event date block from meta (often "2026-10-12 · Lagos")
   const datePart = isEvent && pub.meta ? pub.meta.split("·")[0]?.trim() : null;
 
   return (
