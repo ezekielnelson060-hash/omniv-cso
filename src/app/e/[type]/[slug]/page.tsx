@@ -92,7 +92,6 @@ export default async function EntityPage({ params, searchParams }: Props) {
 
   const activeTab = tab ?? "overview";
 
-  /** Master spec: Overview · Publications · About · Activity (+ type filters) */
   const tabs: { id: string; label: string; types?: PublicationType[] }[] = [
     { id: "overview", label: "Overview" },
     { id: "publications", label: "Publications" },
@@ -100,7 +99,11 @@ export default async function EntityPage({ params, searchParams }: Props) {
     { id: "activity", label: "Activity" },
     { id: "posts", label: "Articles", types: ["article", "announcement"] },
     { id: "media", label: "Media", types: ["music", "video"] },
-    { id: "more", label: "More", types: ["opportunity", "event", "product", "research", "file"] },
+    {
+      id: "more",
+      label: "More",
+      types: ["opportunity", "event", "product", "research", "file"],
+    },
   ];
 
   let filtered = pubs;
@@ -116,17 +119,12 @@ export default async function EntityPage({ params, searchParams }: Props) {
   const coverUrl = (e as { coverUrl?: string | null }).coverUrl;
   const avatarUrl = (e as { avatarUrl?: string | null }).avatarUrl;
 
-  // Entity graph: related identities by shared tags
   const tagSet = new Set(e.tags.map((t) => t.toLowerCase()));
   const relatedEntities = SEED_ENTITIES.filter((other) => {
     if (other.id === e.id) return false;
     return other.tags.some((t) => tagSet.has(t.toLowerCase()));
   }).slice(0, 8);
 
-  // Pubs connected via tags (discovery graph)
-  const relatedPubs = pubs.length
-    ? []
-    : []; // filled below from network
   const networkPubs = liveAll
     .filter((p) => {
       if (p.publisherId === e.id) return false;
@@ -216,7 +214,6 @@ export default async function EntityPage({ params, searchParams }: Props) {
           </p>
           <p className="mt-1 text-[14px] text-zinc-400">{e.tagline}</p>
 
-          {/* Independent identity stats */}
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-[14px]">
             <FollowerCount type={e.type} slug={e.slug} />
             <span className="text-zinc-500">
@@ -354,7 +351,6 @@ export default async function EntityPage({ params, searchParams }: Props) {
                 </div>
               )}
 
-              {/* Graph: related identities */}
               {activeTab === "overview" && relatedEntities.length > 0 && (
                 <section className="pt-8">
                   <h2 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
