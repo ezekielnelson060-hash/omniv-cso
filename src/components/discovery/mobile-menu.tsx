@@ -22,11 +22,6 @@ const MAIN: NavItem[] = [
   { href: "/saved", label: "Saved" },
 ];
 
-const PUBLISH: NavItem[] = [
-  { href: "/publications", label: "Publications" },
-  { href: "/drafts", label: "Drafts" },
-];
-
 const GROW: NavItem[] = [
   { href: "/analytics", label: "Analytics" },
   { href: "/promote", label: "Promote" },
@@ -34,14 +29,11 @@ const GROW: NavItem[] = [
 ];
 
 const MONETIZE: NavItem[] = [
-  { href: "/pro", label: "Pro", badge: "New" },
+  { href: "/pro", label: "Pro", badge: "Popular" },
+  { href: "/pricing", label: "Business" },
   { href: "/explore?type=opportunity", label: "Opportunities" },
 ];
 
-/**
- * Mobile full-height drawer — identity-first nav per production spec.
- * No duplicate Profile / All entities / Switch entity list items.
- */
 export function MobileMenuButton() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -97,12 +89,17 @@ export function MobileMenuButton() {
     const isActive =
       pathname === item.href ||
       (base !== "/home" && pathname.startsWith(base));
+    const isPro = item.label === "Pro";
     return (
       <Link
         href={item.href}
         onClick={close}
         className={`relative flex min-h-[44px] items-center rounded-xl px-3 text-[15px] font-medium ${
-          isActive ? "bg-white/[0.06] text-white" : "text-zinc-300"
+          isActive
+            ? "bg-white/[0.06] text-white"
+            : isPro
+              ? "text-omniv-gold"
+              : "text-zinc-300"
         }`}
       >
         {isActive && (
@@ -110,7 +107,7 @@ export function MobileMenuButton() {
         )}
         {item.label}
         {item.badge && (
-          <span className="ml-auto rounded-full bg-omniv-gold/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-omniv-gold">
+          <span className="ml-auto rounded-full bg-omniv-gold px-1.5 py-0.5 text-[9px] font-bold uppercase text-black">
             {item.badge}
           </span>
         )}
@@ -132,7 +129,6 @@ export function MobileMenuButton() {
               className="absolute left-0 top-0 flex h-[100dvh] w-[min(100vw-40px,300px)] flex-col bg-[#080808] shadow-[12px_0_48px_rgba(0,0,0,0.65)]"
               style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
             >
-              {/* Header */}
               <div className="shrink-0 px-4 pb-2 pt-[max(1rem,env(safe-area-inset-top))]">
                 <div className="mb-3 flex items-center gap-2">
                   <Image src="/logo.svg" alt="" width={22} height={22} />
@@ -141,11 +137,10 @@ export function MobileMenuButton() {
                   </span>
                 </div>
 
-                {/* Current identity — opens switcher */}
                 <button
                   type="button"
                   onClick={() => setMode(mode === "switch" ? "nav" : "switch")}
-                  className="flex w-full items-center gap-3 rounded-xl bg-white/[0.04] px-3 py-2.5 text-left ring-1 ring-white/[0.08]"
+                  className="flex w-full items-center gap-3 rounded-2xl bg-white/[0.04] px-3 py-2.5 text-left"
                 >
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
                     {identityAvatar ? (
@@ -188,11 +183,6 @@ export function MobileMenuButton() {
                         <NavLink key={item.label} item={item} />
                       ))}
                     </Section>
-                    <Section label="Publish">
-                      {PUBLISH.map((item) => (
-                        <NavLink key={item.label} item={item} />
-                      ))}
-                    </Section>
                     <Section label="Grow">
                       {GROW.map((item) => (
                         <NavLink key={item.label} item={item} />
@@ -203,33 +193,18 @@ export function MobileMenuButton() {
                         <NavLink key={item.label} item={item} />
                       ))}
                     </Section>
-                    <Section label="Identity">
-                      <button
-                        type="button"
-                        onClick={() => setMode("switch")}
-                        className="flex min-h-[44px] w-full items-center rounded-xl px-3 text-[15px] font-medium text-zinc-300"
-                      >
-                        Switch identity
-                      </button>
-                      <Link
-                        href={active ? `${active.path}/edit` : "/accounts"}
-                        onClick={close}
-                        className="flex min-h-[44px] items-center rounded-xl px-3 text-[15px] font-medium text-zinc-300"
-                      >
-                        Manage entity
-                      </Link>
-                    </Section>
                   </>
                 )}
               </div>
 
-              <div className="shrink-0 space-y-2 border-t border-white/[0.06] px-3 py-3">
+              <div className="shrink-0 space-y-1 border-t border-white/[0.05] px-3 py-3">
                 <Link
-                  href="/publish"
+                  href="/settings"
                   onClick={close}
-                  className="flex h-11 w-full items-center justify-center rounded-full bg-omniv-gold text-[14px] font-semibold text-black"
+                  className="flex min-h-[44px] items-center gap-2 rounded-xl px-3 text-[15px] font-medium text-zinc-300"
                 >
-                  + Publish
+                  <span className="opacity-70">⚙</span>
+                  Settings
                 </Link>
                 <Link
                   href={active?.path || "/profile"}
@@ -237,10 +212,10 @@ export function MobileMenuButton() {
                   className="flex items-center gap-2.5 rounded-xl px-2 py-2"
                 >
                   <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[11px] font-semibold text-white">
-                    {avatarUrl ? (
+                    {identityAvatar ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={avatarUrl}
+                        src={identityAvatar}
                         alt=""
                         className="h-full w-full object-cover"
                       />
@@ -252,7 +227,9 @@ export function MobileMenuButton() {
                     <p className="truncate text-[12px] font-medium text-white">
                       {identityName}
                     </p>
-                    <p className="text-[10px] capitalize text-zinc-600">{identityType}</p>
+                    <p className="text-[10px] capitalize text-zinc-600">
+                      {identityType}
+                    </p>
                   </div>
                 </Link>
               </div>
