@@ -1,41 +1,108 @@
 "use client";
 
-import { Suspense } from "react";
-import { AppShell } from "@/components/layout/app-shell";
-import { SettingsPanel } from "@/components/settings/settings-panel";
-import { PayoutAndPhoto } from "@/components/settings/payout-and-photo";
-import { ThemeToggleCard } from "@/components/settings/theme-toggle";
-import { PartnersPanel } from "@/components/settings/partners-panel";
+import Link from "next/link";
+import { BottomNav } from "@/components/discovery/bottom-nav";
+import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { CurrentIdentityBanner } from "@/components/discovery/current-identity";
+
+const SECTIONS = [
+  {
+    title: "Account",
+    items: [
+      { href: "/profile", label: "Personal profile", desc: "Name, photo, bio" },
+      {
+        href: "/accounts/switch",
+        label: "Switch identity",
+        desc: "Personal and entity accounts",
+      },
+      {
+        href: "/publish",
+        label: "Create entity",
+        desc: "Company, artist, product, project",
+      },
+    ],
+  },
+  {
+    title: "Growth",
+    items: [
+      { href: "/analytics", label: "Analytics", desc: "Views, follows, heat" },
+      { href: "/promote", label: "Promote", desc: "Run discovery campaigns" },
+      { href: "/verify", label: "Get verified", desc: "Verified publisher badge" },
+    ],
+  },
+  {
+    title: "Billing",
+    items: [
+      { href: "/pro", label: "Pro", desc: "Analytics + verification" },
+      { href: "/pricing", label: "Plans", desc: "Free, Pro, Business" },
+    ],
+  },
+  {
+    title: "Support",
+    items: [
+      { href: "/help", label: "Help", desc: "Guides and answers" },
+      {
+        href: "/policy",
+        label: "Policies",
+        desc: "Privacy and terms",
+      },
+    ],
+  },
+];
 
 export default function SettingsPage() {
   return (
-    <AppShell>
-      <div className="relative -mx-3 mb-5 overflow-hidden sm:-mx-4 md:mx-0 md:rounded-2xl">
-        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/12 via-omniv-gold/8 to-transparent" />
-        <div className="absolute -right-10 top-0 h-36 w-36 rounded-full bg-violet-400/10 blur-3xl" />
-        <div className="relative px-3 pb-4 pt-1 sm:px-4 md:px-5 md:pt-4">
-          <p className="font-data text-[10px] uppercase tracking-[0.16em] text-omniv-gold">
-            Account
+    <DiscoveryShell>
+      <div className="min-h-dvh bg-[#050505] text-zinc-100">
+        <header className="sticky top-0 z-40 border-b border-white/[0.05] bg-[#050505]/95 backdrop-blur-md">
+          <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3 md:max-w-2xl">
+            <Link
+              href="/home"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 hover:bg-white/5"
+            >
+              ←
+            </Link>
+            <h1 className="text-[16px] font-semibold text-white">Settings</h1>
+          </div>
+        </header>
+
+        <main className="mx-auto max-w-lg space-y-8 px-4 pb-28 pt-5 md:max-w-2xl">
+          <CurrentIdentityBanner action="Settings apply to" />
+
+          {SECTIONS.map((section) => (
+            <section key={section.title}>
+              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
+                {section.title}
+              </p>
+              <div className="overflow-hidden rounded-2xl bg-white/[0.03]">
+                {section.items.map((item, i) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center justify-between gap-3 px-4 py-3.5 transition hover:bg-white/[0.04] ${
+                      i > 0 ? "border-t border-white/[0.05]" : ""
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-medium text-white">
+                        {item.label}
+                      </p>
+                      <p className="text-[12px] text-zinc-500">{item.desc}</p>
+                    </div>
+                    <span className="text-zinc-600">›</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          ))}
+
+          <p className="px-1 text-center text-[11px] text-zinc-600">
+            Omniv discovery network · omniv.media
           </p>
-          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
-            Settings
-          </h1>
-          <p className="mt-1 max-w-lg text-[12px] text-omniv-text-secondary">
-            Appearance, photo, payout, partners (distro / playlist / sync),
-            profile, billing.
-          </p>
-        </div>
+        </main>
+
+        <BottomNav />
       </div>
-      <ThemeToggleCard />
-      <PayoutAndPhoto />
-      <PartnersPanel />
-      <Suspense
-        fallback={
-          <p className="text-sm text-omniv-text-muted">Loading settings…</p>
-        }
-      >
-        <SettingsPanel />
-      </Suspense>
-    </AppShell>
+    </DiscoveryShell>
   );
 }
