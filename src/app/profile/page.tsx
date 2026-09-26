@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { ProfilePosts } from "@/components/discovery/profile-posts";
@@ -19,18 +20,32 @@ import {
   writeProfile,
   type LocalProfile,
 } from "@/lib/discovery/local-profile";
+import {
+  readActiveAccount,
+  onAccountSwitch,
+} from "@/lib/discovery/active-account";
 
 type Tab = "posts" | "saved" | "activity";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [profile, setProfile] = useState<LocalProfile | null>(null);
   const [follows, setFollows] = useState<FollowedRef[]>([]);
   const [saved, setSaved] = useState<SavedItem[]>([]);
   const [tab, setTab] = useState<Tab>("posts");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<LocalProfile | null>(null);
+  const [redirecting, setRedirecting] = useState(true);
 
   useEffect(() => {
+    // Entity identity owns /profile → go to entity page
+    const active = readActiveAccount();
+    if (active?.path) {
+      router.replace(active.path);
+      return;
+    }
+    setRedirecting(false);
+
     const p = readProfile();
     setProfile(p);
     setDraft(p);
@@ -62,10 +77,16 @@ export default function ProfilePage() {
         }
       }
     })();
+
+    const unsub = onAccountSwitch((a) => {
+      if (a?.path) router.replace(a.path);
+    });
+
     return () => {
       cancelled = true;
+      unsub();
     };
-  }, []);
+  }, [router]);
 
   function saveEdit() {
     if (!draft) return;
@@ -91,7 +112,7 @@ export default function ProfilePage() {
     setProfile(stuck);
   }
 
-  if (!profile || !draft) {
+  if (redirecting || !profile || !draft) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-[#050505] text-zinc-500">
         Loading…
@@ -138,7 +159,13 @@ export default function ProfilePage() {
 
           {!editing && (
             <div className="absolute right-3 top-3 md:hidden">
-              <Image src="/logo.svg" alt="" width={22} height={22} className="opacity-80" />
+              <Image
+                src="/logo.svg"
+                alt=""
+                width={22}
+                height={22}
+                className="opacity-80"
+              />
             </div>
           )}
         </div>
@@ -184,8 +211,7 @@ export default function ProfilePage() {
             ) : (
               <div className="mb-1 flex gap-2">
                 <button
-                  type="button"
-                  onClick={() => {
+                  type="button"matrix                  onClick={() => {
                     setDraft(profile);
                     setEditing(false);
                   }}
@@ -298,7 +324,7 @@ export default function ProfilePage() {
                     Your entities
                   </p>
                   <p className="text-[12px] text-zinc-500">
-                    Publish as company, artist, brand — separate from this profile
+                    Switch identity to open an entity as the full app context
                   </p>
                 </div>
                 <span className="text-omniv-gold">›</span>
