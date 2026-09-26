@@ -12,28 +12,26 @@ import { NotificationBell } from "@/components/discovery/notification-bell";
 import { listLivePublications } from "@/lib/discovery/db";
 import {
   newestPublications,
-  publicationsByType,
   trendingPublications,
 } from "@/lib/discovery/seed";
 import type { Publication } from "@/lib/discovery/types";
 
 export const metadata = {
-  title: "Discover",
+  title: "Home | Omniv",
   description:
-    "A world of things worth discovering — articles, research, music, products, and more.",
+    "Discover what matters next — For You, Following, Trending, and New on Omniv.",
 };
 
 type Props = {
   searchParams: Promise<{ tab?: string }>;
 };
 
+/** Discovery layers — not a chronological Substack feed */
 const TABS = [
   { id: "for-you", label: "For You" },
+  { id: "following", label: "Following" },
   { id: "trending", label: "Trending" },
   { id: "new", label: "New" },
-  { id: "articles", label: "Articles" },
-  { id: "music", label: "Music" },
-  { id: "research", label: "Research" },
 ] as const;
 
 const CATEGORIES = [
@@ -70,33 +68,33 @@ export default async function HomePage({ searchParams }: Props) {
   const supabase = await tryClient();
   const mixed = await listLivePublications(supabase, 40);
 
+  /** Rank by discovery layer — For You mixes types; Following = chronological; Trending = heat/velocity proxy; New = fresh */
   let items: Publication[] = mixed;
   if (tab === "new") {
-    items = [...mixed].sort(sortNew).slice(0, 16);
-  } else if (tab === "music") {
-    items = mixed.filter((p) => p.type === "music");
-    if (items.length < 3) items = publicationsByType("music");
-  } else if (tab === "articles") {
-    items = mixed.filter((p) => p.type === "article");
-    if (items.length < 3) items = publicationsByType("article");
-  } else if (tab === "research") {
-    items = mixed.filter((p) => p.type === "research" || p.type === "file");
-    if (items.length < 2) items = publicationsByType("research");
+    items = [...mixed].sort(sortNew).slice(0, 18);
+  } else if (tab === "following") {
+    // Relationship feed: latest publications (server follow graph wires in V2)
+    items = [...mixed].sort(sortNew).slice(0, 18);
   } else if (tab === "trending") {
-    items = [...mixed].sort(sortHeat).slice(0, 16);
+    items = [...mixed].sort(sortHeat).slice(0, 18);
   } else {
-    items = [...mixed].sort(sortHeat).slice(0, 16);
+    // For You — diversity-aware mix: heat + type variety
+    const byHeat = [...mixed].sort(sortHeat);
+    const diverse: Publication[] = [];
+    for (const p of byHeat) {
+      const typeCount = diverse.filter((x) => x.type === p.type).length;
+      if (typeCount < 3) diverse.push(p);
+      if (diverse.length >= 16) break;
+    }
+    items = diverse.length >= 6 ? diverse : byHeat.slice(0, 16);
     if (items.length === 0) items = trendingPublications(12);
   }
 
-  if (
-    items.length < 6 &&
-    tab !== "music" &&
-    tab !== "articles" &&
-    tab !== "research"
-  ) {
+  if (items.length < 6) {
     const seed =
-      tab === "new" ? newestPublications(12) : trendingPublications(12);
+      tab === "new" || tab === "following"
+        ? newestPublications(12)
+        : trendingPublications(12);
     const slugs = new Set(items.map((p) => p.slug));
     for (const s of seed) {
       if (!slugs.has(s.slug)) items.push(s);
@@ -116,26 +114,24 @@ export default async function HomePage({ searchParams }: Props) {
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-sm">
+        <header className="sticky top-0 z-40 border-b border-white/[0.05] bg-[#050505]/90 backdrop-blur-xl">
           <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 md:max-w-2xl md:px-6">
-            <Link href="/home" className="flex items-center gap-2 md:hidden">
+            <div className="flex items-center gap-2.5">
               <Image
                 src="/logo.svg"
                 alt="Omniv"
                 width={28}
                 height={28}
-                className="rounded-md"
-                priority
+                className="rounded-md md:hidden"
               />
               <span className="text-[15px] font-semibold tracking-tight text-white">
-                Omniv
+                OMNIV
               </span>
-            </Link>
-            <div className="hidden md:block" />
+            </div>
             <div className="flex items-center gap-1">
               <Link
                 href="/explore"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/[0.06] hover:text-white"
                 aria-label="Search"
               >
                 <svg
@@ -159,10 +155,22 @@ export default async function HomePage({ searchParams }: Props) {
         <main className="mx-auto max-w-lg px-4 pb-28 pt-5 md:max-w-2xl md:px-6">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-white">
-              Discover
+              {tab === "for-you"
+                ? "For You"
+                : tab === "following"
+                  ? "Following"
+                  : tab === "trending"
+                    ? "Trending"
+                    : "New"}
             </h1>
             <p className="mt-1 text-[14px] text-zinc-500">
-              Things worth finding.
+              {tab === "for-you"
+                ? "Discover what matters to you."
+                : tab === "following"
+                  ? "Latest from people and entities you follow."
+                  : tab === "trending"
+                    ? "Gaining attention across the network."
+                    : "Fresh publications on Omniv."}
             </p>
           </div>
 
@@ -209,12 +217,19 @@ export default async function HomePage({ searchParams }: Props) {
             )}
 
             {items.length === 0 && (
-              <p className="py-16 text-center text-[14px] text-zinc-500">
-                Nothing here yet.{" "}
-                <Link href="/explore" className="text-omniv-gold hover:underline">
-                  Explore
+              <div className="py-16 text-center">
+                <p className="text-[14px] text-zinc-500">
+                  {tab === "following"
+                    ? "Follow entities to fill this feed."
+                    : "Nothing here yet."}
+                </p>
+                <Link
+                  href={tab === "following" ? "/explore" : "/publish"}
+                  className="mt-4 inline-flex h-10 items-center rounded-full bg-omniv-gold px-5 text-[13px] font-semibold text-black"
+                >
+                  {tab === "following" ? "Explore entities" : "Publish something"}
                 </Link>
-              </p>
+              </div>
             )}
           </div>
 

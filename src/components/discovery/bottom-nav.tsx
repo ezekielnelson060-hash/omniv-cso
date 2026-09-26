@@ -18,13 +18,13 @@ type NavItem = {
   primary?: boolean;
 };
 
-/** Mockup mobile bar: Home · Explore · + · Saved · Activity */
+/** Discovery product nav: Home · Explore · + · Saved · Profile */
 const ITEMS: NavItem[] = [
   { href: "/home", label: "Home", icon: HomeIcon },
   { href: "/explore", label: "Explore", icon: ExploreIcon },
   { href: "/publish", label: "Publish", icon: null, primary: true },
   { href: "/saved", label: "Saved", icon: SavedIcon },
-  { href: "/activity", label: "Activity", icon: ActivityIcon },
+  { href: "/profile", label: "Profile", icon: ProfileIcon },
 ];
 
 export function BottomNav() {
@@ -37,7 +37,6 @@ export function BottomNav() {
     return onAccountSwitch((a) => setActive(a));
   }, []);
 
-  // keep active for future profile deep-links; silence unused if tree-shaken
   void active;
 
   return (
@@ -140,7 +139,7 @@ function SavedIcon({ active }: { active?: boolean }) {
   );
 }
 
-function ActivityIcon({ active }: { active?: boolean }) {
+function ProfileIcon({ active }: { active?: boolean }) {
   return (
     <svg
       width="22"
