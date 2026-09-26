@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
-import { CoverUpload } from "@/components/discovery/cover-upload";
 
 type Entity = {
   id: string;
@@ -21,11 +20,26 @@ type Entity = {
   links?: { label: string; href: string }[];
 };
 
+async function uploadFile(file: File): Promise<string | null> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch("/api/discovery/upload-cover", {
+    method: "POST",
+    body: fd,
+  });
+  const data = await res.json();
+  if (!res.ok) return null;
+  return data.url as string;
+}
+
 export default function EditEntityPage() {
   const params = useParams();
   const router = useRouter();
   const type = String(params.type || "");
   const slug = String(params.slug || "");
+
+  const coverRef = useRef<HTMLInputElement>(null);
+  const avatarRef = useRef<HTMLInputElement>(null);
 
   const [entity, setEntity] = useState<Entity | null>(null);
   const [name, setName] = useState("");
@@ -33,13 +47,11 @@ export default function EditEntityPage() {
   const [location, setLocation] = useState("");
   const [about, setAbout] = useState("");
   const [website, setWebsite] = useState("");
-  const [xUrl, setXUrl] = useState("");
-  const [linkedin, setLinkedin] = useState("");
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -60,52 +72,43 @@ export default function EditEntityPage() {
         setCoverUrl(found.cover_url || null);
         setAvatarUrl(found.avatar_url || null);
         const links = found.links || [];
-        const web = links.find(
-          (l) =>
-            l.label === "Website" ||
-            (!l.href.includes("x.com") &&
-              !l.href.includes("twitter.com") &&
-              !l.href.includes("linkedin.com"))
-        );
-        const x = links.find(
-          (l) => l.href.includes("x.com") || l.href.includes("twitter.com")
-        );
-        const li = links.find((l) => l.href.includes("linkedin.com"));
+        const web = links.find((l) => l.label === "Website") || links[0];
         setWebsite(web?.href || "");
-        setXUrl(x?.href || "");
-        setLinkedin(li?.href || "");
       } catch {
         setError("Could not load entity");
       }
     })();
   }, [type, slug]);
 
-  async function onSave(e: React.FormEvent) {
-    e.preventDefault();
+  async function onPickCover(file?: File) {
+    if (!file) return;
+    setUploading(true);
+    const url = await uploadFile(file);
+    setUploading(false);
+    if (url) setCoverUrl(url);
+    else setError("Cover upload failed");
+  }
+
+  async function onPickAvatar(file?: File) {
+    if (!file) return;
+    setUploading(true);
+    const url = await uploadFile(file);
+    setUploading(false);
+    if (url) setAvatarUrl(url);
+    else setError("Photo upload failed");
+  }
+
+  async function onSave(e?: React.FormEvent) {
+    e?.preventDefault();
     if (!entity) return;
     setLoading(true);
     setError(null);
-    setOk(false);
 
     const links: { label: string; href: string }[] = [];
     if (website.trim()) {
       const h = website.trim();
       links.push({
         label: "Website",
-        href: h.startsWith("http") ? h : `https://${h}`,
-      });
-    }
-    if (xUrl.trim()) {
-      const h = xUrl.trim();
-      links.push({
-        label: "X",
-        href: h.startsWith("http") ? h : `https://${h}`,
-      });
-    }
-    if (linkedin.trim()) {
-      const h = linkedin.trim();
-      links.push({
-        label: "LinkedIn",
         href: h.startsWith("http") ? h : `https://${h}`,
       });
     }
@@ -134,10 +137,7 @@ export default function EditEntityPage() {
         setError(data.error || "Save failed");
         return;
       }
-      setOk(true);
-      if (data.path) {
-        setTimeout(() => router.push(data.path), 500);
-      }
+      router.push(data.path || entity.path);
     } catch {
       setError("Network error");
     } finally {
@@ -147,163 +147,169 @@ export default function EditEntityPage() {
 
   return (
     <DiscoveryShell>
-      <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#050505]/95 backdrop-blur-md">
-          <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 md:max-w-2xl">
-            <div className="flex items-center gap-3">
+      <div className="min-h-dvh bg-black text-zinc-100">
+        {/* X-style top bar */}
+        <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-black/90 backdrop-blur-md">
+          <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3 md:max-w-2xl">
+            <div className="flex items-center gap-4">
               <Link
                 href={entity?.path || `/e/${type}/${slug}`}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 hover:bg-white/5"
+                className="text-[20px] text-white"
+                aria-label="Back"
               >
                 ←
               </Link>
-              <h1 className="text-[16px] font-semibold text-white">
-                Edit profile
-              </h1>
+              <h1 className="text-[17px] font-bold text-white">Edit profile</h1>
             </div>
             <button
-              type="submit"
-              form="entity-edit-form"
-              disabled={loading || !entity}
-              className="rounded-full bg-omniv-gold px-4 py-1.5 text-[13px] font-semibold text-black disabled:opacity-50"
+              type="button"
+              onClick={() => void onSave()}
+              disabled={loading || !entity || uploading}
+              className="text-[15px] font-bold text-white disabled:opacity-40"
             >
               {loading ? "Saving…" : "Save"}
             </button>
           </div>
         </header>
 
-        <main className="mx-auto max-w-lg px-0 pb-28 md:max-w-2xl">
-          {error && !entity && (
-            <p className="px-4 pt-8 text-center text-[14px] text-red-400">
-              {error}
-            </p>
-          )}
+        {error && !entity && (
+          <p className="px-4 pt-10 text-center text-[14px] text-red-400">
+            {error}
+          </p>
+        )}
 
-          {entity && (
-            <form id="entity-edit-form" onSubmit={onSave} className="space-y-0">
-              {/* Banner — full width rectangular */}
-              <div className="relative">
-                <CoverUpload
-                  label="Change cover"
-                  value={coverUrl}
-                  onChange={setCoverUrl}
+        {entity && (
+          <form onSubmit={onSave} className="mx-auto max-w-lg pb-28 md:max-w-2xl">
+            {/* Cover + avatar stacked like X */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => coverRef.current?.click()}
+                className="relative aspect-[3/1] w-full overflow-hidden bg-zinc-900"
+              >
+                {coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={coverUrl}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-zinc-800" />
+                )}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-xl text-white">
+                    ⌕+
+                  </span>
+                </div>
+              </button>
+              <input
+                ref={coverRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => void onPickCover(e.target.files?.[0])}
+              />
+
+              <button
+                type="button"
+                onClick={() => avatarRef.current?.click()}
+                className="absolute -bottom-10 left-4 flex h-[84px] w-[84px] items-center justify-center overflow-hidden rounded-full bg-zinc-800 ring-4 ring-black"
+              >
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-2xl font-semibold text-zinc-500">
+                    {name.charAt(0) || "?"}
+                  </span>
+                )}
+                <span className="absolute inset-0 flex items-center justify-center bg-black/40 text-lg text-white">
+                  ⌕+
+                </span>
+              </button>
+              <input
+                ref={avatarRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => void onPickAvatar(e.target.files?.[0])}
+              />
+            </div>
+
+            {/* Flat fields like X */}
+            <div className="mt-14 space-y-0 px-4">
+              {uploading && (
+                <p className="mb-3 text-[13px] text-zinc-500">Uploading…</p>
+              )}
+
+              <FlatField label="Name">
+                <input
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={flatInput}
                 />
-                <div className="absolute -bottom-10 left-4 z-10">
-                  <div className="relative">
-                    <div className="flex h-[84px] w-[84px] items-center justify-center overflow-hidden rounded-full bg-omniv-gold/20 text-2xl font-semibold text-omniv-gold ring-4 ring-[#050505]">
-                      {avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={avatarUrl}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        name.charAt(0) || "?"
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              </FlatField>
 
-              <div className="space-y-5 px-4 pt-14">
-                <div>
-                  <p className="mb-1.5 text-[12px] text-zinc-500">Avatar</p>
-                  <CoverUpload
-                    label="Upload photo"
-                    tall
-                    value={avatarUrl}
-                    onChange={setAvatarUrl}
-                  />
-                </div>
+              <FlatField label="Bio">
+                <textarea
+                  value={tagline}
+                  onChange={(e) => setTagline(e.target.value)}
+                  rows={3}
+                  maxLength={280}
+                  className={flatInput + " resize-none py-1"}
+                />
+              </FlatField>
 
-                <Field label="Name">
-                  <input
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className={inputCls}
-                  />
-                </Field>
+              <FlatField label="Location">
+                <input
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Add location"
+                  className={flatInput}
+                />
+              </FlatField>
 
-                <Field label="Bio">
-                  <textarea
-                    value={tagline}
-                    onChange={(e) => setTagline(e.target.value)}
-                    rows={3}
-                    maxLength={280}
-                    placeholder="Tell people who this is"
-                    className={inputCls + " py-2.5"}
-                  />
-                  <p className="mt-1 text-right text-[11px] text-zinc-600">
-                    {tagline.length}/280
-                  </p>
-                </Field>
+              <FlatField label="Website">
+                <input
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  placeholder="https://"
+                  className={flatInput}
+                />
+              </FlatField>
 
-                <Field label="Location">
-                  <input
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="City, country"
-                    className={inputCls}
-                  />
-                </Field>
+              <FlatField label="About">
+                <textarea
+                  value={about}
+                  onChange={(e) => setAbout(e.target.value)}
+                  rows={4}
+                  placeholder="Longer about (About tab)"
+                  className={flatInput + " resize-none py-1"}
+                />
+              </FlatField>
 
-                <Field label="Website">
-                  <input
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
-                    placeholder="https://…"
-                    className={inputCls}
-                  />
-                </Field>
+              {error && (
+                <p className="pt-3 text-[13px] text-red-400">{error}</p>
+              )}
 
-                <Field label="X">
-                  <input
-                    value={xUrl}
-                    onChange={(e) => setXUrl(e.target.value)}
-                    placeholder="https://x.com/…"
-                    className={inputCls}
-                  />
-                </Field>
-
-                <Field label="LinkedIn">
-                  <input
-                    value={linkedin}
-                    onChange={(e) => setLinkedin(e.target.value)}
-                    placeholder="https://linkedin.com/…"
-                    className={inputCls}
-                  />
-                </Field>
-
-                <Field label="About">
-                  <textarea
-                    value={about}
-                    onChange={(e) => setAbout(e.target.value)}
-                    rows={5}
-                    placeholder="Longer story — shows on About tab"
-                    className={inputCls + " py-2.5"}
-                  />
-                </Field>
-
-                {error && (
-                  <p className="text-[13px] text-red-400">{error}</p>
-                )}
-                {ok && (
-                  <p className="text-[13px] text-emerald-400">Saved</p>
-                )}
-
+              {coverUrl && (
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black disabled:opacity-60"
+                  type="button"
+                  onClick={() => setCoverUrl(null)}
+                  className="mt-4 text-[13px] text-zinc-500 hover:text-white"
                 >
-                  {loading ? "Saving…" : "Save"}
+                  Remove cover photo
                 </button>
-              </div>
-            </form>
-          )}
-        </main>
+              )}
+            </div>
+          </form>
+        )}
 
         <BottomNav />
       </div>
@@ -311,10 +317,10 @@ export default function EditEntityPage() {
   );
 }
 
-const inputCls =
-  "mt-1.5 h-11 w-full rounded-xl bg-white/[0.04] px-3.5 text-[14px] text-white outline-none ring-1 ring-white/[0.08] focus:ring-omniv-gold/40";
+const flatInput =
+  "w-full bg-transparent text-[16px] text-white outline-none placeholder:text-zinc-600";
 
-function Field({
+function FlatField({
   label,
   children,
 }: {
@@ -322,8 +328,8 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="text-[12px] text-zinc-500">{label}</span>
+    <label className="block border-b border-white/[0.08] py-3">
+      <span className="mb-1 block text-[13px] text-zinc-500">{label}</span>
       {children}
     </label>
   );
