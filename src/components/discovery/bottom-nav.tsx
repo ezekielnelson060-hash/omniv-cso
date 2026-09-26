@@ -1,14 +1,21 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
+import {
+  readActiveAccount,
+  onAccountSwitch,
+  type ActiveAccount,
+} from "@/lib/discovery/active-account";
 
 type NavItem = {
   href: string;
   label: string;
   icon: ComponentType<{ active?: boolean }> | null;
   primary?: boolean;
+  profile?: boolean;
 };
 
 const ITEMS: NavItem[] = [
@@ -16,11 +23,21 @@ const ITEMS: NavItem[] = [
   { href: "/explore", label: "Explore", icon: ExploreIcon },
   { href: "/publish", label: "Publish", icon: null, primary: true },
   { href: "/saved", label: "Saved", icon: SavedIcon },
-  { href: "/profile", label: "Profile", icon: ProfileIcon },
+  { href: "/profile", label: "Profile", icon: ProfileIcon, profile: true },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const [active, setActive] = useState<ActiveAccount | null>(null);
+
+  useEffect(() => {
+    setActive(readActiveAccount());
+    return onAccountSwitch((a) => setActive(a));
+  }, []);
+
+  const profileHref = active?.path || "/profile";
+  const onEntityProfile =
+    Boolean(active?.path) && pathname.startsWith(active!.path);
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/[0.04] bg-[#050505]/94 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
@@ -38,20 +55,22 @@ export function BottomNav() {
               </Link>
             );
           }
-          const active =
-            pathname === item.href ||
-            (item.href !== "/home" && pathname.startsWith(item.href));
+          const href = item.profile ? profileHref : item.href;
+          const activeNav = item.profile
+            ? pathname === "/profile" || onEntityProfile
+            : pathname === item.href ||
+              (item.href !== "/home" && pathname.startsWith(item.href));
           const Icon = item.icon;
           if (!Icon) return null;
           return (
             <Link
-              key={item.href}
-              href={item.href}
+              key={item.label}
+              href={href}
               className={`flex min-w-[52px] flex-col items-center gap-0.5 py-1 transition ${
-                active ? "text-white" : "text-zinc-600"
+                activeNav ? "text-white" : "text-zinc-600"
               }`}
             >
-              <Icon active={active} />
+              <Icon active={activeNav} />
               <span className="text-[10px] font-medium tracking-wide">
                 {item.label}
               </span>
