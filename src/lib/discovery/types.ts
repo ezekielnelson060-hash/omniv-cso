@@ -1,26 +1,34 @@
-export type EntityType =
-  | "person"
-  | "artist"
-  | "company"
-  | "brand"
-  | "product"
-  | "project"
-  | "organization"
-  | "place";
+/**
+ * Omniv — public publishing + discovery network
+ * Publishers put things into the world. Explorers find them.
+ * Loop: Publish → Discover → Follow / Save / Connect
+ */
 
-export type PublicationType =
-  | "article"
-  | "music"
-  | "video"
-  | "image"
-  | "file"
-  | "research"
-  | "announcement"
-  | "event"
-  | "opportunity"
-  | "product";
+export const PUBLISHER_TYPES = [
+  "person",
+  "artist",
+  "company",
+  "brand",
+  "product",
+  "project",
+  "organization",
+  "place",
+] as const;
 
-export const PUBLICATION_TYPES: PublicationType[] = [
+export type PublisherType = (typeof PUBLISHER_TYPES)[number];
+
+export const PUBLISHER_LABELS: Record<PublisherType, string> = {
+  person: "Person",
+  artist: "Artist",
+  company: "Company",
+  brand: "Brand",
+  product: "Product",
+  project: "Project",
+  organization: "Organization",
+  place: "Place",
+};
+
+export const PUBLICATION_TYPES = [
   "article",
   "music",
   "video",
@@ -31,18 +39,9 @@ export const PUBLICATION_TYPES: PublicationType[] = [
   "event",
   "opportunity",
   "product",
-];
+] as const;
 
-export const ENTITY_LABELS: Record<string, string> = {
-  person: "Person",
-  artist: "Artist",
-  company: "Company",
-  brand: "Brand",
-  product: "Product",
-  project: "Project",
-  organization: "Organization",
-  place: "Place",
-};
+export type PublicationType = (typeof PUBLICATION_TYPES)[number];
 
 export const PUBLICATION_LABELS: Record<PublicationType, string> = {
   article: "Article",
@@ -55,6 +54,40 @@ export const PUBLICATION_LABELS: Record<PublicationType, string> = {
   event: "Event",
   opportunity: "Opportunity",
   product: "Product",
+};
+
+export const ENTITY_TYPES = PUBLISHER_TYPES;
+export type EntityType = PublisherType;
+
+export const ENTITY_LABELS: Record<EntityType, string> = {
+  ...PUBLISHER_LABELS,
+};
+
+export const INTENT_KINDS = [
+  "hire",
+  "partner",
+  "invest",
+  "book",
+  "collaborate",
+  "press",
+  "other",
+] as const;
+
+export type IntentKind = (typeof INTENT_KINDS)[number];
+
+export const INTENT_LABELS: Record<IntentKind, string> = {
+  hire: "Hire",
+  partner: "Partner",
+  invest: "Invest",
+  book: "Book",
+  collaborate: "Collaborate",
+  press: "Press",
+  other: "Other",
+};
+
+export type EntityIntent = {
+  kind: IntentKind;
+  label?: string;
 };
 
 export type DiscoveryEntity = {
@@ -71,17 +104,7 @@ export type DiscoveryEntity = {
   coverUrl?: string;
   avatarUrl?: string;
   heat?: number;
-};
-
-export type EntityReference = {
-  type?: string;
-  slug: string;
-  label?: string;
-};
-
-export type ArticleSource = {
-  label: string;
-  href?: string;
+  intents?: EntityIntent[];
 };
 
 export type ArticleContentBlock =
@@ -91,6 +114,17 @@ export type ArticleContentBlock =
   | { type: "callout"; title?: string; text: string }
   | { type: "list"; items: string[] }
   | { type: "entity-reference"; slug: string; label: string; entityType?: string };
+
+export type ArticleSource = {
+  label: string;
+  href?: string;
+};
+
+export type EntityReference = {
+  type?: string;
+  slug: string;
+  label?: string;
+};
 
 export type Publication = {
   id: string;
@@ -119,7 +153,6 @@ export type Publication = {
   category?: string;
   location?: string;
   tags: string[];
-  /** e.g. "8 min read", "PDF · 42 pages", "Single" */
   meta?: string;
   cta?: { label: string; href: string };
   publishedAt: string;
@@ -136,7 +169,7 @@ export function publicationPath(p: Pick<Publication, "slug">) {
   return `/p/${p.slug}`;
 }
 
-export const EXPLORE_FILTERS = [
+export const EXPLORE_NAV: { label: string; href: string }[] = [
   { label: "Companies", href: "/explore?publisher=company" },
   { label: "People", href: "/explore?publisher=person" },
   { label: "Artists", href: "/explore?publisher=artist" },
