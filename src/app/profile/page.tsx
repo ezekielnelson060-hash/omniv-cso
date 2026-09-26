@@ -38,7 +38,6 @@ export default function ProfilePage() {
   const [redirecting, setRedirecting] = useState(true);
 
   useEffect(() => {
-    // Entity identity owns /profile → go to entity page
     const active = readActiveAccount();
     if (active?.path) {
       router.replace(active.path);
@@ -211,7 +210,8 @@ export default function ProfilePage() {
             ) : (
               <div className="mb-1 flex gap-2">
                 <button
-                  type="button"matrix                  onClick={() => {
+                  type="button"
+                  onClick={() => {
                     setDraft(profile);
                     setEditing(false);
                   }}
