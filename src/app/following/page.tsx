@@ -1,17 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { NotificationBell } from "@/components/discovery/notification-bell";
 import { ProfileAvatarLink } from "@/components/discovery/profile-avatar-link";
 import { readFollows, type FollowedRef } from "@/lib/discovery/local-graph";
 import { SEED_ENTITIES, publicationsByPublisher } from "@/lib/discovery/seed";
 
+const PEOPLE_TYPES = new Set(["person", "artist"]);
+
+const TOPICS = [
+  "Artificial Intelligence",
+  "African infrastructure",
+  "Music",
+  "Energy",
+  "Research",
+  "Technology",
+  "Business",
+];
+
 export default function FollowingPage() {
   const [follows, setFollows] = useState<FollowedRef[]>([]);
   const [ready, setReady] = useState(false);
+  const [tab, setTab] = useState<"people" | "entities" | "topics">("people");
 
   useEffect(() => {
     let cancelled = false;
@@ -36,6 +50,15 @@ export default function FollowingPage() {
     };
   }, []);
 
+  const people = useMemo(
+    () => follows.filter((f) => PEOPLE_TYPES.has(f.type)),
+    [follows]
+  );
+  const entities = useMemo(
+    () => follows.filter((f) => !PEOPLE_TYPES.has(f.type)),
+    [follows]
+  );
+
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
@@ -53,24 +76,8 @@ export default function FollowingPage() {
                 Following
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <Link
-                href="/explore"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 hover:bg-white/5 hover:text-white"
-                aria-label="Search"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                >
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-                </svg>
-              </Link>
+            <div className="flex items-center gap-1">
+              <NotificationBell />
               <ProfileAvatarLink />
             </div>
           </div>
@@ -78,53 +85,102 @@ export default function FollowingPage() {
 
         <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl md:px-6">
           <p className="text-[13px] text-zinc-500">
-            Publishers you follow. Their new work shows up in Activity.
+            Discovery subscriptions — people, entities, and topics.
           </p>
+
+          <div className="mt-4 flex gap-2">
+            {(
+              [
+                { id: "people" as const, label: "People" },
+                { id: "entities" as const, label: "Entities" },
+                { id: "topics" as const, label: "Topics" },
+              ] as const
+            ).map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={`inline-flex h-8 items-center rounded-full px-3.5 text-[13px] font-medium ${
+                  tab === t.id
+                    ? "bg-omniv-gold text-black"
+                    : "bg-white/[0.06] text-zinc-500"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
 
           {!ready ? (
             <p className="mt-16 text-center text-[14px] text-zinc-600">
               Loading…
             </p>
-          ) : follows.length === 0 ? (
+          ) : tab === "topics" ? (
+            <ul className="mt-5 space-y-2">
+              {TOPICS.map((topic) => (
+                <li key={topic}>
+                  <Link
+                    href={`/explore?interest=${encodeURIComponent(topic)}`}
+                    className="flex items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3.5"
+                  >
+                    <span className="text-[14px] font-medium text-white">
+                      {topic}
+                    </span>
+                    <span className="text-zinc-600">›</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (tab === "people" ? people : entities).length === 0 ? (
             <div className="mt-16 text-center">
               <p className="text-[14px] text-zinc-500">
-                You're not following anyone yet.
+                {tab === "people"
+                  ? "Not following any people yet."
+                  : "Not following any entities yet."}
               </p>
               <Link
                 href="/explore"
                 className="mt-5 inline-flex h-11 items-center rounded-full bg-omniv-gold px-6 text-[14px] font-semibold text-black"
               >
-                Explore publishers
+                Explore
               </Link>
             </div>
           ) : (
             <ul className="mt-5 space-y-2.5">
-              {follows.map((f) => {
+              {(tab === "people" ? people : entities).map((f) => {
                 const entity = SEED_ENTITIES.find(
                   (e) => e.type === f.type && e.slug === f.slug
                 );
                 const pubCount = entity
                   ? publicationsByPublisher(entity.id).length
                   : 0;
+                const isPerson = PEOPLE_TYPES.has(f.type);
                 return (
                   <li key={`${f.type}-${f.slug}`}>
                     <Link
                       href={`/e/${f.type}/${f.slug}`}
-                      className="flex items-center gap-3 rounded-2xl bg-white/[0.03] p-3 ring-1 ring-white/[0.08] transition hover:ring-white/15"
+                      className="flex items-center gap-3 rounded-2xl bg-white/[0.03] p-3 transition hover:bg-white/[0.05]"
                     >
-                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold/20 text-base font-semibold text-omniv-gold">
+                      <span
+                        className={`flex h-12 w-12 shrink-0 items-center justify-center text-base font-semibold ${
+                          isPerson
+                            ? "rounded-full bg-white/10 text-white"
+                            : "rounded-xl bg-omniv-gold/20 text-omniv-gold"
+                        }`}
+                      >
                         {f.name.charAt(0)}
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[15px] font-semibold text-white">
                           {f.name}
                         </p>
-                        <p className="truncate text-[12px] capitalize text-zinc-500">
+                        <p className="truncate text-[12px] text-zinc-500">
                           {entity?.tagline ?? f.type}
+                          {entity?.location ? ` · ${entity.location}` : ""}
                           {pubCount > 0 ? ` · ${pubCount} posts` : ""}
                         </p>
                       </div>
-                      <span className="text-zinc-600">›</span>
+                      <span className="text-[12px] text-zinc-500">Following</span>
                     </Link>
                   </li>
                 );
@@ -132,14 +188,14 @@ export default function FollowingPage() {
             </ul>
           )}
 
-          {follows.length > 0 && (
-            <Link
-              href="/activity"
-              className="mt-8 block text-center text-[13px] text-omniv-gold hover:underline"
-            >
-              See activity feed →
+          <div className="mt-8 flex justify-center gap-4 text-[13px]">
+            <Link href="/followers" className="text-omniv-gold hover:underline">
+              Followers →
             </Link>
-          )}
+            <Link href="/activity" className="text-zinc-500 hover:text-white">
+              Activity →
+            </Link>
+          </div>
         </main>
 
         <BottomNav />
