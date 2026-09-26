@@ -13,7 +13,7 @@ import {
 } from "@/lib/discovery/active-account";
 import { IdentityContextBar } from "@/components/discovery/identity-context-bar";
 
-type NavItem = { href: string; label: string };
+type NavItem = { href: string; label: string; badge?: string };
 type NavGroup = { id: string; label: string; items: NavItem[] };
 
 const GROUPS: NavGroup[] = [
@@ -25,14 +25,6 @@ const GROUPS: NavGroup[] = [
       { href: "/explore", label: "Explore" },
       { href: "/following", label: "Following" },
       { href: "/saved", label: "Saved" },
-    ],
-  },
-  {
-    id: "publish",
-    label: "Publish",
-      items: [
-      { href: "/publications", label: "Publications" },
-      { href: "/drafts", label: "Drafts" },
     ],
   },
   {
@@ -48,7 +40,8 @@ const GROUPS: NavGroup[] = [
     id: "monetize",
     label: "Monetize",
     items: [
-      { href: "/pro", label: "Pro" },
+      { href: "/pro", label: "Pro", badge: "Popular" },
+      { href: "/pricing", label: "Business" },
       { href: "/explore?type=opportunity", label: "Opportunities" },
     ],
   },
@@ -63,7 +56,6 @@ export function DesktopSidebar() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     home: true,
-    publish: true,
     grow: true,
     monetize: true,
   });
@@ -93,10 +85,9 @@ export function DesktopSidebar() {
   }
 
   return (
-    <aside className="hidden w-[260px] shrink-0 border-r border-white/[0.06] lg:block xl:w-[280px]">
+    <aside className="hidden w-[260px] shrink-0 border-r border-white/[0.05] lg:block xl:w-[280px]">
       <div className="sticky top-0 flex h-dvh flex-col overflow-hidden bg-[#050505]">
-        {/* Logo */}
-        <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
+        <div className="flex items-center gap-2.5 px-5 pb-4 pt-5">
           <Image
             src="/logo.svg"
             alt="Omniv"
@@ -109,12 +100,12 @@ export function DesktopSidebar() {
           </span>
         </div>
 
-        {/* Current identity card */}
+        {/* Identity — tap to switch only */}
         <div className="relative px-3 pb-3">
           <button
             type="button"
             onClick={() => setSwitchOpen((v) => !v)}
-            className="flex w-full items-center gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5 text-left ring-1 ring-white/[0.08] transition hover:ring-white/15"
+            className="flex w-full items-center gap-3 rounded-2xl bg-white/[0.03] px-3 py-2.5 text-left transition hover:bg-white/[0.05]"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
               {identityAvatar ? (
@@ -131,15 +122,13 @@ export function DesktopSidebar() {
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1 truncate text-[13px] font-semibold text-white">
                 {identityName}
-                {active?.verified && (
-                  <span className="text-sky-400">✓</span>
-                )}
+                {active?.verified && <span className="text-sky-400">✓</span>}
               </p>
               <p className="truncate text-[11px] capitalize text-zinc-500">
                 {identityType} · @{identityHandle}
               </p>
             </div>
-            <span className="text-zinc-500">›</span>
+            <span className="text-zinc-600">›</span>
           </button>
 
           {switchOpen && (
@@ -169,14 +158,13 @@ export function DesktopSidebar() {
           )}
         </div>
 
-        {/* Nav groups */}
         <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-3">
           {GROUPS.map((group) => (
             <div key={group.id} className="mb-1">
               <button
                 type="button"
                 onClick={() => toggleGroup(group.id)}
-                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-[12px] font-semibold uppercase tracking-wide text-zinc-500 hover:text-zinc-300"
+                className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600 hover:text-zinc-400"
               >
                 {group.label}
                 <span className="text-[10px] opacity-60">
@@ -186,36 +174,38 @@ export function DesktopSidebar() {
               {openGroups[group.id] && (
                 <div className="space-y-0.5 pb-2">
                   {group.items.map((item) => {
-                    const activeNav =
-                      pathname === item.href ||
-                      (item.href !== "/home" &&
-                        item.href !== "/publish" &&
-                        pathname.startsWith(item.href.split("?")[0]));
+                    const base = item.href.split("?")[0];
                     const isHomeExact =
                       item.href === "/home" && pathname === "/home";
-                    const isPro = item.label === "Pro";
                     const isActive =
-                      item.href === "/home" ? isHomeExact : activeNav;
+                      item.href === "/home"
+                        ? isHomeExact
+                        : pathname === item.href ||
+                          (base !== "/home" && pathname.startsWith(base));
+                    const isPro = item.label === "Pro";
+                    const isBusiness = item.label === "Business";
 
                     return (
                       <Link
                         key={`${group.id}-${item.label}`}
                         href={item.href}
-                        className={`relative flex items-center rounded-lg py-2 pl-4 pr-3 text-[14px] font-medium transition ${
+                        className={`relative flex items-center rounded-xl py-2 pl-4 pr-3 text-[14px] font-medium transition ${
                           isActive
                             ? "bg-white/[0.06] text-white"
                             : isPro
                               ? "text-omniv-gold hover:bg-omniv-gold/10"
-                              : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+                              : isBusiness
+                                ? "text-zinc-300 hover:bg-white/[0.04] hover:text-white"
+                                : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
                         }`}
                       >
                         {isActive && (
                           <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-omniv-gold" />
                         )}
                         {item.label}
-                        {isPro && (
-                          <span className="ml-auto rounded-full bg-omniv-gold/20 px-1.5 py-0.5 text-[9px] font-bold uppercase text-omniv-gold">
-                            New
+                        {item.badge && (
+                          <span className="ml-auto rounded-full bg-omniv-gold px-1.5 py-0.5 text-[9px] font-bold uppercase text-black">
+                            {item.badge}
                           </span>
                         )}
                       </Link>
@@ -225,48 +215,30 @@ export function DesktopSidebar() {
               )}
             </div>
           ))}
-
-          <div className="mb-1">
-            <p className="px-3 py-2 text-[12px] font-semibold uppercase tracking-wide text-zinc-500">
-              Identity
-            </p>
-            <button
-              type="button"
-              onClick={() => setSwitchOpen(true)}
-              className="flex w-full items-center rounded-lg py-2 pl-4 pr-3 text-[14px] font-medium text-zinc-400 hover:bg-white/[0.04] hover:text-white"
-            >
-              Switch identity
-            </button>
-            <Link
-              href={active ? `${active.path}/edit` : "/accounts"}
-              className="flex items-center rounded-lg py-2 pl-4 pr-3 text-[14px] font-medium text-zinc-400 hover:bg-white/[0.04] hover:text-white"
-            >
-              Manage entity
-            </Link>
-          </div>
         </nav>
 
-        {/* + Publish */}
-        <div className="px-3 pb-3">
+        {/* Settings footer */}
+        <div className="border-t border-white/[0.05] px-3 py-3">
           <Link
-            href="/publish"
-            className="flex h-11 w-full items-center justify-center rounded-full bg-omniv-gold text-[14px] font-semibold text-black transition hover:bg-omniv-gold/90"
+            href="/settings"
+            className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14px] font-medium transition ${
+              pathname.startsWith("/settings")
+                ? "bg-white/[0.06] text-white"
+                : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
+            }`}
           >
-            + Publish
+            <span className="text-[16px] opacity-70">⚙</span>
+            Settings
           </Link>
-        </div>
-
-        {/* Personal account footer */}
-        <div className="border-t border-white/[0.06] px-3 py-3">
           <Link
             href={active?.path || "/profile"}
-            className="flex items-center gap-2.5 rounded-xl px-2 py-2 hover:bg-white/[0.04]"
+            className="mt-1 flex items-center gap-2.5 rounded-xl px-2 py-2 hover:bg-white/[0.04]"
           >
             <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[11px] font-semibold text-white">
-              {avatarUrl ? (
+              {identityAvatar ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={avatarUrl}
+                  src={identityAvatar}
                   alt=""
                   className="h-full w-full object-cover"
                 />
@@ -278,9 +250,10 @@ export function DesktopSidebar() {
               <p className="truncate text-[12px] font-medium text-white">
                 {identityName}
               </p>
-              <p className="text-[10px] capitalize text-zinc-600">{identityType}</p>
+              <p className="text-[10px] capitalize text-zinc-600">
+                {identityType}
+              </p>
             </div>
-            <span className="text-zinc-600" aria-hidden="true">›</span>
           </Link>
         </div>
       </div>
