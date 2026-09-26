@@ -164,14 +164,14 @@ export default async function HomePage({ searchParams }: Props) {
             </p>
           </div>
 
-          <div className="mt-4 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
+          <div className="mt-4 -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
             {TABS.map((t) => {
               const active = tab === t.id;
               return (
                 <Link
                   key={t.id}
                   href={t.id === "for-you" ? "/home" : `/home?tab=${t.id}`}
-                  className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-medium transition ${
+                  className={`inline-flex h-8 shrink-0 items-center justify-center rounded-full px-4 text-[13px] font-medium leading-none transition ${
                     active
                       ? "bg-omniv-gold text-black"
                       : "bg-white/[0.06] text-zinc-400 hover:bg-white/[0.1] hover:text-white"
@@ -183,12 +183,12 @@ export default async function HomePage({ searchParams }: Props) {
             })}
           </div>
 
-          <div className="mt-3 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
+          <div className="mt-3 -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
             {CATEGORIES.map((c) => (
               <Link
                 key={c}
                 href={`/explore?interest=${encodeURIComponent(c)}`}
-                className="shrink-0 rounded-full bg-white/[0.04] px-3.5 py-1.5 text-[12px] font-medium text-zinc-500 transition hover:bg-white/[0.08] hover:text-zinc-200"
+                className="inline-flex h-7 shrink-0 items-center justify-center rounded-full bg-white/[0.04] px-3.5 text-[12px] font-medium leading-none text-zinc-500 transition hover:bg-white/[0.08] hover:text-zinc-200"
               >
                 {c}
               </Link>
