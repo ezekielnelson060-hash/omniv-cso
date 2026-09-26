@@ -57,7 +57,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!e) return { title: "Not found" };
   const origin = process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
   const url = `${origin}/e/${type}/${slug}`;
-  const image = (e as { avatarUrl?: string | null }).avatarUrl || `${origin}/opengraph-image`;
+  const image =
+    (e as { avatarUrl?: string | null }).avatarUrl ||
+    `${origin}/opengraph-image`;
   return {
     title: e.name,
     description: e.tagline || e.about?.slice(0, 160),
@@ -72,7 +74,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       images: [{ url: image }],
       firstName: e.type === "person" ? e.name.split(" ")[0] : undefined,
     },
-    twitter: { card: "summary_large_image", title: e.name, description: e.tagline, images: [image] },
+    twitter: {
+      card: "summary_large_image",
+      title: e.name,
+      description: e.tagline,
+      images: [image],
+    },
   };
 }
 
@@ -130,24 +137,39 @@ export default async function EntityPage({ params, searchParams }: Props) {
   const avatarUrl = (e as { avatarUrl?: string | null }).avatarUrl;
 
   const graphPublications = Array.from(
-    new Map([...SEED_PUBLICATIONS, ...liveAll].map((publication) => [publication.id, publication])).values()
+    new Map(
+      [...SEED_PUBLICATIONS, ...liveAll].map((publication) => [
+        publication.id,
+        publication,
+      ])
+    ).values()
   );
-  const graph = { entities: [e, ...SEED_ENTITIES.filter((entity) => entity.id !== e.id)], publications: graphPublications };
+  const graph = {
+    entities: [e, ...SEED_ENTITIES.filter((entity) => entity.id !== e.id)],
+    publications: graphPublications,
+  };
   const relatedEntities = getRelatedEntities(e, graph, 8);
-  const networkPubs = recommendForEntity(e, graph, {}, 6).map((item) => item.publication);
+  const networkPubs = recommendForEntity(e, graph, {}, 6).map(
+    (item) => item.publication
+  );
 
-  const origin = (process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media").replace(/\/$/, "");
+  const origin = (
+    process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
+  ).replace(/\/$/, "");
   const pageUrl = `${origin}${path}`;
   const entityLd = {
     "@context": "https://schema.org",
-    "@type": e.type === "person" || e.type === "artist" ? "Person" : "Organization",
+    "@type":
+      e.type === "person" || e.type === "artist" ? "Person" : "Organization",
     name: e.name,
     description: e.about || e.tagline,
     url: pageUrl,
     image: avatarUrl || `${origin}/opengraph-image`,
     logo: avatarUrl || undefined,
     additionalType: e.type,
-    address: e.location ? { "@type": "PostalAddress", addressLocality: e.location } : undefined,
+    address: e.location
+      ? { "@type": "PostalAddress", addressLocality: e.location }
+      : undefined,
     sameAs: e.links?.map((link) => link.href).filter((href) => href.startsWith("http")),
     knowsAbout: e.tags,
     publisher: { "@type": "Organization", name: "Omniv", url: origin },
@@ -158,29 +180,29 @@ export default async function EntityPage({ params, searchParams }: Props) {
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
         <StructuredData id={`entity-${e.type}-${e.slug}`} data={entityLd} />
-        <div
-          className="relative h-40 overflow-hidden bg-gradient-to-br from-omniv-gold/30 via-zinc-900 to-black sm:h-48"
-          style={
-            coverUrl
-              ? {
-                  backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.15), #050505), url(${coverUrl})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }
-              : undefined
-          }
-        >
-          {!coverUrl && (
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_20%,rgba(255,200,50,0.22),transparent_55%)]" />
+
+        {/* Cover — strong scrim so photo noise never fights the bio */}
+        <div className="relative h-36 overflow-hidden bg-zinc-900 sm:h-44">
+          {coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={coverUrl}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-omniv-gold/25 via-zinc-900 to-black" />
           )}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-[#050505]" />
+
           <Link
             href="/explore"
-            className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm"
+            className="absolute left-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm"
             aria-label="Back"
           >
             ←
           </Link>
-          <div className="absolute right-4 top-4 flex gap-1">
+          <div className="absolute right-4 top-4 z-10 flex gap-1">
             <SaveButton
               type={e.type}
               slug={e.slug}
@@ -189,7 +211,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
             />
             <Link
               href={editPath}
-              className="flex h-9 items-center rounded-full bg-black/40 px-3 text-[12px] font-medium text-white backdrop-blur-sm"
+              className="flex h-9 items-center rounded-full bg-black/50 px-3 text-[12px] font-medium text-white backdrop-blur-sm"
             >
               Edit
             </Link>
@@ -197,8 +219,9 @@ export default async function EntityPage({ params, searchParams }: Props) {
         </div>
 
         <main className="relative mx-auto max-w-lg px-4 pb-28 md:max-w-2xl md:px-6">
-          <div className="-mt-12 flex flex-col sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 text-3xl font-semibold text-black ring-4 ring-[#050505]">
+          {/* Avatar + actions */}
+          <div className="-mt-11 flex items-end justify-between gap-3">
+            <div className="flex h-[88px] w-[88px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 text-3xl font-semibold text-black ring-[3px] ring-[#050505]">
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -210,7 +233,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
                 initial
               )}
             </div>
-            <div className="mt-4 flex flex-wrap gap-2 sm:mb-1 sm:mt-0">
+            <div className="mb-1 flex flex-wrap justify-end gap-2">
               <FollowButton
                 type={e.type}
                 slug={e.slug}
@@ -226,16 +249,23 @@ export default async function EntityPage({ params, searchParams }: Props) {
             </div>
           </div>
 
-          <h1 className="mt-4 flex items-center gap-2 text-2xl font-semibold tracking-tight text-white">
-            {e.name}
-            {e.verified && <VerifiedBadge />}
-          </h1>
-          <p className="mt-0.5 text-[13px] capitalize text-zinc-500">
-            {e.type}
-            {e.verified ? " · Verified" : ""}
-            {e.location ? ` · ${e.location}` : ""}
-          </p>
-          <p className="mt-1 text-[14px] text-zinc-400">{e.tagline}</p>
+          {/* Name + bio */}
+          <div className="mt-4">
+            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight text-white">
+              {e.name}
+              {e.verified && <VerifiedBadge />}
+            </h1>
+            <p className="mt-1 text-[13px] capitalize text-zinc-500">
+              {e.type}
+              {e.verified ? " · Verified" : ""}
+              {e.location ? ` · ${e.location}` : ""}
+            </p>
+            {e.tagline ? (
+              <p className="mt-2 text-[15px] leading-relaxed text-zinc-300">
+                {e.tagline}
+              </p>
+            ) : null}
+          </div>
 
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-[14px]">
             <FollowerCount type={e.type} slug={e.slug} />
@@ -278,7 +308,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
           {activeTab === "about" && (
             <div className="mt-6 space-y-6">
               <p className="text-[15px] leading-relaxed text-zinc-300">
-                {e.about || e.tagline}
+                {e.about || e.tagline || "No about text yet."}
               </p>
               {e.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
