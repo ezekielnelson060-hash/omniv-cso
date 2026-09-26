@@ -2,60 +2,41 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import { PublicationCard } from "@/components/discovery/publication-card";
-import { EntityCard } from "@/components/discovery/entity-card";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { ProfileAvatarLink } from "@/components/discovery/profile-avatar-link";
+import { RotatingSearch } from "@/components/discovery/rotating-search";
 import { listLivePublications, listDiscoveryEntities } from "@/lib/discovery/db";
+import { SEED_ENTITIES } from "@/lib/discovery/seed";
+import { searchDiscovery } from "@/lib/discovery/search";
 import {
-  SEED_ENTITIES,
-  searchEntities,
-  searchPublications,
-} from "@/lib/discovery/seed";
-import {
+  ENTITY_LABELS,
+  PUBLICATION_LABELS,
   PUBLICATION_TYPES,
+  entityPath,
+  publicationPath,
+  type DiscoveryEntity,
   type Publication,
   type PublicationType,
 } from "@/lib/discovery/types";
 
-type Props = {
-  searchParams: Promise<{
-    q?: string;
-    type?: string;
-    sort?: string;
-    publisher?: string;
-    interest?: string;
-    view?: string;
-  }>;
-};
+const TOPICS = ["World", "Technology", "Africa", "AI", "Music", "Research", "Business", "Culture"];
+const TYPE_CHIPS: { id: string; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "article", label: "Articles" },
+  { id: "research", label: "Research" },
+  { id: "music", label: "Music" },
+  { id: "product", label: "Products" },
+  { id: "event", label: "Events" },
+  { id: "opportunity", label: "Opportunities" },
+];
 
 export const metadata = {
-  title: "Explore",
-  description: "What are you looking for? Search publications, people, and more on Omniv.",
+  title: "Explore | Omniv",
+  description: "Discover publications, people, companies, research, music, products, and opportunities on Omniv.",
 };
 
-const TYPE_CHIPS: { id: string; label: string; href: string }[] = [
-  { id: "all", label: "All", href: "/explore" },
-  { id: "article", label: "Articles", href: "/explore?type=article" },
-  { id: "music", label: "Music", href: "/explore?type=music" },
-  { id: "video", label: "Videos", href: "/explore?type=video" },
-  { id: "research", label: "Research", href: "/explore?type=research" },
-  { id: "product", label: "Products", href: "/explore?type=product" },
-  { id: "event", label: "Events", href: "/explore?type=event" },
-  { id: "opportunity", label: "Opportunities", href: "/explore?type=opportunity" },
-];
-
-const TOPICS = [
-  "World",
-  "Technology",
-  "Africa",
-  "AI",
-  "Music",
-  "Research",
-  "Business",
-  "Culture",
-  "People",
-];
+type Props = { searchParams: Promise<{ q?: string; type?: string; sort?: string; interest?: string }> };
 
 async function tryClient() {
   try {
@@ -68,308 +49,159 @@ async function tryClient() {
 
 export default async function ExplorePage({ searchParams }: Props) {
   const sp = await searchParams;
-  const q = sp.q?.trim() ?? "";
-  const type = sp.type as PublicationType | undefined;
-  const sort = sp.sort ?? "trending";
-  const publisherFilter = sp.publisher;
-  const interest = sp.interest?.trim() ?? "";
-  const view = sp.view; // people | companies
-
+  const q = sp.q?.trim() || "";
+  const type = PUBLICATION_TYPES.includes(sp.type as PublicationType) ? (sp.type as PublicationType) : undefined;
+  const sort = sp.sort === "new" ? "new" : "trending";
+  const interest = sp.interest?.trim() || "";
   const supabase = await tryClient();
+  const publications = await listLivePublications(supabase, 80);
+  const liveEntities = await listDiscoveryEntities(supabase);
+  const entities = Array.from(new Map([...SEED_ENTITIES, ...liveEntities].map((entity) => [entity.id, entity])).values());
 
-  // People / companies view
-  if (publisherFilter || view === "people" || view === "companies") {
-    const liveEntities = await listDiscoveryEntities(supabase);
-    let list = q ? searchEntities(q) : [...liveEntities];
-    if (list.length === 0) list = q ? searchEntities(q) : [...SEED_ENTITIES];
-
-    if (publisherFilter) {
-      list = list.filter((e) => e.type === publisherFilter);
-    } else if (view === "people") {
-      list = list.filter((e) => e.type === "person" || e.type === "artist");
-    } else if (view === "companies") {
-      list = list.filter(
-        (e) =>
-          e.type === "company" ||
-          e.type === "brand" ||
-          e.type === "product"
-      );
-    }
-
-    if (sort === "new") {
-      list.sort((a, b) => (b.publishedAt || "").localeCompare(a.publishedAt || ""));
-    } else {
-      list.sort((a, b) => (b.heat ?? 0) - (a.heat ?? 0));
-    }
-
-    return (
-      <Shell q={q} type={type} sort={sort} interest={interest} view={view}>
-        <p className="text-[13px] text-zinc-500">
-          {list.length} result{list.length === 1 ? "" : "s"}
-        </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {list.map((e) => (
-            <EntityCard key={e.id} entity={e} />
-          ))}
-        </div>
-      </Shell>
-    );
-  }
-
-  const mixed = await listLivePublications(supabase, 60);
-
-  let list: Publication[] = q
-    ? searchPublications(q)
-    : mixed.length
-      ? mixed
-      : [...mixed];
-
-  if (q) {
-    const liveHits = mixed.filter(
-      (p) =>
-        p.title.toLowerCase().includes(q.toLowerCase()) ||
-        p.summary.toLowerCase().includes(q.toLowerCase()) ||
-        p.tags.some((t) => t.toLowerCase().includes(q.toLowerCase()))
-    );
-    const slugs = new Set(liveHits.map((p) => p.slug));
-    for (const s of list) {
-      if (!slugs.has(s.slug)) liveHits.push(s);
-    }
-    list = liveHits;
-  }
-
-  if (type && PUBLICATION_TYPES.includes(type)) {
-    list = list.filter((p) => p.type === type);
-  }
-
+  let filtered = publications;
+  if (type) filtered = filtered.filter((publication) => publication.type === type);
   if (interest) {
     const needle = interest.toLowerCase();
-    list = list.filter(
-      (p) =>
-        p.tags.some((t) => t.toLowerCase().includes(needle)) ||
-        p.title.toLowerCase().includes(needle) ||
-        p.summary.toLowerCase().includes(needle)
+    filtered = filtered.filter((publication) =>
+      [publication.title, publication.summary, publication.category || "", ...publication.tags]
+        .join(" ")
+        .toLowerCase()
+        .includes(needle)
     );
   }
+  filtered = [...filtered].sort((a, b) => sort === "new"
+    ? (b.publishedAt || "").localeCompare(a.publishedAt || "")
+    : (b.heat || 0) - (a.heat || 0));
 
-  if (sort === "new") {
-    list = [...list].sort((a, b) =>
-      (b.publishedAt || "").localeCompare(a.publishedAt || "")
-    );
-  } else {
-    list = [...list].sort((a, b) => (b.heat ?? 0) - (a.heat ?? 0));
-  }
-
-  // When searching, also surface matching people
-  const peopleHits = q ? searchEntities(q).slice(0, 4) : [];
-
+  const results = q ? searchDiscovery(q, filtered, entities, 30) : [];
   return (
-    <Shell q={q} type={type} sort={sort} interest={interest} view={view}>
-      {peopleHits.length > 0 && (
-        <div className="mb-8">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
-            People & organizations
-          </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {peopleHits.map((e) => (
-              <EntityCard key={e.id} entity={e} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      <p className="text-[13px] text-zinc-500">
-        {list.length} publication{list.length === 1 ? "" : "s"}
-        {q ? ` · “${q}”` : ""}
-        {interest ? ` · ${interest}` : ""}
-      </p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {list.map((p) => (
-          <PublicationCard key={p.id} pub={p} />
-        ))}
-      </div>
-      {list.length === 0 && peopleHits.length === 0 && (
-        <p className="mt-16 text-center text-[14px] text-zinc-500">
-          Nothing matched.{" "}
-          <Link href="/publish" className="text-omniv-gold hover:underline">
-            Publish something
-          </Link>
-        </p>
-      )}
-    </Shell>
+    <ExploreShell q={q} type={type} sort={sort} interest={interest}>
+      {q ? <SearchResults results={results} query={q} /> : <DiscoverySections publications={filtered} entities={entities} />}
+    </ExploreShell>
   );
 }
 
-function Shell({
-  children,
-  q,
-  type,
-  sort,
-  interest,
-  view,
-}: {
-  children: ReactNode;
-  q: string;
-  type?: string;
-  sort: string;
-  interest: string;
-  view?: string;
-}) {
+function SearchResults({ results, query }: { results: ReturnType<typeof searchDiscovery>; query: string }) {
+  return (
+    <section>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-omniv-gold">Discovery results</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">{results.length} paths for “{query}”</h2>
+        </div>
+        <Link href="/publish" className="hidden text-[12px] text-zinc-500 hover:text-white sm:block">Publish into this graph →</Link>
+      </div>
+      <div className="mt-8 space-y-3">
+        {results.map((result) => result.kind === "publication"
+          ? <SearchPublication key={`publication-${result.item.id}`} publication={result.item} />
+          : <SearchEntity key={`entity-${result.item.id}`} entity={result.item} />)}
+      </div>
+      {results.length === 0 && <p className="mt-16 text-center text-[14px] text-zinc-500">Nothing matched yet. Try a person, place, topic, or publication.</p>}
+    </section>
+  );
+}
+
+function SearchPublication({ publication }: { publication: Publication }) {
+  return (
+    <Link href={publicationPath(publication)} className="group flex items-center gap-4 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.07] transition hover:bg-white/[0.06] hover:ring-omniv-gold/30">
+      <div className="hidden h-16 w-24 shrink-0 rounded-xl bg-gradient-to-br from-omniv-gold/40 to-zinc-900 sm:block" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">Publication · {PUBLICATION_LABELS[publication.type]}</p>
+        <h3 className="mt-1 truncate text-[16px] font-semibold text-white group-hover:text-omniv-gold">{publication.title}</h3>
+        <p className="mt-1 line-clamp-1 text-[13px] text-zinc-500">{publication.summary}</p>
+      </div>
+      <span className="text-zinc-600 group-hover:text-omniv-gold">→</span>
+    </Link>
+  );
+}
+
+function SearchEntity({ entity }: { entity: DiscoveryEntity }) {
+  return (
+    <Link href={entityPath(entity)} className="group flex items-center gap-4 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.07] transition hover:bg-white/[0.06] hover:ring-omniv-gold/30">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold/15 text-lg font-semibold text-omniv-gold">{entity.name.slice(0, 1)}</div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">{ENTITY_LABELS[entity.type] || entity.type}</p>
+        <h3 className="mt-1 truncate text-[16px] font-semibold text-white group-hover:text-omniv-gold">{entity.name}</h3>
+        <p className="mt-1 line-clamp-1 text-[13px] text-zinc-500">{entity.tagline}{entity.location ? ` · ${entity.location}` : ""}</p>
+      </div>
+      <span className="text-zinc-600 group-hover:text-omniv-gold">→</span>
+    </Link>
+  );
+}
+
+function DiscoverySections({ publications, entities }: { publications: Publication[]; entities: DiscoveryEntity[] }) {
+  const people = entities.filter((entity) => entity.type === "person" || entity.type === "artist").slice(0, 4);
+  const companies = entities.filter((entity) => entity.type === "company" || entity.type === "brand").slice(0, 4);
+  const sections: { type: PublicationType; title: string }[] = [
+    { type: "research", title: "Research" },
+    { type: "music", title: "Music" },
+    { type: "product", title: "Products" },
+    { type: "event", title: "Events" },
+    { type: "opportunity", title: "Opportunities" },
+  ];
+  return (
+    <div className="space-y-14">
+      <EditorialSection title="Trending now" action="/explore?sort=trending" publications={publications.slice(0, 6)} featured />
+      <EditorialSection title="New on Omniv" action="/explore?sort=new" publications={[...publications].sort((a, b) => (b.publishedAt || "").localeCompare(a.publishedAt || "")).slice(0, 4)} />
+      <EntityRail title="People to discover" entities={people} />
+      <EntityRail title="Companies to explore" entities={companies} />
+      {sections.map((section) => (
+        <EditorialSection key={section.type} title={section.title} action={`/explore?type=${section.type}`} publications={publications.filter((publication) => publication.type === section.type).slice(0, 4)} />
+      ))}
+    </div>
+  );
+}
+
+function EditorialSection({ title, action, publications, featured = false }: { title: string; action: string; publications: Publication[]; featured?: boolean }) {
+  if (!publications.length) return null;
+  return (
+    <section>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.16em] text-zinc-400">{title}</h2>
+        <Link href={action} className="text-[12px] text-zinc-600 hover:text-omniv-gold">See all →</Link>
+      </div>
+      <div className={`grid gap-3 ${featured ? "sm:grid-cols-3" : "sm:grid-cols-2 lg:grid-cols-4"}`}>
+        {publications.map((publication) => <PublicationCard key={publication.id} pub={publication} />)}
+      </div>
+    </section>
+  );
+}
+
+function EntityRail({ title, entities }: { title: string; entities: DiscoveryEntity[] }) {
+  if (!entities.length) return null;
+  return (
+    <section>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.16em] text-zinc-400">{title}</h2>
+        <Link href={title.startsWith("People") ? "/explore?view=people" : "/explore?view=companies"} className="text-[12px] text-zinc-600 hover:text-omniv-gold">See all →</Link>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {entities.map((entity) => (
+          <Link key={entity.id} href={entityPath(entity)} className="group rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.07] transition hover:bg-white/[0.06] hover:ring-omniv-gold/30">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-omniv-gold/15 font-semibold text-omniv-gold">{entity.name.slice(0, 1)}</span>
+              <div className="min-w-0"><p className="truncate text-[14px] font-semibold text-white group-hover:text-omniv-gold">{entity.name}</p><p className="text-[11px] text-zinc-500">{ENTITY_LABELS[entity.type] || entity.type}</p></div>
+            </div>
+            <p className="mt-3 line-clamp-2 text-[12px] leading-relaxed text-zinc-500">{entity.tagline}</p>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ExploreShell({ children, q, type, sort, interest }: { children: ReactNode; q: string; type?: string; sort: string; interest: string }) {
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-md">
-          <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 md:max-w-2xl md:px-6 lg:max-w-4xl">
-            <div className="flex items-center gap-2">
-              <Image
-                src="/logo.svg"
-                alt="Omniv"
-                width={28}
-                height={28}
-                className="rounded-md md:hidden"
-              />
-              <div>
-                <h1 className="text-lg font-semibold tracking-tight text-white md:text-xl">
-                  Explore
-                </h1>
-              </div>
-            </div>
-            <ProfileAvatarLink />
-          </div>
-        </header>
-
-        <main className="mx-auto max-w-lg px-4 pb-24 pt-4 md:max-w-2xl md:px-6 lg:max-w-4xl">
-          <p className="mb-3 text-[15px] text-zinc-400">
-            What are you looking for?
-          </p>
-
-          <form action="/explore" method="get" className="flex gap-2">
-            {type && <input type="hidden" name="type" value={type} />}
-            <input
-              name="q"
-              type="search"
-              defaultValue={q}
-              placeholder="Search publications, people, topics…"
-              className="h-12 flex-1 rounded-full bg-white/[0.05] px-5 text-[15px] text-white outline-none ring-1 ring-white/[0.1] placeholder:text-zinc-600 focus:ring-omniv-gold/40"
-            />
-            <button
-              type="submit"
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold text-black"
-              aria-label="Search"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-              </svg>
-            </button>
-          </form>
-
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {TYPE_CHIPS.map((c) => {
-              const active =
-                (c.id === "all" && !type && !view) || (type && c.id === type);
-              return (
-                <Link
-                  key={c.id}
-                  href={c.href}
-                  className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-medium transition ${
-                    active
-                      ? "bg-omniv-gold text-black"
-                      : "text-zinc-400 ring-1 ring-white/12 hover:text-white"
-                  }`}
-                >
-                  {c.label}
-                </Link>
-              );
-            })}
-            <Link
-              href="/explore?view=people"
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-medium transition ${
-                view === "people"
-                  ? "bg-omniv-gold text-black"
-                  : "text-zinc-400 ring-1 ring-white/12 hover:text-white"
-              }`}
-            >
-              People
-            </Link>
-            <Link
-              href="/explore?view=companies"
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-medium transition ${
-                view === "companies"
-                  ? "bg-omniv-gold text-black"
-                  : "text-zinc-400 ring-1 ring-white/12 hover:text-white"
-              }`}
-            >
-              Companies
-            </Link>
-          </div>
-
-          <div className="mt-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
-              Topics
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {TOPICS.map((name) => {
-                const active = interest.toLowerCase() === name.toLowerCase();
-                return (
-                  <Link
-                    key={name}
-                    href={
-                      active
-                        ? "/explore"
-                        : `/explore?interest=${encodeURIComponent(name)}`
-                    }
-                    className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
-                      active
-                        ? "bg-omniv-gold text-black"
-                        : "text-zinc-400 ring-1 ring-white/12 hover:text-white"
-                    }`}
-                  >
-                    {name}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            <Link
-              href={
-                type
-                  ? `/explore?type=${type}&sort=trending`
-                  : "/explore?sort=trending"
-              }
-              className={`rounded-full px-3 py-1 text-[12px] font-medium ${
-                sort !== "new"
-                  ? "bg-white/10 text-white"
-                  : "text-zinc-500"
-              }`}
-            >
-              Trending
-            </Link>
-            <Link
-              href={type ? `/explore?type=${type}&sort=new` : "/explore?sort=new"}
-              className={`rounded-full px-3 py-1 text-[12px] font-medium ${
-                sort === "new"
-                  ? "bg-white/10 text-white"
-                  : "text-zinc-500"
-              }`}
-            >
-              New
-            </Link>
-          </div>
-
-          <div className="mt-6">{children}</div>
-        </main>
-
-        <BottomNav />
+        <header className="sticky top-0 z-40 border-b border-white/[0.05] bg-[#050505]/90 backdrop-blur-xl"><div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 md:max-w-2xl md:px-6 lg:max-w-5xl"><div className="flex items-center gap-2"><Image src="/logo.svg" alt="Omniv" width={28} height={28} className="rounded-md md:hidden" /><span className="text-[15px] font-semibold tracking-tight text-white">OMNIV</span></div><ProfileAvatarLink /></div></header>
+        <main className="mx-auto max-w-lg px-4 pb-24 pt-12 md:max-w-2xl md:px-6 lg:max-w-5xl">
+          <div className="max-w-2xl"><p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-omniv-gold">The discovery network</p><h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-6xl">What are you looking for?</h1><p className="mt-4 max-w-xl text-[15px] leading-relaxed text-zinc-500">Find something worth following. Publications lead the way; people, companies, and ideas connect around them.</p></div>
+          <form action="/explore" method="get" className="mt-8 flex gap-2"><RotatingSearch value={q} />{type && <input type="hidden" name="type" value={type} />}{interest && <input type="hidden" name="interest" value={interest} />}<button type="submit" className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-omniv-gold text-black" aria-label="Search"><span className="text-xl">⌕</span></button></form>
+          <div className="mt-5 flex flex-wrap gap-2">{TOPICS.map((topic) => <Link key={topic} href={`/explore?interest=${encodeURIComponent(topic)}`} className={`rounded-full px-3 py-1.5 text-[12px] ${interest.toLowerCase() === topic.toLowerCase() ? "bg-omniv-gold text-black" : "bg-white/[0.04] text-zinc-400 ring-1 ring-white/[0.08] hover:text-white"}`}>{topic}</Link>)}</div>
+          <div className="mt-8 flex gap-2 border-b border-white/[0.07] pb-3">{TYPE_CHIPS.map((chip) => <Link key={chip.id} href={chip.id === "all" ? "/explore" : `/explore?type=${chip.id}`} className={`text-[12px] ${(!type && chip.id === "all") || type === chip.id ? "font-semibold text-omniv-gold" : "text-zinc-600 hover:text-zinc-300"}`}>{chip.label}</Link>)}<span className="mx-1 text-zinc-800">/</span><Link href="/explore?sort=trending" className={`text-[12px] ${sort === "trending" ? "text-white" : "text-zinc-600"}`}>Trending</Link><Link href="/explore?sort=new" className={`text-[12px] ${sort === "new" ? "text-white" : "text-zinc-600"}`}>New</Link></div>
+          <div className="mt-10">{children}</div>
+        </main><BottomNav />
       </div>
     </DiscoveryShell>
   );
