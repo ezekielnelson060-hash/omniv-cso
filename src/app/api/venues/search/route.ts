@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: Request) {
   const sp = new URL(req.url).searchParams;
-  let city = (sp.get("city") || "").trim();
+  const city = (sp.get("city") || "").trim();
   const q = (sp.get("q") || "music venue").trim();
   if (!city) {
     return NextResponse.json(
