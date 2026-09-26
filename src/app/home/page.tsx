@@ -17,9 +17,9 @@ import {
 import type { Publication } from "@/lib/discovery/types";
 
 export const metadata = {
-  title: "For You",
+  title: "Discover",
   description:
-    "Personalized picks based on what you follow and what's trending.",
+    "A world of things worth discovering — articles, research, music, products, and more.",
 };
 
 type Props = {
@@ -30,9 +30,21 @@ const TABS = [
   { id: "for-you", label: "For You" },
   { id: "trending", label: "Trending" },
   { id: "new", label: "New" },
-  { id: "music", label: "Music" },
   { id: "articles", label: "Articles" },
+  { id: "music", label: "Music" },
+  { id: "research", label: "Research" },
 ] as const;
+
+/** Editorial categories from master spec */
+const CATEGORIES = [
+  "World",
+  "Technology",
+  "Africa",
+  "Research",
+  "Music",
+  "Business",
+  "People",
+];
 
 async function tryClient() {
   try {
@@ -67,6 +79,9 @@ export default async function HomePage({ searchParams }: Props) {
   } else if (tab === "articles") {
     items = mixed.filter((p) => p.type === "article");
     if (items.length < 3) items = publicationsByType("article");
+  } else if (tab === "research") {
+    items = mixed.filter((p) => p.type === "research" || p.type === "file");
+    if (items.length < 2) items = publicationsByType("research");
   } else if (tab === "trending") {
     items = [...mixed].sort(sortHeat).slice(0, 16);
   } else {
@@ -74,7 +89,7 @@ export default async function HomePage({ searchParams }: Props) {
     if (items.length === 0) items = trendingPublications(12);
   }
 
-  if (items.length < 6 && tab !== "music" && tab !== "articles") {
+  if (items.length < 6 && tab !== "music" && tab !== "articles" && tab !== "research") {
     const seed =
       tab === "new" ? newestPublications(12) : trendingPublications(12);
     const slugs = new Set(items.map((p) => p.slug));
@@ -138,10 +153,10 @@ export default async function HomePage({ searchParams }: Props) {
         <main className="mx-auto max-w-lg px-4 pb-24 pt-5 md:max-w-2xl md:px-6">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-white">
-              For You
+              Discover
             </h1>
-            <p className="mt-1 text-[13px] text-zinc-500">
-              Personalized picks based on what you follow and what's trending.
+            <p className="mt-1 text-[14px] leading-snug text-zinc-500">
+              Things worth finding — not a feed of noise.
             </p>
           </div>
 
@@ -164,8 +179,21 @@ export default async function HomePage({ searchParams }: Props) {
             })}
           </div>
 
+          {/* Editorial topic strip */}
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {CATEGORIES.map((c) => (
+              <Link
+                key={c}
+                href={`/explore?interest=${encodeURIComponent(c)}`}
+                className="shrink-0 rounded-full px-3 py-1 text-[12px] font-medium text-zinc-500 ring-1 ring-white/[0.08] transition hover:text-zinc-200"
+              >
+                {c}
+              </Link>
+            ))}
+          </div>
+
           <div className="mt-5 space-y-3">
-            {featured && <FeedFeaturedCard pub={featured} />}
+            {featured && <FeedFeaturedCard pub={featured} showExplore />}
 
             {rest.map((pub) =>
               compactTypes.has(pub.type) ? (
@@ -183,6 +211,18 @@ export default async function HomePage({ searchParams }: Props) {
                 </Link>
               </p>
             )}
+          </div>
+
+          <div className="mt-10 rounded-2xl bg-white/[0.03] p-5 text-center ring-1 ring-white/[0.06]">
+            <p className="text-[15px] font-medium text-white">
+              Looking for something specific?
+            </p>
+            <Link
+              href="/explore"
+              className="mt-3 inline-flex h-11 items-center rounded-full bg-omniv-gold px-6 text-[14px] font-semibold text-black"
+            >
+              Open Explore
+            </Link>
           </div>
         </main>
 
