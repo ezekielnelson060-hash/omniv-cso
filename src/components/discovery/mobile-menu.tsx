@@ -15,23 +15,31 @@ import {
 
 type NavItem = { href: string; label: string; badge?: string; icon: string };
 
-const MAIN: NavItem[] = [
+const PRIMARY: NavItem[] = [
   { href: "/home", label: "Home", icon: "home" },
   { href: "/explore", label: "Explore", icon: "search" },
-  { href: "/following", label: "Following", icon: "users" },
-  { href: "/saved", label: "Saved", icon: "bookmark" },
+  { href: "/notifications", label: "Notifications", icon: "bell" },
 ];
 
-const GROW: NavItem[] = [
+const NETWORK: NavItem[] = [
+  { href: "/following", label: "Following", icon: "users" },
+  { href: "/saved", label: "Saved", icon: "bookmark" },
+  { href: "/activity", label: "Activity", icon: "activity" },
+];
+
+const PUBLISH: NavItem[] = [
+  { href: "/publish", label: "New publication", icon: "plus" },
+];
+
+const MANAGE: NavItem[] = [
   { href: "/analytics", label: "Analytics", icon: "chart" },
   { href: "/promote", label: "Promote", icon: "boost" },
-  { href: "/verify", label: "Get Verified", icon: "check" },
+  { href: "/accounts", label: "Entities", icon: "entities" },
 ];
 
 const MONETIZE: NavItem[] = [
-  { href: "/pro", label: "Pro", badge: "Popular", icon: "star" },
-  { href: "/pricing", label: "Business", icon: "bag" },
-  { href: "/explore?type=opportunity", label: "Opportunities", icon: "spark" },
+  { href: "/pro", label: "Upgrade to Pro", badge: "Popular", icon: "star" },
+  { href: "/verify", label: "Get Verified", icon: "check" },
 ];
 
 function Icon({ name }: { name: string }) {
@@ -58,6 +66,13 @@ function Icon({ name }: { name: string }) {
           <path d="m20 20-3.2-3.2" strokeLinecap="round" />
         </svg>
       );
+    case "bell":
+      return (
+        <svg {...p}>
+          <path d="M6 9a6 6 0 0 1 12 0c0 7 2 7 2 9H4c0-2 2-2 2-9" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M10 20a2 2 0 0 0 4 0" strokeLinecap="round" />
+        </svg>
+      );
     case "users":
       return (
         <svg {...p}>
@@ -72,6 +87,18 @@ function Icon({ name }: { name: string }) {
           <path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-3.2L6 21V4.5a1 1 0 0 1 1-1z" strokeLinejoin="round" />
         </svg>
       );
+    case "activity":
+      return (
+        <svg {...p}>
+          <path d="M4 12h4l2-6 4 12 2-6h4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case "plus":
+      return (
+        <svg {...p}>
+          <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+        </svg>
+      );
     case "chart":
       return (
         <svg {...p}>
@@ -82,6 +109,15 @@ function Icon({ name }: { name: string }) {
       return (
         <svg {...p}>
           <path d="M13 3 4 14h7l-1 7 9-11h-7l1-7z" strokeLinejoin="round" />
+        </svg>
+      );
+    case "entities":
+      return (
+        <svg {...p}>
+          <rect x="3" y="3" width="7" height="7" rx="1.5" />
+          <rect x="14" y="3" width="7" height="7" rx="1.5" />
+          <rect x="3" y="14" width="7" height="7" rx="1.5" />
+          <rect x="14" y="14" width="7" height="7" rx="1.5" />
         </svg>
       );
     case "check":
@@ -95,19 +131,6 @@ function Icon({ name }: { name: string }) {
       return (
         <svg {...p}>
           <path d="m12 3 2.4 5.4 5.8.6-4.4 3.9 1.3 5.7L12 15.8 6.9 18.6l1.3-5.7L3.8 9l5.8-.6L12 3z" strokeLinejoin="round" />
-        </svg>
-      );
-    case "bag":
-      return (
-        <svg {...p}>
-          <path d="M6 8h12l-1 12H7L6 8z" strokeLinejoin="round" />
-          <path d="M9 8V6a3 3 0 0 1 6 0v2" strokeLinecap="round" />
-        </svg>
-      );
-    case "spark":
-      return (
-        <svg {...p}>
-          <path d="M12 3v4M12 17v4M3 12h4M17 12h4" strokeLinecap="round" />
         </svg>
       );
     default:
@@ -170,7 +193,7 @@ export function MobileMenuButton() {
     const isActive =
       pathname === item.href ||
       (base !== "/home" && pathname.startsWith(base));
-    const isPro = item.label === "Pro";
+    const isPro = item.label.includes("Pro");
     return (
       <Link
         href={item.href}
@@ -219,6 +242,9 @@ export function MobileMenuButton() {
                   </span>
                 </div>
 
+                <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600">
+                  Publishing as
+                </p>
                 <button
                   type="button"
                   onClick={() => setMode(mode === "switch" ? "nav" : "switch")}
@@ -249,7 +275,7 @@ export function MobileMenuButton() {
                       {identityType} · @{identityHandle}
                     </p>
                   </div>
-                  <span className="text-zinc-500">›</span>
+                  <span className="text-zinc-500">▾</span>
                 </button>
               </div>
 
@@ -262,13 +288,23 @@ export function MobileMenuButton() {
                   />
                 ) : (
                   <>
-                    <Section label="Home">
-                      {MAIN.map((item) => (
+                    <Section label="">
+                      {PRIMARY.map((item) => (
                         <NavLink key={item.label} item={item} />
                       ))}
                     </Section>
-                    <Section label="Grow">
-                      {GROW.map((item) => (
+                    <Section label="Your network">
+                      {NETWORK.map((item) => (
+                        <NavLink key={item.label} item={item} />
+                      ))}
+                    </Section>
+                    <Section label="Publish">
+                      {PUBLISH.map((item) => (
+                        <NavLink key={item.label} item={item} />
+                      ))}
+                    </Section>
+                    <Section label="Manage">
+                      {MANAGE.map((item) => (
                         <NavLink key={item.label} item={item} />
                       ))}
                     </Section>
@@ -283,6 +319,27 @@ export function MobileMenuButton() {
 
               <div className="shrink-0 space-y-1 border-t border-white/[0.05] px-3 py-3">
                 <Link
+                  href={active?.path || "/profile"}
+                  onClick={close}
+                  className="flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-zinc-300"
+                >
+                  <div className="h-7 w-7 shrink-0 overflow-hidden rounded-full bg-white/10">
+                    {identityAvatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={identityAvatar}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-white">
+                        {identityName.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  Profile
+                </Link>
+                <Link
                   href="/settings"
                   onClick={close}
                   className="flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-zinc-300"
@@ -292,34 +349,6 @@ export function MobileMenuButton() {
                     <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" strokeLinecap="round" />
                   </svg>
                   Settings
-                </Link>
-                <Link
-                  href={active?.path || "/profile"}
-                  onClick={close}
-                  className="flex items-center gap-2.5 rounded-xl px-2 py-2"
-                >
-                  <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white/10">
-                    {identityAvatar ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={identityAvatar}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-white">
-                        {identityName.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-[12px] font-medium text-white">
-                      {identityName}
-                    </p>
-                    <p className="text-[10px] capitalize text-zinc-600">
-                      {identityType}
-                    </p>
-                  </div>
                 </Link>
               </div>
             </aside>
@@ -363,9 +392,13 @@ function Section({
 }) {
   return (
     <div className="mb-3">
-      <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
-        {label}
-      </p>
+      {label ? (
+        <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
+          {label}
+        </p>
+      ) : (
+        <div className="pt-1" />
+      )}
       <div className="space-y-0.5">{children}</div>
     </div>
   );
