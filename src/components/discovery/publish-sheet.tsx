@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   readActiveAccount,
   onAccountSwitch,
+  isEntityContext,
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
 import { readProfile } from "@/lib/discovery/local-profile";
@@ -134,10 +135,9 @@ export function PublishSheet({
 
   if (!mounted || !open) return null;
 
-  const publishingAs =
-    active?.kind === "entity" ? active.name : displayName;
-  const publishingType =
-    active?.kind === "entity" ? active.type : "personal";
+  const asEntity = isEntityContext(active);
+  const publishingAs = asEntity && active ? active.name : displayName;
+  const publishingType = asEntity && active ? active.type : "personal";
 
   function goPublish() {
     const type = selected || "article";
@@ -206,7 +206,7 @@ export function PublishSheet({
             Publish as
           </p>
           <p className="mt-1 text-[12px] text-zinc-500">
-            Choose who you're publishing for.
+            Choose who you&apos;re publishing for.
           </p>
           <div className="mt-2 flex items-center gap-3 rounded-2xl bg-white/[0.03] px-3 py-3 ring-1 ring-white/[0.06]">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">

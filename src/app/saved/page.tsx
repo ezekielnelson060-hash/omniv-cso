@@ -142,7 +142,7 @@ export default function SavedPage() {
                       className="flex items-center gap-3 p-2.5 pr-3"
                     >
                       <div
-                        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${tone} text-[11px] font-bold uppercase text-white/90"}
+                        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${tone} text-[11px] font-bold uppercase text-white/90`}
                       >
                         {label.slice(0, 3)}
                       </div>
