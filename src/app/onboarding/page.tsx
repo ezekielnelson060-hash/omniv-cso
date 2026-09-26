@@ -36,6 +36,7 @@ export default function OnboardingPage() {
   }, []);
 
   function saveAndNext() {
+    const existing = readProfile();
     writeProfile({
       displayName: name.trim() || "You",
       handle:
@@ -45,6 +46,7 @@ export default function OnboardingPage() {
           .slice(0, 24) || "you",
       bio: bio.trim(),
       location: location.trim(),
+      joinedAt: existing.joinedAt,
       avatarUrl: avatarUrl || undefined,
     });
     if (step < 3) setStep(step + 1);

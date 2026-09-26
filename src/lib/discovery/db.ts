@@ -109,11 +109,13 @@ export async function listDiscoveryEntities(
   if (!supabase) return SEED_ENTITIES;
 
   try {
-    let { data, error } = await supabase
+    const fullResult = await supabase
       .from("discovery_entities")
       .select(ENT_SELECT)
       .order("heat", { ascending: false })
       .limit(200);
+    let data = fullResult.data as Row[] | null;
+    let { error } = fullResult;
 
     if (error) {
       const retry = await supabase
@@ -121,7 +123,7 @@ export async function listDiscoveryEntities(
         .select(ENT_SELECT_SAFE)
         .order("heat", { ascending: false })
         .limit(200);
-      data = retry.data;
+      data = retry.data as Row[] | null;
       error = retry.error;
     }
 
@@ -147,12 +149,13 @@ export async function getDiscoveryEntity(
 ): Promise<LiveEntity | null> {
   if (supabase) {
     try {
-      let { data } = await supabase
+      const fullResult = await supabase
         .from("discovery_entities")
         .select(ENT_SELECT)
         .eq("type", type)
         .eq("slug", slug)
         .maybeSingle();
+      let data = fullResult.data as Row | null;
 
       if (!data) {
         const retry = await supabase
@@ -161,7 +164,7 @@ export async function getDiscoveryEntity(
           .eq("type", type)
           .eq("slug", slug)
           .maybeSingle();
-        data = retry.data;
+        data = retry.data as Row | null;
       }
 
       if (data) return rowToEntity(data as Row);

@@ -92,7 +92,6 @@ export default async function ExplorePage({ searchParams }: Props) {
         (e) =>
           e.type === "company" ||
           e.type === "brand" ||
-          e.type === "organization" ||
           e.type === "product"
       );
     }

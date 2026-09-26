@@ -9,6 +9,23 @@ import {
   type IntentKind,
 } from "@/lib/discovery/types";
 
+type EntityListRow = {
+  id: string;
+  type: EntityType;
+  slug: string;
+  name: string;
+  tagline: string;
+  location: string | null;
+  about: string;
+  intents: unknown;
+  tags: unknown;
+  heat: number | null;
+  published_at: string | null;
+  verified: boolean | null;
+  avatar_url?: string | null;
+  cover_url?: string | null;
+};
+
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -25,11 +42,13 @@ export async function GET() {
     const safe =
       "id, type, slug, name, tagline, location, about, intents, tags, heat, published_at, verified";
 
-    let { data, error } = await supabase
+    const fullResult = await supabase
       .from("discovery_entities")
       .select(full)
       .eq("owner_id", user.id)
       .order("created_at", { ascending: false });
+    let data = fullResult.data as EntityListRow[] | null;
+    let { error } = fullResult;
 
     if (error) {
       const retry = await supabase
@@ -37,7 +56,7 @@ export async function GET() {
         .select(safe)
         .eq("owner_id", user.id)
         .order("created_at", { ascending: false });
-      data = retry.data;
+      data = retry.data as EntityListRow[] | null;
       error = retry.error;
     }
 
