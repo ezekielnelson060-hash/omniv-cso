@@ -1,8 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const baseUrl = (
-  process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
-).replace(/\/$/, "");
+const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media").replace(/\/$/, "");
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -12,25 +10,32 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         disallow: [
           "/api/",
-          "/crm",
-          "/dashboard",
-          "/settings",
-          "/ziki",
-          "/notifications",
-          "/opportunities",
-          "/catalogue",
-          "/content",
+          "/accounts",
+          "/activate",
+          "/admin",
           "/analytics",
           "/artist-brain",
-          "/label",
-          "/reports",
-          "/admin",
-          "/onboarding",
-          "/activate",
-          "/release-simulator",
+          "/catalogue",
+          "/content",
+          "/crm",
+          "/dashboard",
           "/discover",
-          "/help",
           "/g/",
+          "/help",
+          "/label",
+          "/login",
+          "/notifications",
+          "/onboarding",
+          "/opportunities",
+          "/pricing",
+          "/promote",
+          "/publish",
+          "/release-simulator",
+          "/reports",
+          "/settings",
+          "/signup",
+          "/verify",
+          "/ziki",
         ],
       },
     ],

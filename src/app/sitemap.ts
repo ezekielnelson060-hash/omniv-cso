@@ -1,15 +1,36 @@
 import type { MetadataRoute } from "next";
 import { SEED_ENTITIES } from "@/lib/discovery/seed";
-import { entityPath } from "@/lib/discovery/types";
+import { entityPath, publicationPath } from "@/lib/discovery/types";
+import { listDiscoveryEntities, listLivePublications } from "@/lib/discovery/db";
 
-const baseUrl = (
-  process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
-).replace(/\/$/, "");
+const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media").replace(/\/$/, "");
 
-/** Public routes only — auth app surfaces stay out of the index. */
-export default function sitemap(): MetadataRoute.Sitemap {
+async function getPublicData() {
+  try {
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+    return {
+      entities: await listDiscoveryEntities(supabase),
+      publications: await listLivePublications(supabase, 200),
+    };
+  } catch {
+    return { entities: SEED_ENTITIES, publications: [] };
+  }
+}
+
+/** Public routes only — auth, checkout, and application surfaces stay out of the index. */
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-
+  const { entities, publications } = await getPublicData();
+  const staticRoutes = [
+    { path: "/", changeFrequency: "daily" as const, priority: 1 },
+    { path: "/explore", changeFrequency: "daily" as const, priority: 0.95 },
+    { path: "/blog", changeFrequency: "weekly" as const, priority: 0.7 },
+    { path: "/partners", changeFrequency: "monthly" as const, priority: 0.4 },
+    { path: "/contact", changeFrequency: "yearly" as const, priority: 0.3 },
+    { path: "/privacy", changeFrequency: "yearly" as const, priority: 0.2 },
+    { path: "/terms", changeFrequency: "yearly" as const, priority: 0.2 },
+  ];
   const blogSlugs = [
     "you-dont-need-more-fans",
     "how-to-find-your-best-fan-city",
@@ -19,83 +40,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "ai-tools-for-musicians-what-ai-should-do",
     "make-money-without-only-streaming",
   ];
-
-  const blogRoutes = blogSlugs.map((slug) => ({
-    url: `${baseUrl}/blog/${slug}`,
-    lastModified: now,
-    changeFrequency: "monthly" as const,
-    priority: 0.7,
-  }));
-
-  const entityRoutes = SEED_ENTITIES.map((e) => ({
-    url: `${baseUrl}${entityPath(e)}`,
-    lastModified: now,
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-  }));
-
   return [
-    {
-      url: `${baseUrl}/`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/explore`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.95,
-    },
-    {
-      url: `${baseUrl}/verify`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-    {
-      url: `${baseUrl}/blog`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/partners`,
-      lastModified: now,
-      changeFrequency: "monthly" as const,
-      priority: 0.4,
-    },
-    {
-      url: `${baseUrl}/signup`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/login`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/contact`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.3,
-    },
-    {
-      url: `${baseUrl}/privacy`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.2,
-    },
-    {
-      url: `${baseUrl}/terms`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.2,
-    },
-    ...entityRoutes,
-    ...blogRoutes,
+    ...staticRoutes.map((route) => ({ url: `${baseUrl}${route.path}`, lastModified: now, changeFrequency: route.changeFrequency, priority: route.priority })),
+    ...entities.map((entity) => ({ url: `${baseUrl}${entityPath(entity)}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.8 })),
+    ...publications.map((publication) => ({ url: `${baseUrl}${publicationPath(publication)}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.75 })),
+    ...blogSlugs.map((slug) => ({ url: `${baseUrl}/blog/${slug}`, lastModified: now, changeFrequency: "monthly" as const, priority: 0.7 })),
   ];
 }

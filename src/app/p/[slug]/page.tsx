@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { SaveButton } from "@/components/discovery/save-button";
 import { ShareButton } from "@/components/discovery/share-button";
 import { FollowButton } from "@/components/discovery/follow-button";
+import { StructuredData } from "@/components/StructuredData";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { createClient } from "@/lib/supabase/server";
@@ -157,6 +158,20 @@ export default async function PublicationPage({ params }: Props) {
   const mediaUrl = p.mediaUrl;
   const fullText = `${p.summary} ${p.body || ""}`;
   const mins = readMinutes(fullText);
+  const origin = (process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media").replace(/\/$/, "");
+  const pageUrl = `${origin}${path}`;
+  const articleLd = {
+    "@context": "https://schema.org",
+    "@type": p.type === "article" || p.type === "research" ? "Article" : "CreativeWork",
+    headline: p.title,
+    description: p.summary,
+    url: pageUrl,
+    datePublished: p.publishedAt || undefined,
+    author: { "@type": "Organization", name: publisherName },
+    publisher: { "@type": "Organization", name: "Omniv", url: origin },
+    image: coverUrl,
+    mainEntityOfPage: { "@type": "WebPage", "@id": pageUrl },
+  };
 
   const isPdf = mediaUrl?.toLowerCase().includes(".pdf");
   const ytMatch = mediaUrl?.match(
@@ -191,6 +206,7 @@ export default async function PublicationPage({ params }: Props) {
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
+        <StructuredData id={`publication-${p.slug}`} data={articleLd} />
         <div
           className={`relative min-h-[300px] bg-gradient-to-b ${hero} sm:min-h-[380px]`}
           style={

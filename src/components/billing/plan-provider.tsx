@@ -58,16 +58,22 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       }
       const { data } = await supabase
         .from("profiles")
-        .select("plan, plan_status, billing_status")
+        .select("plan, plan_status, billing_status, plan_expires_at")
         .eq("id", user.id)
         .maybeSingle();
 
       const status = data?.plan_status || data?.billing_status || "none";
       const dbPlan = data?.plan;
+      const expiresAt = data?.plan_expires_at
+        ? new Date(data.plan_expires_at).getTime()
+        : null;
+      const entitlementActive =
+        status === "active" &&
+        (expiresAt === null || Number.isNaN(expiresAt) || expiresAt > Date.now());
 
       // Paid plans only stick when backend marked active (webhook)
       if (isPlanId(dbPlan) && dbPlan !== "free") {
-        if (status === "active") {
+        if (entitlementActive) {
           setPlanState(dbPlan);
           setPlanStatus("active");
         } else {

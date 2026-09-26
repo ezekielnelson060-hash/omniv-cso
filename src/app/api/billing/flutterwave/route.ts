@@ -105,10 +105,12 @@ export async function POST(req: Request) {
         logo: `${origin}/logo.svg`,
       },
       meta: {
+        ...(body.meta || {}),
         plan,
+        amount: String(amount),
+        currency: process.env.FLW_CURRENCY || "USD",
         user_id: userId || "",
         product: plan === "promote" ? "promote" : "discovery",
-        ...(body.meta || {}),
       },
     };
 

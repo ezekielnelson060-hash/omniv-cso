@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/discovery/contact-form";
+import { StructuredData } from "@/components/StructuredData";
 import { FollowButton } from "@/components/discovery/follow-button";
 import { SaveButton } from "@/components/discovery/save-button";
 import { FollowerCount } from "@/components/discovery/follower-count";
@@ -132,9 +133,23 @@ export default async function EntityPage({ params, searchParams }: Props) {
     })
     .slice(0, 5);
 
+  const origin = (process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media").replace(/\/$/, "");
+  const pageUrl = `${origin}${path}`;
+  const entityLd = {
+    "@context": "https://schema.org",
+    "@type": e.type === "person" || e.type === "artist" ? "Person" : "Organization",
+    name: e.name,
+    description: e.about || e.tagline,
+    url: pageUrl,
+    image: avatarUrl || undefined,
+    address: e.location ? { "@type": "PostalAddress", addressLocality: e.location } : undefined,
+    sameAs: e.links?.map((link) => link.href),
+  };
+
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
+        <StructuredData id={`entity-${e.type}-${e.slug}`} data={entityLd} />
         <div
           className="relative h-40 overflow-hidden bg-gradient-to-br from-omniv-gold/30 via-zinc-900 to-black sm:h-48"
           style={

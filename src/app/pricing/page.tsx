@@ -118,7 +118,7 @@ export default async function PricingPage({ searchParams }: Props) {
               <ul className="mt-4 space-y-2">
                 {[
                   "Everything in Free",
-                  "Verified publisher badge",
+                  "Ongoing verified publisher badge",
                   "Higher search visibility",
                   "Audience insights",
                   "Priority support",
@@ -169,7 +169,8 @@ export default async function PricingPage({ searchParams }: Props) {
 
           <p className="mt-10 text-center text-[12px] text-zinc-600">
             Secure card payments via Flutterwave. You must be signed in so we
-            can attach Pro to your account and turn on verified badges.
+            can attach Pro to your account and turn on verified badges. Pro
+            renews monthly when a successful payment is received.
           </p>
           <p className="mt-2 text-center text-[12px] text-zinc-600">
             <Link href="/signup?next=/pricing" className="text-omniv-gold">

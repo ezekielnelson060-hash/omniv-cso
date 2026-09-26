@@ -26,7 +26,7 @@ export function VerifiedBadge({
   );
 }
 
-/** Mockup 8 — Verified Publisher card + Get Verified CTA */
+/** Upgrade card shown on an unverified public entity page. */
 export function GetVerifiedCard() {
   return (
     <div className="mt-8 overflow-hidden rounded-2xl ring-1 ring-white/[0.1]">
@@ -42,14 +42,14 @@ export function GetVerifiedCard() {
               Verified Publisher
             </p>
             <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-400">
-              This entity has been verified by Omniv. Verified accounts get
-              higher visibility, more trust, and access to premium features.
+              Pro includes an ongoing verified badge for this entity, higher
+              visibility, more trust, and access to premium features.
             </p>
             <Link
               href="/verify"
               className="mt-4 inline-flex h-11 items-center rounded-full bg-omniv-gold px-5 text-[14px] font-semibold text-black"
             >
-              Get Verified
+              View Pro plans
             </Link>
           </div>
         </div>
