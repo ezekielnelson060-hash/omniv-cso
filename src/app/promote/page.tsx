@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useMemo, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { CurrentIdentityBanner } from "@/components/discovery/current-identity";
 import { startFlutterwaveCheckout } from "@/lib/checkout";
 import { type PromotionTargetType } from "@/lib/discovery/monetization";
+import {
+  readActiveAccount,
+  onAccountSwitch,
+  type ActiveAccount,
+} from "@/lib/discovery/active-account";
 
 type Pub = {
   id: string;
@@ -19,7 +25,7 @@ type Entity = { id: string; name: string; slug: string; type: string };
 
 const TARGETS: { id: PromotionTargetType; label: string }[] = [
   { id: "publication", label: "Publication" },
-  { id: "entity", label: "Entity" },
+  { id: "entity", label: "Identity" },
   { id: "product", label: "Product" },
   { id: "event", label: "Event" },
   { id: "opportunity", label: "Opportunity" },
@@ -27,34 +33,51 @@ const TARGETS: { id: PromotionTargetType; label: string }[] = [
 
 const AUDIENCES = [
   "AI & Research",
-  "African Tech",
-  "Music",
+  "Technology",
+  "Business",
   "Founders",
   "Investors",
   "Creators",
+  "Music",
+  "Culture",
+  "Media",
+  "Policy",
+  "Design",
+  "Students",
 ];
 
-const LOCATIONS = [
-  "Africa",
-  "Nigeria",
-  "Kenya",
-  "South Africa",
-  "Ghana",
-  "Global",
+/** Regions & major markets — global discovery */
+const REGIONS: { id: string; label: string; group: string }[] = [
+  { id: "global", label: "Worldwide", group: "Global" },
+  { id: "africa", label: "Africa (all)", group: "Africa" },
+  { id: "nigeria", label: "Nigeria", group: "Africa" },
+  { id: "ghana", label: "Ghana", group: "Africa" },
+  { id: "kenya", label: "Kenya", group: "Africa" },
+  { id: "south-africa", label: "South Africa", group: "Africa" },
+  { id: "egypt", label: "Egypt", group: "Africa" },
+  { id: "europe", label: "Europe (all)", group: "Europe" },
+  { id: "uk", label: "United Kingdom", group: "Europe" },
+  { id: "germany", label: "Germany", group: "Europe" },
+  { id: "france", label: "France", group: "Europe" },
+  { id: "north-america", label: "North America", group: "Americas" },
+  { id: "usa", label: "United States", group: "Americas" },
+  { id: "canada", label: "Canada", group: "Americas" },
+  { id: "brazil", label: "Brazil", group: "Americas" },
+  { id: "asia", label: "Asia (all)", group: "Asia & Pacific" },
+  { id: "india", label: "India", group: "Asia & Pacific" },
+  { id: "uae", label: "United Arab Emirates", group: "Asia & Pacific" },
+  { id: "singapore", label: "Singapore", group: "Asia & Pacific" },
+  { id: "australia", label: "Australia", group: "Asia & Pacific" },
 ];
 
-const DURATIONS = [
-  { id: "3", label: "3 days" },
-  { id: "7", label: "7 days" },
-  { id: "14", label: "14 days" },
-];
-
-const BUDGETS = [
-  { id: "20", label: "$20" },
-  { id: "50", label: "$50" },
-  { id: "100", label: "$100" },
-  { id: "custom", label: "Custom" },
-];
+/** Duration packages with aligned pricing (USD) */
+const PACKAGES = [
+  { days: 1, price: 12, label: "1 day", reach: "~2–4k impressions" },
+  { days: 3, price: 29, label: "3 days", reach: "~8–15k impressions" },
+  { days: 7, price: 59, label: "7 days", reach: "~25–40k impressions" },
+  { days: 14, price: 99, label: "14 days", reach: "~50–80k impressions" },
+  { days: 30, price: 179, label: "30 days", reach: "~120–200k impressions" },
+] as const;
 
 function PromoteInner() {
   const sp = useSearchParams();
@@ -65,17 +88,26 @@ function PromoteInner() {
   const [pubs, setPubs] = useState<Pub[]>([]);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [slug, setSlug] = useState(preSlug);
-  const [targetType, setTargetType] = useState<PromotionTargetType>("publication");
-  const [audience, setAudience] = useState("AI & Research");
-  const [location, setLocation] = useState("Africa");
-  const [duration, setDuration] = useState("7");
-  const [budget, setBudget] = useState("50");
-  const [customBudget, setCustomBudget] = useState("");
+  const [targetType, setTargetType] =
+    useState<PromotionTargetType>("publication");
+  const [audiences, setAudiences] = useState<string[]>(["AI & Research"]);
+  const [region, setRegion] = useState("global");
+  const [packageDays, setPackageDays] = useState(7);
   const [auth, setAuth] = useState<boolean | null>(null);
   const [done, setDone] = useState(billingOk);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [review, setReview] = useState(false);
+  const [identity, setIdentity] = useState<ActiveAccount | null>(null);
+
+  const pkg = PACKAGES.find((p) => p.days === packageDays) ?? PACKAGES[2];
+  const regionLabel =
+    REGIONS.find((r) => r.id === region)?.label ?? "Worldwide";
+
+  useEffect(() => {
+    setIdentity(readActiveAccount());
+    return onAccountSwitch((a) => setIdentity(a));
+  }, []);
 
   useEffect(() => {
     if (billingOk) setDone(true);
@@ -85,9 +117,7 @@ function PromoteInner() {
     (async () => {
       try {
         const [pubRes, entityRes] = await Promise.all([
-          fetch(
-          "/api/discovery/publications/list?owner=me&limit=30"
-          ),
+          fetch("/api/discovery/publications/list?owner=me&limit=30"),
           fetch("/api/discovery/entities"),
         ]);
         const data = await pubRes.json();
@@ -104,42 +134,60 @@ function PromoteInner() {
     })();
   }, [preSlug]);
 
-  const candidates = targetType === "entity"
-    ? entities.map((entity) => ({ id: entity.id, title: entity.name, slug: entity.slug, type: entity.type }))
-    : targetType === "publication"
-      ? pubs
-      : pubs.filter((publication) => publication.type === targetType);
+  const candidates = useMemo(() => {
+    if (targetType === "entity") {
+      return entities.map((entity) => ({
+        id: entity.id,
+        title: entity.name,
+        slug: entity.slug,
+        type: entity.type,
+      }));
+    }
+    if (targetType === "publication") return pubs;
+    return pubs.filter((p) => p.type === targetType);
+  }, [targetType, pubs, entities]);
+
   const selected = candidates.find((item) => item.slug === slug);
 
   useEffect(() => {
-    if (candidates.length > 0 && !candidates.some((item) => item.slug === slug)) {
+    if (
+      candidates.length > 0 &&
+      !candidates.some((item) => item.slug === slug)
+    ) {
       setSlug(candidates[0]!.slug);
     }
   }, [candidates, slug]);
 
-  function budgetAmount() {
-    if (budget === "custom") {
-      const n = parseInt(customBudget, 10);
-      return Number.isFinite(n) ? n : 50;
-    }
-    return parseInt(budget, 10) || 50;
+  function toggleAudience(a: string) {
+    setAudiences((prev) => {
+      if (prev.includes(a)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((x) => x !== a);
+      }
+      if (prev.length >= 4) return prev;
+      return [...prev, a];
+    });
   }
 
   async function onContinue() {
     setError(null);
     setLoading(true);
-    const amount = budgetAmount();
+    const amount = pkg.price;
+
     try {
-      const payload = {
-        slug,
-        title: selected?.title,
-        audience,
-        location,
-        duration,
-        budget: amount,
-        at: Date.now(),
-      };
-      localStorage.setItem("omniv_promote_draft", JSON.stringify(payload));
+      localStorage.setItem(
+        "omniv_promote_draft",
+        JSON.stringify({
+          slug,
+          title: selected?.title,
+          audiences,
+          region,
+          duration: pkg.days,
+          budget: amount,
+          identity: identity?.name || "personal",
+          at: Date.now(),
+        })
+      );
     } catch {
       /* ignore */
     }
@@ -152,10 +200,11 @@ function PromoteInner() {
         targetId: selected?.id,
         targetSlug: slug,
         targetTitle: selected?.title || slug,
-        durationDays: Number(duration),
+        durationDays: pkg.days,
         budget: amount,
-        audience: [audience],
-        location,
+        audience: audiences,
+        location: regionLabel,
+        entityId: identity?.id || null,
       }),
     });
     const draftData = await draftRes.json();
@@ -164,16 +213,17 @@ function PromoteInner() {
       setLoading(false);
       return;
     }
+
     const result = await startFlutterwaveCheckout({
       plan: "promote",
       amount,
       meta: {
-        promotion_id: draftData.promotion.id,
+        promotion_id: draftData.promotion?.id,
         target_type: targetType,
         slug,
-        audience,
-        location,
-        duration,
+        region,
+        duration: String(pkg.days),
+        entity_id: identity?.id,
       },
     });
 
@@ -194,16 +244,21 @@ function PromoteInner() {
               type="button"
               onClick={() => router.back()}
               className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400"
+              aria-label="Back"
             >
               ←
             </button>
-                <span className="text-[16px] font-semibold text-white">
+            <span className="text-[16px] font-semibold text-white">
               Promote
             </span>
           </div>
         </header>
 
-        <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl">
+        <main className="mx-auto max-w-lg px-4 pb-28 pt-2 md:max-w-2xl">
+          <div className="mb-5">
+            <CurrentIdentityBanner action="Campaign runs as" />
+          </div>
+
           {auth === false && (
             <div className="mt-10 text-center">
               <p className="text-zinc-500">Sign in to promote.</p>
@@ -217,40 +272,53 @@ function PromoteInner() {
           )}
 
           {auth && done && (
-            <div className="mt-8 rounded-2xl bg-emerald-500/10 p-6 text-center ring-1 ring-emerald-500/25">
+            <div className="mt-6 rounded-2xl bg-emerald-500/10 p-6 text-center ring-1 ring-emerald-500/25">
               <p className="text-[16px] font-semibold text-emerald-300">
                 {billingOk ? "Checkout returned" : "Promotion ready"}
               </p>
               <p className="mt-2 text-[13px] text-zinc-400">
                 {billingOk
-                  ? "We are waiting for the payment confirmation webhook. Your promotion will become active only after the transaction is verified."
-                  : `Targeted discovery for “${selected?.title || slug}”. Review your settings before payment.`}
+                  ? "Waiting for payment confirmation. The campaign activates only after Flutterwave verifies the charge."
+                  : `Targeted discovery for “${selected?.title || slug}”.`}
               </p>
               <Link
-                href={slug ? `/p/${slug}` : "/home"}
+                href={identity?.path || "/home"}
                 className="mt-5 inline-flex h-11 items-center rounded-full bg-omniv-gold px-5 text-[14px] font-semibold text-black"
               >
-                Back to publication
+                Back
               </Link>
             </div>
           )}
 
           {auth && !done && (
-            <div className="space-y-6">
+            <div className="space-y-7">
+              <p className="text-[14px] leading-relaxed text-zinc-500">
+                Reach the right people for this identity — not more noise.
+                Pricing is fixed by campaign length.
+              </p>
+
               <Field label="What do you want to promote?">
                 <div className="flex flex-wrap gap-2">
-                  {TARGETS.map((target) => <Chip key={target.id} active={targetType === target.id} onClick={() => setTargetType(target.id)}>{target.label}</Chip>)}
+                  {TARGETS.map((t) => (
+                    <Chip
+                      key={t.id}
+                      active={targetType === t.id}
+                      onClick={() => setTargetType(t.id)}
+                    >
+                      {t.label}
+                    </Chip>
+                  ))}
                 </div>
               </Field>
 
-              {candidates.length > 0 && (
-                <div className="flex items-center gap-3 rounded-2xl bg-white/[0.04] p-3 ring-1 ring-white/[0.08]">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-omniv-gold/20 text-omniv-gold">
+              {selected && (
+                <div className="flex items-center gap-3 rounded-2xl bg-white/[0.03] p-3.5">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-omniv-gold/15 text-omniv-gold">
                     ▣
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-semibold text-white">
-                      {selected?.title || "Choose a target"}
+                      {selected.title}
                     </p>
                     <p className="text-[12px] capitalize text-zinc-500">
                       {targetType}
@@ -261,11 +329,11 @@ function PromoteInner() {
 
               {candidates.length > 1 && (
                 <label className="block">
-                  <span className="text-[12px] text-zinc-400">{targetType === "entity" ? "Entity" : "Content"}</span>
+                  <span className="text-[12px] text-zinc-500">Select</span>
                   <select
                     value={slug}
                     onChange={(e) => setSlug(e.target.value)}
-                    className="mt-1.5 h-11 w-full rounded-xl bg-white/[0.04] px-3 text-[14px] text-white outline-none ring-1 ring-white/[0.08]"
+                    className="mt-1.5 h-12 w-full rounded-xl bg-white/[0.04] px-3 text-[14px] text-white outline-none ring-1 ring-white/[0.08]"
                   >
                     {candidates.map((p) => (
                       <option key={p.id} value={p.slug} className="bg-zinc-900">
@@ -278,20 +346,20 @@ function PromoteInner() {
 
               {candidates.length === 0 && (
                 <p className="text-[14px] text-zinc-500">
-                  {targetType === "entity" ? "Create an entity first." : `Create a ${targetType} first.`}{" "}
+                  Nothing to promote under this identity yet.{" "}
                   <Link href="/publish" className="text-omniv-gold">
-                    Create →
+                    Publish →
                   </Link>
                 </p>
               )}
 
-              <Field label="Target audience">
+              <Field label="Who should discover this? (up to 4)">
                 <div className="flex flex-wrap gap-2">
                   {AUDIENCES.map((a) => (
                     <Chip
                       key={a}
-                      active={audience === a}
-                      onClick={() => setAudience(a)}
+                      active={audiences.includes(a)}
+                      onClick={() => toggleAudience(a)}
                     >
                       {a}
                     </Chip>
@@ -299,70 +367,73 @@ function PromoteInner() {
                 </div>
               </Field>
 
-              <Field label="Location">
-                <div className="flex flex-wrap gap-2">
-                  {LOCATIONS.map((l) => (
-                    <Chip
-                      key={l}
-                      active={location === l}
-                      onClick={() => setLocation(l)}
-                    >
-                      {l}
-                    </Chip>
-                  ))}
-                </div>
+              <Field label="Where?">
+                <select
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  className="h-12 w-full rounded-xl bg-white/[0.04] px-3 text-[14px] text-white outline-none ring-1 ring-white/[0.08]"
+                >
+                  {["Global", "Africa", "Europe", "Americas", "Asia & Pacific"].map(
+                    (group) => (
+                      <optgroup key={group} label={group} className="bg-zinc-900">
+                        {REGIONS.filter((r) => r.group === group).map((r) => (
+                          <option key={r.id} value={r.id} className="bg-zinc-900">
+                            {r.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )
+                  )}
+                </select>
               </Field>
 
-              <Field label="Duration">
-                <div className="flex flex-wrap gap-2">
-                  {DURATIONS.map((d) => (
-                    <Chip
-                      key={d.id}
-                      active={duration === d.id}
-                      onClick={() => setDuration(d.id)}
+              <Field label="Campaign length">
+                <select
+                  value={packageDays}
+                  onChange={(e) => setPackageDays(Number(e.target.value))}
+                  className="h-12 w-full rounded-xl bg-white/[0.04] px-3 text-[14px] text-white outline-none ring-1 ring-white/[0.08]"
+                >
+                  {PACKAGES.map((p) => (
+                    <option
+                      key={p.days}
+                      value={p.days}
+                      className="bg-zinc-900"
                     >
-                      {d.label}
-                    </Chip>
+                      {p.label} — ${p.price}
+                    </option>
                   ))}
-                </div>
+                </select>
               </Field>
 
-              <Field label="Budget">
-                <div className="flex flex-wrap gap-2">
-                  {BUDGETS.map((b) => (
-                    <Chip
-                      key={b.id}
-                      active={budget === b.id}
-                      onClick={() => setBudget(b.id)}
-                    >
-                      {b.label}
-                    </Chip>
-                  ))}
+              {/* Price card tied to duration */}
+              <div className="rounded-2xl bg-omniv-gold/10 p-5 ring-1 ring-omniv-gold/30">
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
+                      Campaign total
+                    </p>
+                    <p className="mt-1 text-3xl font-semibold text-white">
+                      ${pkg.price}
+                    </p>
+                    <p className="mt-1 text-[13px] text-zinc-400">
+                      {pkg.label} · {regionLabel}
+                    </p>
+                  </div>
+                  <p className="text-right text-[12px] text-zinc-500">
+                    {pkg.reach}
+                  </p>
                 </div>
-                {budget === "custom" && (
-                  <input
-                    type="number"
-                    min={10}
-                    value={customBudget}
-                    onChange={(e) => setCustomBudget(e.target.value)}
-                    placeholder="Amount in USD"
-                    className="mt-3 h-11 w-full rounded-xl bg-white/[0.04] px-3.5 text-[14px] text-white outline-none ring-1 ring-white/[0.08]"
-                  />
-                )}
-              </Field>
+                <p className="mt-3 text-[12px] leading-relaxed text-zinc-500">
+                  One-time charge. Runs under{" "}
+                  <span className="text-zinc-300">
+                    {identity?.name || "Personal"}
+                  </span>
+                  . Impressions are estimates, not guarantees.
+                </p>
+              </div>
 
               {error && (
-                <p className="text-center text-[13px] text-rose-400">
-                  {error}
-                  {error.includes("Sign in") && (
-                    <>
-                      {" "}
-                      <Link href="/signup?next=/promote" className="underline">
-                        Sign in
-                      </Link>
-                    </>
-                  )}
-                </p>
+                <p className="text-center text-[13px] text-rose-400">{error}</p>
               )}
 
               <button
@@ -375,17 +446,44 @@ function PromoteInner() {
               </button>
 
               {review && (
-                <div className="rounded-2xl bg-white/[0.04] p-4 ring-1 ring-omniv-gold/30">
-                  <p className="text-[12px] font-semibold uppercase tracking-wide text-omniv-gold">Review</p>
-                  <p className="mt-2 text-[14px] text-white">{targetType} · {audience} · {location}</p>
-                  <p className="mt-1 text-[13px] text-zinc-400">{duration} days · ${budgetAmount()} total</p>
-                  <button type="button" disabled={loading} onClick={() => void onContinue()} className="mt-4 flex h-11 w-full items-center justify-center rounded-full bg-omniv-gold text-[14px] font-semibold text-black disabled:opacity-50">{loading ? "Opening checkout…" : "Continue to payment"}</button>
+                <div className="rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/[0.1]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-omniv-gold">
+                    Review
+                  </p>
+                  <ul className="mt-3 space-y-1.5 text-[13px] text-zinc-300">
+                    <li>
+                      <span className="text-zinc-500">Target · </span>
+                      {selected?.title}
+                    </li>
+                    <li>
+                      <span className="text-zinc-500">Audience · </span>
+                      {audiences.join(", ")}
+                    </li>
+                    <li>
+                      <span className="text-zinc-500">Region · </span>
+                      {regionLabel}
+                    </li>
+                    <li>
+                      <span className="text-zinc-500">Length · </span>
+                      {pkg.label}
+                    </li>
+                    <li>
+                      <span className="text-zinc-500">Total · </span>${pkg.price}
+                    </li>
+                  </ul>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => void onContinue()}
+                    className="mt-4 flex h-11 w-full items-center justify-center rounded-full bg-omniv-gold text-[14px] font-semibold text-black disabled:opacity-50"
+                  >
+                    {loading ? "Opening checkout…" : "Continue to payment"}
+                  </button>
                 </div>
               )}
 
-              <p className="text-center text-[12px] text-zinc-600">
-                Secure card payment via Flutterwave. Requires FLW_SECRET_KEY in
-                Vercel.
+              <p className="text-center text-[11px] text-zinc-600">
+                Secure card payment via Flutterwave.
               </p>
             </div>
           )}
@@ -406,7 +504,7 @@ function Field({
 }) {
   return (
     <div>
-      <p className="mb-2 text-[12px] font-medium text-zinc-400">{label}</p>
+      <p className="mb-2.5 text-[12px] font-medium text-zinc-400">{label}</p>
       {children}
     </div>
   );
@@ -425,10 +523,10 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-3.5 py-1.5 text-[13px] font-medium ${
+      className={`rounded-full px-3.5 py-2 text-[13px] font-medium transition ${
         active
           ? "bg-omniv-gold text-black"
-          : "text-zinc-400 ring-1 ring-white/12"
+          : "text-zinc-400 ring-1 ring-white/12 hover:text-white"
       }`}
     >
       {children}
