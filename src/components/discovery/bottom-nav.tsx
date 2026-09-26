@@ -16,15 +16,15 @@ type NavItem = {
   label: string;
   icon: ComponentType<{ active?: boolean }> | null;
   primary?: boolean;
-  profile?: boolean;
 };
 
+/** Mockup mobile bar: Home · Explore · + · Saved · Activity */
 const ITEMS: NavItem[] = [
   { href: "/home", label: "Home", icon: HomeIcon },
   { href: "/explore", label: "Explore", icon: ExploreIcon },
   { href: "/publish", label: "Publish", icon: null, primary: true },
   { href: "/saved", label: "Saved", icon: SavedIcon },
-  { href: "/profile", label: "Profile", icon: ProfileIcon, profile: true },
+  { href: "/activity", label: "Activity", icon: ActivityIcon },
 ];
 
 export function BottomNav() {
@@ -37,9 +37,8 @@ export function BottomNav() {
     return onAccountSwitch((a) => setActive(a));
   }, []);
 
-  const profileHref = active?.path || "/profile";
-  const onEntityProfile =
-    Boolean(active?.path) && pathname.startsWith(active!.path);
+  // keep active for future profile deep-links; silence unused if tree-shaken
+  void active;
 
   return (
     <>
@@ -59,17 +58,15 @@ export function BottomNav() {
                 </button>
               );
             }
-            const href = item.profile ? profileHref : item.href;
-            const activeNav = item.profile
-              ? pathname === "/profile" || onEntityProfile
-              : pathname === item.href ||
-                (item.href !== "/home" && pathname.startsWith(item.href));
+            const activeNav =
+              pathname === item.href ||
+              (item.href !== "/home" && pathname.startsWith(item.href));
             const Icon = item.icon;
             if (!Icon) return null;
             return (
               <Link
                 key={item.label}
-                href={href}
+                href={item.href}
                 className={`flex w-[18%] min-w-0 flex-col items-center gap-0.5 py-1 transition ${
                   activeNav ? "text-white" : "text-zinc-600"
                 }`}
@@ -143,7 +140,7 @@ function SavedIcon({ active }: { active?: boolean }) {
   );
 }
 
-function ProfileIcon({ active }: { active?: boolean }) {
+function ActivityIcon({ active }: { active?: boolean }) {
   return (
     <svg
       width="22"
