@@ -50,6 +50,17 @@ async function tryClient() {
   }
 }
 
+function hostLabel(href: string) {
+  try {
+    return new URL(href.startsWith("http") ? href : `https://${href}`).hostname.replace(
+      /^www\./,
+      ""
+    );
+  } catch {
+    return href;
+  }
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { type, slug } = await params;
   const supabase = await tryClient();
@@ -72,7 +83,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "profile",
       siteName: "Omniv",
       images: [{ url: image }],
-      firstName: e.type === "person" ? e.name.split(" ")[0] : undefined,
     },
     twitter: {
       card: "summary_large_image",
@@ -135,6 +145,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
   const editPath = `${path}/edit`;
   const coverUrl = (e as { coverUrl?: string | null }).coverUrl;
   const avatarUrl = (e as { avatarUrl?: string | null }).avatarUrl;
+  const links = e.links || [];
 
   const graphPublications = Array.from(
     new Map(
@@ -165,15 +176,12 @@ export default async function EntityPage({ params, searchParams }: Props) {
     description: e.about || e.tagline,
     url: pageUrl,
     image: avatarUrl || `${origin}/opengraph-image`,
-    logo: avatarUrl || undefined,
     additionalType: e.type,
     address: e.location
       ? { "@type": "PostalAddress", addressLocality: e.location }
       : undefined,
-    sameAs: e.links?.map((link) => link.href).filter((href) => href.startsWith("http")),
+    sameAs: links.map((l) => l.href).filter((h) => h.startsWith("http")),
     knowsAbout: e.tags,
-    publisher: { "@type": "Organization", name: "Omniv", url: origin },
-    mainEntityOfPage: { "@type": "WebPage", "@id": pageUrl },
   };
 
   return (
@@ -181,8 +189,8 @@ export default async function EntityPage({ params, searchParams }: Props) {
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
         <StructuredData id={`entity-${e.type}-${e.slug}`} data={entityLd} />
 
-        {/* Cover — strong scrim so photo noise never fights the bio */}
-        <div className="relative h-36 overflow-hidden bg-zinc-900 sm:h-44">
+        {/* Wide rectangular banner — X-style */}
+        <div className="relative aspect-[3/1] max-h-48 w-full overflow-hidden bg-zinc-900 sm:max-h-56">
           {coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -191,13 +199,13 @@ export default async function EntityPage({ params, searchParams }: Props) {
               className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-omniv-gold/25 via-zinc-900 to-black" />
+            <div className="absolute inset-0 bg-gradient-to-br from-omniv-gold/20 via-zinc-900 to-black" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-[#050505]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-[#050505]" />
 
           <Link
             href="/explore"
-            className="absolute left-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm"
+            className="absolute left-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/55 text-white"
             aria-label="Back"
           >
             ←
@@ -211,7 +219,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
             />
             <Link
               href={editPath}
-              className="flex h-9 items-center rounded-full bg-black/50 px-3 text-[12px] font-medium text-white backdrop-blur-sm"
+              className="flex h-9 items-center rounded-full bg-black/55 px-3.5 text-[13px] font-semibold text-white"
             >
               Edit
             </Link>
@@ -219,9 +227,8 @@ export default async function EntityPage({ params, searchParams }: Props) {
         </div>
 
         <main className="relative mx-auto max-w-lg px-4 pb-28 md:max-w-2xl md:px-6">
-          {/* Avatar + actions */}
-          <div className="-mt-11 flex items-end justify-between gap-3">
-            <div className="flex h-[88px] w-[88px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 text-3xl font-semibold text-black ring-[3px] ring-[#050505]">
+          <div className="-mt-12 flex items-end justify-between gap-3">
+            <div className="flex h-[92px] w-[92px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 text-3xl font-semibold text-black ring-4 ring-[#050505]">
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -242,29 +249,58 @@ export default async function EntityPage({ params, searchParams }: Props) {
               />
               <a
                 href="#contact"
-                className="inline-flex h-10 items-center rounded-full bg-transparent px-5 text-[13px] font-medium text-white ring-1 ring-white/20"
+                className="inline-flex h-10 items-center rounded-full bg-white/[0.08] px-5 text-[13px] font-semibold text-white"
               >
                 Contact
               </a>
             </div>
           </div>
 
-          {/* Name + bio */}
-          <div className="mt-4">
-            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight text-white">
+          <div className="mt-3">
+            <h1 className="flex flex-wrap items-center gap-1.5 text-[22px] font-bold tracking-tight text-white">
               {e.name}
               {e.verified && <VerifiedBadge />}
             </h1>
-            <p className="mt-1 text-[13px] capitalize text-zinc-500">
-              {e.type}
-              {e.verified ? " · Verified" : ""}
-              {e.location ? ` · ${e.location}` : ""}
-            </p>
+
             {e.tagline ? (
-              <p className="mt-2 text-[15px] leading-relaxed text-zinc-300">
+              <p className="mt-2 text-[15px] leading-relaxed text-zinc-200">
                 {e.tagline}
               </p>
             ) : null}
+
+            {/* X-style meta row: type · location · links */}
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[13px] text-zinc-500">
+              <span className="inline-flex items-center gap-1 capitalize">
+                <span aria-hidden className="opacity-70">
+                  ◈
+                </span>
+                {e.type}
+              </span>
+              {e.location ? (
+                <span className="inline-flex items-center gap-1">
+                  <span aria-hidden className="opacity-70">
+                    ⌖
+                  </span>
+                  {e.location}
+                </span>
+              ) : null}
+              {links.map((l) => (
+                <a
+                  key={l.href}
+                  href={l.href.startsWith("http") ? l.href : `https://${l.href}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-omniv-gold hover:underline"
+                >
+                  <span aria-hidden className="opacity-80">
+                    ↗
+                  </span>
+                  {l.label && l.label !== "Website"
+                    ? l.label
+                    : hostLabel(l.href)}
+                </a>
+              ))}
+            </div>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-[14px]">
@@ -276,11 +312,11 @@ export default async function EntityPage({ params, searchParams }: Props) {
           </div>
 
           {e.intents.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               {e.intents.map((i) => (
                 <span
                   key={i.kind + (i.detail ?? "")}
-                  className="rounded-full bg-omniv-gold/10 px-3 py-1 text-[12px] text-omniv-gold ring-1 ring-omniv-gold/30"
+                  className="rounded-full bg-omniv-gold/10 px-3 py-1 text-[12px] text-omniv-gold"
                 >
                   {INTENT_LABELS[i.kind]}
                   {i.detail ? ` · ${i.detail}` : ""}
@@ -289,15 +325,15 @@ export default async function EntityPage({ params, searchParams }: Props) {
             </div>
           )}
 
-          <div className="mt-7 flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          <div className="mt-6 -mx-4 flex gap-2 overflow-x-auto border-b border-white/[0.06] px-4 pb-0 scrollbar-none">
             {tabs.map((t) => (
               <Link
                 key={t.id}
                 href={t.id === "overview" ? path : `${path}?tab=${t.id}`}
-                className={`shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-medium transition ${
+                className={`shrink-0 border-b-2 px-3 pb-3 text-[14px] font-medium transition ${
                   activeTab === t.id
-                    ? "bg-omniv-gold text-black"
-                    : "text-zinc-500 ring-1 ring-white/12 hover:text-white"
+                    ? "border-omniv-gold text-white"
+                    : "border-transparent text-zinc-500 hover:text-zinc-300"
                 }`}
               >
                 {t.label}
@@ -316,24 +352,31 @@ export default async function EntityPage({ params, searchParams }: Props) {
                     <Link
                       key={t}
                       href={`/explore?q=${encodeURIComponent(t)}`}
-                      className="rounded-full bg-white/[0.04] px-3 py-1 text-[12px] text-zinc-400 ring-1 ring-white/[0.06] hover:text-white"
+                      className="rounded-full bg-white/[0.06] px-3 py-1 text-[12px] text-zinc-400 hover:text-white"
                     >
                       {t}
                     </Link>
                   ))}
                 </div>
               )}
-              {e.links?.map((l) => (
-                <a
-                  key={l.href}
-                  href={l.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block text-[14px] text-omniv-gold hover:underline"
-                >
-                  {l.label} →
-                </a>
-              ))}
+              {links.length > 0 && (
+                <div className="space-y-2">
+                  {links.map((l) => (
+                    <a
+                      key={l.href}
+                      href={
+                        l.href.startsWith("http") ? l.href : `https://${l.href}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-[14px] text-omniv-gold hover:underline"
+                    >
+                      <span>↗</span>
+                      {l.label || hostLabel(l.href)}
+                    </a>
+                  ))}
+                </div>
+              )}
               {!e.verified && <GetVerifiedCard />}
               <div id="contact" className="pt-4">
                 <ContactForm entityName={e.name} entityPath={path} />
@@ -343,9 +386,6 @@ export default async function EntityPage({ params, searchParams }: Props) {
 
           {activeTab === "activity" && (
             <div className="mt-6 space-y-2.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
-                Activity
-              </p>
               {pubs.length === 0 ? (
                 <p className="py-10 text-center text-[14px] text-zinc-500">
                   No activity yet for this identity.
@@ -355,7 +395,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
                   <Link
                     key={p.id}
                     href={publicationPath(p)}
-                    className="block rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]"
+                    className="block rounded-xl bg-white/[0.03] px-3.5 py-3"
                   >
                     <p className="text-[12px] text-zinc-500">
                       Published a{" "}
