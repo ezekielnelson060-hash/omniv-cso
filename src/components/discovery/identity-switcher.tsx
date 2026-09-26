@@ -22,8 +22,8 @@ type EntityRow = {
 };
 
 /**
- * Identity switcher — personal + owned entities.
- * Switching an entity changes the entire app context (like X / Instagram).
+ * Professional identity switcher.
+ * Personal account owns entities; each entity behaves as its own account.
  */
 export function IdentitySwitcher({
   onClose,
@@ -92,14 +92,14 @@ export function IdentitySwitcher({
     writeActiveAccount(next);
     setActive(next);
     onClose?.();
-    // Entity owns the app context — land on its public home
     router.push(e.path);
   }
 
   return (
-    <div className={compact ? "" : "p-1"}>
-      <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
-        Your identities
+    <div className={compact ? "" : "px-1 py-1"}>
+      {/* PERSONAL */}
+      <p className="px-3 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
+        Personal
       </p>
 
       <button
@@ -111,7 +111,7 @@ export function IdentitySwitcher({
             : "hover:bg-white/[0.04]"
         }`}
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -125,13 +125,18 @@ export function IdentitySwitcher({
           </p>
           <p className="text-[12px] text-zinc-500">Personal · @{handle}</p>
         </div>
-        {!active && (
-          <span className="h-2.5 w-2.5 rounded-full bg-omniv-gold" />
+        {!active ? (
+          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-omniv-gold text-[11px] font-bold text-black">
+            ●
+          </span>
+        ) : (
+          <span className="h-5 w-5 rounded-full ring-1 ring-white/20" />
         )}
       </button>
 
+      {/* ENTITIES */}
       <p className="mt-4 px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
-        Publish as
+        Entities
       </p>
 
       {entities.map((e) => {
@@ -147,7 +152,7 @@ export function IdentitySwitcher({
                 : "hover:bg-white/[0.04]"
             }`}
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/10 text-sm font-semibold text-white">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 text-sm font-semibold text-white">
               {e.avatar_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -170,11 +175,15 @@ export function IdentitySwitcher({
               </p>
               <p className="text-[12px] capitalize text-zinc-500">
                 {e.type}
-                {e.verified ? " · Verified" : ""} · @{e.slug}
+                {e.verified ? " · Verified" : ""}
               </p>
             </div>
-            {isActive && (
-              <span className="h-2.5 w-2.5 rounded-full bg-omniv-gold" />
+            {isActive ? (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-omniv-gold text-[11px] font-bold text-black">
+                ●
+              </span>
+            ) : (
+              <span className="h-5 w-5 rounded-full ring-1 ring-white/20" />
             )}
           </button>
         );
@@ -182,7 +191,7 @@ export function IdentitySwitcher({
 
       {auth && entities.length === 0 && (
         <p className="px-3 py-2 text-[12px] text-zinc-500">
-          No entities yet — create one to publish as a company, brand, or artist.
+          No entities yet — create a company, brand, artist, or product.
         </p>
       )}
 
@@ -196,22 +205,32 @@ export function IdentitySwitcher({
         </Link>
       )}
 
-      <Link
-        href="/accounts"
-        onClick={onClose}
-        className="mt-2 flex w-full items-center gap-3 rounded-xl border border-dashed border-omniv-gold/40 px-3 py-2.5 hover:bg-omniv-gold/5"
-      >
-        <span className="flex h-10 w-10 items-center justify-center rounded-full text-lg text-omniv-gold">
-          +
-        </span>
-        <span className="text-[14px] font-medium text-omniv-gold">
-          Create new entity
-        </span>
-      </Link>
+      <div className="mt-3 border-t border-white/[0.06] pt-3">
+        <Link
+          href="/accounts"
+          onClick={onClose}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-omniv-gold/5"
+        >
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-dashed border-omniv-gold/50 text-lg text-omniv-gold">
+            +
+          </span>
+          <span className="text-[14px] font-medium text-omniv-gold">
+            Create entity
+          </span>
+        </Link>
 
-      <p className="mt-4 px-3 text-[11px] leading-relaxed text-zinc-600">
-        Each entity is an independent account with its own audience, content,
-        and activity.
+        <Link
+          href="/accounts"
+          onClick={onClose}
+          className="mt-1 block px-3 py-2 text-[13px] text-zinc-500 hover:text-zinc-300"
+        >
+          Manage identities →
+        </Link>
+      </div>
+
+      <p className="mt-3 px-3 pb-2 text-[11px] leading-relaxed text-zinc-600">
+        Switch identity and everything changes — feed, publications, followers,
+        analytics, and settings.
       </p>
     </div>
   );
