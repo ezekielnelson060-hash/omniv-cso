@@ -26,14 +26,6 @@ type Pub = {
 
 type Range = "7d" | "30d" | "90d" | "1y";
 
-const SOURCES = [
-  { label: "Search", pct: 34 },
-  { label: "Explore", pct: 28 },
-  { label: "Followed", pct: 22 },
-  { label: "External", pct: 14 },
-  { label: "Other", pct: 12 },
-];
-
 export default function AnalyticsPage() {
   const [pubs, setPubs] = useState<Pub[]>([]);
   const [auth, setAuth] = useState<boolean | null>(null);
@@ -42,6 +34,7 @@ export default function AnalyticsPage() {
   const [personalName, setPersonalName] = useState("You");
   const [follows, setFollows] = useState(0);
   const [saves, setSaves] = useState(0);
+  const [likes, setLikes] = useState(0);
 
   useEffect(() => {
     try {
@@ -56,18 +49,21 @@ export default function AnalyticsPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [pRes, fRes, sRes] = await Promise.all([
+        const [pRes, fRes, sRes, lRes] = await Promise.all([
           fetch("/api/discovery/publications/list?owner=me&limit=80"),
           fetch("/api/discovery/follow"),
           fetch("/api/discovery/save"),
+          fetch("/api/discovery/like"),
         ]);
         const pData = await pRes.json();
         const fData = await fRes.json();
         const sData = await sRes.json();
+        const lData = await lRes.json();
         setAuth(pData.auth !== false);
         setPubs(pData.publications || []);
         if (Array.isArray(fData.follows)) setFollows(fData.follows.length);
         if (Array.isArray(sData.saves)) setSaves(sData.saves.length);
+        if (Array.isArray(lData.likes)) setLikes(lData.likes.length);
       } catch {
         setAuth(false);
       }
@@ -90,13 +86,14 @@ export default function AnalyticsPage() {
     [scopedPubs]
   );
 
-  const discoveries = Math.max(totalHeat * 12, scopedPubs.length * 40);
-  const profileViews = Math.max(
-    Math.round(discoveries * 0.26),
-    scopedPubs.length * 8
+  // Range scales heat for display only until full event tracking lands
+  const rangeFactor =
+    range === "7d" ? 0.25 : range === "30d" ? 1 : range === "90d" ? 2.2 : 4;
+
+  const discoveries = Math.round(Math.max(totalHeat, scopedPubs.length) * rangeFactor);
+  const profileViews = Math.round(
+    Math.max(follows * 8, scopedPubs.length * 3) * rangeFactor
   );
-  const saveCount = Math.max(saves, Math.round(discoveries * 0.07));
-  const followCount = Math.max(follows, Math.round(profileViews * 0.05));
 
   return (
     <DiscoveryShell>
@@ -132,7 +129,7 @@ export default function AnalyticsPage() {
             <CurrentIdentityBanner action="Analytics for" />
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             {(
               [
                 { id: "7d" as const, label: "7D" },
@@ -145,10 +142,10 @@ export default function AnalyticsPage() {
                 key={r.id}
                 type="button"
                 onClick={() => setRange(r.id)}
-                className={`rounded-full px-3.5 py-1.5 text-[12px] font-semibold ${
+                className={`inline-flex h-8 items-center justify-center rounded-full px-3.5 text-[12px] font-semibold leading-none ${
                   range === r.id
                     ? "bg-omniv-gold text-black"
-                    : "text-zinc-500 ring-1 ring-white/12"
+                    : "bg-white/[0.06] text-zinc-500"
                 }`}
               >
                 {r.label}
@@ -172,52 +169,33 @@ export default function AnalyticsPage() {
             <>
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <Stat
-                  label="Total Discoveries"
+                  label="Heat score"
                   value={formatNum(discoveries)}
-                  delta="+24%"
+                  note="From likes + engagement"
                 />
                 <Stat
-                  label="Profile Views"
+                  label="Profile reach"
                   value={formatNum(profileViews)}
-                  delta="+16%"
+                  note="Estimated from network"
                 />
-                <Stat
-                  label="Saves"
-                  value={formatNum(saveCount)}
-                  delta="+32%"
-                />
+                <Stat label="Saves" value={formatNum(saves)} note="Real count" />
                 <Stat
                   label="Follows"
-                  value={formatNum(followCount)}
-                  delta="+27%"
+                  value={formatNum(follows)}
+                  note="Real count"
                 />
               </div>
 
-              <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wide text-zinc-500">
-                Top Sources
-              </h2>
-              <ul className="mt-3 space-y-3">
-                {SOURCES.map((s) => (
-                  <li key={s.label}>
-                    <div className="mb-1 flex justify-between text-[13px]">
-                      <span className="text-zinc-300">{s.label}</span>
-                      <span className="text-zinc-500">{s.pct}%</span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
-                      <div
-                        className="h-full rounded-full bg-omniv-gold"
-                        style={{ width: `${s.pct}%` }}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <p className="mt-3 text-[11px] text-zinc-600">
+                Your likes on Omniv: {likes}. Trending ranks publications by heat
+                (likes + saves + recency).
+              </p>
 
               <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wide text-zinc-500">
-                Publications
+                Publications by heat
               </h2>
               <p className="mt-1 text-[12px] text-zinc-600">
-                {scopedPubs.length} for this identity · heat {totalHeat}
+                {scopedPubs.length} for this identity · total heat {totalHeat}
               </p>
 
               {scopedPubs.length === 0 ? (
@@ -229,26 +207,29 @@ export default function AnalyticsPage() {
                 </p>
               ) : (
                 <ul className="mt-3 space-y-2">
-                  {scopedPubs.slice(0, 12).map((p) => (
-                    <li key={p.id}>
-                      <Link
-                        href={`/p/${p.slug}`}
-                        className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-[14px] font-medium text-white">
-                            {p.title}
-                          </p>
-                          <p className="text-[11px] capitalize text-zinc-500">
-                            {p.type}
-                          </p>
-                        </div>
-                        <span className="text-[13px] tabular-nums text-zinc-400">
-                          {p.heat ?? 0}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
+                  {[...scopedPubs]
+                    .sort((a, b) => (b.heat ?? 0) - (a.heat ?? 0))
+                    .slice(0, 12)
+                    .map((p) => (
+                      <li key={p.id}>
+                        <Link
+                          href={`/p/${p.slug}`}
+                          className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3.5 py-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-[14px] font-medium text-white">
+                              {p.title}
+                            </p>
+                            <p className="text-[11px] capitalize text-zinc-500">
+                              {p.type}
+                            </p>
+                          </div>
+                          <span className="text-[13px] tabular-nums text-zinc-400">
+                            {p.heat ?? 0}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
                 </ul>
               )}
 
@@ -257,7 +238,8 @@ export default function AnalyticsPage() {
                   Full Pro analytics
                 </p>
                 <p className="mt-1 text-[13px] text-zinc-400">
-                  Per-identity demand, sources, and export.
+                  Per-identity demand, sources, and export when event tracking is
+                  live.
                 </p>
                 <Link
                   href="/pro"
@@ -279,19 +261,19 @@ export default function AnalyticsPage() {
 function Stat({
   label,
   value,
-  delta,
+  note,
 }: {
   label: string;
   value: string;
-  delta: string;
+  note: string;
 }) {
   return (
-    <div className="rounded-2xl bg-white/[0.04] p-4 ring-1 ring-white/[0.08]">
+    <div className="rounded-2xl bg-white/[0.04] p-4">
       <p className="text-[12px] text-zinc-500">{label}</p>
       <p className="mt-1 text-2xl font-semibold tracking-tight text-white">
         {value}
       </p>
-      <p className="mt-1 text-[12px] font-medium text-emerald-400">{delta}</p>
+      <p className="mt-1 text-[11px] text-zinc-600">{note}</p>
     </div>
   );
 }
