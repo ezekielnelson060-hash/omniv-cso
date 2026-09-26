@@ -365,6 +365,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
 
               {activeTab === "overview" && (
                 <KeepExploring
+                  currentEntity={e}
                   entities={relatedEntities}
                   publications={networkPubs}
                   tags={e.tags}

@@ -337,6 +337,7 @@ export default async function PublicationPage({ params }: Props) {
           )}
 
           <KeepExploring
+            currentPublication={p}
             entities={[...connectedEntities, ...relatedEntities]}
             publications={recommended}
             tags={p.tags}
