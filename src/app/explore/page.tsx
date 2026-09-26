@@ -5,6 +5,7 @@ import { PublicationCard } from "@/components/discovery/publication-card";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { ProfileAvatarLink } from "@/components/discovery/profile-avatar-link";
+import { NotificationBell } from "@/components/discovery/notification-bell";
 import { RotatingSearch } from "@/components/discovery/rotating-search";
 import { listLivePublications, listDiscoveryEntities } from "@/lib/discovery/db";
 import { SEED_ENTITIES } from "@/lib/discovery/seed";
@@ -352,7 +353,10 @@ function ExploreShell({
                 OMNIV
               </span>
             </div>
-            <ProfileAvatarLink />
+            <div className="flex items-center gap-1">
+              <NotificationBell />
+              <ProfileAvatarLink />
+            </div>
           </div>
         </header>
 
@@ -411,17 +415,17 @@ function ExploreShell({
             ))}
             <Link
               href="/explore?sort=trending"
-              className={`shrink-0 border-b-2 px-2 pb-2.5 text-[13px] ${
+              className={`shrink-0 border-b-2 border-transparent px-2 pb-2.5 text-[13px] ${
                 sort === "trending" ? "text-white" : "text-zinc-500"
-              } border-transparent"`}
+              }`}
             >
               Trending
             </Link>
             <Link
               href="/explore?sort=new"
-              className={`shrink-0 border-b-2 px-2 pb-2.5 text-[13px] ${
+              className={`shrink-0 border-b-2 border-transparent px-2 pb-2.5 text-[13px] ${
                 sort === "new" ? "text-white" : "text-zinc-500"
-              } border-transparent"`}
+              }`}
             >
               New
             </Link>
