@@ -7,6 +7,7 @@ import { FollowButton } from "@/components/discovery/follow-button";
 import { StructuredData } from "@/components/StructuredData";
 import { ArticleContent, ArticleSources } from "@/components/discovery/article-content";
 import { KeepExploring } from "@/components/discovery/keep-exploring";
+import { StickyArticleHeader } from "@/components/discovery/sticky-article-header";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { createClient } from "@/lib/supabase/server";
@@ -53,7 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     supabase = await createClient();
   } catch {
-    /* seed fallback remains available without Supabase env */
+    /* seed fallback */
   }
   const p = await getLivePublication(supabase, slug);
   if (!p) return { title: "Not found" };
@@ -112,14 +113,22 @@ export default async function PublicationPage({ params }: Props) {
     new Map(
       connectedEntities
         .flatMap((entity) => getRelatedEntities(entity, graph, 6))
-        .filter((entity) => !connectedEntities.some((connected) => connected.id === entity.id))
+        .filter(
+          (entity) =>
+            !connectedEntities.some((connected) => connected.id === entity.id)
+        )
         .map((entity) => [entity.id, entity])
     ).values()
   ).slice(0, 8);
-  const recommended = recommendPublications(p, graph, {}, 6).map((item) => item.publication);
+  const recommended = recommendPublications(p, graph, {}, 6).map(
+    (item) => item.publication
+  );
   const relatedPubs = [
     ...fromPublisher.slice(0, 3),
-    ...recommended.filter((candidate) => !fromPublisher.some((existing) => existing.id === candidate.id)),
+    ...recommended.filter(
+      (candidate) =>
+        !fromPublisher.some((existing) => existing.id === candidate.id)
+    ),
   ].slice(0, 6);
 
   const hero = HERO[p.type] ?? "from-zinc-800 to-[#050505]";
@@ -128,11 +137,14 @@ export default async function PublicationPage({ params }: Props) {
   const mediaUrl = p.mediaUrl;
   const fullText = `${p.excerpt || p.summary} ${p.body || ""}`;
   const mins = readMinutes(fullText);
-  const origin = (process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media").replace(/\/$/, "");
+  const origin = (
+    process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
+  ).replace(/\/$/, "");
   const pageUrl = `${origin}${path}`;
   const articleLd = {
     "@context": "https://schema.org",
-    "@type": p.type === "article" || p.type === "research" ? "Article" : "CreativeWork",
+    "@type":
+      p.type === "article" || p.type === "research" ? "Article" : "CreativeWork",
     headline: p.title,
     description: p.seoDescription || p.excerpt || p.summary,
     url: pageUrl,
@@ -174,8 +186,10 @@ export default async function PublicationPage({ params }: Props) {
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
         <StructuredData id={`publication-${p.slug}`} data={articleLd} />
+        <StickyArticleHeader title={p.title} backHref="/home" />
+
         <div
-          className={`relative min-h-[300px] bg-gradient-to-b ${hero} sm:min-h-[380px]`}
+          className={`relative min-h-[280px] bg-gradient-to-b ${hero} sm:min-h-[360px]`}
           style={
             coverUrl
               ? {
@@ -186,8 +200,7 @@ export default async function PublicationPage({ params }: Props) {
               : undefined
           }
         >
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,255,255,0.06),transparent_55%)]" />
-          <div className="relative mx-auto flex min-h-[300px] max-w-2xl flex-col px-4 pb-10 pt-3 sm:min-h-[380px]">
+          <div className="relative mx-auto flex min-h-[280px] max-w-2xl flex-col px-4 pb-10 pt-3 sm:min-h-[360px]">
             <div className="flex items-center justify-between">
               <Link
                 href="/home"
@@ -213,11 +226,11 @@ export default async function PublicationPage({ params }: Props) {
               <span className="inline-flex items-center rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90 backdrop-blur-sm">
                 {PUBLICATION_LABELS[p.type]}
               </span>
-              <h1 className="mt-3 text-[28px] font-semibold leading-[1.15] tracking-tight text-white sm:text-[44px]">
+              <h1 className="mt-3 text-[28px] font-semibold leading-[1.15] tracking-tight text-white sm:text-[40px]">
                 {p.title}
               </h1>
               {(p.subtitle || p.excerpt) && (
-                <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-zinc-200 sm:text-[18px]">
+                <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-zinc-200 sm:text-[17px]">
                   {p.subtitle || p.excerpt}
                 </p>
               )}
@@ -237,14 +250,6 @@ export default async function PublicationPage({ params }: Props) {
                 )}
                 <span className="text-zinc-600">·</span>
                 <span>{p.readingTime || mins} min read</span>
-                {p.category && (
-                  <>
-                    <span className="text-zinc-600">·</span>
-                    <Link href={`/explore/${p.category.toLowerCase()}`} className="text-omniv-gold hover:text-white">
-                      {p.category}
-                    </Link>
-                  </>
-                )}
                 {p.publishedAt && (
                   <>
                     <span className="text-zinc-600">·</span>
@@ -264,7 +269,7 @@ export default async function PublicationPage({ params }: Props) {
 
         <main className="mx-auto max-w-2xl px-4 pb-28 pt-2">
           {isEmbed && embedSrc && (
-            <div className="mb-8 overflow-hidden rounded-2xl ring-1 ring-white/[0.08]">
+            <div className="mb-8 overflow-hidden rounded-2xl">
               <div className="aspect-video w-full">
                 <iframe
                   src={embedSrc}
@@ -278,7 +283,7 @@ export default async function PublicationPage({ params }: Props) {
           )}
 
           {isDirectVideo && mediaUrl && (
-            <div className="mb-8 overflow-hidden rounded-2xl ring-1 ring-white/[0.08]">
+            <div className="mb-8 overflow-hidden rounded-2xl">
               <video controls className="w-full" src={mediaUrl} preload="metadata">
                 Your browser does not support video.
               </video>
@@ -286,7 +291,7 @@ export default async function PublicationPage({ params }: Props) {
           )}
 
           {isAudio && mediaUrl && (
-            <div className="mb-8 overflow-hidden rounded-2xl bg-white/[0.04] p-5 ring-1 ring-white/[0.08]">
+            <div className="mb-8 overflow-hidden rounded-2xl bg-white/[0.04] p-5">
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                 Listen
               </p>
@@ -301,7 +306,7 @@ export default async function PublicationPage({ params }: Props) {
               href={mediaUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mb-8 flex items-center gap-3 rounded-2xl bg-white/[0.04] px-4 py-4 ring-1 ring-white/[0.08] transition hover:ring-white/15"
+              className="mb-8 flex items-center gap-3 rounded-2xl bg-white/[0.04] px-4 py-4"
             >
               <span className="text-2xl">📄</span>
               <div className="min-w-0 flex-1">
@@ -312,7 +317,6 @@ export default async function PublicationPage({ params }: Props) {
             </a>
           )}
 
-          {/* Lead */}
           <p className="text-[19px] font-medium leading-[1.75] text-zinc-200">
             {p.excerpt || p.summary}
           </p>
@@ -331,12 +335,21 @@ export default async function PublicationPage({ params }: Props) {
           {p.type === "article" && (
             <>
               <section className="mt-16 border-t border-white/10 pt-8">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">What this means</p>
-                <p className="mt-3 text-[18px] leading-relaxed text-zinc-200">{p.whatThisMeans || p.summary}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
+                  What this means
+                </p>
+                <p className="mt-3 text-[18px] leading-relaxed text-zinc-200">
+                  {p.whatThisMeans || p.summary}
+                </p>
               </section>
               <section className="mt-8 rounded-2xl border border-omniv-gold/30 bg-omniv-gold/[0.06] p-6">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">The question nobody asks</p>
-                <p className="mt-3 text-[20px] font-medium leading-snug text-white">{p.questionNobodyAsks || "What changes when this becomes infrastructure rather than a one-off experiment?"}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
+                  The question nobody asks
+                </p>
+                <p className="mt-3 text-[20px] font-medium leading-snug text-white">
+                  {p.questionNobodyAsks ||
+                    "What changes when this becomes infrastructure rather than a one-off experiment?"}
+                </p>
               </section>
               <ArticleSources sources={p.sources} />
             </>
@@ -358,9 +371,8 @@ export default async function PublicationPage({ params }: Props) {
             tags={p.tags}
           />
 
-          {/* Publisher */}
           {publisher && (
-            <div className="mt-12 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.08]">
+            <div className="mt-12 rounded-2xl bg-white/[0.03] p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                 Publisher
               </p>
@@ -391,7 +403,6 @@ export default async function PublicationPage({ params }: Props) {
             </div>
           )}
 
-          {/* More from / related */}
           {relatedPubs.length > 0 && (
             <section className="mt-12">
               <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
@@ -402,7 +413,7 @@ export default async function PublicationPage({ params }: Props) {
                   <li key={r.id}>
                     <Link
                       href={publicationPath(r)}
-                      className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3.5 py-3.5 ring-1 ring-white/[0.06] transition hover:ring-white/15"
+                      className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3.5 py-3.5 transition hover:bg-white/[0.05]"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-[14px] font-medium text-white">
@@ -424,7 +435,7 @@ export default async function PublicationPage({ params }: Props) {
           <div className="mt-10 flex flex-wrap gap-2">
             <Link
               href={`/promote?slug=${p.slug}`}
-              className="inline-flex h-11 items-center rounded-full bg-omniv-gold/15 px-5 text-[13px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/30"
+              className="inline-flex h-11 items-center rounded-full bg-omniv-gold/15 px-5 text-[13px] font-semibold text-omniv-gold"
             >
               Promote this
             </Link>
@@ -437,13 +448,9 @@ export default async function PublicationPage({ params }: Props) {
             />
           </div>
 
-          {/* CTA — master spec */}
           <div className="mt-14 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-transparent p-6 text-center">
             <p className="text-[17px] font-semibold text-white">
               Publish what is worth discovering.
-            </p>
-            <p className="mt-2 text-[13px] text-zinc-500">
-              Permanent publications. Real discovery. Independent identities.
             </p>
             <Link
               href="/publish"
