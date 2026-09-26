@@ -5,23 +5,23 @@ import Link from "next/link";
 import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { NotificationBell } from "@/components/discovery/notification-bell";
 import { ProfileAvatarLink } from "@/components/discovery/profile-avatar-link";
-import { readFollows, type FollowedRef } from "@/lib/discovery/local-graph";
-import { onAccountSwitch, readActiveAccount, type ActiveAccount } from "@/lib/discovery/active-account";
-import { SEED_ENTITIES, SEED_PUBLICATIONS } from "@/lib/discovery/seed";
+import { timeAgo } from "@/lib/discovery/time-ago";
 import {
-  PUBLICATION_LABELS,
-  publicationPath,
-  type Publication,
-} from "@/lib/discovery/types";
-
-type LivePub = Publication & {
-  publisherName?: string;
-};
+  ensureDemoActivity,
+  groupActivityByDay,
+  kindLabel,
+  type MyActivityItem,
+} from "@/lib/discovery/my-activity";
+import {
+  onAccountSwitch,
+  readActiveAccount,
+  type ActiveAccount,
+} from "@/lib/discovery/active-account";
 
 export default function ActivityPage() {
-  const [follows, setFollows] = useState<FollowedRef[]>([]);
-  const [live, setLive] = useState<LivePub[]>([]);
+  const [items, setItems] = useState<MyActivityItem[]>([]);
   const [ready, setReady] = useState(false);
   const [active, setActive] = useState<ActiveAccount | null>(null);
 
@@ -31,101 +31,19 @@ export default function ActivityPage() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [fRes, pRes] = await Promise.all([
-          fetch("/api/discovery/follow"),
-          fetch("/api/discovery/publications/list?limit=40"),
-        ]);
-        const fData = await fRes.json();
-        const pData = await pRes.json().catch(() => ({ publications: [] }));
-        if (cancelled) return;
-        if (fData.auth && Array.isArray(fData.follows) && fData.follows.length > 0) {
-          setFollows(fData.follows as FollowedRef[]);
-        } else {
-          setFollows(readFollows());
-        }
-        if (Array.isArray(pData.publications)) {
-          setLive(pData.publications as LivePub[]);
-        }
-      } catch {
-        if (!cancelled) setFollows(readFollows());
-      } finally {
-        if (!cancelled) setReady(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    setItems(ensureDemoActivity());
+    setReady(true);
+    const onUp = () => setItems(ensureDemoActivity());
+    window.addEventListener("omniv-my-activity", onUp);
+    return () => window.removeEventListener("omniv-my-activity", onUp);
   }, []);
 
-  const feed = useMemo(() => {
-    const ids = new Set<string>();
-    const names = new Set<string>();
-    for (const f of follows) {
-      names.add(f.name.toLowerCase());
-      const e =
-        SEED_ENTITIES.find((x) => x.type === f.type && x.slug === f.slug) ??
-        (f.id ? SEED_ENTITIES.find((x) => x.id === f.id) : undefined);
-      if (e) ids.add(e.id);
-      if (f.id) ids.add(f.id);
-    }
-
-    const pool: LivePub[] = [
-      ...live,
-      ...SEED_PUBLICATIONS.filter(
-        (p) => !live.some((l) => l.slug === p.slug)
-      ),
-    ];
-
-    const identityPool = active?.id
-      ? pool.filter(
-          (p) =>
-            p.publisherId === active.id ||
-            p.publisherName?.toLowerCase() === active.name.toLowerCase()
-        )
-      : pool;
-    let pubs =
-      follows.length > 0
-        ? identityPool.filter(
-            (p) =>
-              ids.has(p.publisherId) ||
-              (p.publisherName &&
-                names.has(p.publisherName.toLowerCase()))
-          )
-        : identityPool;
-
-    // If follow filter empties the feed, show network pulse
-    if (follows.length > 0 && pubs.length === 0) {
-      pubs = identityPool;
-    }
-
-    return pubs
-      .sort((a, b) =>
-        (b.publishedAt || "").localeCompare(a.publishedAt || "")
-      )
-      .slice(0, 40)
-      .map((p) => {
-        const publisher =
-          SEED_ENTITIES.find((e) => e.id === p.publisherId) ||
-          SEED_ENTITIES.find(
-            (e) =>
-              p.publisherName &&
-              e.name.toLowerCase() === p.publisherName.toLowerCase()
-          );
-        return {
-          pub: p,
-          publisherName: p.publisherName || publisher?.name || "Publisher",
-          publisher,
-        };
-      });
-  }, [follows, live, active]);
+  const groups = useMemo(() => groupActivityByDay(items), [items]);
 
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-sm">
+        <header className="sticky top-0 z-40 border-b border-white/[0.05] bg-[#050505]/95 backdrop-blur-sm">
           <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3 md:max-w-2xl md:px-6">
             <div className="flex items-center gap-2">
               <Image
@@ -139,113 +57,79 @@ export default function ActivityPage() {
                 Activity
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <Link
-                href="/explore"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 hover:bg-white/5 hover:text-white"
-                aria-label="Search"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                >
-                  <circle cx="11" cy="11" r="7" />
-                  <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-                </svg>
-              </Link>
+            <div className="flex items-center gap-1">
+              <NotificationBell />
               <ProfileAvatarLink />
             </div>
           </div>
         </header>
 
         <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl md:px-6">
+          <p className="text-[13px] text-zinc-500">
+            What you've been doing
+            {active ? ` as ${active.name}` : ""}.{" "}
+            <Link href="/notifications" className="text-omniv-gold hover:underline">
+              Notifications
+            </Link>{" "}
+            are what happened to you.
+          </p>
+
           {!ready ? (
-            <p className="pt-10 text-center text-[14px] text-zinc-600">
+            <p className="mt-16 text-center text-[14px] text-zinc-600">
               Loading…
             </p>
-          ) : feed.length === 0 ? (
-            <div className="pt-10 text-center">
-              <p className="text-[15px] text-zinc-400">
-                Follow publishers to see new publications here.
+          ) : items.length === 0 ? (
+            <div className="mt-16 text-center">
+              <p className="text-[15px] text-zinc-400">No activity yet</p>
+              <p className="mt-2 text-[13px] text-zinc-600">
+                Publish, save, and follow — it shows up here.
               </p>
               <Link
-                href="/explore"
+                href="/publish"
                 className="mt-6 inline-flex h-11 items-center rounded-full bg-omniv-gold px-6 text-[14px] font-semibold text-black"
               >
-                Explore
+                Publish something
               </Link>
             </div>
           ) : (
-            <>
-              {follows.length === 0 && (
-                <p className="mb-4 text-[13px] text-zinc-500">
-                  Network pulse.{" "}
-                  <Link
-                    href="/explore"
-                    className="text-omniv-gold hover:underline"
-                  >
-                    Follow people
-                  </Link>{" "}
-                  to personalize this feed.
-                </p>
-              )}
-              <ul className="space-y-2.5">
-                {feed.map(({ pub, publisherName }) => (
-                  <li key={pub.id}>
-                    <Link
-                      href={publicationPath(pub)}
-                      className="block rounded-2xl bg-white/[0.03] p-3.5 ring-1 ring-white/[0.08] transition hover:ring-white/15"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-omniv-gold/20 text-[10px] font-bold text-omniv-gold">
-                          {publisherName.charAt(0)}
-                        </span>
-                        <p className="min-w-0 truncate text-[12px] text-zinc-500">
-                          <span className="font-medium text-zinc-300">
-                            {publisherName}
-                          </span>{" "}
-                          published a{" "}
-                          {PUBLICATION_LABELS[pub.type]?.toLowerCase() ??
-                            pub.type}
-                        </p>
-                      </div>
-                      <p className="mt-2 text-[15px] font-semibold leading-snug text-white">
-                        {pub.title}
-                      </p>
-                      <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-zinc-500">
-                        {pub.summary}
-                      </p>
-                      <p className="mt-2 text-[11px] text-zinc-600">
-                        {pub.publishedAt}
-                        {pub.meta ? ` · ${pub.meta}` : ""}
-                      </p>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-
-          {follows.length > 0 && (
-            <div className="mt-8">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
-                Following · {follows.length}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {follows.map((f) => (
-                  <Link
-                    key={`${f.type}-${f.slug}`}
-                    href={`/e/${f.type}/${f.slug}`}
-                    className="rounded-full bg-white/[0.04] px-3 py-1.5 text-[12px] text-zinc-400 ring-1 ring-white/[0.08] hover:text-white"
-                  >
-                    {f.name}
-                  </Link>
-                ))}
-              </div>
+            <div className="mt-6">
+              {groups.map((g) => (
+                <section key={g.label} className="mb-8">
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
+                    {g.label}
+                  </p>
+                  <ul className="space-y-1">
+                    {g.items.map((item) => (
+                      <li key={item.id}>
+                        <Link
+                          href={item.href || "/home"}
+                          className="flex gap-3 rounded-2xl px-3 py-3 transition hover:bg-white/[0.04]"
+                        >
+                          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[10px] font-semibold uppercase text-omniv-gold">
+                            {kindLabel(item.kind).slice(0, 3)}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-medium text-zinc-400">
+                              {kindLabel(item.kind)}
+                            </p>
+                            <p className="mt-0.5 text-[14px] font-semibold text-white">
+                              {item.subtitle || item.title}
+                            </p>
+                            {item.subtitle && (
+                              <p className="mt-0.5 truncate text-[12px] text-zinc-600">
+                                {item.title}
+                              </p>
+                            )}
+                            <p className="mt-1 text-[11px] text-zinc-600">
+                              {timeAgo(item.createdAt)}
+                            </p>
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
             </div>
           )}
         </main>
