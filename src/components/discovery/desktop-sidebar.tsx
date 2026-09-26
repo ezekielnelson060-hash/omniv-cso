@@ -321,6 +321,15 @@ export function DesktopSidebar() {
 
         <div className="border-t border-white/[0.05] px-3 py-3">
           <Link
+            href="/publish"
+            className="mb-2 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-omniv-gold text-[14px] font-semibold text-black shadow-lg shadow-omniv-gold/15 transition hover:brightness-110 active:scale-[0.98]"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4">
+              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+            </svg>
+            Publish
+          </Link>
+          <Link
             href={active?.path || "/profile"}
             className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition ${
               pathname.startsWith("/profile") || pathname.startsWith("/e/")
