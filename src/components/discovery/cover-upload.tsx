@@ -47,15 +47,21 @@ export function CoverUpload({
     }
   }
 
+  const aspect = tall
+    ? "aspect-square max-w-[140px]"
+    : video
+      ? "aspect-video"
+      : "aspect-[3/1]";
+
   return (
     <div>
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        className={`relative w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-zinc-800 to-zinc-950 text-left ${
-          tall ? "aspect-square" : video ? "aspect-video" : "aspect-[2/1]"
-        }`}
+        className={`relative w-full overflow-hidden border border-white/10 bg-gradient-to-br from-zinc-800 to-zinc-950 text-left ${
+          tall ? "rounded-2xl" : "rounded-none"
+        } ${aspect}`}
       >
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -67,7 +73,7 @@ export function CoverUpload({
         ) : null}
         <div
           className={`absolute inset-0 flex flex-col items-center justify-center gap-2 ${
-            value ? "bg-black/40" : ""
+            value ? "bg-black/45" : ""
           }`}
         >
           {video && !value && (
@@ -78,7 +84,7 @@ export function CoverUpload({
           {!video && !value && (
             <span className="text-2xl opacity-40">◻</span>
           )}
-          <span className="rounded-full bg-black/50 px-3 py-1 text-[11px] text-zinc-300 ring-1 ring-white/10">
+          <span className="rounded-full bg-black/55 px-3 py-1 text-[11px] text-zinc-200">
             {busy ? "Uploading…" : label}
           </span>
         </div>
@@ -91,15 +97,15 @@ export function CoverUpload({
         onChange={(e) => onFile(e.target.files?.[0])}
       />
       {err && (
-        <p className="mt-1.5 text-[12px] text-rose-400">{err}</p>
+        <p className="mt-1.5 px-4 text-[12px] text-rose-400">{err}</p>
       )}
       {value && (
         <button
           type="button"
           onClick={() => onChange(null)}
-          className="mt-1.5 text-[12px] text-zinc-500 hover:text-zinc-300"
+          className="mt-1.5 px-4 text-[12px] text-zinc-500 hover:text-zinc-300"
         >
-          Remove cover
+          Remove
         </button>
       )}
     </div>
