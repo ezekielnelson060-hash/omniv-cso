@@ -13,26 +13,107 @@ import {
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
 
-type NavItem = { href: string; label: string; badge?: string };
+type NavItem = { href: string; label: string; badge?: string; icon: string };
 
 const MAIN: NavItem[] = [
-  { href: "/home", label: "Home" },
-  { href: "/explore", label: "Explore" },
-  { href: "/following", label: "Following" },
-  { href: "/saved", label: "Saved" },
+  { href: "/home", label: "Home", icon: "home" },
+  { href: "/explore", label: "Explore", icon: "search" },
+  { href: "/following", label: "Following", icon: "users" },
+  { href: "/saved", label: "Saved", icon: "bookmark" },
 ];
 
 const GROW: NavItem[] = [
-  { href: "/analytics", label: "Analytics" },
-  { href: "/promote", label: "Promote" },
-  { href: "/verify", label: "Get Verified" },
+  { href: "/analytics", label: "Analytics", icon: "chart" },
+  { href: "/promote", label: "Promote", icon: "boost" },
+  { href: "/verify", label: "Get Verified", icon: "check" },
 ];
 
 const MONETIZE: NavItem[] = [
-  { href: "/pro", label: "Pro", badge: "Popular" },
-  { href: "/pricing", label: "Business" },
-  { href: "/explore?type=opportunity", label: "Opportunities" },
+  { href: "/pro", label: "Pro", badge: "Popular", icon: "star" },
+  { href: "/pricing", label: "Business", icon: "bag" },
+  { href: "/explore?type=opportunity", label: "Opportunities", icon: "spark" },
 ];
+
+function Icon({ name }: { name: string }) {
+  const p = {
+    width: 18,
+    height: 18,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.7,
+    className: "shrink-0 opacity-80",
+  } as const;
+  switch (name) {
+    case "home":
+      return (
+        <svg {...p}>
+          <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-5.5H10V21H5a1 1 0 0 1-1-1v-9.5z" strokeLinejoin="round" />
+        </svg>
+      );
+    case "search":
+      return (
+        <svg {...p}>
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.2-3.2" strokeLinecap="round" />
+        </svg>
+      );
+    case "users":
+      return (
+        <svg {...p}>
+          <circle cx="9" cy="8" r="3" />
+          <circle cx="16" cy="9" r="2.5" />
+          <path d="M3 19c1.2-3 3.5-4.5 6-4.5s4.8 1.5 6 4.5" strokeLinecap="round" />
+        </svg>
+      );
+    case "bookmark":
+      return (
+        <svg {...p}>
+          <path d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-3.2L6 21V4.5a1 1 0 0 1 1-1z" strokeLinejoin="round" />
+        </svg>
+      );
+    case "chart":
+      return (
+        <svg {...p}>
+          <path d="M4 19h16M7 16V10M12 16V6M17 16v-4" strokeLinecap="round" />
+        </svg>
+      );
+    case "boost":
+      return (
+        <svg {...p}>
+          <path d="M13 3 4 14h7l-1 7 9-11h-7l1-7z" strokeLinejoin="round" />
+        </svg>
+      );
+    case "check":
+      return (
+        <svg {...p}>
+          <circle cx="12" cy="12" r="8" />
+          <path d="m8.5 12.5 2.2 2.2 4.8-5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case "star":
+      return (
+        <svg {...p}>
+          <path d="m12 3 2.4 5.4 5.8.6-4.4 3.9 1.3 5.7L12 15.8 6.9 18.6l1.3-5.7L3.8 9l5.8-.6L12 3z" strokeLinejoin="round" />
+        </svg>
+      );
+    case "bag":
+      return (
+        <svg {...p}>
+          <path d="M6 8h12l-1 12H7L6 8z" strokeLinejoin="round" />
+          <path d="M9 8V6a3 3 0 0 1 6 0v2" strokeLinecap="round" />
+        </svg>
+      );
+    case "spark":
+      return (
+        <svg {...p}>
+          <path d="M12 3v4M12 17v4M3 12h4M17 12h4" strokeLinecap="round" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
 
 export function MobileMenuButton() {
   const pathname = usePathname();
@@ -94,7 +175,7 @@ export function MobileMenuButton() {
       <Link
         href={item.href}
         onClick={close}
-        className={`relative flex min-h-[44px] items-center rounded-xl px-3 text-[15px] font-medium ${
+        className={`relative flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-[15px] font-medium ${
           isActive
             ? "bg-white/[0.06] text-white"
             : isPro
@@ -105,9 +186,10 @@ export function MobileMenuButton() {
         {isActive && (
           <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-omniv-gold" />
         )}
-        {item.label}
+        <Icon name={item.icon} />
+        <span className="flex-1">{item.label}</span>
         {item.badge && (
-          <span className="ml-auto rounded-full bg-omniv-gold px-1.5 py-0.5 text-[9px] font-bold uppercase text-black">
+          <span className="rounded-full bg-omniv-gold px-1.5 py-0.5 text-[9px] font-bold uppercase text-black">
             {item.badge}
           </span>
         )}
@@ -142,7 +224,7 @@ export function MobileMenuButton() {
                   onClick={() => setMode(mode === "switch" ? "nav" : "switch")}
                   className="flex w-full items-center gap-3 rounded-2xl bg-white/[0.04] px-3 py-2.5 text-left"
                 >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
+                  <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-omniv-gold/20">
                     {identityAvatar ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -151,7 +233,9 @@ export function MobileMenuButton() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      identityName.charAt(0).toUpperCase()
+                      <span className="flex h-full w-full items-center justify-center text-sm font-semibold text-omniv-gold">
+                        {identityName.charAt(0).toUpperCase()}
+                      </span>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -201,9 +285,12 @@ export function MobileMenuButton() {
                 <Link
                   href="/settings"
                   onClick={close}
-                  className="flex min-h-[44px] items-center gap-2 rounded-xl px-3 text-[15px] font-medium text-zinc-300"
+                  className="flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-zinc-300"
                 >
-                  <span className="opacity-70">⚙</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="opacity-80">
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" strokeLinecap="round" />
+                  </svg>
                   Settings
                 </Link>
                 <Link
@@ -211,7 +298,7 @@ export function MobileMenuButton() {
                   onClick={close}
                   className="flex items-center gap-2.5 rounded-xl px-2 py-2"
                 >
-                  <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[11px] font-semibold text-white">
+                  <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white/10">
                     {identityAvatar ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -220,7 +307,9 @@ export function MobileMenuButton() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      identityName.charAt(0).toUpperCase()
+                      <span className="flex h-full w-full items-center justify-center text-[11px] font-semibold text-white">
+                        {identityName.charAt(0).toUpperCase()}
+                      </span>
                     )}
                   </div>
                   <div className="min-w-0">
@@ -244,7 +333,7 @@ export function MobileMenuButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/20 text-[13px] font-semibold text-omniv-gold ring-1 ring-white/15"
+        className="relative z-10 h-9 w-9 shrink-0 overflow-hidden rounded-full bg-omniv-gold/20 ring-1 ring-white/10"
         aria-label="Open menu"
       >
         {identityAvatar ? (
@@ -255,7 +344,9 @@ export function MobileMenuButton() {
             className="h-full w-full object-cover"
           />
         ) : (
-          identityName.charAt(0).toUpperCase()
+          <span className="flex h-full w-full items-center justify-center text-[13px] font-semibold text-omniv-gold">
+            {identityName.charAt(0).toUpperCase()}
+          </span>
         )}
       </button>
       {drawer}
