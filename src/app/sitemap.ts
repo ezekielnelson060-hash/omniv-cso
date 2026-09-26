@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
-import { SEED_ENTITIES } from "@/lib/discovery/seed";
+import { SEED_ENTITIES, SEED_PUBLICATIONS } from "@/lib/discovery/seed";
 import { entityPath, publicationPath } from "@/lib/discovery/types";
 import { listDiscoveryEntities, listLivePublications } from "@/lib/discovery/db";
+import { DISCOVERY_CATEGORIES } from "@/lib/discovery/seo";
 
 const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media").replace(/\/$/, "");
 
@@ -14,7 +15,7 @@ async function getPublicData() {
       publications: await listLivePublications(supabase, 200),
     };
   } catch {
-    return { entities: SEED_ENTITIES, publications: [] };
+    return { entities: SEED_ENTITIES, publications: SEED_PUBLICATIONS };
   }
 }
 
@@ -44,6 +45,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticRoutes.map((route) => ({ url: `${baseUrl}${route.path}`, lastModified: now, changeFrequency: route.changeFrequency, priority: route.priority })),
     ...entities.map((entity) => ({ url: `${baseUrl}${entityPath(entity)}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.8 })),
     ...publications.map((publication) => ({ url: `${baseUrl}${publicationPath(publication)}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.75 })),
+    ...DISCOVERY_CATEGORIES.map((category) => ({ url: `${baseUrl}/explore/${category.slug}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.7 })),
     ...blogSlugs.map((slug) => ({ url: `${baseUrl}/blog/${slug}`, lastModified: now, changeFrequency: "monthly" as const, priority: 0.7 })),
   ];
 }

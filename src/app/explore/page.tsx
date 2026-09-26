@@ -9,6 +9,7 @@ import { RotatingSearch } from "@/components/discovery/rotating-search";
 import { listLivePublications, listDiscoveryEntities } from "@/lib/discovery/db";
 import { SEED_ENTITIES } from "@/lib/discovery/seed";
 import { searchDiscovery } from "@/lib/discovery/search";
+import { DISCOVERY_CATEGORIES } from "@/lib/discovery/seo";
 import {
   ENTITY_LABELS,
   PUBLICATION_LABELS,
@@ -199,6 +200,9 @@ function ExploreShell({ children, q, type, sort, interest }: { children: ReactNo
           <div className="max-w-2xl"><p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-omniv-gold">The discovery network</p><h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-6xl">What are you looking for?</h1><p className="mt-4 max-w-xl text-[15px] leading-relaxed text-zinc-500">Find something worth following. Publications lead the way; people, companies, and ideas connect around them.</p></div>
           <form action="/explore" method="get" className="mt-8 flex gap-2"><RotatingSearch value={q} />{type && <input type="hidden" name="type" value={type} />}{interest && <input type="hidden" name="interest" value={interest} />}<button type="submit" className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-omniv-gold text-black" aria-label="Search"><span className="text-xl">⌕</span></button></form>
           <div className="mt-5 flex flex-wrap gap-2">{TOPICS.map((topic) => <Link key={topic} href={`/explore?interest=${encodeURIComponent(topic)}`} className={`rounded-full px-3 py-1.5 text-[12px] ${interest.toLowerCase() === topic.toLowerCase() ? "bg-omniv-gold text-black" : "bg-white/[0.04] text-zinc-400 ring-1 ring-white/[0.08] hover:text-white"}`}>{topic}</Link>)}</div>
+          <nav aria-label="Explore categories" className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+            {DISCOVERY_CATEGORIES.map((category) => <Link key={category.slug} href={`/explore/${category.slug}`} className="text-[11px] text-zinc-600 transition hover:text-omniv-gold">{category.label}</Link>)}
+          </nav>
           <div className="mt-8 flex gap-2 border-b border-white/[0.07] pb-3">{TYPE_CHIPS.map((chip) => <Link key={chip.id} href={chip.id === "all" ? "/explore" : `/explore?type=${chip.id}`} className={`text-[12px] ${(!type && chip.id === "all") || type === chip.id ? "font-semibold text-omniv-gold" : "text-zinc-600 hover:text-zinc-300"}`}>{chip.label}</Link>)}<span className="mx-1 text-zinc-800">/</span><Link href="/explore?sort=trending" className={`text-[12px] ${sort === "trending" ? "text-white" : "text-zinc-600"}`}>Trending</Link><Link href="/explore?sort=new" className={`text-[12px] ${sort === "new" ? "text-white" : "text-zinc-600"}`}>New</Link></div>
           <div className="mt-10">{children}</div>
         </main><BottomNav />

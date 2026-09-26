@@ -57,16 +57,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!e) return { title: "Not found" };
   const origin = process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
   const url = `${origin}/e/${type}/${slug}`;
+  const image = (e as { avatarUrl?: string | null }).avatarUrl || `${origin}/opengraph-image`;
   return {
     title: e.name,
     description: e.tagline || e.about?.slice(0, 160),
+    metadataBase: new URL(origin),
     alternates: { canonical: url },
     openGraph: {
       title: e.name,
       description: e.tagline,
       url,
       type: "profile",
+      siteName: "Omniv",
+      images: [{ url: image }],
+      firstName: e.type === "person" ? e.name.split(" ")[0] : undefined,
     },
+    twitter: { card: "summary_large_image", title: e.name, description: e.tagline, images: [image] },
   };
 }
 
@@ -138,9 +144,14 @@ export default async function EntityPage({ params, searchParams }: Props) {
     name: e.name,
     description: e.about || e.tagline,
     url: pageUrl,
-    image: avatarUrl || undefined,
+    image: avatarUrl || `${origin}/opengraph-image`,
+    logo: avatarUrl || undefined,
+    additionalType: e.type,
     address: e.location ? { "@type": "PostalAddress", addressLocality: e.location } : undefined,
-    sameAs: e.links?.map((link) => link.href),
+    sameAs: e.links?.map((link) => link.href).filter((href) => href.startsWith("http")),
+    knowsAbout: e.tags,
+    publisher: { "@type": "Organization", name: "Omniv", url: origin },
+    mainEntityOfPage: { "@type": "WebPage", "@id": pageUrl },
   };
 
   return (

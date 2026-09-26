@@ -61,25 +61,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const url = p.canonicalUrl || `${origin}/p/${p.slug}`;
   const title = p.seoTitle || p.title;
   const description = p.seoDescription || p.excerpt || p.summary;
+  const image = p.coverUrl || `${origin}/opengraph-image`;
   return {
     title,
     description,
+    metadataBase: new URL(origin),
     alternates: { canonical: url },
     openGraph: {
       title,
       description,
       url,
       type: "article",
-      images: p.coverUrl ? [{ url: p.coverUrl }] : undefined,
+      siteName: "Omniv",
+      images: [{ url: image }],
       publishedTime: p.publishedAt,
       modifiedTime: p.updatedAt,
       authors: p.publisherName ? [p.publisherName] : undefined,
+      section: p.category,
+      tags: p.tags,
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: p.coverUrl ? [p.coverUrl] : undefined,
+      images: [image],
     },
   };
 }
@@ -133,9 +138,11 @@ export default async function PublicationPage({ params }: Props) {
     url: pageUrl,
     datePublished: p.publishedAt || undefined,
     dateModified: p.updatedAt || p.publishedAt || undefined,
-    author: { "@type": "Organization", name: publisherName },
+    author: { "@type": "Organization", name: publisherName, url: origin },
     publisher: { "@type": "Organization", name: "Omniv", url: origin },
-    image: coverUrl,
+    image: coverUrl || `${origin}/opengraph-image`,
+    articleSection: p.category || undefined,
+    keywords: p.tags?.join(", ") || undefined,
     mainEntityOfPage: { "@type": "WebPage", "@id": pageUrl },
   };
 
@@ -230,6 +237,14 @@ export default async function PublicationPage({ params }: Props) {
                 )}
                 <span className="text-zinc-600">·</span>
                 <span>{p.readingTime || mins} min read</span>
+                {p.category && (
+                  <>
+                    <span className="text-zinc-600">·</span>
+                    <Link href={`/explore/${p.category.toLowerCase()}`} className="text-omniv-gold hover:text-white">
+                      {p.category}
+                    </Link>
+                  </>
+                )}
                 {p.publishedAt && (
                   <>
                     <span className="text-zinc-600">·</span>
