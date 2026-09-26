@@ -36,7 +36,18 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (body.cover_url !== undefined) {
       patch.cover_url = body.cover_url || null;
     }
-    if (typeof body.website === "string") {
+
+    if (Array.isArray(body.links)) {
+      patch.links = body.links
+        .filter(
+          (l: { label?: string; href?: string }) =>
+            typeof l?.href === "string" && l.href.trim()
+        )
+        .map((l: { label?: string; href: string }) => ({
+          label: (l.label || "Link").trim(),
+          href: l.href.startsWith("http") ? l.href.trim() : `https://${l.href.trim()}`,
+        }));
+    } else if (typeof body.website === "string") {
       const w = body.website.trim();
       if (w) {
         patch.links = [
@@ -59,11 +70,12 @@ export async function PATCH(req: Request, ctx: Ctx) {
       .update(patch)
       .eq("id", id)
       .eq("owner_id", user.id)
-      .select("id, type, slug, name, tagline, location, about, avatar_url, cover_url, verified")
+      .select(
+        "id, type, slug, name, tagline, location, about, avatar_url, cover_url, links, verified"
+      )
       .maybeSingle();
 
     if (error) {
-      // Retry without avatar/cover if columns missing
       if (
         error.message?.includes("avatar") ||
         error.message?.includes("cover")
@@ -94,7 +106,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
     }
 
     if (!data) {
-      return NextResponse.json({ error: "Not found or not owner" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Not found or not owner" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({
