@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { readProfile } from "@/lib/discovery/local-profile";
 import {
   readActiveAccount,
@@ -21,8 +22,8 @@ type EntityRow = {
 };
 
 /**
- * Identity switcher panel — personal + all owned entities.
- * Each entity is an independent public identity.
+ * Identity switcher — personal + owned entities.
+ * Switching an entity changes the entire app context (like X / Instagram).
  */
 export function IdentitySwitcher({
   onClose,
@@ -31,6 +32,7 @@ export function IdentitySwitcher({
   onClose?: () => void;
   compact?: boolean;
 }) {
+  const router = useRouter();
   const [active, setActive] = useState<ActiveAccount | null>(null);
   const [entities, setEntities] = useState<EntityRow[]>([]);
   const [auth, setAuth] = useState(false);
@@ -73,6 +75,7 @@ export function IdentitySwitcher({
     writeActiveAccount(null);
     setActive(null);
     onClose?.();
+    router.push("/profile");
   }
 
   function pickEntity(e: EntityRow) {
@@ -89,6 +92,8 @@ export function IdentitySwitcher({
     writeActiveAccount(next);
     setActive(next);
     onClose?.();
+    // Entity owns the app context — land on its public home
+    router.push(e.path);
   }
 
   return (
@@ -97,7 +102,6 @@ export function IdentitySwitcher({
         Your identities
       </p>
 
-      {/* Personal */}
       <button
         type="button"
         onClick={pickPersonal}
@@ -119,9 +123,7 @@ export function IdentitySwitcher({
           <p className="truncate text-[14px] font-semibold text-white">
             {displayName}
           </p>
-          <p className="text-[12px] text-zinc-500">
-            Personal · @{handle}
-          </p>
+          <p className="text-[12px] text-zinc-500">Personal · @{handle}</p>
         </div>
         {!active && (
           <span className="h-2.5 w-2.5 rounded-full bg-omniv-gold" />
@@ -161,10 +163,8 @@ export function IdentitySwitcher({
               <p className="flex items-center gap-1.5 truncate text-[14px] font-semibold text-white">
                 {e.name}
                 {e.verified && (
-                  <span className="inline-flex text-sky-400" title="Verified">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2l2.4 2.4L18 3l.6 3.6L22 9l-2.4 2.4L21 15l-3.6.6L15 19l-2.4-2.4L9 19l-.6-3.6L5 15l2.4-2.4L5 9l3.6-.6L9 5l2.4 2.4L12 2z" />
-                    </svg>
+                  <span className="text-sky-400" title="Verified">
+                    ✓
                   </span>
                 )}
               </p>
@@ -199,7 +199,7 @@ export function IdentitySwitcher({
       <Link
         href="/accounts"
         onClick={onClose}
-        className="mt-2 flex w-full items-center gap-3 rounded-xl border border-dashed border-white/15 px-3 py-2.5 hover:border-omniv-gold/40"
+        className="mt-2 flex w-full items-center gap-3 rounded-xl border border-dashed border-omniv-gold/40 px-3 py-2.5 hover:bg-omniv-gold/5"
       >
         <span className="flex h-10 w-10 items-center justify-center rounded-full text-lg text-omniv-gold">
           +
@@ -209,20 +209,9 @@ export function IdentitySwitcher({
         </span>
       </Link>
 
-      <Link
-        href="/accounts"
-        onClick={onClose}
-        className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-zinc-400 hover:bg-white/[0.04] hover:text-white"
-      >
-        <span className="flex h-10 w-10 items-center justify-center text-[15px]">
-          ⚙
-        </span>
-        <span className="text-[14px]">Manage identities</span>
-      </Link>
-
       <p className="mt-4 px-3 text-[11px] leading-relaxed text-zinc-600">
-        One account. Multiple identities. Each with its own audience, activity,
-        and analytics.
+        Each entity is an independent account with its own audience, content,
+        and activity.
       </p>
     </div>
   );
