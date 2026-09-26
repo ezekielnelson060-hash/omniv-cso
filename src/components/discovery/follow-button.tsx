@@ -10,6 +10,7 @@ import {
   setFollowPrefs,
   type FollowPrefs,
 } from "@/lib/discovery/follow-prefs";
+import { pushMyActivity } from "@/lib/discovery/my-activity";
 
 export function FollowButton({
   type,
@@ -64,6 +65,16 @@ export function FollowButton({
         detail: { type, slug, following: next },
       })
     );
+    try {
+      pushMyActivity({
+        kind: next ? "followed" : "unfollowed",
+        title: next ? `Followed ${name}` : `Unfollowed ${name}`,
+        subtitle: type,
+        href: `/e/${type}/${slug}`,
+      });
+    } catch {
+      /* ignore */
+    }
   }
 
   async function onClick() {
