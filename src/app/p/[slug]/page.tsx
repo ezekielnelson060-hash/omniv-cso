@@ -34,13 +34,85 @@ const HERO: Record<string, string> = {
   file: "from-cyan-800 via-slate-900 to-[#050505]",
 };
 
+function readMinutes(text: string) {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200));
+}
+
+function renderBody(body: string) {
+  const blocks = body.split(/\n\n+/);
+  return blocks.map((block, i) => {
+    const t = block.trim();
+    if (!t) return null;
+    // Markdown-ish H2
+    if (t.startsWith("## ")) {
+      return (
+        <h2
+          key={i}
+          className="mt-10 text-[20px] font-semibold tracking-tight text-white"
+        >
+          {t.replace(/^##\s+/, "")}
+        </h2>
+      );
+    }
+    if (t.startsWith("# ")) {
+      return (
+        <h2
+          key={i}
+          className="mt-10 text-[22px] font-semibold tracking-tight text-white"
+        >
+          {t.replace(/^#\s+/, "")}
+        </h2>
+      );
+    }
+    // Pull quote
+    if (t.startsWith("> ") || t.startsWith('"')) {
+      const quote = t.replace(/^>\s*/, "").replace(/^"|"$/g, "");
+      return (
+        <blockquote
+          key={i}
+          className="my-8 border-l-2 border-omniv-gold/60 pl-5 text-[18px] font-medium leading-relaxed text-zinc-200"
+        >
+          {quote}
+        </blockquote>
+      );
+    }
+    return (
+      <p key={i} className="text-[16px] leading-[1.8] text-zinc-300">
+        {t}
+      </p>
+    );
+  });
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   try {
     const supabase = await createClient();
     const p = await getLivePublication(supabase, slug);
     if (!p) return { title: "Not found" };
-    return { title: p.title, description: p.summary };
+    const origin =
+      process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
+    const url = `${origin}/p/${p.slug}`;
+    return {
+      title: p.title,
+      description: p.summary,
+      alternates: { canonical: url },
+      openGraph: {
+        title: p.title,
+        description: p.summary,
+        url,
+        type: "article",
+        images: p.coverUrl ? [{ url: p.coverUrl }] : undefined,
+        publishedTime: p.publishedAt,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: p.title,
+        description: p.summary,
+        images: p.coverUrl ? [p.coverUrl] : undefined,
+      },
+    };
   } catch {
     return { title: "Omniv" };
   }
@@ -67,22 +139,25 @@ export default async function PublicationPage({ params }: Props) {
   const byTags = SEED_PUBLICATIONS.filter((x) => {
     if (x.id === p.id) return false;
     return x.tags.some((t) => tagSet.has(t.toLowerCase()));
-  }).slice(0, 4);
+  }).slice(0, 6);
 
   const relatedPubs = [
     ...fromPublisher.slice(0, 3),
     ...byTags.filter((x) => !fromPublisher.some((f) => f.id === x.id)),
-  ].slice(0, 5);
+  ].slice(0, 6);
 
   const relatedEntities = SEED_ENTITIES.filter((e) => {
     if (publisher && e.id === publisher.id) return false;
     return e.tags.some((t) => tagSet.has(t.toLowerCase()));
-  }).slice(0, 3);
+  }).slice(0, 6);
 
   const hero = HERO[p.type] ?? "from-zinc-800 to-[#050505]";
   const path = publicationPath(p);
   const coverUrl = p.coverUrl;
   const mediaUrl = p.mediaUrl;
+  const fullText = `${p.summary} ${p.body || ""}`;
+  const mins = readMinutes(fullText);
+
   const isPdf = mediaUrl?.toLowerCase().includes(".pdf");
   const ytMatch = mediaUrl?.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{6,})/i
@@ -107,15 +182,21 @@ export default async function PublicationPage({ params }: Props) {
     !isAudio &&
     (p.type === "video" || /\.(mp4|webm)(\?|$)/i.test(mediaUrl));
 
+  // Explore chips = tags + related entity names
+  const exploreChips = [
+    ...p.tags.slice(0, 8),
+    ...relatedEntities.map((e) => e.name).slice(0, 4),
+  ].filter((v, i, a) => a.findIndex((x) => x.toLowerCase() === v.toLowerCase()) === i);
+
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
         <div
-          className={`relative min-h-[280px] bg-gradient-to-b ${hero} sm:min-h-[340px]`}
+          className={`relative min-h-[300px] bg-gradient-to-b ${hero} sm:min-h-[380px]`}
           style={
             coverUrl
               ? {
-                  backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.2) 0%, rgba(5,5,5,0.55) 45%, #050505 100%), url(${coverUrl})`,
+                  backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.15) 0%, rgba(5,5,5,0.5) 40%, #050505 100%), url(${coverUrl})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center top",
                 }
@@ -123,7 +204,7 @@ export default async function PublicationPage({ params }: Props) {
           }
         >
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,255,255,0.06),transparent_55%)]" />
-          <div className="relative mx-auto flex min-h-[280px] max-w-2xl flex-col px-4 pb-8 pt-3 sm:min-h-[340px]">
+          <div className="relative mx-auto flex min-h-[300px] max-w-2xl flex-col px-4 pb-10 pt-3 sm:min-h-[380px]">
             <div className="flex items-center justify-between">
               <Link
                 href="/home"
@@ -149,7 +230,7 @@ export default async function PublicationPage({ params }: Props) {
               <span className="inline-flex items-center rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90 backdrop-blur-sm">
                 {PUBLICATION_LABELS[p.type]}
               </span>
-              <h1 className="mt-3 text-[28px] font-semibold leading-[1.15] tracking-tight text-white sm:text-4xl">
+              <h1 className="mt-3 text-[28px] font-semibold leading-[1.15] tracking-tight text-white sm:text-[36px]">
                 {p.title}
               </h1>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-zinc-300">
@@ -166,12 +247,8 @@ export default async function PublicationPage({ params }: Props) {
                 ) : (
                   <span className="font-medium">{publisherName}</span>
                 )}
-                {p.meta && (
-                  <>
-                    <span className="text-zinc-600">·</span>
-                    <span>{p.meta}</span>
-                  </>
-                )}
+                <span className="text-zinc-600">·</span>
+                <span>{mins} min read</span>
                 {p.publishedAt && (
                   <>
                     <span className="text-zinc-600">·</span>
@@ -239,30 +316,11 @@ export default async function PublicationPage({ params }: Props) {
             </a>
           )}
 
-          <p className="text-[17px] leading-[1.7] text-zinc-300">{p.summary}</p>
+          {/* Lead */}
+          <p className="text-[18px] leading-[1.7] text-zinc-200">{p.summary}</p>
 
           {p.body && (
-            <div className="mt-8 space-y-5">
-              {p.body.split("\n\n").map((para, i) => (
-                <p key={i} className="text-[16px] leading-[1.75] text-zinc-300">
-                  {para}
-                </p>
-              ))}
-            </div>
-          )}
-
-          {p.tags.length > 0 && (
-            <div className="mt-10 flex flex-wrap gap-2">
-              {p.tags.map((t) => (
-                <Link
-                  key={t}
-                  href={`/explore?q=${encodeURIComponent(t)}`}
-                  className="rounded-full bg-white/[0.04] px-3.5 py-1.5 text-[12px] text-zinc-400 ring-1 ring-white/[0.08] hover:text-zinc-200"
-                >
-                  {t}
-                </Link>
-              ))}
-            </div>
+            <div className="mt-8 space-y-5">{renderBody(p.body)}</div>
           )}
 
           {p.cta && (
@@ -274,22 +332,35 @@ export default async function PublicationPage({ params }: Props) {
             </a>
           )}
 
-          {/* Promote — mockup growth loop */}
-          <div className="mt-10 flex flex-wrap gap-2">
-            <Link
-              href={`/promote?slug=${p.slug}`}
-              className="inline-flex h-11 items-center rounded-full bg-omniv-gold/15 px-5 text-[13px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/30"
-            >
-              Promote this
-            </Link>
-            <Link
-              href="/publish"
-              className="inline-flex h-11 items-center rounded-full px-5 text-[13px] font-medium text-zinc-400 ring-1 ring-white/12"
-            >
-              Publish more
-            </Link>
-          </div>
+          {/* KEEP EXPLORING — master spec §11 */}
+          {exploreChips.length > 0 && (
+            <section className="mt-14">
+              <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                Keep exploring
+              </h2>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {exploreChips.map((chip) => {
+                  const ent = relatedEntities.find(
+                    (e) => e.name.toLowerCase() === chip.toLowerCase()
+                  );
+                  const href = ent
+                    ? entityPath(ent)
+                    : `/explore?q=${encodeURIComponent(chip)}`;
+                  return (
+                    <Link
+                      key={chip}
+                      href={href}
+                      className="rounded-full bg-white/[0.05] px-4 py-2 text-[13px] font-medium text-zinc-300 ring-1 ring-white/[0.1] transition hover:bg-omniv-gold/10 hover:text-omniv-gold hover:ring-omniv-gold/30"
+                    >
+                      {chip}
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
+          {/* Publisher */}
           {publisher && (
             <div className="mt-12 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.08]">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
@@ -322,27 +393,15 @@ export default async function PublicationPage({ params }: Props) {
             </div>
           )}
 
-          {(relatedPubs.length > 0 || relatedEntities.length > 0) && (
-            <div className="mt-12">
-              <h2 className="text-[12px] font-semibold uppercase tracking-wide text-zinc-500">
-                Related
+          {/* More from / related */}
+          {relatedPubs.length > 0 && (
+            <section className="mt-12">
+              <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                {publisher
+                  ? `More from ${publisher.name}`
+                  : "Related publications"}
               </h2>
-
-              {relatedEntities.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {relatedEntities.map((ent) => (
-                    <Link
-                      key={ent.id}
-                      href={entityPath(ent)}
-                      className="rounded-full bg-white/[0.04] px-3 py-1.5 text-[12px] text-zinc-300 ring-1 ring-white/[0.08] hover:text-white"
-                    >
-                      {ent.name}
-                    </Link>
-                  ))}
-                </div>
-              )}
-
-              <ul className="mt-3 space-y-2">
+              <ul className="mt-4 space-y-2">
                 {relatedPubs.map((r) => (
                   <li key={r.id}>
                     <Link
@@ -363,8 +422,40 @@ export default async function PublicationPage({ params }: Props) {
                   </li>
                 ))}
               </ul>
-            </div>
+            </section>
           )}
+
+          <div className="mt-10 flex flex-wrap gap-2">
+            <Link
+              href={`/promote?slug=${p.slug}`}
+              className="inline-flex h-11 items-center rounded-full bg-omniv-gold/15 px-5 text-[13px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/30"
+            >
+              Promote this
+            </Link>
+            <SaveButton
+              kind="publication"
+              type={p.type}
+              slug={p.slug}
+              name={p.title}
+              pubType={p.type}
+            />
+          </div>
+
+          {/* CTA — master spec */}
+          <div className="mt-14 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-transparent p-6 text-center">
+            <p className="text-[17px] font-semibold text-white">
+              Publish what is worth discovering.
+            </p>
+            <p className="mt-2 text-[13px] text-zinc-500">
+              Permanent publications. Real discovery. Independent identities.
+            </p>
+            <Link
+              href="/publish"
+              className="mt-5 inline-flex h-11 items-center rounded-full bg-omniv-gold px-6 text-[14px] font-semibold text-black"
+            >
+              Publish on Omniv
+            </Link>
+          </div>
         </main>
 
         <BottomNav />
