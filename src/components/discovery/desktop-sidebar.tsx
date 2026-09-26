@@ -11,7 +11,6 @@ import {
   onAccountSwitch,
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
-import { IdentityContextBar } from "@/components/discovery/identity-context-bar";
 
 type NavItem = { href: string; label: string; badge?: string };
 type NavGroup = { id: string; label: string; items: NavItem[] };
@@ -100,7 +99,6 @@ export function DesktopSidebar() {
           </span>
         </div>
 
-        {/* Identity — tap to switch only */}
         <div className="relative px-3 pb-3">
           <button
             type="button"
@@ -217,7 +215,6 @@ export function DesktopSidebar() {
           ))}
         </nav>
 
-        {/* Settings footer */}
         <div className="border-t border-white/[0.05] px-3 py-3">
           <Link
             href="/settings"
@@ -269,10 +266,7 @@ export function DiscoveryShell({
   return (
     <div className="flex min-h-dvh bg-[#050505] text-zinc-100">
       <DesktopSidebar />
-      <div className="min-w-0 flex-1">
-        <IdentityContextBar />
-        {children}
-      </div>
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }
