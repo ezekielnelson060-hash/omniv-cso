@@ -7,6 +7,7 @@ import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { ProfileAvatarLink } from "@/components/discovery/profile-avatar-link";
 import { readFollows, type FollowedRef } from "@/lib/discovery/local-graph";
+import { onAccountSwitch, readActiveAccount, type ActiveAccount } from "@/lib/discovery/active-account";
 import { SEED_ENTITIES, SEED_PUBLICATIONS } from "@/lib/discovery/seed";
 import {
   PUBLICATION_LABELS,
@@ -22,6 +23,12 @@ export default function ActivityPage() {
   const [follows, setFollows] = useState<FollowedRef[]>([]);
   const [live, setLive] = useState<LivePub[]>([]);
   const [ready, setReady] = useState(false);
+  const [active, setActive] = useState<ActiveAccount | null>(null);
+
+  useEffect(() => {
+    setActive(readActiveAccount());
+    return onAccountSwitch(setActive);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,19 +79,26 @@ export default function ActivityPage() {
       ),
     ];
 
+    const identityPool = active?.id
+      ? pool.filter(
+          (p) =>
+            p.publisherId === active.id ||
+            p.publisherName?.toLowerCase() === active.name.toLowerCase()
+        )
+      : pool;
     let pubs =
       follows.length > 0
-        ? pool.filter(
+        ? identityPool.filter(
             (p) =>
               ids.has(p.publisherId) ||
               (p.publisherName &&
                 names.has(p.publisherName.toLowerCase()))
           )
-        : pool;
+        : identityPool;
 
     // If follow filter empties the feed, show network pulse
     if (follows.length > 0 && pubs.length === 0) {
-      pubs = pool;
+      pubs = identityPool;
     }
 
     return pubs
@@ -106,7 +120,7 @@ export default function ActivityPage() {
           publisher,
         };
       });
-  }, [follows, live]);
+  }, [follows, live, active]);
 
   return (
     <DiscoveryShell>
@@ -180,7 +194,7 @@ export default function ActivityPage() {
                 </p>
               )}
               <ul className="space-y-2.5">
-                {feed.map(({ pub, publisherName, publisher }) => (
+                {feed.map(({ pub, publisherName }) => (
                   <li key={pub.id}>
                     <Link
                       href={publicationPath(pub)}

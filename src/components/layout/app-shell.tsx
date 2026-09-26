@@ -7,6 +7,7 @@ import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { AgentLiveSignals } from "@/components/notifications/agent-toast";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import { IdentityContextBar } from "@/components/discovery/identity-context-bar";
 
 /** Soft page views so Ziki operating brief sees where the artist spends time. */
 function PathTracker() {
@@ -38,6 +39,7 @@ export function AppShell({
             : "px-3 pb-[calc(3.5rem+env(safe-area-inset-bottom)+0.75rem)] pt-14 sm:px-4 md:px-6 md:pb-12 md:pt-5"
         )}
       >
+        <IdentityContextBar />
         {fullBleed ? (
           <div className="h-[calc(100dvh-3rem)] md:h-dvh">{children}</div>
         ) : (

@@ -11,6 +11,7 @@ import {
   onAccountSwitch,
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
+import { IdentityContextBar } from "@/components/discovery/identity-context-bar";
 
 type NavItem = { href: string; label: string };
 type NavGroup = { id: string; label: string; items: NavItem[] };
@@ -258,7 +259,7 @@ export function DesktopSidebar() {
         {/* Personal account footer */}
         <div className="border-t border-white/[0.06] px-3 py-3">
           <Link
-            href="/profile"
+            href={active?.path || "/profile"}
             className="flex items-center gap-2.5 rounded-xl px-2 py-2 hover:bg-white/[0.04]"
           >
             <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/10 text-[11px] font-semibold text-white">
@@ -270,22 +271,16 @@ export function DesktopSidebar() {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                displayName.charAt(0).toUpperCase()
+                identityName.charAt(0).toUpperCase()
               )}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[12px] font-medium text-white">
-                {displayName}
+                {identityName}
               </p>
-              <p className="text-[10px] text-zinc-600">Personal account</p>
+              <p className="text-[10px] capitalize text-zinc-600">{identityType}</p>
             </div>
-            <Link
-              href="/accounts"
-              className="text-zinc-600 hover:text-white"
-              title="Settings"
-            >
-              ⚙
-            </Link>
+            <span className="text-zinc-600" aria-hidden="true">›</span>
           </Link>
         </div>
       </div>
@@ -301,7 +296,10 @@ export function DiscoveryShell({
   return (
     <div className="flex min-h-dvh bg-[#050505] text-zinc-100">
       <DesktopSidebar />
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-0 flex-1">
+        <IdentityContextBar />
+        {children}
+      </div>
     </div>
   );
 }

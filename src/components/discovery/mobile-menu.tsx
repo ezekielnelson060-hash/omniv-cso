@@ -23,8 +23,8 @@ const MAIN: NavItem[] = [
 ];
 
 const PUBLISH: NavItem[] = [
-  { href: "/publish", label: "Publications" },
-  { href: "/publish", label: "Drafts" },
+  { href: "/publications", label: "Publications" },
+  { href: "/drafts", label: "Drafts" },
 ];
 
 const GROW: NavItem[] = [
@@ -232,7 +232,7 @@ export function MobileMenuButton() {
                   + Publish
                 </Link>
                 <Link
-                  href="/profile"
+                  href={active?.path || "/profile"}
                   onClick={close}
                   className="flex items-center gap-2.5 rounded-xl px-2 py-2"
                 >
@@ -245,14 +245,14 @@ export function MobileMenuButton() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      displayName.charAt(0).toUpperCase()
+                      identityName.charAt(0).toUpperCase()
                     )}
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-[12px] font-medium text-white">
-                      {displayName}
+                      {identityName}
                     </p>
-                    <p className="text-[10px] text-zinc-600">Personal account</p>
+                    <p className="text-[10px] capitalize text-zinc-600">{identityType}</p>
                   </div>
                 </Link>
               </div>
