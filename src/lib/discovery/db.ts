@@ -7,6 +7,7 @@ import type {
   PublicationType,
   ArticleContentBlock,
   ArticleSource,
+  EntityReference,
 } from "./types";
 import { SEED_ENTITIES, SEED_PUBLICATIONS, getPublication as seedGetPub } from "./seed";
 
@@ -50,6 +51,8 @@ type PubRow = {
   what_this_means?: string | null;
   question_nobody_asks?: string | null;
   reading_time?: number | null;
+  entity_refs?: EntityReference[] | null;
+  related_publication_ids?: string[] | null;
   status?: "draft" | "published" | "archived" | null;
   seo_title?: string | null;
   seo_description?: string | null;
@@ -104,6 +107,10 @@ function rowToPublication(r: PubRow): LivePublication {
     whatThisMeans: r.what_this_means ?? undefined,
     questionNobodyAsks: r.question_nobody_asks ?? undefined,
     readingTime: r.reading_time ?? undefined,
+    entityRefs: Array.isArray(r.entity_refs) ? r.entity_refs : undefined,
+    relatedPublicationIds: Array.isArray(r.related_publication_ids)
+      ? r.related_publication_ids
+      : undefined,
     status: r.status ?? "published",
     seoTitle: r.seo_title ?? undefined,
     seoDescription: r.seo_description ?? undefined,
@@ -123,7 +130,7 @@ function rowToPublication(r: PubRow): LivePublication {
 const PUB_SELECT =
   "id, type, slug, title, summary, body, tags, meta, cover_url, media_url, heat, published_at, publisher_id, publisher_name";
 const PUB_SELECT_ARTICLE =
-  `${PUB_SELECT}, subtitle, excerpt, content, sources, what_this_means, question_nobody_asks, reading_time, status, seo_title, seo_description, canonical_url, updated_at`;
+  `${PUB_SELECT}, subtitle, excerpt, content, entity_refs, related_publication_ids, sources, what_this_means, question_nobody_asks, reading_time, status, seo_title, seo_description, canonical_url, updated_at`;
 
 const ENT_SELECT =
   "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified, avatar_url, cover_url";

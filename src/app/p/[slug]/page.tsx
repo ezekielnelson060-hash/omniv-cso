@@ -6,6 +6,7 @@ import { ShareButton } from "@/components/discovery/share-button";
 import { FollowButton } from "@/components/discovery/follow-button";
 import { StructuredData } from "@/components/StructuredData";
 import { ArticleContent, ArticleSources } from "@/components/discovery/article-content";
+import { KeepExploring } from "@/components/discovery/keep-exploring";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { createClient } from "@/lib/supabase/server";
@@ -21,6 +22,11 @@ import {
   entityPath,
   publicationPath,
 } from "@/lib/discovery/types";
+import {
+  getEntityReferences,
+  getRelatedEntities,
+  recommendPublications,
+} from "@/lib/discovery/graph";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -95,21 +101,21 @@ export default async function PublicationPage({ params }: Props) {
     ? publicationsByPublisher(publisher.id).filter((x) => x.id !== p.id)
     : [];
 
-  const tagSet = new Set(p.tags.map((t) => t.toLowerCase()));
-  const byTags = SEED_PUBLICATIONS.filter((x) => {
-    if (x.id === p.id) return false;
-    return x.tags.some((t) => tagSet.has(t.toLowerCase()));
-  }).slice(0, 6);
-
+  const graph = { entities: SEED_ENTITIES, publications: SEED_PUBLICATIONS };
+  const connectedEntities = getEntityReferences(p, graph.entities);
+  const relatedEntities = Array.from(
+    new Map(
+      connectedEntities
+        .flatMap((entity) => getRelatedEntities(entity, graph, 6))
+        .filter((entity) => !connectedEntities.some((connected) => connected.id === entity.id))
+        .map((entity) => [entity.id, entity])
+    ).values()
+  ).slice(0, 8);
+  const recommended = recommendPublications(p, graph, {}, 6).map((item) => item.publication);
   const relatedPubs = [
     ...fromPublisher.slice(0, 3),
-    ...byTags.filter((x) => !fromPublisher.some((f) => f.id === x.id)),
+    ...recommended.filter((candidate) => !fromPublisher.some((existing) => existing.id === candidate.id)),
   ].slice(0, 6);
-
-  const relatedEntities = SEED_ENTITIES.filter((e) => {
-    if (publisher && e.id === publisher.id) return false;
-    return e.tags.some((t) => tagSet.has(t.toLowerCase()));
-  }).slice(0, 6);
 
   const hero = HERO[p.type] ?? "from-zinc-800 to-[#050505]";
   const path = publicationPath(p);
@@ -156,12 +162,6 @@ export default async function PublicationPage({ params }: Props) {
     !isEmbed &&
     !isAudio &&
     (p.type === "video" || /\.(mp4|webm)(\?|$)/i.test(mediaUrl));
-
-  // Explore chips = tags + related entity names
-  const exploreChips = [
-    ...p.tags.slice(0, 8),
-    ...relatedEntities.map((e) => e.name).slice(0, 4),
-  ].filter((v, i, a) => a.findIndex((x) => x.toLowerCase() === v.toLowerCase()) === i);
 
   return (
     <DiscoveryShell>
@@ -336,53 +336,11 @@ export default async function PublicationPage({ params }: Props) {
             </a>
           )}
 
-          {/* KEEP EXPLORING — master spec §11 */}
-          {exploreChips.length > 0 && (
-            <section className="mt-14">
-              <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                Keep exploring
-              </h2>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {exploreChips.map((chip) => {
-                  const ent = relatedEntities.find(
-                    (e) => e.name.toLowerCase() === chip.toLowerCase()
-                  );
-                  const href = ent
-                    ? entityPath(ent)
-                    : `/explore?q=${encodeURIComponent(chip)}`;
-                  return (
-                    <Link
-                      key={chip}
-                      href={href}
-                      className="rounded-full bg-white/[0.05] px-4 py-2 text-[13px] font-medium text-zinc-300 ring-1 ring-white/[0.1] transition hover:bg-omniv-gold/10 hover:text-omniv-gold hover:ring-omniv-gold/30"
-                    >
-                      {chip}
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
-          {relatedEntities.length > 0 && (
-            <section className="mt-10">
-              <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                Keep exploring
-              </h2>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                {relatedEntities.slice(0, 4).map((entity) => (
-                  <Link
-                    key={entity.id}
-                    href={entityPath(entity)}
-                    className="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.08] transition hover:bg-white/[0.06] hover:ring-omniv-gold/30"
-                  >
-                    <p className="text-[14px] font-semibold text-white">{entity.name}</p>
-                    <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-zinc-500">{entity.tagline}</p>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
+          <KeepExploring
+            entities={[...connectedEntities, ...relatedEntities]}
+            publications={recommended}
+            tags={p.tags}
+          />
 
           {/* Publisher */}
           {publisher && (

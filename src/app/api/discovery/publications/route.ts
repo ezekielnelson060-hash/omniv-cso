@@ -30,6 +30,10 @@ export async function POST(req: Request) {
     const tagsRaw = String(body.tags || "");
     const coverUrl = body.coverUrl ? String(body.coverUrl).trim() : null;
     const mediaUrl = body.mediaUrl ? String(body.mediaUrl).trim() : null;
+    const entityRefs = Array.isArray(body.entityRefs) ? body.entityRefs : [];
+    const relatedPublicationIds = Array.isArray(body.relatedPublicationIds)
+      ? body.relatedPublicationIds.map((id: unknown) => String(id)).slice(0, 20)
+      : [];
     const status = ["draft", "published", "archived"].includes(String(body.status))
       ? String(body.status)
       : "published";
@@ -131,6 +135,8 @@ export async function POST(req: Request) {
       summary,
       body: content || null,
       status,
+      entity_refs: entityRefs,
+      related_publication_ids: relatedPublicationIds,
       tags,
       meta,
       heat: 10,

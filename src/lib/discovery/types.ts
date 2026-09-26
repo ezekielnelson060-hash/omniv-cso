@@ -144,6 +144,13 @@ export type ArticleSource = {
   url: string;
 };
 
+export type EntityReference = {
+  id?: string;
+  type: string;
+  slug: string;
+  label: string;
+};
+
 /** A thing published into the world — primary discovery unit */
 export type Publication = {
   id: string;
@@ -155,6 +162,8 @@ export type Publication = {
   subtitle?: string;
   excerpt?: string;
   content?: ArticleContentBlock[];
+  entityRefs?: EntityReference[];
+  relatedPublicationIds?: string[];
   sources?: ArticleSource[];
   readingTime?: number;
   whatThisMeans?: string;

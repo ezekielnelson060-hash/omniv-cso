@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/discovery/contact-form";
 import { StructuredData } from "@/components/StructuredData";
+import { KeepExploring } from "@/components/discovery/keep-exploring";
 import { FollowButton } from "@/components/discovery/follow-button";
 import { SaveButton } from "@/components/discovery/save-button";
 import { FollowerCount } from "@/components/discovery/follower-count";
@@ -21,6 +22,7 @@ import {
 } from "@/lib/discovery/db";
 import {
   publicationsByPublisher,
+  SEED_PUBLICATIONS,
   SEED_ENTITIES,
 } from "@/lib/discovery/seed";
 import {
@@ -32,6 +34,7 @@ import {
   type Publication,
   type PublicationType,
 } from "@/lib/discovery/types";
+import { getRelatedEntities, recommendForEntity } from "@/lib/discovery/graph";
 
 type Props = {
   params: Promise<{ type: string; slug: string }>;
@@ -120,18 +123,12 @@ export default async function EntityPage({ params, searchParams }: Props) {
   const coverUrl = (e as { coverUrl?: string | null }).coverUrl;
   const avatarUrl = (e as { avatarUrl?: string | null }).avatarUrl;
 
-  const tagSet = new Set(e.tags.map((t) => t.toLowerCase()));
-  const relatedEntities = SEED_ENTITIES.filter((other) => {
-    if (other.id === e.id) return false;
-    return other.tags.some((t) => tagSet.has(t.toLowerCase()));
-  }).slice(0, 8);
-
-  const networkPubs = liveAll
-    .filter((p) => {
-      if (p.publisherId === e.id) return false;
-      return p.tags.some((t) => tagSet.has(t.toLowerCase()));
-    })
-    .slice(0, 5);
+  const graphPublications = Array.from(
+    new Map([...SEED_PUBLICATIONS, ...liveAll].map((publication) => [publication.id, publication])).values()
+  );
+  const graph = { entities: [e, ...SEED_ENTITIES.filter((entity) => entity.id !== e.id)], publications: graphPublications };
+  const relatedEntities = getRelatedEntities(e, graph, 8);
+  const networkPubs = recommendForEntity(e, graph, {}, 6).map((item) => item.publication);
 
   const origin = (process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media").replace(/\/$/, "");
   const pageUrl = `${origin}${path}`;
@@ -366,51 +363,12 @@ export default async function EntityPage({ params, searchParams }: Props) {
                 </div>
               )}
 
-              {activeTab === "overview" && relatedEntities.length > 0 && (
-                <section className="pt-8">
-                  <h2 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
-                    Related identities
-                  </h2>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {relatedEntities.map((ent) => (
-                      <Link
-                        key={ent.id}
-                        href={entityPath(ent)}
-                        className="rounded-full bg-white/[0.04] px-3.5 py-1.5 text-[12px] text-zinc-300 ring-1 ring-white/[0.08] hover:text-omniv-gold"
-                      >
-                        {ent.name}
-                      </Link>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {activeTab === "overview" && networkPubs.length > 0 && (
-                <section className="pt-6">
-                  <h2 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
-                    Keep exploring
-                  </h2>
-                  <ul className="mt-3 space-y-2">
-                    {networkPubs.map((r) => (
-                      <li key={r.id}>
-                        <Link
-                          href={publicationPath(r)}
-                          className="flex justify-between rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-[14px] font-medium text-white">
-                              {r.title}
-                            </p>
-                            <p className="text-[11px] text-zinc-500">
-                              {PUBLICATION_LABELS[r.type]}
-                            </p>
-                          </div>
-                          <span className="text-zinc-600">›</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+              {activeTab === "overview" && (
+                <KeepExploring
+                  entities={relatedEntities}
+                  publications={networkPubs}
+                  tags={e.tags}
+                />
               )}
 
               {!e.verified && <GetVerifiedCard />}
