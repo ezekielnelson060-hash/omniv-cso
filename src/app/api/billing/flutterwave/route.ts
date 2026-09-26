@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  DISCOVERY_PLANS,
+  LEGACY_CHECKOUT_AMOUNTS,
+  PROMOTION_CONFIG,
+} from "@/lib/discovery/monetization";
 
 /**
  * Flutterwave standard checkout.
- * Plans: pro ($29), business ($99), promote (custom $20–500).
+ * Plans: discovery Pro (central config), legacy business, and promotion budget.
  * Requires FLW_SECRET_KEY. Optional: FLW_CURRENCY (default USD).
  */
 export async function POST(req: Request) {
@@ -28,11 +33,11 @@ export async function POST(req: Request) {
     };
 
     const prices: Record<string, number> = {
-      starter: 29,
-      pro: 29,
-      business: 99,
-      label: 99,
-      promote: 50,
+      starter: DISCOVERY_PLANS.pro.priceMonthlyUsd,
+      pro: DISCOVERY_PLANS.pro.priceMonthlyUsd,
+      business: LEGACY_CHECKOUT_AMOUNTS.business,
+      label: LEGACY_CHECKOUT_AMOUNTS.label,
+      promote: PROMOTION_CONFIG.defaultBudgetUsd,
     };
     let plan = body.plan || "pro";
     if (plan === "starter") plan = "pro";
@@ -40,7 +45,10 @@ export async function POST(req: Request) {
 
     let amount = prices[plan] ?? 29;
     if (plan === "promote" && typeof body.amount === "number") {
-      amount = Math.min(500, Math.max(10, Math.round(body.amount)));
+      amount = Math.min(
+        PROMOTION_CONFIG.maxBudgetUsd,
+        Math.max(PROMOTION_CONFIG.minBudgetUsd, Math.round(body.amount))
+      );
     }
 
     let userId: string | null = null;
@@ -79,7 +87,7 @@ export async function POST(req: Request) {
     const redirect =
       plan === "promote"
         ? `${origin}/promote?billing=success`
-        : `${origin}/pricing?billing=success&plan=${plan}`;
+        : `${origin}/pro?billing=success&plan=${plan}`;
 
     const tx_ref = userId
       ? `omniv_${plan}_${userId}_${Date.now()}`

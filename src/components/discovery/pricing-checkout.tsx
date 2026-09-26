@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { startFlutterwaveCheckout, type CheckoutPlan } from "@/lib/checkout";
+import { readActiveAccount } from "@/lib/discovery/active-account";
 
 export function PricingCheckoutButton({
   plan,
@@ -20,7 +21,15 @@ export function PricingCheckoutButton({
     setError(null);
     setLoading(true);
     try {
-      const result = await startFlutterwaveCheckout({ plan });
+      const active = readActiveAccount();
+      if (plan === "pro" && !active?.id) {
+        setError("Select an entity before buying entity verification.");
+        return;
+      }
+      const result = await startFlutterwaveCheckout({
+        plan,
+        meta: active?.id ? { entity_id: active.id, entity_name: active.name } : undefined,
+      });
       if (!result.ok) {
         setError(result.error);
         return;

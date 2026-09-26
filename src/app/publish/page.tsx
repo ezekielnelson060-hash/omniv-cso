@@ -302,6 +302,7 @@ export default function PublishPage() {
       coverUrl,
       mediaUrl,
       categoryId: category,
+      opportunityType: oppType,
       entityRefs: refs,
       seoTitle,
       seoDescription,
@@ -580,7 +581,11 @@ export default function PublishPage() {
             )}
             {pubType === "opportunity" && (
               <>
-                <Field label="Type"><input value={oppType} onChange={(e) => setOppType(e.target.value)} placeholder="Funding" className={inputCls} /></Field>
+                <Field label="Opportunity type">
+                  <select value={oppType} onChange={(e) => setOppType(e.target.value)} className={inputCls}>
+                    {(["Hiring", "Partnership", "Funding", "Grant", "Booking", "Procurement", "Investment", "Acquisition"] as const).map((kind) => <option key={kind} value={kind} className="bg-zinc-900">{kind}</option>)}
+                  </select>
+                </Field>
                 <Field label="Deadline"><input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className={inputCls} /></Field>
                 <Field label="Requirements"><textarea value={requirements} onChange={(e) => setRequirements(e.target.value)} rows={3} placeholder="Who should apply…" className={areaCls} /></Field>
               </>

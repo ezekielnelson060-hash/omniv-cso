@@ -3,6 +3,7 @@ import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { PricingCheckoutButton } from "@/components/discovery/pricing-checkout";
+import { DISCOVERY_PLANS, LEGACY_CHECKOUT_AMOUNTS } from "@/lib/discovery/monetization";
 
 export const metadata = {
   title: "Pricing",
@@ -15,6 +16,7 @@ type Props = {
 
 export default async function PricingPage({ searchParams }: Props) {
   const sp = await searchParams;
+  const proPlan = DISCOVERY_PLANS.pro;
   const success = sp.billing === "success";
   const paidPlan = sp.plan;
 
@@ -48,12 +50,12 @@ export default async function PricingPage({ searchParams }: Props) {
           {success && (
             <div className="mb-6 rounded-2xl bg-emerald-500/15 px-4 py-3 text-center ring-1 ring-emerald-500/30">
               <p className="text-[14px] font-semibold text-emerald-300">
-                Payment received
+                Checkout returned
                 {paidPlan ? ` · ${paidPlan}` : ""}
               </p>
               <p className="mt-1 text-[12px] text-zinc-400">
-                Your entities will show the verified badge once the webhook
-                confirms. Usually under a minute.
+                Your selected entity will show the verified badge only after
+                the payment webhook confirms the transaction.
               </p>
               <Link
                 href="/accounts"
@@ -112,17 +114,11 @@ export default async function PricingPage({ searchParams }: Props) {
               </span>
               <p className="text-[15px] font-semibold text-white">Pro</p>
               <p className="mt-2">
-                <span className="text-2xl font-semibold text-white">$29</span>
-                <span className="text-[13px] text-zinc-500"> / month</span>
+                <span className="text-2xl font-semibold text-white">${proPlan.priceMonthlyUsd}</span>
+                <span className="text-[13px] text-zinc-500"> {proPlan.billingLabel}</span>
               </p>
               <ul className="mt-4 space-y-2">
-                {[
-                  "Everything in Free",
-                  "Ongoing verified publisher badge",
-                  "Higher search visibility",
-                  "Audience insights",
-                  "Priority support",
-                ].map((f) => (
+                {proPlan.features.map((f) => (
                   <li
                     key={f}
                     className="flex items-start gap-2 text-[13px] text-zinc-400"
@@ -141,13 +137,13 @@ export default async function PricingPage({ searchParams }: Props) {
             <div className="relative rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.08]">
               <p className="text-[15px] font-semibold text-white">Business</p>
               <p className="mt-2">
-                <span className="text-2xl font-semibold text-white">$99</span>
+                <span className="text-2xl font-semibold text-white">${LEGACY_CHECKOUT_AMOUNTS.business}</span>
                 <span className="text-[13px] text-zinc-500"> / month</span>
               </p>
               <ul className="mt-4 space-y-2">
                 {[
                   "Everything in Pro",
-                  "Verified on all entities",
+                  "Entity-specific verification",
                   "Team-ready",
                   "Private publications",
                   "Priority onboarding",

@@ -30,6 +30,7 @@ export async function POST(req: Request) {
     const tagsRaw = String(body.tags || "");
     const coverUrl = body.coverUrl ? String(body.coverUrl).trim() : null;
     const mediaUrl = body.mediaUrl ? String(body.mediaUrl).trim() : null;
+    const opportunityType = body.opportunityType ? String(body.opportunityType).trim() : null;
     const entityRefs = Array.isArray(body.entityRefs) ? body.entityRefs : [];
     const relatedPublicationIds = Array.isArray(body.relatedPublicationIds)
       ? body.relatedPublicationIds.map((id: unknown) => String(id)).slice(0, 20)
@@ -134,6 +135,7 @@ export async function POST(req: Request) {
     }
     if (coverUrl) insertRow.cover_url = coverUrl;
     if (mediaUrl) insertRow.media_url = mediaUrl;
+    if (type === "opportunity" && opportunityType) insertRow.opportunity_type = opportunityType;
 
     const { data, error } = await supabase
       .from("discovery_publications")

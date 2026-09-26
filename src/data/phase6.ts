@@ -1,3 +1,5 @@
+import { DISCOVERY_PLANS } from "@/lib/discovery/monetization";
+
 export type PlanId = "starter" | "pro" | "label";
 
 export interface Plan {
@@ -36,7 +38,7 @@ export const plans: Plan[] = [
   {
     id: "pro",
     name: "Pro",
-    priceMonthly: 59,
+    priceMonthly: DISCOVERY_PLANS.pro.priceMonthlyUsd,
     currency: "USD",
     blurb: "Artists & managers shipping weekly",
     highlighted: true,

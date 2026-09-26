@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { startFlutterwaveCheckout } from "@/lib/checkout";
+import { type PromotionTargetType } from "@/lib/discovery/monetization";
 
 type Pub = {
   id: string;
@@ -14,6 +15,15 @@ type Pub = {
   slug: string;
   summary?: string;
 };
+type Entity = { id: string; name: string; slug: string; type: string };
+
+const TARGETS: { id: PromotionTargetType; label: string }[] = [
+  { id: "publication", label: "Publication" },
+  { id: "entity", label: "Entity" },
+  { id: "product", label: "Product" },
+  { id: "event", label: "Event" },
+  { id: "opportunity", label: "Opportunity" },
+];
 
 const AUDIENCES = [
   "AI & Research",
@@ -53,7 +63,9 @@ function PromoteInner() {
   const billingOk = sp.get("billing") === "success";
 
   const [pubs, setPubs] = useState<Pub[]>([]);
+  const [entities, setEntities] = useState<Entity[]>([]);
   const [slug, setSlug] = useState(preSlug);
+  const [targetType, setTargetType] = useState<PromotionTargetType>("publication");
   const [audience, setAudience] = useState("AI & Research");
   const [location, setLocation] = useState("Africa");
   const [duration, setDuration] = useState("7");
@@ -63,6 +75,7 @@ function PromoteInner() {
   const [done, setDone] = useState(billingOk);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [review, setReview] = useState(false);
 
   useEffect(() => {
     if (billingOk) setDone(true);
@@ -71,13 +84,18 @@ function PromoteInner() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(
+        const [pubRes, entityRes] = await Promise.all([
+          fetch(
           "/api/discovery/publications/list?owner=me&limit=30"
-        );
-        const data = await res.json();
+          ),
+          fetch("/api/discovery/entities"),
+        ]);
+        const data = await pubRes.json();
+        const entityData = await entityRes.json();
         setAuth(data.auth !== false);
         const list = data.publications || [];
         setPubs(list);
+        setEntities(entityData.entities || []);
         if (!preSlug && list[0]) setSlug(list[0].slug);
         if (preSlug) setSlug(preSlug);
       } catch {
@@ -86,7 +104,18 @@ function PromoteInner() {
     })();
   }, [preSlug]);
 
-  const selected = pubs.find((p) => p.slug === slug);
+  const candidates = targetType === "entity"
+    ? entities.map((entity) => ({ id: entity.id, title: entity.name, slug: entity.slug, type: entity.type }))
+    : targetType === "publication"
+      ? pubs
+      : pubs.filter((publication) => publication.type === targetType);
+  const selected = candidates.find((item) => item.slug === slug);
+
+  useEffect(() => {
+    if (candidates.length > 0 && !candidates.some((item) => item.slug === slug)) {
+      setSlug(candidates[0]!.slug);
+    }
+  }, [candidates, slug]);
 
   function budgetAmount() {
     if (budget === "custom") {
@@ -115,10 +144,32 @@ function PromoteInner() {
       /* ignore */
     }
 
+    const draftRes = await fetch("/api/discovery/promotions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        targetType,
+        targetId: selected?.id,
+        targetSlug: slug,
+        targetTitle: selected?.title || slug,
+        durationDays: Number(duration),
+        budget: amount,
+        audience: [audience],
+        location,
+      }),
+    });
+    const draftData = await draftRes.json();
+    if (!draftRes.ok) {
+      setError(draftData.error || "Could not save promotion");
+      setLoading(false);
+      return;
+    }
     const result = await startFlutterwaveCheckout({
       plan: "promote",
       amount,
       meta: {
+        promotion_id: draftData.promotion.id,
+        target_type: targetType,
         slug,
         audience,
         location,
@@ -146,8 +197,8 @@ function PromoteInner() {
             >
               ←
             </button>
-            <span className="text-[16px] font-semibold text-white">
-              Promote this publication
+                <span className="text-[16px] font-semibold text-white">
+              Promote
             </span>
           </div>
         </header>
@@ -168,12 +219,12 @@ function PromoteInner() {
           {auth && done && (
             <div className="mt-8 rounded-2xl bg-emerald-500/10 p-6 text-center ring-1 ring-emerald-500/25">
               <p className="text-[16px] font-semibold text-emerald-300">
-                {billingOk ? "Payment received" : "Promotion ready"}
+                {billingOk ? "Checkout returned" : "Promotion ready"}
               </p>
               <p className="mt-2 text-[13px] text-zinc-400">
-                Targeted discovery for “{selected?.title || slug}”. Your boost
-                settings are saved. Visibility lift runs over the selected
-                duration.
+                {billingOk
+                  ? "We are waiting for the payment confirmation webhook. Your promotion will become active only after the transaction is verified."
+                  : `Targeted discovery for “${selected?.title || slug}”. Review your settings before payment.`}
               </p>
               <Link
                 href={slug ? `/p/${slug}` : "/home"}
@@ -186,31 +237,37 @@ function PromoteInner() {
 
           {auth && !done && (
             <div className="space-y-6">
-              {selected && (
+              <Field label="What do you want to promote?">
+                <div className="flex flex-wrap gap-2">
+                  {TARGETS.map((target) => <Chip key={target.id} active={targetType === target.id} onClick={() => setTargetType(target.id)}>{target.label}</Chip>)}
+                </div>
+              </Field>
+
+              {candidates.length > 0 && (
                 <div className="flex items-center gap-3 rounded-2xl bg-white/[0.04] p-3 ring-1 ring-white/[0.08]">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-omniv-gold/20 text-omniv-gold">
                     ▣
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-semibold text-white">
-                      {selected.title}
+                      {selected?.title || "Choose a target"}
                     </p>
                     <p className="text-[12px] capitalize text-zinc-500">
-                      {selected.type}
+                      {targetType}
                     </p>
                   </div>
                 </div>
               )}
 
-              {pubs.length > 1 && (
+              {candidates.length > 1 && (
                 <label className="block">
-                  <span className="text-[12px] text-zinc-400">Publication</span>
+                  <span className="text-[12px] text-zinc-400">{targetType === "entity" ? "Entity" : "Content"}</span>
                   <select
                     value={slug}
                     onChange={(e) => setSlug(e.target.value)}
                     className="mt-1.5 h-11 w-full rounded-xl bg-white/[0.04] px-3 text-[14px] text-white outline-none ring-1 ring-white/[0.08]"
                   >
-                    {pubs.map((p) => (
+                    {candidates.map((p) => (
                       <option key={p.id} value={p.slug} className="bg-zinc-900">
                         {p.title}
                       </option>
@@ -219,9 +276,9 @@ function PromoteInner() {
                 </label>
               )}
 
-              {pubs.length === 0 && (
+              {candidates.length === 0 && (
                 <p className="text-[14px] text-zinc-500">
-                  Publish something first.{" "}
+                  {targetType === "entity" ? "Create an entity first." : `Create a ${targetType} first.`}{" "}
                   <Link href="/publish" className="text-omniv-gold">
                     Create →
                   </Link>
@@ -310,14 +367,21 @@ function PromoteInner() {
 
               <button
                 type="button"
-                disabled={loading || !slug}
-                onClick={() => void onContinue()}
+                disabled={loading || !slug || !selected}
+                onClick={() => setReview(true)}
                 className="flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black disabled:opacity-50"
               >
-                {loading
-                  ? "Opening checkout…"
-                  : `Pay $${budgetAmount()} & promote`}
+                Review promotion
               </button>
+
+              {review && (
+                <div className="rounded-2xl bg-white/[0.04] p-4 ring-1 ring-omniv-gold/30">
+                  <p className="text-[12px] font-semibold uppercase tracking-wide text-omniv-gold">Review</p>
+                  <p className="mt-2 text-[14px] text-white">{targetType} · {audience} · {location}</p>
+                  <p className="mt-1 text-[13px] text-zinc-400">{duration} days · ${budgetAmount()} total</p>
+                  <button type="button" disabled={loading} onClick={() => void onContinue()} className="mt-4 flex h-11 w-full items-center justify-center rounded-full bg-omniv-gold text-[14px] font-semibold text-black disabled:opacity-50">{loading ? "Opening checkout…" : "Continue to payment"}</button>
+                </div>
+              )}
 
               <p className="text-center text-[12px] text-zinc-600">
                 Secure card payment via Flutterwave. Requires FLW_SECRET_KEY in

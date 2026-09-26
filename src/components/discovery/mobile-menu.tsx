@@ -34,7 +34,7 @@ const GROW: NavItem[] = [
 ];
 
 const MONETIZE: NavItem[] = [
-  { href: "/pricing", label: "Pro", badge: "New" },
+  { href: "/pro", label: "Pro", badge: "New" },
   { href: "/explore?type=opportunity", label: "Opportunities" },
 ];
 

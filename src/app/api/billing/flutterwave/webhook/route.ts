@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { DISCOVERY_PLANS, LEGACY_CHECKOUT_AMOUNTS } from "@/lib/discovery/monetization";
 
 export const runtime = "nodejs";
 
 const PAYMENT_PLANS = new Set(["starter", "pro", "business", "label", "promote"]);
-const PLAN_AMOUNTS: Record<string, number> = { starter: 29, pro: 29, business: 99, label: 99 };
+const PLAN_AMOUNTS: Record<string, number> = {
+  starter: DISCOVERY_PLANS.pro.priceMonthlyUsd,
+  pro: DISCOVERY_PLANS.pro.priceMonthlyUsd,
+  business: LEGACY_CHECKOUT_AMOUNTS.business,
+  label: LEGACY_CHECKOUT_AMOUNTS.label,
+};
 
 function parseTxRef(txRef: string) {
   const m = txRef.match(/^omniv_(starter|pro|business|label|promote)_([0-9a-f-]{36})_/i);
@@ -119,7 +125,7 @@ export async function POST(req: Request) {
   if (!userId) return NextResponse.json({ error: "unmapped user" }, { status: 422 });
 
   const providerPaymentId = String(verified.id ?? data.id ?? verifiedTxRef);
-  const { error: paymentError } = await admin.from("payments").upsert(
+  const { data: paymentRow, error: paymentError } = await admin.from("payments").upsert(
     {
       provider: "flutterwave",
       provider_payment_id: providerPaymentId,
@@ -133,11 +139,31 @@ export async function POST(req: Request) {
       raw: verified,
     },
     { onConflict: "provider,provider_payment_id" }
-  );
+  ).select("id").single();
   if (paymentError) return NextResponse.json({ error: "payment record failed" }, { status: 500 });
 
   // Promotion purchases are recorded but never grant a membership plan.
   if (rawPlan === "promote") {
+    const promotionId = String(verifiedMeta.promotion_id || "").trim();
+    if (promotionId) {
+      const durationDays = Number(verifiedMeta.duration || 7);
+      const startsAt = new Date();
+      const endsAt = new Date(startsAt);
+      endsAt.setUTCDate(endsAt.getUTCDate() + (Number.isFinite(durationDays) ? durationDays : 7));
+      const { error: promotionError } = await admin
+        .from("discovery_promotions")
+        .update({
+          status: "active",
+          payment_id: paymentRow?.id || null,
+          starts_at: startsAt.toISOString(),
+          ends_at: endsAt.toISOString(),
+          updated_at: startsAt.toISOString(),
+        })
+        .eq("id", promotionId)
+        .eq("owner_id", userId)
+        .eq("status", "pending_payment");
+      if (promotionError) console.error("promotion activation", promotionError);
+    }
     return NextResponse.json({ ok: true, plan: "promote", userId, promotion: true });
   }
 
@@ -159,8 +185,27 @@ export async function POST(req: Request) {
   if (profileError) return NextResponse.json({ error: "entitlement update failed" }, { status: 500 });
 
   if (plan === "pro" || plan === "business") {
-    const { error } = await admin.from("discovery_entities").update({ verified: true }).eq("owner_id", userId);
-    if (error) console.error("verify entities after pay", error);
+    const entityId = String(verifiedMeta.entity_id || "").trim();
+    if (entityId) {
+      const { data: entity } = await admin
+        .from("discovery_entities")
+        .select("id")
+        .eq("id", entityId)
+        .eq("owner_id", userId)
+        .maybeSingle();
+      if (entity?.id) {
+        const { error } = await admin
+          .from("discovery_entities")
+          .update({ verified: true })
+          .eq("id", entity.id)
+          .eq("owner_id", userId);
+        if (error) console.error("verify selected entity after pay", error);
+      } else {
+        console.warn("paid verification entity not owned by payer", { entityId, userId });
+      }
+    } else {
+      console.warn("paid plan had no entity_id; no entity was verified", { userId, plan });
+    }
   }
   return NextResponse.json({ ok: true, plan, userId, planExpiresAt, verified: true });
 }

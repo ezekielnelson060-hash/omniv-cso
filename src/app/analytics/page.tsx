@@ -12,6 +12,7 @@ import {
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
 import { readProfile } from "@/lib/discovery/local-profile";
+import { DISCOVERY_PLANS } from "@/lib/discovery/monetization";
 
 type Pub = {
   id: string;
@@ -259,10 +260,10 @@ export default function AnalyticsPage() {
                   Per-identity demand, sources, and export.
                 </p>
                 <Link
-                  href="/pricing"
+                  href="/pro"
                   className="mt-4 inline-flex h-11 items-center rounded-full bg-omniv-gold px-5 text-[14px] font-semibold text-black"
                 >
-                  Upgrade to Pro — $29/mo
+                  Upgrade to Pro — ${DISCOVERY_PLANS.pro.priceMonthlyUsd}/mo
                 </Link>
               </div>
             </>
