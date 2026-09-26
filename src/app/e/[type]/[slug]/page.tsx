@@ -7,7 +7,10 @@ import { SaveButton } from "@/components/discovery/save-button";
 import { FollowerCount } from "@/components/discovery/follower-count";
 import { PublicationCard } from "@/components/discovery/publication-card";
 import { EntityLatestRow } from "@/components/discovery/entity-latest-row";
-import { VerifiedBadge, GetVerifiedCard } from "@/components/discovery/verified-badge";
+import {
+  VerifiedBadge,
+  GetVerifiedCard,
+} from "@/components/discovery/verified-badge";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import {
@@ -15,11 +18,16 @@ import {
   listLivePublications,
   type LivePublication,
 } from "@/lib/discovery/db";
-import { publicationsByPublisher } from "@/lib/discovery/seed";
+import {
+  publicationsByPublisher,
+  SEED_ENTITIES,
+} from "@/lib/discovery/seed";
 import {
   ENTITY_TYPES,
   INTENT_LABELS,
+  PUBLICATION_LABELS,
   entityPath,
+  publicationPath,
   type Publication,
   type PublicationType,
 } from "@/lib/discovery/types";
@@ -43,7 +51,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = await tryClient();
   const e = await getDiscoveryEntity(supabase, type, slug);
   if (!e) return { title: "Not found" };
-  return { title: e.name, description: e.tagline };
+  const origin = process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
+  const url = `${origin}/e/${type}/${slug}`;
+  return {
+    title: e.name,
+    description: e.tagline || e.about?.slice(0, 160),
+    alternates: { canonical: url },
+    openGraph: {
+      title: e.name,
+      description: e.tagline,
+      url,
+      type: "profile",
+    },
+  };
 }
 
 export default async function EntityPage({ params, searchParams }: Props) {
@@ -66,44 +86,53 @@ export default async function EntityPage({ params, searchParams }: Props) {
   for (const p of [...seedPubs, ...liveForEntity]) {
     pubsMap.set(p.slug || p.id, p);
   }
-  const pubs = Array.from(pubsMap.values()).sort(
-    (a, b) => (b.publishedAt || "").localeCompare(a.publishedAt || "")
+  const pubs = Array.from(pubsMap.values()).sort((a, b) =>
+    (b.publishedAt || "").localeCompare(a.publishedAt || "")
   );
 
   const activeTab = tab ?? "overview";
 
+  /** Master spec: Overview · Publications · About · Activity (+ type filters) */
   const tabs: { id: string; label: string; types?: PublicationType[] }[] = [
     { id: "overview", label: "Overview" },
-    { id: "posts", label: "Posts", types: ["article", "announcement"] },
-    { id: "research", label: "Research", types: ["research", "file"] },
-    { id: "products", label: "Products", types: ["product"] },
-    { id: "media", label: "Media", types: ["music", "video"] },
-    { id: "more", label: "More", types: ["opportunity", "event"] },
+    { id: "publications", label: "Publications" },
     { id: "about", label: "About" },
+    { id: "activity", label: "Activity" },
+    { id: "posts", label: "Articles", types: ["article", "announcement"] },
+    { id: "media", label: "Media", types: ["music", "video"] },
+    { id: "more", label: "More", types: ["opportunity", "event", "product", "research", "file"] },
   ];
 
-  const filtered =
-    activeTab === "overview" || activeTab === "about"
-      ? pubs
-      : pubs.filter((p) =>
-          tabs.find((t) => t.id === activeTab)?.types?.includes(p.type)
-        );
+  let filtered = pubs;
+  if (activeTab === "posts" || activeTab === "media" || activeTab === "more") {
+    filtered = pubs.filter((p) =>
+      tabs.find((t) => t.id === activeTab)?.types?.includes(p.type)
+    );
+  }
 
   const initial = e.name.slice(0, 1).toUpperCase();
   const path = entityPath(e);
   const editPath = `${path}/edit`;
-  // optional media fields if migration applied
   const coverUrl = (e as { coverUrl?: string | null }).coverUrl;
   const avatarUrl = (e as { avatarUrl?: string | null }).avatarUrl;
 
-  const counts = {
-    posts: pubs.filter((p) => p.type === "article" || p.type === "announcement")
-      .length,
-    products: pubs.filter((p) => p.type === "product").length,
-    research: pubs.filter((p) => p.type === "research" || p.type === "file")
-      .length,
-    events: pubs.filter((p) => p.type === "event").length,
-  };
+  // Entity graph: related identities by shared tags
+  const tagSet = new Set(e.tags.map((t) => t.toLowerCase()));
+  const relatedEntities = SEED_ENTITIES.filter((other) => {
+    if (other.id === e.id) return false;
+    return other.tags.some((t) => tagSet.has(t.toLowerCase()));
+  }).slice(0, 8);
+
+  // Pubs connected via tags (discovery graph)
+  const relatedPubs = pubs.length
+    ? []
+    : []; // filled below from network
+  const networkPubs = liveAll
+    .filter((p) => {
+      if (p.publisherId === e.id) return false;
+      return p.tags.some((t) => tagSet.has(t.toLowerCase()));
+    })
+    .slice(0, 5);
 
   return (
     <DiscoveryShell>
@@ -131,7 +160,12 @@ export default async function EntityPage({ params, searchParams }: Props) {
             ←
           </Link>
           <div className="absolute right-4 top-4 flex gap-1">
-            <SaveButton type={e.type} slug={e.slug} name={e.name} variant="icon" />
+            <SaveButton
+              type={e.type}
+              slug={e.slug}
+              name={e.name}
+              variant="icon"
+            />
             <Link
               href={editPath}
               className="flex h-9 items-center rounded-full bg-black/40 px-3 text-[12px] font-medium text-white backdrop-blur-sm"
@@ -146,25 +180,28 @@ export default async function EntityPage({ params, searchParams }: Props) {
             <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 text-3xl font-semibold text-black ring-4 ring-[#050505]">
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 initial
               )}
             </div>
             <div className="mt-4 flex flex-wrap gap-2 sm:mb-1 sm:mt-0">
-              <FollowButton type={e.type} slug={e.slug} name={e.name} id={e.id} />
+              <FollowButton
+                type={e.type}
+                slug={e.slug}
+                name={e.name}
+                id={e.id}
+              />
               <a
                 href="#contact"
                 className="inline-flex h-10 items-center rounded-full bg-transparent px-5 text-[13px] font-medium text-white ring-1 ring-white/20"
               >
                 Contact
               </a>
-              <Link
-                href={editPath}
-                className="inline-flex h-10 items-center rounded-full px-4 text-[13px] font-medium text-zinc-400 ring-1 ring-white/12"
-              >
-                Edit
-              </Link>
             </div>
           </div>
 
@@ -172,37 +209,20 @@ export default async function EntityPage({ params, searchParams }: Props) {
             {e.name}
             {e.verified && <VerifiedBadge />}
           </h1>
-          {e.verified && (
-            <p className="mt-1 text-[12px] font-medium text-sky-400">
-              Verified Publisher
-            </p>
-          )}
+          <p className="mt-0.5 text-[13px] capitalize text-zinc-500">
+            {e.type}
+            {e.verified ? " · Verified" : ""}
+            {e.location ? ` · ${e.location}` : ""}
+          </p>
           <p className="mt-1 text-[14px] text-zinc-400">{e.tagline}</p>
-          {e.location && (
-            <p className="mt-1.5 text-[13px] text-zinc-500">📍 {e.location}</p>
-          )}
 
-          <div className="mt-3">
+          {/* Independent identity stats */}
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-[14px]">
             <FollowerCount type={e.type} slug={e.slug} />
-          </div>
-
-          <div className="mt-5 grid grid-cols-4 gap-2">
-            {(
-              [
-                { n: counts.posts, label: "Posts" },
-                { n: counts.products, label: "Products" },
-                { n: counts.research, label: "Research" },
-                { n: counts.events, label: "Events" },
-              ] as const
-            ).map((c) => (
-              <div
-                key={c.label}
-                className="rounded-xl bg-white/[0.03] py-2.5 text-center ring-1 ring-white/[0.06]"
-              >
-                <p className="text-[16px] font-semibold text-white">{c.n}</p>
-                <p className="text-[11px] text-zinc-500">{c.label}</p>
-              </div>
-            ))}
+            <span className="text-zinc-500">
+              <span className="font-semibold text-white">{pubs.length}</span>{" "}
+              Publications
+            </span>
           </div>
 
           {e.intents.length > 0 && (
@@ -235,18 +255,21 @@ export default async function EntityPage({ params, searchParams }: Props) {
             ))}
           </div>
 
-          {activeTab === "about" ? (
+          {activeTab === "about" && (
             <div className="mt-6 space-y-6">
-              <p className="text-[15px] leading-relaxed text-zinc-300">{e.about}</p>
+              <p className="text-[15px] leading-relaxed text-zinc-300">
+                {e.about || e.tagline}
+              </p>
               {e.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {e.tags.map((t) => (
-                    <span
+                    <Link
                       key={t}
-                      className="rounded-full bg-white/[0.04] px-3 py-1 text-[12px] text-zinc-500 ring-1 ring-white/[0.06]"
+                      href={`/explore?q=${encodeURIComponent(t)}`}
+                      className="rounded-full bg-white/[0.04] px-3 py-1 text-[12px] text-zinc-400 ring-1 ring-white/[0.06] hover:text-white"
                     >
                       {t}
-                    </span>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -266,31 +289,119 @@ export default async function EntityPage({ params, searchParams }: Props) {
                 <ContactForm entityName={e.name} entityPath={path} />
               </div>
             </div>
-          ) : (
+          )}
+
+          {activeTab === "activity" && (
+            <div className="mt-6 space-y-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
+                Activity
+              </p>
+              {pubs.length === 0 ? (
+                <p className="py-10 text-center text-[14px] text-zinc-500">
+                  No activity yet for this identity.
+                </p>
+              ) : (
+                pubs.slice(0, 20).map((p) => (
+                  <Link
+                    key={p.id}
+                    href={publicationPath(p)}
+                    className="block rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]"
+                  >
+                    <p className="text-[12px] text-zinc-500">
+                      Published a{" "}
+                      {PUBLICATION_LABELS[p.type]?.toLowerCase() ?? p.type}
+                      {p.publishedAt ? ` · ${p.publishedAt}` : ""}
+                    </p>
+                    <p className="mt-0.5 text-[14px] font-medium text-white">
+                      {p.title}
+                    </p>
+                  </Link>
+                ))
+              )}
+            </div>
+          )}
+
+          {(activeTab === "overview" ||
+            activeTab === "publications" ||
+            activeTab === "posts" ||
+            activeTab === "media" ||
+            activeTab === "more") && (
             <div className="mt-6 space-y-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
                 {activeTab === "overview"
                   ? "Latest"
                   : tabs.find((t) => t.id === activeTab)?.label}
               </p>
+
               {activeTab === "overview" ? (
                 <div className="space-y-2.5">
-                  {filtered.slice(0, 8).map((p) => (
+                  {pubs.slice(0, 8).map((p) => (
                     <EntityLatestRow key={p.id} pub={p} />
                   ))}
+                  {pubs.length === 0 && (
+                    <p className="py-10 text-center text-[14px] text-zinc-500">
+                      No publications yet.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {filtered.map((p) => (
-                    <PublicationCard key={p.id} pub={p} />
-                  ))}
+                  {(activeTab === "publications" ? pubs : filtered).map(
+                    (p) => (
+                      <PublicationCard key={p.id} pub={p} />
+                    )
+                  )}
                 </div>
               )}
-              {filtered.length === 0 && (
-                <p className="py-12 text-center text-[14px] text-zinc-500">
-                  Nothing in this tab yet.
-                </p>
+
+              {/* Graph: related identities */}
+              {activeTab === "overview" && relatedEntities.length > 0 && (
+                <section className="pt-8">
+                  <h2 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
+                    Related identities
+                  </h2>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {relatedEntities.map((ent) => (
+                      <Link
+                        key={ent.id}
+                        href={entityPath(ent)}
+                        className="rounded-full bg-white/[0.04] px-3.5 py-1.5 text-[12px] text-zinc-300 ring-1 ring-white/[0.08] hover:text-omniv-gold"
+                      >
+                        {ent.name}
+                      </Link>
+                    ))}
+                  </div>
+                </section>
               )}
+
+              {activeTab === "overview" && networkPubs.length > 0 && (
+                <section className="pt-6">
+                  <h2 className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
+                    Keep exploring
+                  </h2>
+                  <ul className="mt-3 space-y-2">
+                    {networkPubs.map((r) => (
+                      <li key={r.id}>
+                        <Link
+                          href={publicationPath(r)}
+                          className="flex justify-between rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-[14px] font-medium text-white">
+                              {r.title}
+                            </p>
+                            <p className="text-[11px] text-zinc-500">
+                              {PUBLICATION_LABELS[r.type]}
+                            </p>
+                          </div>
+                          <span className="text-zinc-600">›</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
               {!e.verified && <GetVerifiedCard />}
               <div id="contact" className="pt-8">
                 <ContactForm entityName={e.name} entityPath={path} />
