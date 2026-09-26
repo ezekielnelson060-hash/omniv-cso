@@ -9,6 +9,7 @@ import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { ProfilePosts } from "@/components/discovery/profile-posts";
 import { FirstAccountNudge } from "@/components/discovery/first-account-nudge";
 import { PhotoPicker } from "@/components/discovery/photo-picker";
+import { NotificationBell } from "@/components/discovery/notification-bell";
 import {
   readFollows,
   readSaved,
@@ -125,7 +126,8 @@ export default function ProfilePage() {
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <div className="relative h-36 overflow-hidden bg-zinc-900 sm:h-44">
+        {/* Wide rectangular cover */}
+        <div className="relative aspect-[3/1] max-h-[200px] min-h-[140px] overflow-hidden bg-zinc-900 sm:max-h-[240px]">
           {show.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -134,39 +136,40 @@ export default function ProfilePage() {
               className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-omniv-gold/25 via-zinc-900 to-black" />
+            <div className="absolute inset-0 bg-gradient-to-br from-omniv-gold/20 via-zinc-900 to-black" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050505]/70 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-black/40 to-transparent" />
 
-          <Link
-            href="/home"
-            className="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm md:hidden"
-            aria-label="Back"
-          >
-            ←
-          </Link>
+          <div className="absolute left-3 top-3 flex items-center gap-2 md:hidden">
+            <Link
+              href="/home"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm"
+              aria-label="Back"
+            >
+              ←
+            </Link>
+          </div>
 
-          {editing && (
-            <div className="absolute right-3 top-3">
+          <div className="absolute right-3 top-3 flex items-center gap-2">
+            {editing ? (
               <PhotoPicker
                 kind="cover"
                 value={draft.coverUrl}
                 onChange={(url) => setPhoto("coverUrl", url)}
               />
-            </div>
-          )}
-
-          {!editing && (
-            <div className="absolute right-3 top-3 md:hidden">
-              <Image
-                src="/logo.svg"
-                alt=""
-                width={22}
-                height={22}
-                className="opacity-80"
-              />
-            </div>
-          )}
+            ) : (
+              <>
+                <NotificationBell />
+                <Image
+                  src="/logo.svg"
+                  alt=""
+                  width={22}
+                  height={22}
+                  className="opacity-80 md:hidden"
+                />
+              </>
+            )}
+          </div>
         </div>
 
         <main className="relative mx-auto max-w-lg px-4 pb-28 md:max-w-2xl md:px-6">
@@ -270,11 +273,21 @@ export default function ProfilePage() {
                 {profile.displayName}
               </h1>
               <p className="text-[14px] text-zinc-500">@{profile.handle}</p>
-              <p className="mt-3 text-[15px] leading-relaxed text-zinc-200">
-                {profile.bio}
-              </p>
-              <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-zinc-500">
-                {profile.location && <span>📍 {profile.location}</span>}
+
+              {profile.bio && (
+                <p className="mt-3 text-[15px] leading-relaxed text-zinc-200">
+                  {profile.bio}
+                </p>
+              )}
+
+              {/* X-style meta row */}
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-zinc-500">
+                {profile.location && (
+                  <span className="inline-flex items-center gap-1">
+                    <MetaIcon name="pin" />
+                    {profile.location}
+                  </span>
+                )}
                 {profile.website ? (
                   <a
                     href={
@@ -284,12 +297,14 @@ export default function ProfilePage() {
                     }
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-omniv-gold hover:underline"
+                    className="inline-flex items-center gap-1 text-omniv-gold hover:underline"
                   >
+                    <MetaIcon name="link" />
                     {profile.website.replace(/^https?:\/\//, "")}
                   </a>
                 ) : null}
-                <span>
+                <span className="inline-flex items-center gap-1">
+                  <MetaIcon name="calendar" />
                   Joined{" "}
                   {new Date(profile.joinedAt).toLocaleDateString("en-US", {
                     month: "short",
@@ -303,10 +318,10 @@ export default function ProfilePage() {
                   <span className="font-bold text-white">{follows.length}</span>{" "}
                   <span className="text-zinc-500">Following</span>
                 </Link>
-                <span>
+                <Link href="/followers" className="hover:underline">
                   <span className="font-bold text-white">0</span>{" "}
                   <span className="text-zinc-500">Followers</span>
-                </span>
+                </Link>
                 <Link href="/saved" className="hover:underline">
                   <span className="font-bold text-white">{saved.length}</span>{" "}
                   <span className="text-zinc-500">Saved</span>
@@ -324,7 +339,7 @@ export default function ProfilePage() {
                     Your entities
                   </p>
                   <p className="text-[12px] text-zinc-500">
-                    Switch identity to open an entity as the full app context
+                    Switch identity — each entity is its own account
                   </p>
                 </div>
                 <span className="text-omniv-gold">›</span>
@@ -393,35 +408,19 @@ export default function ProfilePage() {
                       ))}
                     </ul>
                   ))}
-                {tab === "activity" &&
-                  (follows.length === 0 ? (
-                    <p className="py-10 text-center text-[14px] text-zinc-500">
-                      Follow publishers to build your network.
+                {tab === "activity" && (
+                  <div className="py-6 text-center">
+                    <p className="text-[14px] text-zinc-500">
+                      Your actions live on the Activity page.
                     </p>
-                  ) : (
-                    <ul className="divide-y divide-white/[0.06]">
-                      {follows.map((f) => (
-                        <li key={`${f.type}-${f.slug}`}>
-                          <Link
-                            href={`/e/${f.type}/${f.slug}`}
-                            className="flex items-center gap-3 py-3.5"
-                          >
-                            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-omniv-gold/15 text-sm font-semibold text-omniv-gold">
-                              {f.name.charAt(0)}
-                            </span>
-                            <div>
-                              <p className="text-[14px] font-medium text-white">
-                                {f.name}
-                              </p>
-                              <p className="text-[12px] capitalize text-zinc-500">
-                                Entity · {f.type}
-                              </p>
-                            </div>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  ))}
+                    <Link
+                      href="/activity"
+                      className="mt-4 inline-flex h-10 items-center rounded-full bg-omniv-gold px-5 text-[13px] font-semibold text-black"
+                    >
+                      Open Activity
+                    </Link>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -429,6 +428,38 @@ export default function ProfilePage() {
         <BottomNav />
       </div>
     </DiscoveryShell>
+  );
+}
+
+function MetaIcon({ name }: { name: "pin" | "link" | "calendar" }) {
+  const p = {
+    width: 14,
+    height: 14,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    className: "opacity-70",
+  } as const;
+  if (name === "pin")
+    return (
+      <svg {...p}>
+        <path d="M12 21s7-4.5 7-11a7 7 0 1 0-14 0c0 6.5 7 11 7 11z" />
+        <circle cx="12" cy="10" r="2.5" />
+      </svg>
+    );
+  if (name === "link")
+    return (
+      <svg {...p}>
+        <path d="M10 13a5 5 0 0 0 7.07 0l1.41-1.41a5 5 0 0 0-7.07-7.07L10 5.93" strokeLinecap="round" />
+        <path d="M14 11a5 5 0 0 0-7.07 0L5.52 12.4a5 5 0 0 0 7.07 7.07L14 18.07" strokeLinecap="round" />
+      </svg>
+    );
+  return (
+    <svg {...p}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4" strokeLinecap="round" />
+    </svg>
   );
 }
 
