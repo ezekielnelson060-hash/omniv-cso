@@ -186,7 +186,18 @@ export const SEED_PUBLICATIONS: Publication[] = [
     title: "Why African language models need local infrastructure",
     summary:
       "English-first stacks break on tone, code-switching, and low-resource languages. The fix is infrastructure, not another fine-tune.",
+    subtitle: "The hard part is not making a model speak. It is making the whole system understand where it is.",
     body: "Most AI products still assume English as the default interface. Across African markets that assumption fails in production — not in demos.\n\nNokanda is building speech and language infrastructure for those markets: models, evaluation, and deployment paths that respect local language reality.",
+    content: [
+      { type: "paragraph", text: "Most AI products still assume English as the default interface. Across African markets that assumption fails in production — not in demos." },
+      { type: "heading", text: "The demo is not the deployment", level: 2 },
+      { type: "paragraph", text: "A model can produce an impressive sentence and still fail the moment a customer code-switches, uses a local name, or speaks over a noisy connection. The missing layer is not another benchmark. It is local infrastructure." },
+      { type: "quote", text: "The chip is only the beginning.", attribution: "Nokanda AI" },
+      { type: "paragraph", text: "Nokanda is building speech and language infrastructure for those markets: models, evaluation, and deployment paths that respect local language reality." },
+      { type: "callout", title: "The Omniv read", text: "When language is infrastructure, distribution is part of the model. The teams closest to the user often see the failure modes first." },
+    ],
+    whatThisMeans: "The next advantage in African AI will come from teams that own the evaluation, deployment, and feedback loops—not just teams that fine-tune a model.",
+    questionNobodyAsks: "Who gets to define quality when the benchmark language is not the language people use at home?",
     publisherId: "1",
     category: "AI",
     location: "Lagos",

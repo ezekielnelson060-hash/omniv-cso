@@ -5,6 +5,7 @@ import { SaveButton } from "@/components/discovery/save-button";
 import { ShareButton } from "@/components/discovery/share-button";
 import { FollowButton } from "@/components/discovery/follow-button";
 import { StructuredData } from "@/components/StructuredData";
+import { ArticleContent, ArticleSources } from "@/components/discovery/article-content";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { createClient } from "@/lib/supabase/server";
@@ -40,83 +41,41 @@ function readMinutes(text: string) {
   return Math.max(1, Math.round(words / 200));
 }
 
-function renderBody(body: string) {
-  const blocks = body.split(/\n\n+/);
-  return blocks.map((block, i) => {
-    const t = block.trim();
-    if (!t) return null;
-    // Markdown-ish H2
-    if (t.startsWith("## ")) {
-      return (
-        <h2
-          key={i}
-          className="mt-10 text-[20px] font-semibold tracking-tight text-white"
-        >
-          {t.replace(/^##\s+/, "")}
-        </h2>
-      );
-    }
-    if (t.startsWith("# ")) {
-      return (
-        <h2
-          key={i}
-          className="mt-10 text-[22px] font-semibold tracking-tight text-white"
-        >
-          {t.replace(/^#\s+/, "")}
-        </h2>
-      );
-    }
-    // Pull quote
-    if (t.startsWith("> ") || t.startsWith('"')) {
-      const quote = t.replace(/^>\s*/, "").replace(/^"|"$/g, "");
-      return (
-        <blockquote
-          key={i}
-          className="my-8 border-l-2 border-omniv-gold/60 pl-5 text-[18px] font-medium leading-relaxed text-zinc-200"
-        >
-          {quote}
-        </blockquote>
-      );
-    }
-    return (
-      <p key={i} className="text-[16px] leading-[1.8] text-zinc-300">
-        {t}
-      </p>
-    );
-  });
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+  let supabase = null;
   try {
-    const supabase = await createClient();
-    const p = await getLivePublication(supabase, slug);
-    if (!p) return { title: "Not found" };
-    const origin =
-      process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
-    const url = `${origin}/p/${p.slug}`;
-    return {
-      title: p.title,
-      description: p.summary,
-      alternates: { canonical: url },
-      openGraph: {
-        title: p.title,
-        description: p.summary,
-        url,
-        type: "article",
-        images: p.coverUrl ? [{ url: p.coverUrl }] : undefined,
-        publishedTime: p.publishedAt,
-      },
-      twitter: {
-        card: "summary_large_image",
-        title: p.title,
-        description: p.summary,
-        images: p.coverUrl ? [p.coverUrl] : undefined,
-      },
-    };
+    supabase = await createClient();
   } catch {
-    return { title: "Omniv" };
+    /* seed fallback remains available without Supabase env */
   }
+  const p = await getLivePublication(supabase, slug);
+  if (!p) return { title: "Not found" };
+  const origin = process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
+  const url = p.canonicalUrl || `${origin}/p/${p.slug}`;
+  const title = p.seoTitle || p.title;
+  const description = p.seoDescription || p.excerpt || p.summary;
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: "article",
+      images: p.coverUrl ? [{ url: p.coverUrl }] : undefined,
+      publishedTime: p.publishedAt,
+      modifiedTime: p.updatedAt,
+      authors: p.publisherName ? [p.publisherName] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: p.coverUrl ? [p.coverUrl] : undefined,
+    },
+  };
 }
 
 export default async function PublicationPage({ params }: Props) {
@@ -156,7 +115,7 @@ export default async function PublicationPage({ params }: Props) {
   const path = publicationPath(p);
   const coverUrl = p.coverUrl;
   const mediaUrl = p.mediaUrl;
-  const fullText = `${p.summary} ${p.body || ""}`;
+  const fullText = `${p.excerpt || p.summary} ${p.body || ""}`;
   const mins = readMinutes(fullText);
   const origin = (process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media").replace(/\/$/, "");
   const pageUrl = `${origin}${path}`;
@@ -164,9 +123,10 @@ export default async function PublicationPage({ params }: Props) {
     "@context": "https://schema.org",
     "@type": p.type === "article" || p.type === "research" ? "Article" : "CreativeWork",
     headline: p.title,
-    description: p.summary,
+    description: p.seoDescription || p.excerpt || p.summary,
     url: pageUrl,
     datePublished: p.publishedAt || undefined,
+    dateModified: p.updatedAt || p.publishedAt || undefined,
     author: { "@type": "Organization", name: publisherName },
     publisher: { "@type": "Organization", name: "Omniv", url: origin },
     image: coverUrl,
@@ -246,9 +206,14 @@ export default async function PublicationPage({ params }: Props) {
               <span className="inline-flex items-center rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90 backdrop-blur-sm">
                 {PUBLICATION_LABELS[p.type]}
               </span>
-              <h1 className="mt-3 text-[28px] font-semibold leading-[1.15] tracking-tight text-white sm:text-[36px]">
+              <h1 className="mt-3 text-[28px] font-semibold leading-[1.15] tracking-tight text-white sm:text-[44px]">
                 {p.title}
               </h1>
+              {(p.subtitle || p.excerpt) && (
+                <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-zinc-200 sm:text-[18px]">
+                  {p.subtitle || p.excerpt}
+                </p>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-zinc-300">
                 {publisher ? (
                   <Link
@@ -264,7 +229,7 @@ export default async function PublicationPage({ params }: Props) {
                   <span className="font-medium">{publisherName}</span>
                 )}
                 <span className="text-zinc-600">·</span>
-                <span>{mins} min read</span>
+                <span>{p.readingTime || mins} min read</span>
                 {p.publishedAt && (
                   <>
                     <span className="text-zinc-600">·</span>
@@ -333,10 +298,33 @@ export default async function PublicationPage({ params }: Props) {
           )}
 
           {/* Lead */}
-          <p className="text-[18px] leading-[1.7] text-zinc-200">{p.summary}</p>
+          <p className="text-[19px] font-medium leading-[1.75] text-zinc-200">
+            {p.excerpt || p.summary}
+          </p>
 
           {p.body && (
-            <div className="mt-8 space-y-5">{renderBody(p.body)}</div>
+            <div className="mt-8">
+              <ArticleContent content={p.content} body={p.body} />
+            </div>
+          )}
+          {!p.body && p.content && (
+            <div className="mt-8">
+              <ArticleContent content={p.content} />
+            </div>
+          )}
+
+          {p.type === "article" && (
+            <>
+              <section className="mt-16 border-t border-white/10 pt-8">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">What this means</p>
+                <p className="mt-3 text-[18px] leading-relaxed text-zinc-200">{p.whatThisMeans || p.summary}</p>
+              </section>
+              <section className="mt-8 rounded-2xl border border-omniv-gold/30 bg-omniv-gold/[0.06] p-6">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">The question nobody asks</p>
+                <p className="mt-3 text-[20px] font-medium leading-snug text-white">{p.questionNobodyAsks || "What changes when this becomes infrastructure rather than a one-off experiment?"}</p>
+              </section>
+              <ArticleSources sources={p.sources} />
+            </>
           )}
 
           {p.cta && (
@@ -372,6 +360,26 @@ export default async function PublicationPage({ params }: Props) {
                     </Link>
                   );
                 })}
+              </div>
+            </section>
+          )}
+
+          {relatedEntities.length > 0 && (
+            <section className="mt-10">
+              <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                Keep exploring
+              </h2>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {relatedEntities.slice(0, 4).map((entity) => (
+                  <Link
+                    key={entity.id}
+                    href={entityPath(entity)}
+                    className="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.08] transition hover:bg-white/[0.06] hover:ring-omniv-gold/30"
+                  >
+                    <p className="text-[14px] font-semibold text-white">{entity.name}</p>
+                    <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-zinc-500">{entity.tagline}</p>
+                  </Link>
+                ))}
               </div>
             </section>
           )}
@@ -413,9 +421,7 @@ export default async function PublicationPage({ params }: Props) {
           {relatedPubs.length > 0 && (
             <section className="mt-12">
               <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                {publisher
-                  ? `More from ${publisher.name}`
-                  : "Related publications"}
+                More from Omniv
               </h2>
               <ul className="mt-4 space-y-2">
                 {relatedPubs.map((r) => (

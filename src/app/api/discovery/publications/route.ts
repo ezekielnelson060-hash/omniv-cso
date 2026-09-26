@@ -30,6 +30,9 @@ export async function POST(req: Request) {
     const tagsRaw = String(body.tags || "");
     const coverUrl = body.coverUrl ? String(body.coverUrl).trim() : null;
     const mediaUrl = body.mediaUrl ? String(body.mediaUrl).trim() : null;
+    const status = ["draft", "published", "archived"].includes(String(body.status))
+      ? String(body.status)
+      : "published";
 
     if (!(PUBLICATION_TYPES as readonly string[]).includes(type)) {
       return NextResponse.json({ error: "Invalid type" }, { status: 400 });
@@ -127,10 +130,35 @@ export async function POST(req: Request) {
       title,
       summary,
       body: content || null,
+      status,
       tags,
       meta,
       heat: 10,
     };
+    if (type === "article") {
+      insertRow.author_profile_id = user.id;
+      insertRow.subtitle = body.subtitle ? String(body.subtitle).trim() : null;
+      insertRow.excerpt = body.excerpt ? String(body.excerpt).trim() : summary;
+      insertRow.category_id = body.categoryId ? String(body.categoryId).trim() : null;
+      insertRow.reading_time = Number.isFinite(Number(body.readingTime))
+        ? Math.max(1, Math.round(Number(body.readingTime)))
+        : null;
+      insertRow.seo_title = body.seoTitle ? String(body.seoTitle).trim() : null;
+      insertRow.seo_description = body.seoDescription
+        ? String(body.seoDescription).trim()
+        : null;
+      insertRow.canonical_url = body.canonicalUrl
+        ? String(body.canonicalUrl).trim()
+        : null;
+      insertRow.what_this_means = body.whatThisMeans
+        ? String(body.whatThisMeans).trim()
+        : null;
+      insertRow.question_nobody_asks = body.questionNobodyAsks
+        ? String(body.questionNobodyAsks).trim()
+        : null;
+      if (Array.isArray(body.content)) insertRow.content = body.content;
+      if (Array.isArray(body.sources)) insertRow.sources = body.sources;
+    }
     if (coverUrl) insertRow.cover_url = coverUrl;
     if (mediaUrl) insertRow.media_url = mediaUrl;
 

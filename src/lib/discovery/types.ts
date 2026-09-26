@@ -124,6 +124,26 @@ export type DiscoveryEntity = {
   verified?: boolean;
 };
 
+export type ArticleContentBlock =
+  | { type: "paragraph"; text: string }
+  | { type: "heading"; text: string; level?: 2 | 3 }
+  | { type: "subheading"; text: string }
+  | { type: "image"; src: string; alt?: string; caption?: string }
+  | { type: "caption"; text: string }
+  | { type: "quote"; text: string; attribution?: string }
+  | { type: "divider" }
+  | { type: "entity-reference"; slug: string; label: string; entityType?: string }
+  | { type: "publication-reference"; slug: string; label: string }
+  | { type: "list"; items: string[]; ordered?: boolean }
+  | { type: "callout"; title?: string; text: string };
+
+export type ArticleSource = {
+  name: string;
+  title: string;
+  date?: string;
+  url: string;
+};
+
 /** A thing published into the world — primary discovery unit */
 export type Publication = {
   id: string;
@@ -132,6 +152,18 @@ export type Publication = {
   title: string;
   summary: string;
   body?: string;
+  subtitle?: string;
+  excerpt?: string;
+  content?: ArticleContentBlock[];
+  sources?: ArticleSource[];
+  readingTime?: number;
+  whatThisMeans?: string;
+  questionNobodyAsks?: string;
+  status?: "draft" | "published" | "archived";
+  seoTitle?: string;
+  seoDescription?: string;
+  canonicalUrl?: string;
+  updatedAt?: string;
   /** publisher entity id */
   publisherId: string;
   category?: string;

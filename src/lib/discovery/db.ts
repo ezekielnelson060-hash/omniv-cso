@@ -5,6 +5,8 @@ import type {
   EntityType,
   Publication,
   PublicationType,
+  ArticleContentBlock,
+  ArticleSource,
 } from "./types";
 import { SEED_ENTITIES, SEED_PUBLICATIONS, getPublication as seedGetPub } from "./seed";
 
@@ -41,6 +43,18 @@ type PubRow = {
   published_at: string;
   publisher_id: string | null;
   publisher_name: string | null;
+  subtitle?: string | null;
+  excerpt?: string | null;
+  content?: ArticleContentBlock[] | null;
+  sources?: ArticleSource[] | null;
+  what_this_means?: string | null;
+  question_nobody_asks?: string | null;
+  reading_time?: number | null;
+  status?: "draft" | "published" | "archived" | null;
+  seo_title?: string | null;
+  seo_description?: string | null;
+  canonical_url?: string | null;
+  updated_at?: string | null;
 };
 
 export type LivePublication = Publication & {
@@ -83,6 +97,18 @@ function rowToPublication(r: PubRow): LivePublication {
     title: r.title,
     summary: r.summary,
     body: r.body ?? undefined,
+    subtitle: r.subtitle ?? undefined,
+    excerpt: r.excerpt ?? undefined,
+    content: Array.isArray(r.content) ? r.content : undefined,
+    sources: Array.isArray(r.sources) ? r.sources : undefined,
+    whatThisMeans: r.what_this_means ?? undefined,
+    questionNobodyAsks: r.question_nobody_asks ?? undefined,
+    readingTime: r.reading_time ?? undefined,
+    status: r.status ?? "published",
+    seoTitle: r.seo_title ?? undefined,
+    seoDescription: r.seo_description ?? undefined,
+    canonicalUrl: r.canonical_url ?? undefined,
+    updatedAt: r.updated_at ?? undefined,
     publisherId: r.publisher_id || "live",
     publisherName: r.publisher_name ?? undefined,
     mediaUrl: r.media_url ?? undefined,
@@ -96,6 +122,8 @@ function rowToPublication(r: PubRow): LivePublication {
 
 const PUB_SELECT =
   "id, type, slug, title, summary, body, tags, meta, cover_url, media_url, heat, published_at, publisher_id, publisher_name";
+const PUB_SELECT_ARTICLE =
+  `${PUB_SELECT}, subtitle, excerpt, content, sources, what_this_means, question_nobody_asks, reading_time, status, seo_title, seo_description, canonical_url, updated_at`;
 
 const ENT_SELECT =
   "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified, avatar_url, cover_url";
@@ -182,13 +210,21 @@ export async function getLivePublication(
 ): Promise<LivePublication | null> {
   if (supabase) {
     try {
-      const { data } = await supabase
+      const fullResult = await supabase
         .from("discovery_publications")
-        .select(PUB_SELECT)
+        .select(PUB_SELECT_ARTICLE)
         .eq("slug", slug)
+        .eq("status", "published")
         .maybeSingle();
-
-      if (data) return rowToPublication(data as PubRow);
+      if (fullResult.data) return rowToPublication(fullResult.data as PubRow);
+      if (fullResult.error) {
+        const { data } = await supabase
+          .from("discovery_publications")
+          .select(PUB_SELECT)
+          .eq("slug", slug)
+          .maybeSingle();
+        if (data) return rowToPublication(data as PubRow);
+      }
     } catch {
       /* fall through */
     }
@@ -203,11 +239,24 @@ export async function listLivePublications(
   if (!supabase) return SEED_PUBLICATIONS;
 
   try {
-    const { data, error } = await supabase
+    const fullResult = await supabase
       .from("discovery_publications")
-      .select(PUB_SELECT)
+      .select(PUB_SELECT_ARTICLE)
       .order("published_at", { ascending: false })
+      .eq("status", "published")
       .limit(limit);
+    let data: PubRow[] | null = fullResult.data as PubRow[] | null;
+    let error: typeof fullResult.error = fullResult.error;
+
+    if (error) {
+      const fallback = await supabase
+        .from("discovery_publications")
+        .select(PUB_SELECT)
+        .order("published_at", { ascending: false })
+        .limit(limit);
+      data = fallback.data as PubRow[] | null;
+      error = fallback.error;
+    }
 
     if (error || !data?.length) {
       return SEED_PUBLICATIONS;
