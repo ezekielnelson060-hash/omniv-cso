@@ -46,7 +46,6 @@ const AUDIENCES = [
   "Students",
 ];
 
-/** Regions & major markets — global discovery */
 const REGIONS: { id: string; label: string; group: string }[] = [
   { id: "global", label: "Worldwide", group: "Global" },
   { id: "africa", label: "Africa (all)", group: "Africa" },
@@ -70,7 +69,6 @@ const REGIONS: { id: string; label: string; group: string }[] = [
   { id: "australia", label: "Australia", group: "Asia & Pacific" },
 ];
 
-/** Duration packages with aligned pricing (USD) */
 const PACKAGES = [
   { days: 1, price: 12, label: "1 day", reach: "~2–4k impressions" },
   { days: 3, price: 29, label: "3 days", reach: "~8–15k impressions" },
@@ -214,17 +212,23 @@ function PromoteInner() {
       return;
     }
 
+    const meta: Record<string, string> = {
+      target_type: targetType,
+      slug,
+      region,
+      duration: String(pkg.days),
+    };
+    if (draftData.promotion?.id) {
+      meta.promotion_id = String(draftData.promotion.id);
+    }
+    if (identity?.id) {
+      meta.entity_id = identity.id;
+    }
+
     const result = await startFlutterwaveCheckout({
       plan: "promote",
       amount,
-      meta: {
-        promotion_id: draftData.promotion?.id,
-        target_type: targetType,
-        slug,
-        region,
-        duration: String(pkg.days),
-        entity_id: identity?.id,
-      },
+      meta,
     });
 
     if (!result.ok) {
@@ -373,17 +377,29 @@ function PromoteInner() {
                   onChange={(e) => setRegion(e.target.value)}
                   className="h-12 w-full rounded-xl bg-white/[0.04] px-3 text-[14px] text-white outline-none ring-1 ring-white/[0.08]"
                 >
-                  {["Global", "Africa", "Europe", "Americas", "Asia & Pacific"].map(
-                    (group) => (
-                      <optgroup key={group} label={group} className="bg-zinc-900">
-                        {REGIONS.filter((r) => r.group === group).map((r) => (
-                          <option key={r.id} value={r.id} className="bg-zinc-900">
-                            {r.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                    )
-                  )}
+                  {[
+                    "Global",
+                    "Africa",
+                    "Europe",
+                    "Americas",
+                    "Asia & Pacific",
+                  ].map((group) => (
+                    <optgroup
+                      key={group}
+                      label={group}
+                      className="bg-zinc-900"
+                    >
+                      {REGIONS.filter((r) => r.group === group).map((r) => (
+                        <option
+                          key={r.id}
+                          value={r.id}
+                          className="bg-zinc-900"
+                        >
+                          {r.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
                 </select>
               </Field>
 
@@ -405,7 +421,6 @@ function PromoteInner() {
                 </select>
               </Field>
 
-              {/* Price card tied to duration */}
               <div className="rounded-2xl bg-omniv-gold/10 p-5 ring-1 ring-omniv-gold/30">
                 <div className="flex items-end justify-between gap-3">
                   <div>
