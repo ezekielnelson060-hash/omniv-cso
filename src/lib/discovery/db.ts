@@ -1,15 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type {
+import {
   DiscoveryEntity,
   EntityIntent,
   EntityType,
   Publication,
   PublicationType,
-  ArticleContentBlock,
-  ArticleSource,
-  EntityReference,
 } from "./types";
-import { SEED_ENTITIES, SEED_PUBLICATIONS, getPublication as seedGetPub } from "./seed";
+import { SEED_ENTITIES, SEED_PUBLICATIONS } from "./seed";
 
 type Row = {
   id: string;
@@ -27,6 +24,7 @@ type Row = {
   verified?: boolean | null;
   avatar_url?: string | null;
   cover_url?: string | null;
+  owner_id?: string | null;
 };
 
 type PubRow = {
@@ -35,41 +33,56 @@ type PubRow = {
   slug: string;
   title: string;
   summary: string;
-  body: string | null;
-  tags: string[] | null;
-  meta: string | null;
-  cover_url: string | null;
-  media_url: string | null;
-  heat: number | null;
-  published_at: string;
-  publisher_id: string | null;
-  publisher_name: string | null;
+  body?: string | null;
   subtitle?: string | null;
   excerpt?: string | null;
-  content?: ArticleContentBlock[] | null;
-  sources?: ArticleSource[] | null;
+  content?: { type: string; text?: string; items?: string[] }[] | null;
+  sources?: { label: string; href?: string }[] | null;
   what_this_means?: string | null;
   question_nobody_asks?: string | null;
   reading_time?: number | null;
-  entity_refs?: EntityReference[] | null;
+  entity_refs?: { type: string; slug: string; id?: string }[] | null;
   related_publication_ids?: string[] | null;
-  status?: "draft" | "published" | "archived" | null;
+  status?: string | null;
   seo_title?: string | null;
   seo_description?: string | null;
   canonical_url?: string | null;
   updated_at?: string | null;
+  tags: string[] | null;
+  meta?: string | null;
+  cover_url?: string | null;
+  media_url?: string | null;
+  heat: number | null;
+  published_at: string;
+  publisher_id?: string | null;
+  publisher_name?: string | null;
 };
 
 export type LivePublication = Publication & {
+  body?: string;
+  subtitle?: string;
+  excerpt?: string;
+  content?: { type: string; text?: string; items?: string[] }[];
+  sources?: { label: string; href?: string }[];
+  whatThisMeans?: string;
+  questionNobodyAsks?: string;
+  readingTime?: number;
+  entityRefs?: { type: string; slug: string; id?: string }[];
+  relatedPublicationIds?: string[];
+  status?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  canonicalUrl?: string;
+  updatedAt?: string;
   publisherName?: string;
   mediaUrl?: string;
   coverUrl?: string;
 };
 
-/** Entity with optional media (after migration) */
 export type LiveEntity = DiscoveryEntity & {
   avatarUrl?: string;
   coverUrl?: string;
+  ownerId?: string;
 };
 
 function rowToEntity(r: Row): LiveEntity {
@@ -89,6 +102,7 @@ function rowToEntity(r: Row): LiveEntity {
     verified: Boolean(r.verified),
     avatarUrl: r.avatar_url ?? undefined,
     coverUrl: r.cover_url ?? undefined,
+    ownerId: r.owner_id ?? undefined,
   };
 }
 
@@ -133,10 +147,10 @@ const PUB_SELECT_ARTICLE =
   `${PUB_SELECT}, subtitle, excerpt, content, entity_refs, related_publication_ids, sources, what_this_means, question_nobody_asks, reading_time, status, seo_title, seo_description, canonical_url, updated_at`;
 
 const ENT_SELECT =
-  "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified, avatar_url, cover_url";
+  "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified, avatar_url, cover_url, owner_id";
 
 const ENT_SELECT_SAFE =
-  "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified";
+  "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified, owner_id";
 
 export async function listDiscoveryEntities(
   supabase: SupabaseClient | null
@@ -221,68 +235,74 @@ export async function getLivePublication(
         .from("discovery_publications")
         .select(PUB_SELECT_ARTICLE)
         .eq("slug", slug)
-        .eq("status", "published")
         .maybeSingle();
-      if (fullResult.data) return rowToPublication(fullResult.data as PubRow);
-      if (fullResult.error) {
-        const { data } = await supabase
+      let data = fullResult.data as PubRow | null;
+      if (fullResult.error || !data) {
+        const retry = await supabase
           .from("discovery_publications")
           .select(PUB_SELECT)
           .eq("slug", slug)
           .maybeSingle();
-        if (data) return rowToPublication(data as PubRow);
+        data = retry.data as PubRow | null;
       }
+      if (data) return rowToPublication(data as PubRow);
     } catch {
       /* fall through */
     }
   }
-  return seedGetPub(slug) ?? null;
+
+  return (
+    (SEED_PUBLICATIONS.find((p) => p.slug === slug) as LivePublication) ?? null
+  );
 }
 
 export async function listLivePublications(
   supabase: SupabaseClient | null,
-  limit = 50
+  limit = 60
 ): Promise<LivePublication[]> {
-  if (!supabase) return SEED_PUBLICATIONS;
+  if (!supabase) {
+    return SEED_PUBLICATIONS as LivePublication[];
+  }
 
   try {
     const fullResult = await supabase
       .from("discovery_publications")
       .select(PUB_SELECT_ARTICLE)
       .order("published_at", { ascending: false })
-      .eq("status", "published")
       .limit(limit);
-    let data: PubRow[] | null = fullResult.data as PubRow[] | null;
-    let error: typeof fullResult.error = fullResult.error;
+    let data = fullResult.data as PubRow[] | null;
+    let { error } = fullResult;
 
     if (error) {
-      const fallback = await supabase
+      const retry = await supabase
         .from("discovery_publications")
         .select(PUB_SELECT)
         .order("published_at", { ascending: false })
         .limit(limit);
-      data = fallback.data as PubRow[] | null;
-      error = fallback.error;
+      data = retry.data as PubRow[] | null;
+      error = retry.error;
     }
 
     if (error || !data?.length) {
-      return SEED_PUBLICATIONS;
+      return SEED_PUBLICATIONS as LivePublication[];
     }
 
     const live = (data as PubRow[]).map(rowToPublication);
     const liveSlugs = new Set(live.map((p) => p.slug));
-    const extras = SEED_PUBLICATIONS.filter((p) => !liveSlugs.has(p.slug));
+    const extras = (SEED_PUBLICATIONS as LivePublication[]).filter(
+      (p) => !liveSlugs.has(p.slug)
+    );
     return [...live, ...extras];
   } catch {
-    return SEED_PUBLICATIONS;
+    return SEED_PUBLICATIONS as LivePublication[];
   }
 }
 
-export function slugify(name: string): string {
-  return name
+export function slugify(input: string) {
+  return input
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 64);
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
 }
