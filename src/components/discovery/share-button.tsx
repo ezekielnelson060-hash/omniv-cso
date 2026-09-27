@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { recordSignal } from "@/lib/discovery/signals";
 
 export function ShareButton({
   title,
@@ -17,21 +18,29 @@ export function ShareButton({
         ? `${window.location.origin}${path}`
         : path;
 
+    let shared = false;
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({ title, url, text: title });
-        return;
+        shared = true;
       } catch {
         /* user cancelled or failed — fall through to copy */
       }
     }
 
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      /* ignore */
+    if (!shared) {
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        shared = true;
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (shared) {
+      recordSignal("share", [title.slice(0, 48)]);
     }
   }
 
