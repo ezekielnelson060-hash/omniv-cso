@@ -53,7 +53,10 @@ export async function POST(req: Request) {
     const pubType = body.pubType ? String(body.pubType) : null;
 
     if (!type || !slug) {
-      return NextResponse.json({ error: "type and slug required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "type and slug required" },
+        { status: 400 }
+      );
     }
 
     const { data: existing } = await supabase
@@ -67,6 +70,16 @@ export async function POST(req: Request) {
 
     if (existing?.id) {
       await supabase.from("discovery_saves").delete().eq("id", existing.id);
+      if (kind === "publication") {
+        try {
+          await supabase.rpc("discovery_bump_heat", {
+            p_slug: slug,
+            p_delta: -2,
+          });
+        } catch {
+          /* rpc optional until migration */
+        }
+      }
       return NextResponse.json({ saved: false });
     }
 
@@ -82,6 +95,17 @@ export async function POST(req: Request) {
     if (error) {
       console.error("save insert", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (kind === "publication") {
+      try {
+        await supabase.rpc("discovery_bump_heat", {
+          p_slug: slug,
+          p_delta: 2,
+        });
+      } catch {
+        /* rpc optional until migration */
+      }
     }
 
     return NextResponse.json({ saved: true });
