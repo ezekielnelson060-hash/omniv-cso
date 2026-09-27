@@ -9,8 +9,7 @@ import {
 
 /**
  * Flutterwave standard checkout.
- * Plans: discovery Pro (central config), legacy business, and promotion budget.
- * Requires FLW_SECRET_KEY. Optional: FLW_CURRENCY (default USD).
+ * Plans: discovery Pro, business, promote, verification fee.
  */
 export async function POST(req: Request) {
   const secret = process.env.FLW_SECRET_KEY;
@@ -26,7 +25,7 @@ export async function POST(req: Request) {
 
   try {
     const body = (await req.json()) as {
-      plan?: "starter" | "pro" | "business" | "label" | "promote";
+      plan?: "starter" | "pro" | "business" | "label" | "promote" | "verify";
       amount?: number;
       email?: string;
       name?: string;
@@ -39,6 +38,7 @@ export async function POST(req: Request) {
       business: LEGACY_CHECKOUT_AMOUNTS.business,
       label: LEGACY_CHECKOUT_AMOUNTS.label,
       promote: PROMOTION_CONFIG.defaultBudgetUsd,
+      verify: 19,
     };
     let plan = body.plan || "pro";
     if (plan === "starter") plan = "pro";
@@ -56,6 +56,7 @@ export async function POST(req: Request) {
     }
 
     let amount = prices[plan] ?? 29;
+    if (plan === "verify") amount = 19;
     if (plan === "promote" && typeof body.amount === "number") {
       amount = Math.min(
         PROMOTION_CONFIG.maxBudgetUsd,
@@ -99,7 +100,9 @@ export async function POST(req: Request) {
     const redirect =
       plan === "promote"
         ? `${origin}/promote?billing=success`
-        : `${origin}/pro?billing=success&plan=${plan}`;
+        : plan === "verify"
+          ? `${origin}/verify?billing=success`
+          : `${origin}/pro?billing=success&plan=${plan}`;
 
     const tx_ref = userId
       ? `omniv_${plan}_${userId}_${Date.now()}`
@@ -122,9 +125,11 @@ export async function POST(req: Request) {
         description:
           plan === "promote"
             ? `Promote publication — $${amount}`
-            : plan === "business"
-              ? "Omniv Business — verified + team tools"
-              : "Omniv Pro — verified publisher",
+            : plan === "verify"
+              ? "Omniv Verification — application fee"
+              : plan === "business"
+                ? "Omniv Business — verified + team tools"
+                : "Omniv Pro — verified publisher",
         logo: `${origin}/logo.svg`,
       },
       meta: {
@@ -133,7 +138,12 @@ export async function POST(req: Request) {
         amount: String(amount),
         currency: process.env.FLW_CURRENCY || "USD",
         user_id: userId || "",
-        product: plan === "promote" ? "promote" : "discovery",
+        product:
+          plan === "promote"
+            ? "promote"
+            : plan === "verify"
+              ? "verification"
+              : "discovery",
       },
     };
 
