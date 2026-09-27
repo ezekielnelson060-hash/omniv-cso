@@ -13,7 +13,11 @@ import {
   readInterests,
   interestsChosen,
 } from "@/lib/discovery/interests";
-import { signalBoost, risingScore, trendingScore } from "@/lib/discovery/signals";
+import {
+  signalBoost,
+  risingScore,
+  trendingScore,
+} from "@/lib/discovery/signals";
 import { recommendationReason } from "@/lib/discovery/recommend";
 import { SEED_ENTITIES } from "@/lib/discovery/seed";
 import type { Publication } from "@/lib/discovery/types";
@@ -32,12 +36,19 @@ type Props = {
   dimension?: string;
 };
 
-export function HomeFeedClient({ tab, publications, dimension = "all" }: Props) {
+export function HomeFeedClient({
+  tab,
+  publications,
+  dimension = "all",
+}: Props) {
   const [follows, setFollows] = useState<FollowRow[]>([]);
   const [interests, setInterests] = useState<string[]>([]);
   const [interestsDone, setInterestsDone] = useState(true);
   const [ready, setReady] = useState(false);
   const [tick, setTick] = useState(0);
+  const [serverWeights, setServerWeights] = useState<
+    Record<string, number>
+  >({});
 
   useEffect(() => {
     let cancelled = false;
@@ -49,12 +60,27 @@ export function HomeFeedClient({ tab, publications, dimension = "all" }: Props) 
         const data = await res.json();
         if (!cancelled && Array.isArray(data.follows)) {
           setFollows(
-            data.follows.map((f: { slug?: string; name?: string; type?: string }) => ({
-              slug: String(f.slug || ""),
-              name: String(f.name || ""),
-              type: f.type,
-            }))
+            data.follows.map(
+              (f: { slug?: string; name?: string; type?: string }) => ({
+                slug: String(f.slug || ""),
+                name: String(f.name || ""),
+                type: f.type,
+              })
+            )
           );
+        }
+        try {
+          const sRes = await fetch("/api/discovery/signals");
+          const sData = await sRes.json();
+          if (
+            !cancelled &&
+            sData.weights &&
+            typeof sData.weights === "object"
+          ) {
+            setServerWeights(sData.weights as Record<string, number>);
+          }
+        } catch {
+          /* signals optional */
         }
       } catch {
         /* guest */
@@ -140,7 +166,26 @@ export function HomeFeedClient({ tab, publications, dimension = "all" }: Props) 
     const scored = list.map((p) => {
       const interest = interestMatchScore(p.tags || [], p.category);
       const heat = Math.min(1, (p.heat ?? 0) / 100);
-      const behavior = signalBoost(p.tags || [], p.category);
+      const localBehavior = signalBoost(p.tags || [], p.category);
+      let serverBehavior = 0;
+      if (Object.keys(serverWeights).length) {
+        const topics = [...(p.tags || []), p.category || ""].map((x) =>
+          (x || "").toLowerCase()
+        );
+        let sum = 0;
+        let n = 0;
+        for (const t of topics) {
+          if (!t) continue;
+          for (const [k, v] of Object.entries(serverWeights)) {
+            if (t.includes(k) || k.includes(t)) {
+              sum += v;
+              n += 1;
+            }
+          }
+        }
+        if (n) serverBehavior = Math.max(0, Math.min(1, (sum / n + 1) / 4));
+      }
+      const behavior = Math.max(localBehavior, serverBehavior);
       const velocity = risingScore(p);
       const score =
         interest * 0.32 +
@@ -158,7 +203,7 @@ export function HomeFeedClient({ tab, publications, dimension = "all" }: Props) 
       if (diverse.length >= 18) break;
     }
     return diverse.length ? diverse : scored.slice(0, 18).map((x) => x.p);
-  }, [tab, publications, follows, interests, dimension, tick]);
+  }, [tab, publications, follows, interests, dimension, tick, serverWeights]);
 
   function onFeedback(
     pub: Publication,
