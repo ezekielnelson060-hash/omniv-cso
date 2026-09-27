@@ -8,6 +8,7 @@ import {
   type Publication,
 } from "@/lib/discovery/types";
 import { getEntityById } from "@/lib/discovery/seed";
+import { coverFor } from "@/lib/discovery/seed-covers";
 
 type PubWithCover = Publication & {
   coverUrl?: string;
@@ -33,15 +34,16 @@ export function PublicationCard({ pub }: { pub: PubWithCover }) {
   const isMusic = pub.type === "music";
   const isEvent = pub.type === "event";
   const isOpp = pub.type === "opportunity";
+  const coverSrc = pub.coverUrl || coverFor(pub.slug);
 
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06] transition-colors duration-200 hover:bg-[#101010]">
       <Link href={publicationPath(pub)} className="group flex flex-1 flex-col">
         <div className="relative flex aspect-[16/10] items-end overflow-hidden">
-          {pub.coverUrl ? (
+          {coverSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={pub.coverUrl}
+              src={coverSrc}
               alt=""
               className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
             />
