@@ -6,7 +6,6 @@ import { ShareButton } from "@/components/discovery/share-button";
 import { PublicationPageActions } from "@/components/discovery/publication-page-actions";
 import { FollowButton } from "@/components/discovery/follow-button";
 import { StructuredData } from "@/components/StructuredData";
-import { ArticleContent, ArticleSources } from "@/components/discovery/article-content";
 import { KeepExploring } from "@/components/discovery/keep-exploring";
 import { PublicationBody } from "@/components/discovery/publication-body";
 import { StickyArticleHeader } from "@/components/discovery/sticky-article-header";
@@ -103,8 +102,12 @@ export default async function PublicationPage({ params }: Props) {
 
   const graph = { entities: SEED_ENTITIES, publications: SEED_PUBLICATIONS };
   const connectedEntities = getEntityReferences(p, graph.entities);
-  const relatedEntities = getRelatedEntities(p, graph.entities, graph.publications);
-  const recommended = recommendPublications(p, graph.publications).slice(0, 6);
+  const relatedEntities = publisher
+    ? getRelatedEntities(publisher, graph)
+    : [];
+  const recommended = recommendPublications(p, graph)
+    .map((item) => item.publication)
+    .slice(0, 6);
   const relatedPubs = [
     ...fromPublisher.slice(0, 4),
     ...recommended.filter((r) => !fromPublisher.some((f) => f.id === r.id)),
