@@ -59,15 +59,16 @@ export default async function DiscoveryHomePage() {
 
       <main className="mx-auto max-w-6xl px-4 pb-20 pt-10 sm:pt-12">
         <section className="max-w-3xl">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-omniv-gold/80">
             Discovery network
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Discover what's being published
+            Publish what matters.
+            <span className="block text-zinc-400">Discover what moves next.</span>
           </h1>
-          <p className="mt-2 text-[15px] text-zinc-400">
-            Articles, music, research, products, events, and opportunities —
-            from people, companies, and brands putting work into the world.
+          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-zinc-400">
+            A premium network for articles, research, music, products, events, and
+            opportunities — from people, companies, and brands putting real work into the world.
           </p>
 
           <form
