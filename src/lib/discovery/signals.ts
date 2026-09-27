@@ -80,6 +80,22 @@ export function recordSignal(
   } catch {
     /* ignore */
   }
+
+  // V2: best-effort server signal (authenticated explorers)
+  try {
+    void fetch("/api/discovery/signals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind,
+        tags: topics,
+        category,
+      }),
+      keepalive: true,
+    });
+  } catch {
+    /* offline / unauthenticated */
+  }
 }
 
 /** Topic weight for ranking (0–1ish scaled) */
@@ -110,8 +126,21 @@ export function risingScore(p: {
   const heat = Math.min(1, (p.heat ?? 0) / 100);
   const ts = p.publishedAt ? Date.parse(p.publishedAt) : 0;
   const ageHours = ts ? Math.max(0, (Date.now() - ts) / 3_600_000) : 72;
-  const freshness = Math.max(0, 1 - ageHours / 72);
-  return heat * 0.4 + freshness * 0.6;
+  const freshness = Math.exp(-ageHours / 36);
+  const velocity = heat * freshness;
+  return velocity * 0.65 + freshness * 0.25 + heat * 0.1;
+}
+
+/** Trending score: sustained engagement + mild freshness */
+export function trendingScore(p: {
+  heat?: number;
+  publishedAt?: string;
+}): number {
+  const heat = Math.min(1, (p.heat ?? 0) / 100);
+  const ts = p.publishedAt ? Date.parse(p.publishedAt) : 0;
+  const ageDays = ts ? Math.max(0, (Date.now() - ts) / 86_400_000) : 14;
+  const recency = Math.exp(-ageDays / 10);
+  return heat * 0.75 + recency * 0.25;
 }
 
 export type SignalEvent = {
@@ -135,6 +164,13 @@ export function getRecentSignals(limit = 100): SignalEvent[] {
 
 /** Qualified interactions — saves, follows, completes, contacts, shares */
 export function countQualifiedInteractions(): number {
-  const strong = new Set(["save", "follow", "complete", "contact", "share", "like"]);
+  const strong = new Set([
+    "save",
+    "follow",
+    "complete",
+    "contact",
+    "share",
+    "like",
+  ]);
   return getRecentSignals(200).filter((e) => strong.has(e.kind)).length;
 }
