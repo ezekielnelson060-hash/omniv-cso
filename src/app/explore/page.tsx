@@ -75,7 +75,7 @@ export default async function ExplorePage({ searchParams }: Props) {
 
   const supabase = await tryClient();
   let publications = await listLivePublications(supabase, 60);
-  let entities = await listDiscoveryEntities(supabase, 40);
+  let entities = await listDiscoveryEntities(supabase);
   if (publications.length < 6) {
     const { SEED_PUBLICATIONS } = await import("@/lib/discovery/seed");
     const slugs = new Set(publications.map((p) => p.slug));
@@ -210,7 +210,8 @@ function DiscoverySections({
   publications: Publication[];
   entities: DiscoveryEntity[];
 }) {
-  const byType = (t: string) => publications.filter((p) => p.type === t).slice(0, 6);
+  const byType = (t: string) =>
+    publications.filter((p) => p.type === t).slice(0, 6);
   const sections: { type: string; title: string }[] = [
     { type: "article", title: "Articles" },
     { type: "research", title: "Research" },
@@ -283,7 +284,7 @@ function DiscoverySections({
             </div>
             <div className="mt-3 space-y-3">
               {items.map((p) => (
-                <PublicationCard key={p.id} publication={p} />
+                <PublicationCard key={p.id} pub={p} />
               ))}
             </div>
           </section>
