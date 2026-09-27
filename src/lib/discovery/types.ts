@@ -65,29 +65,46 @@ export const ENTITY_LABELS: Record<EntityType, string> = {
 
 export const INTENT_KINDS = [
   "hire",
+  "hires",
   "partner",
+  "partners",
   "invest",
+  "investors",
   "book",
   "collaborate",
   "press",
   "other",
+  "beta_users",
+  "customers",
+  "contributors",
+  "creators",
+  "distributors",
 ] as const;
 
 export type IntentKind = (typeof INTENT_KINDS)[number];
 
-export const INTENT_LABELS: Record<IntentKind, string> = {
+export const INTENT_LABELS: Record<string, string> = {
   hire: "Hire",
+  hires: "Hiring",
   partner: "Partner",
+  partners: "Partners",
   invest: "Invest",
+  investors: "Investors",
   book: "Book",
   collaborate: "Collaborate",
   press: "Press",
   other: "Other",
+  beta_users: "Beta users",
+  customers: "Customers",
+  contributors: "Contributors",
+  creators: "Creators",
+  distributors: "Distributors",
 };
 
 export type EntityIntent = {
-  kind: IntentKind;
+  kind: IntentKind | string;
   label?: string;
+  detail?: string;
 };
 
 export type DiscoveryEntity = {
@@ -96,14 +113,17 @@ export type DiscoveryEntity = {
   slug: string;
   name: string;
   handle?: string;
+  tagline?: string;
   about?: string;
   location?: string;
   website?: string;
   tags?: string[];
+  links?: { label: string; href: string }[];
   verified?: boolean;
   coverUrl?: string;
   avatarUrl?: string;
   heat?: number;
+  publishedAt?: string;
   intents?: EntityIntent[];
 };
 
