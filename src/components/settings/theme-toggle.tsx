@@ -6,7 +6,7 @@ import { useTheme } from "@/components/theme-provider";
 import { Moon, Sun } from "lucide-react";
 
 export function ThemeToggleCard() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setPreference } = useTheme();
   return (
     <Card className="mb-6 p-5">
       <h3 className="text-sm font-medium">Appearance</h3>
@@ -18,7 +18,7 @@ export function ThemeToggleCard() {
           size="sm"
           variant={theme === "dark" ? "primary" : "outline"}
           className="gap-1.5"
-          onClick={() => setTheme("dark")}
+          onClick={() => setPreference("dark")}
         >
           <Moon className="h-3.5 w-3.5" />
           Dark
@@ -27,7 +27,7 @@ export function ThemeToggleCard() {
           size="sm"
           variant={theme === "light" ? "primary" : "outline"}
           className="gap-1.5"
-          onClick={() => setTheme("light")}
+          onClick={() => setPreference("light")}
         >
           <Sun className="h-3.5 w-3.5" />
           Light
