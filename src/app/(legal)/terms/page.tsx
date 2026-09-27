@@ -60,8 +60,11 @@ export default function TermsPage() {
           </Sec>
           <Sec t="6. Subscriptions & billing">
             Paid plans are billed via Flutterwave or other processors we designate.
-            Fees are due as shown at checkout. Plan access unlocks after payment
-            confirmation.
+            Pro and Business are monthly recurring subscriptions: the payment
+            method is charged each month until the subscription is cancelled.
+            Fees, currency, and the billing interval are shown at checkout. Plan
+            access unlocks after payment confirmation and remains available through
+            the paid billing period after cancellation.
           </Sec>
           <Sec t="7. Intellectual property">
             Omniv and its marks belong to us. You retain rights to content you

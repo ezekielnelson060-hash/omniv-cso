@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   DISCOVERY_PLANS,
   LEGACY_CHECKOUT_AMOUNTS,
+  paymentPlanIdFor,
   PROMOTION_CONFIG,
 } from "@/lib/discovery/monetization";
 
@@ -42,6 +43,17 @@ export async function POST(req: Request) {
     let plan = body.plan || "pro";
     if (plan === "starter") plan = "pro";
     if (plan === "label") plan = "business";
+    if (plan === "pro" || plan === "business") {
+      if (!paymentPlanIdFor(plan)) {
+        return NextResponse.json(
+          {
+            error:
+              "Monthly recurring billing is not configured yet. Add the Flutterwave payment-plan ID and try again.",
+          },
+          { status: 503 }
+        );
+      }
+    }
 
     let amount = prices[plan] ?? 29;
     if (plan === "promote" && typeof body.amount === "number") {
@@ -97,6 +109,9 @@ export async function POST(req: Request) {
       tx_ref,
       amount,
       currency: process.env.FLW_CURRENCY || "USD",
+      ...(plan === "pro" || plan === "business"
+        ? { payment_plan: paymentPlanIdFor(plan) as number }
+        : {}),
       redirect_url: redirect,
       customer: {
         email,

@@ -54,13 +54,35 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid signature" }, { status: 401 });
   }
 
-  let body: { data?: Record<string, unknown> };
+  let body: { event?: string; data?: Record<string, unknown> };
   try {
     body = JSON.parse(await req.text());
   } catch {
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
   const data = (body.data || {}) as Record<string, unknown>;
+  if (String(body.event || "").toLowerCase() === "subscription.cancelled") {
+    const customer = (data.customer || {}) as Record<string, unknown>;
+    const email = String(customer.email || "").toLowerCase().trim();
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !service || !email) {
+      return NextResponse.json({ ok: true, skipped: "unmapped_subscription" });
+    }
+    const admin = createClient(url, service, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    // Cancellation stops future charges; the current paid month remains valid.
+    const { error } = await admin
+      .from("profiles")
+      .update({ plan_status: "cancelled", billing_status: "cancelled" })
+      .eq("email", email)
+      .neq("plan", "free");
+    if (error) {
+      return NextResponse.json({ error: "subscription update failed" }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, subscription: "cancelled" });
+  }
   const status = String(data.status || "").toLowerCase();
   if (status && status !== "successful" && status !== "success") {
     return NextResponse.json({ ok: true, skipped: "not_successful" });

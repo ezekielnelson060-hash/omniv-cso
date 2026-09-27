@@ -68,7 +68,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         ? new Date(data.plan_expires_at).getTime()
         : null;
       const entitlementActive =
-        status === "active" &&
+        (status === "active" || status === "cancelled") &&
         (expiresAt === null || Number.isNaN(expiresAt) || expiresAt > Date.now());
 
       // Paid plans only stick when backend marked active (webhook)

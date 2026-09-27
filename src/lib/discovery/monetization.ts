@@ -4,6 +4,7 @@ export type DiscoveryPlan = {
   id: DiscoveryPlanId;
   name: string;
   priceMonthlyUsd: number;
+  billingInterval: "monthly";
   billingLabel: string;
   blurb: string;
   features: string[];
@@ -14,6 +15,7 @@ export const DISCOVERY_PLANS: Record<DiscoveryPlanId, DiscoveryPlan> = {
     id: "free",
     name: "Free",
     priceMonthlyUsd: 0,
+    billingInterval: "monthly",
     billingLabel: "forever",
     blurb: "Publish, explore, and build your network without a paywall.",
     features: [
@@ -28,6 +30,7 @@ export const DISCOVERY_PLANS: Record<DiscoveryPlanId, DiscoveryPlan> = {
     id: "pro",
     name: "Pro",
     priceMonthlyUsd: 29,
+    billingInterval: "monthly",
     billingLabel: "/ month",
     blurb: "Build a stronger identity and understand what is moving through the network.",
     features: [
@@ -44,6 +47,19 @@ export const DISCOVERY_PLANS: Record<DiscoveryPlanId, DiscoveryPlan> = {
     ],
   },
 };
+
+/** Flutterwave IDs for indefinite monthly subscriptions. */
+export const FLUTTERWAVE_PAYMENT_PLAN_IDS = {
+  pro: process.env.FLW_PRO_PAYMENT_PLAN_ID || "",
+  business: process.env.FLW_BUSINESS_PAYMENT_PLAN_ID || "",
+} as const;
+
+export function paymentPlanIdFor(plan: "pro" | "business"): number | null {
+  const raw = FLUTTERWAVE_PAYMENT_PLAN_IDS[plan].trim();
+  if (!raw) return null;
+  const id = Number(raw);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
 
 export const PROMOTION_CONFIG = {
   minBudgetUsd: 10,

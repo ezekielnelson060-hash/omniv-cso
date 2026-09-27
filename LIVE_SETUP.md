@@ -20,10 +20,15 @@
 1. https://dashboard.flutterwave.com → Settings → API Keys
 2. Vercel env:
    - `FLW_SECRET_KEY`
+   - `FLW_SECRET_HASH` (webhook signature secret)
    - `FLW_PUBLIC_KEY` (optional for client)
    - `FLW_CURRENCY` = `USD` or `NGN`
+   - `FLW_PRO_PAYMENT_PLAN_ID` = an **indefinite monthly** Flutterwave payment plan
+   - `FLW_BUSINESS_PAYMENT_PLAN_ID` = an **indefinite monthly** Flutterwave payment plan
    - `NEXT_PUBLIC_APP_URL` = your production URL
-3. POST `/api/billing/flutterwave` with `{ plan, email, name }` returns checkout `link`
+3. Create the payment plans in Flutterwave first: interval `monthly`, matching currency and amount, with no duration.
+4. Configure the webhook URL as `https://YOUR_DOMAIN/api/billing/flutterwave/webhook` and enable charge + subscription events.
+5. POST `/api/billing/flutterwave` with `{ plan, email, name }` returns a checkout `link`. Paid checkout fails closed until the payment-plan ID is configured, so Pro/Business cannot accidentally become one-time payments.
 
 ## 3. Spotify OAuth + metrics
 1. https://developer.spotify.com/dashboard → Create app
