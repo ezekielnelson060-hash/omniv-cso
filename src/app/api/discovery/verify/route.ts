@@ -14,7 +14,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from("discovery_verification_requests")
       .select(
-        "id, entity_id, entity_type, entity_slug, entity_name, verify_type, status, created_at"
+        "id, entity_id, entity_type, entity_slug, entity_name, verify_type, status, paid, payment_ref, created_at"
       )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
