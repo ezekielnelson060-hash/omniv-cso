@@ -1,20 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { useTheme } from "@/components/theme-provider";
 
-type Theme = "dark" | "light" | "system";
+type ThemePreference = "dark" | "light" | "system";
 
 export default function AppearanceSettingsPage() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const { preference, setPreference, theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const current = mounted ? preference : "dark";
 
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
         <header className="sticky top-0 z-40 border-b border-white/[0.05] bg-[#050505]/95 backdrop-blur-md">
-          <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3 md:max-w-2xl">
+          <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3">
             <Link href="/settings" className="text-zinc-400">
               ←
             </Link>
@@ -22,7 +27,7 @@ export default function AppearanceSettingsPage() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-lg px-4 pb-28 pt-5 md:max-w-2xl">
+        <main className="mx-auto max-w-lg px-4 pb-28 pt-5">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
             Theme
           </p>
@@ -37,9 +42,9 @@ export default function AppearanceSettingsPage() {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setTheme(t.id)}
+                onClick={() => setPreference(t.id as ThemePreference)}
                 className={`rounded-2xl py-4 text-[14px] font-medium ring-1 transition ${
-                  theme === t.id
+                  current === t.id
                     ? "bg-omniv-gold/15 text-omniv-gold ring-omniv-gold/40"
                     : "bg-white/[0.03] text-zinc-400 ring-white/[0.06]"
                 }`}
@@ -49,7 +54,11 @@ export default function AppearanceSettingsPage() {
             ))}
           </div>
           <p className="mt-4 text-[13px] text-zinc-500">
-            Omniv is designed dark-first. Light mode is experimental.
+            Omniv is designed dark-first. Active theme:{" "}
+            <span className="font-medium text-zinc-300">
+              {mounted ? theme : "…"}
+            </span>
+            .
           </p>
         </main>
 
