@@ -350,14 +350,14 @@ export default async function EntityPage({ params, searchParams }: Props) {
             ))}
           </div>
 
-          {e.intents.length > 0 && (
+          {(e.intents?.length ?? 0) > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
-              {e.intents.map((i) => (
+              {e.intents?.map((i) => (
                 <span
                   key={i.kind + (i.detail ?? "")}
                   className="rounded-full bg-omniv-gold/10 px-3 py-1 text-[12px] text-omniv-gold"
                 >
-                  {INTENT_LABELS[i.kind]}
+                  {INTENT_LABELS[i.kind] || i.kind}
                   {i.detail ? ` · ${i.detail}` : ""}
                 </span>
               ))}

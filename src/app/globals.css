@@ -71,6 +71,7 @@ body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   font-feature-settings: "ss01" on, "cv11" on;
   letter-spacing: -0.014em;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100dvh;
@@ -92,6 +93,44 @@ h1, h2, h3, h4 {
 
 .prose-omniv p + p {
   margin-top: 1.25rem;
+}
+
+a, button, input, textarea, select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--omniv-black), 0 0 0 4px var(--omniv-gold);
+}
+
+.editorial-surface {
+  background: rgba(255, 255, 255, 0.025);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+}
+
+.editorial-rule {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.editorial-label {
+  color: var(--omniv-gold);
+  font-size: 0.6875rem;
+  font-weight: 650;
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .font-data {
