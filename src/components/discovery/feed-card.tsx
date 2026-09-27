@@ -5,6 +5,7 @@ import {
   type Publication,
 } from "@/lib/discovery/types";
 import { getEntityById } from "@/lib/discovery/seed";
+import { coverFor } from "@/lib/discovery/seed-covers";
 import { PublicationActions } from "@/components/discovery/publication-actions";
 
 type PubWithCover = Publication & {
@@ -64,6 +65,7 @@ export function FeedFeaturedCard({
 }) {
   const publisher = getEntityById(pub.publisherId);
   const name = pub.publisherName || publisher?.name;
+  const resolvedCover = pub.coverUrl || coverFor(pub.slug);
   const tags = (pub.tags || []).slice(0, 5);
 
   return (
@@ -73,7 +75,7 @@ export function FeedFeaturedCard({
         className="group block transition-opacity duration-200 hover:opacity-[0.97]"
       >
         <div className="relative aspect-[5/4] sm:aspect-[16/10]">
-          <CoverBg pub={pub} className="absolute inset-0" />
+          <CoverBg pub={{ ...pub, coverUrl: resolvedCover }} className="absolute inset-0" />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/10" />
           <div className="absolute left-4 top-4">
             <TypeLabel type={pub.type} />
@@ -128,6 +130,7 @@ export function FeedFeaturedCard({
 export function FeedCompactCard({ pub }: { pub: PubWithCover }) {
   const publisher = getEntityById(pub.publisherId);
   const name = pub.publisherName || publisher?.name;
+  const resolvedCover = pub.coverUrl || coverFor(pub.slug);
   const isMusic = pub.type === "music";
   const isEvent = pub.type === "event";
   const datePart = isEvent && pub.meta ? pub.meta.split("·")[0]?.trim() : null;
@@ -146,7 +149,7 @@ export function FeedCompactCard({ pub }: { pub: PubWithCover }) {
           </div>
         ) : (
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
-            <CoverBg pub={pub} className="absolute inset-0" />
+            <CoverBg pub={{ ...pub, coverUrl: resolvedCover }} className="absolute inset-0" />
             {isMusic && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-black">
@@ -186,12 +189,13 @@ export function FeedCompactCard({ pub }: { pub: PubWithCover }) {
 export function FeedCard({ pub }: { pub: PubWithCover }) {
   const publisher = getEntityById(pub.publisherId);
   const name = pub.publisherName || publisher?.name;
+  const resolvedCover = pub.coverUrl || coverFor(pub.slug);
 
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] transition-colors duration-200 hover:bg-[#101010]">
       <Link href={publicationPath(pub)} className="group flex flex-1 flex-col">
         <div className="relative aspect-[16/10]">
-          <CoverBg pub={pub} className="absolute inset-0" />
+          <CoverBg pub={{ ...pub, coverUrl: resolvedCover }} className="absolute inset-0" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
           <span className="absolute left-3 top-3">
             <TypeLabel type={pub.type} />
