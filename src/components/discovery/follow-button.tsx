@@ -11,6 +11,7 @@ import {
   type FollowPrefs,
 } from "@/lib/discovery/follow-prefs";
 import { pushMyActivity } from "@/lib/discovery/my-activity";
+import { recordSignal } from "@/lib/discovery/signals";
 
 export function FollowButton({
   type,
@@ -65,6 +66,9 @@ export function FollowButton({
         detail: { type, slug, following: next },
       })
     );
+    if (next) {
+      recordSignal("follow", [type, name, slug].filter(Boolean));
+    }
     try {
       pushMyActivity({
         kind: next ? "followed" : "unfollowed",
