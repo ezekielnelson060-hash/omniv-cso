@@ -7,6 +7,7 @@ import {
   readSaved,
   type SavedItem,
 } from "@/lib/discovery/local-graph";
+import { recordSignal } from "@/lib/discovery/signals";
 
 export type SavedRef = { type: string; slug: string; name: string };
 
@@ -76,7 +77,9 @@ export function SaveButton({
         body: JSON.stringify(item),
       });
       if (res.status === 401) {
-        setSaved(toggleSave(item));
+        const next = toggleSave(item);
+        setSaved(next);
+        if (next) recordSignal("save", [type, pubType || ""].filter(Boolean));
         return;
       }
       const data = await res.json();
@@ -84,11 +87,16 @@ export function SaveButton({
         setSaved(Boolean(data.saved));
         const local = isSaved(kind, type, slug);
         if (data.saved !== local) toggleSave(item);
+        if (data.saved) recordSignal("save", [type, pubType || ""].filter(Boolean));
       } else {
-        setSaved(toggleSave(item));
+        const next = toggleSave(item);
+        setSaved(next);
+        if (next) recordSignal("save", [type, pubType || ""].filter(Boolean));
       }
     } catch {
-      setSaved(toggleSave(item));
+      const next = toggleSave(item);
+      setSaved(next);
+      if (next) recordSignal("save", [type, pubType || ""].filter(Boolean));
     } finally {
       setBusy(false);
     }
@@ -101,22 +109,22 @@ export function SaveButton({
         onClick={onClick}
         disabled={!ready || busy}
         aria-label={saved ? "Unsave" : "Save"}
-        className={`flex h-9 w-9 items-center justify-center rounded-full transition ${
+        className={`inline-flex items-center rounded-full p-1.5 transition active:scale-95 ${
           saved
-            ? "bg-omniv-gold/20 text-omniv-gold"
-            : "text-zinc-400 hover:bg-white/5 hover:text-white"
+            ? "text-omniv-gold"
+            : "text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-300"
         }`}
       >
         <svg
-          width="18"
-          height="18"
+          width="17"
+          height="17"
           viewBox="0 0 24 24"
           fill={saved ? "currentColor" : "none"}
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="1.75"
         >
           <path
-            d="M6 4h12a1 1 0 0 1 1 1v15l-7-3.5L5 20V5a1 1 0 0 1 1-1z"
+            d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-3.2L6 21V4.5a1 1 0 0 1 1-1z"
             strokeLinejoin="round"
           />
         </svg>
@@ -129,10 +137,10 @@ export function SaveButton({
       type="button"
       onClick={onClick}
       disabled={!ready || busy}
-      className={`inline-flex h-11 items-center rounded-full border px-5 text-[13px] transition ${
+      className={`inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold transition ${
         saved
-          ? "border-omniv-gold/50 bg-omniv-gold/15 text-omniv-gold"
-          : "border-white/15 text-zinc-300 hover:border-white/30"
+          ? "bg-omniv-gold/15 text-omniv-gold ring-1 ring-omniv-gold/30"
+          : "bg-white/[0.06] text-white ring-1 ring-white/10 hover:bg-white/[0.1]"
       }`}
     >
       {saved ? "Saved" : "Save"}

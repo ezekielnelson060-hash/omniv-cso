@@ -8,12 +8,12 @@ import {
   toggleLocalLike,
 } from "@/lib/discovery/local-likes";
 import { timeAgo } from "@/lib/discovery/time-ago";
+import { recordSignal } from "@/lib/discovery/signals";
 
 /**
  * Engagement bar — matches mockup:
  * left: ♥ like + count · comments
  * right: bookmark save · relative time
- * Used on home feed, explore cards, entity latest, publication page.
  */
 export function PublicationActions({
   slug,
@@ -24,6 +24,8 @@ export function PublicationActions({
   initialComments = 0,
   compact = false,
   showTime = true,
+  tags = [],
+  category,
 }: {
   slug: string;
   type: string;
@@ -33,6 +35,8 @@ export function PublicationActions({
   initialComments?: number;
   compact?: boolean;
   showTime?: boolean;
+  tags?: string[];
+  category?: string;
 }) {
   const [liked, setLiked] = useState(false);
   const [count, setCount] = useState(initialLikes);
@@ -60,7 +64,7 @@ export function PublicationActions({
         } else {
           setCount(getLocalLikeCount(slug, initialLikes));
         }
-        if (data.auth) {
+        if (typeof data.liked === "boolean") {
           setLiked(Boolean(data.liked));
         } else {
           setLiked(isLiked(slug));
@@ -94,6 +98,7 @@ export function PublicationActions({
         const local = toggleLocalLike(slug, type, count);
         setLiked(local.liked);
         setCount(local.count);
+        if (local.liked) recordSignal("like", tags, category);
         return;
       }
       const data = await res.json();
@@ -103,15 +108,18 @@ export function PublicationActions({
         if (data.liked !== isLiked(slug)) {
           toggleLocalLike(slug, type, count);
         }
+        if (data.liked) recordSignal("like", tags, category);
       } else {
         const local = toggleLocalLike(slug, type, count);
         setLiked(local.liked);
         setCount(local.count);
+        if (local.liked) recordSignal("like", tags, category);
       }
     } catch {
       const local = toggleLocalLike(slug, type, count);
       setLiked(local.liked);
       setCount(local.count);
+      if (local.liked) recordSignal("like", tags, category);
     } finally {
       setBusy(false);
     }
@@ -129,7 +137,6 @@ export function PublicationActions({
       className={`flex items-center gap-0.5 ${compact ? "" : "pt-1"}`}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Like — mockup heart */}
       <button
         type="button"
         onClick={onLike}
@@ -158,29 +165,26 @@ export function PublicationActions({
         {displayCount ? <span>{displayCount}</span> : null}
       </button>
 
-      {/* Comments — visual parity with mockup */}
-      <span
-        className="inline-flex items-center gap-1.5 rounded-full px-2 py-1.5 text-[12px] font-medium tabular-nums text-zinc-500"
-        title="Comments"
-      >
-        <svg
-          width="17"
-          height="17"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          className="shrink-0"
-        >
-          <path
-            d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"
-            strokeLinejoin="round"
-          />
-        </svg>
-        {initialComments > 0 ? <span>{initialComments}</span> : null}
-      </span>
+      {initialComments > 0 && (
+        <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-1.5 text-[12px] font-medium tabular-nums text-zinc-500">
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+          >
+            <path
+              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+              strokeLinejoin="round"
+            />
+          </svg>
+          {initialComments}
+        </span>
+      )}
 
-      <div className="ml-auto flex items-center gap-0.5">
+      <div className="ml-auto flex items-center gap-1">
         <SaveButton
           kind="publication"
           type={type}
