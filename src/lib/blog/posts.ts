@@ -3,12 +3,16 @@ import { postsB } from "./posts-data-b";
 import { postsC } from "./posts-data-c";
 import { postsD } from "./posts-data-d";
 import { postsE } from "./posts-data-e";
+import { postsF } from "./posts-data-f";
+import { postsG } from "./posts-data-g";
 
 export type { BlogPost };
 
 export const posts: BlogPost[] = [
   ...postsD,
   ...postsE,
+  ...postsF,
+  ...postsG,
   ...postsA,
   ...postsB,
   ...postsC,
