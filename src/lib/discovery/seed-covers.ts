@@ -41,3 +41,24 @@ export const SEED_COVERS: Record<string, string> = {
 export function coverFor(slug: string): string | undefined {
   return SEED_COVERS[slug];
 }
+
+export const SEED_CTAS: Record<string, { label: string; href: string }> = {
+  "african-language-model-landscape-2026": {
+    label: "Read research",
+    href: "/p/african-language-model-landscape-2026",
+  },
+  "nokanda-api": { label: "View product", href: "/e/company/nokanda-ai" },
+  "relay-desk-product": {
+    label: "Request access",
+    href: "/e/company/relay-desk",
+  },
+  "voltpath-residential": {
+    label: "Contact VoltPath",
+    href: "/e/company/voltpath",
+  },
+  "danfo-route-map-v1": { label: "Open map", href: "/p/danfo-route-map-v1" },
+};
+
+export function ctaFor(slug: string) {
+  return SEED_CTAS[slug];
+}
