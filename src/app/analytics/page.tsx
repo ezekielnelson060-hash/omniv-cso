@@ -13,6 +13,7 @@ import {
 } from "@/lib/discovery/active-account";
 import { readProfile } from "@/lib/discovery/local-profile";
 import { DISCOVERY_PLANS } from "@/lib/discovery/monetization";
+import { countQualifiedInteractions } from "@/lib/discovery/signals";
 
 type Pub = {
   id: string;
@@ -35,11 +36,13 @@ export default function AnalyticsPage() {
   const [follows, setFollows] = useState(0);
   const [saves, setSaves] = useState(0);
   const [likes, setLikes] = useState(0);
+  const [qualified, setQualified] = useState(0);
 
   useEffect(() => {
     try {
       setPersonalName(readProfile().displayName || "You");
       setActive(readActiveAccount());
+      setQualified(countQualifiedInteractions());
     } catch {
       /* ignore */
     }
@@ -86,11 +89,12 @@ export default function AnalyticsPage() {
     [scopedPubs]
   );
 
-  // Range scales heat for display only until full event tracking lands
   const rangeFactor =
     range === "7d" ? 0.25 : range === "30d" ? 1 : range === "90d" ? 2.2 : 4;
 
-  const discoveries = Math.round(Math.max(totalHeat, scopedPubs.length) * rangeFactor);
+  const discoveries = Math.round(
+    Math.max(totalHeat, scopedPubs.length) * rangeFactor
+  );
   const profileViews = Math.round(
     Math.max(follows * 8, scopedPubs.length * 3) * rangeFactor
   );
@@ -184,11 +188,22 @@ export default function AnalyticsPage() {
                   value={formatNum(follows)}
                   note="Real count"
                 />
+                <Stat
+                  label="Qualified"
+                  value={formatNum(qualified)}
+                  note="Saves · follows · completes"
+                />
+                <Stat
+                  label="Your likes"
+                  value={formatNum(likes)}
+                  note="Network likes given"
+                />
               </div>
 
               <p className="mt-3 text-[11px] text-zinc-600">
-                Your likes on Omniv: {likes}. Trending ranks publications by heat
-                (likes + saves + recency).
+                Discovery quality counts meaningful actions (save, follow,
+                complete, contact, share) — not raw views. Trending still ranks
+                by heat.
               </p>
 
               <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wide text-zinc-500">
