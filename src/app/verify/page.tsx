@@ -139,7 +139,9 @@ export default function VerifyPage() {
       const evidenceNotes = [
         evidence.website && website ? `Website: ${website}` : null,
         evidence.email && orgEmail ? `Email: ${orgEmail}` : null,
-        evidence.registration ? "Registration document: provided (manual)" : null,
+        evidence.registration
+          ? "Registration document: provided (manual)"
+          : null,
         evidence.social ? "Official social: connected (manual)" : null,
         evidence.other ? "Other evidence: noted" : null,
         role ? `Role: ${ROLE_LABEL[role]}` : null,
@@ -359,7 +361,9 @@ export default function VerifyPage() {
                     />
                   </label>
                   <label className="mt-4 block">
-                    <span className="text-[12px] text-zinc-500">Organization email</span>
+                    <span className="text-[12px] text-zinc-500">
+                      Organization email
+                    </span>
                     <input
                       type="email"
                       value={orgEmail}
@@ -395,13 +399,15 @@ export default function VerifyPage() {
                     key={r}
                     type="button"
                     onClick={() => setRole(r)}
-                    className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left ring-1 ${\n                      role === r
+                    className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left ring-1 ${
+                      role === r
                         ? "bg-omniv-gold/10 ring-omniv-gold/40"
                         : "bg-white/[0.03] ring-white/[0.06]"
                     }`}
                   >
                     <span
-                      className={`flex h-5 w-5 items-center justify-center rounded-full border ${\n                        role === r
+                      className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                        role === r
                           ? "border-omniv-gold bg-omniv-gold"
                           : "border-zinc-600"
                       }`}
@@ -463,13 +469,15 @@ export default function VerifyPage() {
                     onClick={() =>
                       setEvidence((e) => ({ ...e, [item.key]: !e[item.key] }))
                     }
-                    className={`flex w-full items-start gap-3 rounded-2xl px-4 py-3 text-left ring-1 ${\n                      evidence[item.key]
+                    className={`flex w-full items-start gap-3 rounded-2xl px-4 py-3 text-left ring-1 ${
+                      evidence[item.key]
                         ? "bg-omniv-gold/10 ring-omniv-gold/40"
                         : "bg-white/[0.03] ring-white/[0.06]"
                     }`}
                   >
                     <span
-                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-[11px] ${\n                        evidence[item.key]
+                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-[11px] ${
+                        evidence[item.key]
                           ? "border-omniv-gold bg-omniv-gold text-black"
                           : "border-zinc-600"
                       }`}
@@ -517,8 +525,7 @@ export default function VerifyPage() {
                 <p className="text-[14px] font-medium text-white">Manual review (MVP)</p>
                 <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">
                   For launch, identity checks are handled by the Omniv review team.
-                  A third-party provider (liveness + government ID) will plug in
-                  here without changing this flow.
+                  A third-party provider can plug in here later.
                 </p>
               </div>
               <button
@@ -563,8 +570,7 @@ export default function VerifyPage() {
                 </div>
               </div>
               <p className="mt-4 text-[12px] leading-relaxed text-zinc-600">
-                Payment enters the review queue. It does not guarantee a badge. Fee
-                is non-refundable; one free resubmission after rejection.
+                Payment enters the review queue. It does not guarantee a badge.
               </p>
               {error && <p className="mt-3 text-[13px] text-rose-400">{error}</p>}
               <button
@@ -575,9 +581,6 @@ export default function VerifyPage() {
               >
                 {loading ? "Submitting…" : "Apply for verification — $19"}
               </button>
-              <p className="mt-3 text-center text-[11px] text-zinc-600">
-                Submits to the review queue. Flutterwave checkout can attach later.
-              </p>
             </section>
           )}
 
