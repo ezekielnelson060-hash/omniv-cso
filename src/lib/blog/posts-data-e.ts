@@ -1,15 +1,11 @@
 import type { BlogPost } from "./posts-data-a";
-
-import why_taiwan_sits_at_center_us_china_relationship from "./content/why-taiwan-sits-at-center-us-china-relationship.json";
-import the_chip_war_isnt_really_about_chips from "./content/the-chip-war-isnt-really-about-chips.json";
-import why_china_wants_control_technology_supply_chain from "./content/why-china-wants-control-technology-supply-chain.json";
-import what_happens_if_world_splits_two_technology_systems from "./content/what-happens-if-world-splits-two-technology-systems.json";
 import the_physical_internet_behind_the_cloud from "./content/the-physical-internet-behind-the-cloud.json";
-
+import why_taiwan_sits_at_center_us_china_relationship from "./content/why-taiwan-sits-at-center-us-china-relationship.json";
+import what_actually_makes_an_asset_valuable from "./content/what-actually-makes-an-asset-valuable.json";
+import stop_looking_for_ideas_look_for_problems from "./content/stop-looking-for-ideas-look-for-problems.json";
 export const postsE: BlogPost[] = [
-  why_taiwan_sits_at_center_us_china_relationship as BlogPost,
-  the_chip_war_isnt_really_about_chips as BlogPost,
-  why_china_wants_control_technology_supply_chain as BlogPost,
-  what_happens_if_world_splits_two_technology_systems as BlogPost,
   the_physical_internet_behind_the_cloud as BlogPost,
+  why_taiwan_sits_at_center_us_china_relationship as BlogPost,
+  what_actually_makes_an_asset_valuable as BlogPost,
+  stop_looking_for_ideas_look_for_problems as BlogPost,
 ];
