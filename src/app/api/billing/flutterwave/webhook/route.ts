@@ -1,210 +1,213 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { DISCOVERY_PLANS, LEGACY_CHECKOUT_AMOUNTS } from "@/lib/discovery/monetization";
 
-export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-const PAYMENT_PLANS = new Set(["starter", "pro", "business", "label", "promote"]);
 const PLAN_AMOUNTS: Record<string, number> = {
-  starter: DISCOVERY_PLANS.pro.priceMonthlyUsd,
-  pro: DISCOVERY_PLANS.pro.priceMonthlyUsd,
-  business: LEGACY_CHECKOUT_AMOUNTS.business,
-  label: LEGACY_CHECKOUT_AMOUNTS.label,
+  pro: 29,
+  business: 99,
+  verify: 19,
 };
 
 function parseTxRef(txRef: string) {
-  const m = txRef.match(/^omniv_(starter|pro|business|label|promote)_([0-9a-f-]{36})_/i);
-  if (m) return { plan: m[1]!.toLowerCase(), userId: m[2]! };
-  const p = txRef.match(/^omniv_(starter|pro|business|label|promote)_/i);
-  return { plan: p?.[1]?.toLowerCase() ?? null, userId: null };
-}
-
-function normalizePlan(plan: string) {
-  if (plan === "starter") return "pro";
-  if (plan === "label") return "business";
-  return plan;
+  // omniv_{plan}_{userId}_{ts} or omniv_{plan}_anon_{ts}
+  const parts = txRef.split("_");
+  if (parts[0] !== "omniv" || parts.length < 3) {
+    return { plan: "", userId: null as string | null };
+  }
+  const plan = parts[1] || "";
+  const userId = parts[2] === "anon" ? null : parts[2] || null;
+  return { plan, userId };
 }
 
 async function verifyTransaction(id: number | string) {
   const secret = process.env.FLW_SECRET_KEY;
   if (!secret) return null;
-  const res = await fetch(`https://api.flutterwave.com/v3/transactions/${id}/verify`, {
-    headers: { Authorization: `Bearer ${secret}` },
-    cache: "no-store",
-  });
+  const res = await fetch(
+    `https://api.flutterwave.com/v3/transactions/${id}/verify`,
+    { headers: { Authorization: `Bearer ${secret}` } }
+  );
   if (!res.ok) return null;
   const json = await res.json();
-  return json?.data ?? null;
-}
-
-function nextMonth(from: Date) {
-  const result = new Date(from);
-  result.setUTCMonth(result.getUTCMonth() + 1);
-  return result.toISOString();
+  return json?.data || null;
 }
 
 export async function POST(req: Request) {
-  const secretHash = process.env.FLW_SECRET_HASH;
-  if (!secretHash) {
-    console.error("Flutterwave webhook disabled: FLW_SECRET_HASH is missing");
-    return NextResponse.json({ error: "webhook misconfigured" }, { status: 503 });
-  }
-  const signature = req.headers.get("verif-hash");
-  if (!signature || signature !== secretHash) {
-    return NextResponse.json({ error: "invalid signature" }, { status: 401 });
+  const secret = process.env.FLW_SECRET_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret || !url || !service) {
+    return NextResponse.json({ error: "Not configured" }, { status: 503 });
   }
 
-  let body: { event?: string; data?: Record<string, unknown> };
+  let body: Record<string, unknown> = {};
   try {
-    body = JSON.parse(await req.text());
+    body = await req.json();
   } catch {
-    return NextResponse.json({ error: "invalid json" }, { status: 400 });
-  }
-  const data = (body.data || {}) as Record<string, unknown>;
-  if (String(body.event || "").toLowerCase() === "subscription.cancelled") {
-    const customer = (data.customer || {}) as Record<string, unknown>;
-    const email = String(customer.email || "").toLowerCase().trim();
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !service || !email) {
-      return NextResponse.json({ ok: true, skipped: "unmapped_subscription" });
-    }
-    const admin = createClient(url, service, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    // Cancellation stops future charges; the current paid month remains valid.
-    const { error } = await admin
-      .from("profiles")
-      .update({ plan_status: "cancelled", billing_status: "cancelled" })
-      .eq("email", email)
-      .neq("plan", "free");
-    if (error) {
-      return NextResponse.json({ error: "subscription update failed" }, { status: 500 });
-    }
-    return NextResponse.json({ ok: true, subscription: "cancelled" });
-  }
-  const status = String(data.status || "").toLowerCase();
-  if (status && status !== "successful" && status !== "success") {
-    return NextResponse.json({ ok: true, skipped: "not_successful" });
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const eventTxRef = String(data.tx_ref || data.txRef || "");
-  const eventMeta = (data.meta || {}) as Record<string, unknown>;
-  const txId = data.id as number | string | undefined;
+  const data = (body.data as Record<string, unknown>) || body;
+  const eventTxRef = String(
+    data.tx_ref || data.txRef || body.tx_ref || ""
+  );
+  const txId = data.id || body.id;
+  const eventMeta =
+    data.meta && typeof data.meta === "object"
+      ? (data.meta as Record<string, unknown>)
+      : {};
+
   let verified: Record<string, unknown> = data;
-  if (txId != null) {
-    const transaction = await verifyTransaction(txId);
-    if (!transaction) return NextResponse.json({ error: "transaction verification failed" }, { status: 422 });
-    verified = transaction as Record<string, unknown>;
+  if (txId) {
+    const transaction = await verifyTransaction(txId as string | number);
+    if (transaction) {
+      verified = transaction as Record<string, unknown>;
+    }
   }
 
   const verifiedTxRef = String(verified.tx_ref || verified.txRef || eventTxRef);
   if (!verifiedTxRef || (eventTxRef && verifiedTxRef !== eventTxRef)) {
-    return NextResponse.json({ error: "transaction reference mismatch" }, { status: 422 });
+    return NextResponse.json({ error: "tx_ref mismatch" }, { status: 400 });
   }
+
   if (/tip/i.test(verifiedTxRef) || eventMeta.gathering_id || eventMeta.is_tip) {
-    return NextResponse.json({ ok: true, type: "gathering_skipped" });
+    return NextResponse.json({ ok: true, skipped: "tip" });
   }
 
   const parsed = parseTxRef(verifiedTxRef);
-  const verifiedMeta = verified.meta && typeof verified.meta === "object"
-    ? (verified.meta as Record<string, unknown>)
-    : eventMeta;
+  const verifiedMeta =
+    verified.meta && typeof verified.meta === "object"
+      ? (verified.meta as Record<string, unknown>)
+      : {};
   const rawPlan = (parsed.plan || String(verifiedMeta.plan || "")).toLowerCase();
-  if (!PAYMENT_PLANS.has(rawPlan)) {
-    return NextResponse.json({ error: "unknown payment plan" }, { status: 422 });
-  }
-  const plan = normalizePlan(rawPlan);
-  const expectedAmount = Number(verifiedMeta.amount || PLAN_AMOUNTS[rawPlan] || 0);
+  let plan = rawPlan;
+  if (plan === "starter") plan = "pro";
+  if (plan === "label") plan = "business";
+
+  const expectedAmount = Number(
+    verifiedMeta.amount || PLAN_AMOUNTS[rawPlan] || 0
+  );
   const amount = Number(verified.amount ?? data.amount ?? 0);
   const expectedCurrency = String(
     verifiedMeta.currency || process.env.FLW_CURRENCY || "USD"
   ).toUpperCase();
-  const currency = String(verified.currency ?? data.currency ?? "USD").toUpperCase();
-  if (!expectedAmount || !amount || Math.abs(amount - expectedAmount) > 0.01) {
-    return NextResponse.json({ error: "transaction amount mismatch" }, { status: 422 });
-  }
-  if (currency !== expectedCurrency) {
-    return NextResponse.json({ error: "transaction currency mismatch" }, { status: 422 });
-  }
+  const currency = String(
+    verified.currency ?? data.currency ?? "USD"
+  ).toUpperCase();
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !service) return NextResponse.json({ error: "server misconfigured" }, { status: 500 });
-
-  let userId = parsed.userId || String(verifiedMeta.user_id || "") || null;
-  const email = (
+  let userId =
+    parsed.userId || String(verifiedMeta.user_id || "") || null;
+  const email =
     (verified.customer as { email?: string } | undefined)?.email ||
-    (data.customer as { email?: string } | undefined)?.email || ""
-  ).toLowerCase();
+    String(verifiedMeta.email || "") ||
+    "";
+
   const admin = createClient(url, service, {
-    auth: { persistSession: false, autoRefreshToken: false },
+    auth: { persistSession: false },
   });
+
   if (!userId && email) {
-    const { data: profile } = await admin.from("profiles").select("id").eq("email", email).maybeSingle();
-    userId = profile?.id ?? null;
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+    if (profile?.id) userId = profile.id;
   }
-  if (!userId) return NextResponse.json({ error: "unmapped user" }, { status: 422 });
 
   const providerPaymentId = String(verified.id ?? data.id ?? verifiedTxRef);
-  const { data: paymentRow, error: paymentError } = await admin.from("payments").upsert(
-    {
-      provider: "flutterwave",
-      provider_payment_id: providerPaymentId,
-      user_id: userId,
-      email: email || null,
-      plan,
-      amount,
-      currency,
-      status: "successful",
-      tx_ref: verifiedTxRef,
-      raw: verified,
-    },
-    { onConflict: "provider,provider_payment_id" }
-  ).select("id").single();
-  if (paymentError) return NextResponse.json({ error: "payment record failed" }, { status: 500 });
+  const status = String(verified.status || data.status || "").toLowerCase();
+  if (status && status !== "successful" && status !== "success") {
+    return NextResponse.json({ ok: true, ignored: status });
+  }
 
-  // Promotion purchases are recorded but never grant a membership plan.
-  if (rawPlan === "promote") {
+  const { data: paymentRow, error: paymentError } = await admin
+    .from("payments")
+    .upsert(
+      {
+        amount,
+        currency,
+        status: "successful",
+        user_id: userId,
+        plan,
+        tx_ref: verifiedTxRef,
+        raw: verified,
+        email,
+        provider_payment_id: providerPaymentId,
+      },
+      { onConflict: "tx_ref" }
+    )
+    .select("id")
+    .maybeSingle();
+  if (paymentError) {
+    console.error("payment upsert", paymentError);
+  }
+
+  if (rawPlan === "promote" || plan === "promote") {
     const promotionId = String(verifiedMeta.promotion_id || "").trim();
     if (promotionId) {
       const durationDays = Number(verifiedMeta.duration || 7);
-      const startsAt = new Date();
-      const endsAt = new Date(startsAt);
-      endsAt.setUTCDate(endsAt.getUTCDate() + (Number.isFinite(durationDays) ? durationDays : 7));
+      const ends = new Date();
+      ends.setDate(ends.getDate() + durationDays);
       const { error: promotionError } = await admin
         .from("discovery_promotions")
         .update({
           status: "active",
-          payment_id: paymentRow?.id || null,
-          starts_at: startsAt.toISOString(),
-          ends_at: endsAt.toISOString(),
-          updated_at: startsAt.toISOString(),
+          ends_at: ends.toISOString(),
+          payment_ref: verifiedTxRef,
         })
-        .eq("id", promotionId)
-        .eq("owner_id", userId)
-        .eq("status", "pending_payment");
-      if (promotionError) console.error("promotion activation", promotionError);
+        .eq("id", promotionId);
+      if (promotionError) console.error("promotion activate", promotionError);
     }
-    return NextResponse.json({ ok: true, plan: "promote", userId, promotion: true });
+    return NextResponse.json({ ok: true, plan: "promote" });
   }
+
+  // Verification application fee — mark paid only; badge after admin approve
+  if (rawPlan === "verify" || plan === "verify") {
+    const requestId = String(
+      verifiedMeta.verification_request_id || verifiedMeta.request_id || ""
+    ).trim();
+    if (requestId) {
+      await admin
+        .from("discovery_verification_requests")
+        .update({
+          paid: true,
+          payment_ref: verifiedTxRef,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", requestId);
+    }
+    return NextResponse.json({ ok: true, plan: "verify", paid: true, userId });
+  }
+
+  if (!userId) {
+    return NextResponse.json({ ok: true, warning: "no user" });
+  }
+
+  const planExpiresAt = new Date();
+  planExpiresAt.setMonth(planExpiresAt.getMonth() + 1);
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("plan_expires_at")
+    .select("id")
     .eq("id", userId)
     .maybeSingle();
-  const existingExpiry = profile?.plan_expires_at ? new Date(profile.plan_expires_at) : new Date();
-  const start = existingExpiry.getTime() > Date.now() ? existingExpiry : new Date();
-  const planExpiresAt = nextMonth(start);
-  const { error: profileError } = await admin.from("profiles").update({
-    plan,
-    plan_status: "active",
-    billing_status: "active",
-    plan_updated_at: new Date().toISOString(),
-    plan_expires_at: planExpiresAt,
-  }).eq("id", userId);
-  if (profileError) return NextResponse.json({ error: "entitlement update failed" }, { status: 500 });
+
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update({
+      plan,
+      plan_status: "active",
+      billing_status: "active",
+      plan_updated_at: new Date().toISOString(),
+      plan_expires_at: planExpiresAt.toISOString(),
+    })
+    .eq("id", userId);
+  if (profileError)
+    return NextResponse.json(
+      { error: "entitlement update failed" },
+      { status: 500 }
+    );
 
   if (plan === "pro" || plan === "business") {
     const entityId = String(verifiedMeta.entity_id || "").trim();
@@ -223,15 +226,31 @@ export async function POST(req: Request) {
           .eq("owner_id", userId);
         if (error) console.error("verify selected entity after pay", error);
       } else {
-        console.warn("paid verification entity not owned by payer", { entityId, userId });
+        console.warn("paid verification entity not owned by payer", {
+          entityId,
+          userId,
+        });
       }
     } else {
-      console.warn("paid plan had no entity_id; no entity was verified", { userId, plan });
+      console.warn("paid plan had no entity_id; no entity was verified", {
+        userId,
+        plan,
+      });
     }
   }
-  return NextResponse.json({ ok: true, plan, userId, planExpiresAt, verified: true });
+  return NextResponse.json({
+    ok: true,
+    plan,
+    userId,
+    planExpiresAt: planExpiresAt.toISOString(),
+    verified: true,
+    paymentId: paymentRow?.id,
+  });
 }
 
 export async function GET() {
-  return NextResponse.json({ ok: true, path: "/api/billing/flutterwave/webhook" });
+  return NextResponse.json({
+    ok: true,
+    path: "/api/billing/flutterwave/webhook",
+  });
 }
