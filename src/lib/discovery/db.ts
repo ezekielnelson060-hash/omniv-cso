@@ -1,12 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import {
+import type {
   DiscoveryEntity,
   EntityIntent,
   EntityType,
   Publication,
   PublicationType,
+  ArticleContentBlock,
+  ArticleSource,
+  EntityReference,
 } from "./types";
-import { SEED_ENTITIES, SEED_PUBLICATIONS } from "./seed";
+import { SEED_ENTITIES, SEED_PUBLICATIONS, getPublication as seedGetPub } from "./seed";
 
 type Row = {
   id: string;
@@ -33,52 +36,38 @@ type PubRow = {
   slug: string;
   title: string;
   summary: string;
-  body?: string | null;
+  body: string | null;
+  tags: string[] | null;
+  meta: string | null;
+  cover_url: string | null;
+  media_url: string | null;
+  heat: number | null;
+  published_at: string;
+  publisher_id: string | null;
+  publisher_name: string | null;
   subtitle?: string | null;
   excerpt?: string | null;
-  content?: { type: string; text?: string; items?: string[] }[] | null;
-  sources?: { label: string; href?: string }[] | null;
+  content?: ArticleContentBlock[] | null;
+  sources?: ArticleSource[] | null;
   what_this_means?: string | null;
   question_nobody_asks?: string | null;
   reading_time?: number | null;
-  entity_refs?: { type: string; slug: string; id?: string }[] | null;
+  entity_refs?: EntityReference[] | null;
   related_publication_ids?: string[] | null;
-  status?: string | null;
+  status?: "draft" | "published" | "archived" | null;
   seo_title?: string | null;
   seo_description?: string | null;
   canonical_url?: string | null;
   updated_at?: string | null;
-  tags: string[] | null;
-  meta?: string | null;
-  cover_url?: string | null;
-  media_url?: string | null;
-  heat: number | null;
-  published_at: string;
-  publisher_id?: string | null;
-  publisher_name?: string | null;
 };
 
 export type LivePublication = Publication & {
-  body?: string;
-  subtitle?: string;
-  excerpt?: string;
-  content?: { type: string; text?: string; items?: string[] }[];
-  sources?: { label: string; href?: string }[];
-  whatThisMeans?: string;
-  questionNobodyAsks?: string;
-  readingTime?: number;
-  entityRefs?: { type: string; slug: string; id?: string }[];
-  relatedPublicationIds?: string[];
-  status?: string;
-  seoTitle?: string;
-  seoDescription?: string;
-  canonicalUrl?: string;
-  updatedAt?: string;
   publisherName?: string;
   mediaUrl?: string;
   coverUrl?: string;
 };
 
+/** Entity with optional media (after migration) */
 export type LiveEntity = DiscoveryEntity & {
   avatarUrl?: string;
   coverUrl?: string;
@@ -251,9 +240,8 @@ export async function getLivePublication(
     }
   }
 
-  return (
-    (SEED_PUBLICATIONS.find((p) => p.slug === slug) as LivePublication) ?? null
-  );
+  const seed = seedGetPub?.(slug) ?? SEED_PUBLICATIONS.find((p) => p.slug === slug);
+  return (seed as LivePublication) ?? null;
 }
 
 export async function listLivePublications(
