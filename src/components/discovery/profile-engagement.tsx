@@ -20,7 +20,7 @@ function writeLikes(m: Record<string, number>) {
   }
 }
 
-/** Soft engagement — heart + comment (comments ship next) */
+/** Soft engagement — heart */
 export function ProfileEngagement({
   slug,
   seedLikes = 0,
@@ -80,24 +80,6 @@ export function ProfileEngagement({
         </svg>
         {count > 0 && <span>{count}</span>}
       </button>
-      <span
-        className="inline-flex items-center gap-1.5 opacity-50"
-        title="Comments coming soon"
-      >
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-        >
-          <path
-            d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v6a2.5 2.5 0 0 1-2.5 2.5H11l-4 3.5V15H7.5A2.5 2.5 0 0 1 5 12.5v-6z"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
     </div>
   );
 }
