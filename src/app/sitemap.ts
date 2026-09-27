@@ -25,7 +25,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { entities, publications } = await getPublicData();
   const staticRoutes = [
     { path: "/", changeFrequency: "daily" as const, priority: 1 },
+    { path: "/home", changeFrequency: "daily" as const, priority: 0.95 },
     { path: "/explore", changeFrequency: "daily" as const, priority: 0.95 },
+    { path: "/publish", changeFrequency: "weekly" as const, priority: 0.85 },
+    { path: "/pricing", changeFrequency: "weekly" as const, priority: 0.8 },
+    { path: "/pro", changeFrequency: "weekly" as const, priority: 0.75 },
     { path: "/blog", changeFrequency: "weekly" as const, priority: 0.7 },
     { path: "/partners", changeFrequency: "monthly" as const, priority: 0.4 },
     { path: "/contact", changeFrequency: "yearly" as const, priority: 0.3 },
@@ -42,10 +46,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "make-money-without-only-streaming",
   ];
   return [
-    ...staticRoutes.map((route) => ({ url: `${baseUrl}${route.path}`, lastModified: now, changeFrequency: route.changeFrequency, priority: route.priority })),
-    ...entities.map((entity) => ({ url: `${baseUrl}${entityPath(entity)}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.8 })),
-    ...publications.map((publication) => ({ url: `${baseUrl}${publicationPath(publication)}`, lastModified: now, changeFrequency: "weekly" as const, priority: 0.75 })),
-    ...DISCOVERY_CATEGORIES.map((category) => ({ url: `${baseUrl}/explore/${category.slug}`, lastModified: now, changeFrequency: "daily" as const, priority: 0.7 })),
-    ...blogSlugs.map((slug) => ({ url: `${baseUrl}/blog/${slug}`, lastModified: now, changeFrequency: "monthly" as const, priority: 0.7 })),
+    ...staticRoutes.map((route) => ({
+      url: `${baseUrl}${route.path}`,
+      lastModified: now,
+      changeFrequency: route.changeFrequency,
+      priority: route.priority,
+    })),
+    ...entities.map((entity) => ({
+      url: `${baseUrl}${entityPath(entity)}`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    })),
+    ...publications.map((publication) => ({
+      url: `${baseUrl}${publicationPath(publication)}`,
+      lastModified: now,
+      changeFrequency: "weekly" as const,
+      priority: 0.75,
+    })),
+    ...DISCOVERY_CATEGORIES.map((category) => ({
+      url: `${baseUrl}/explore/${category.slug}`,
+      lastModified: now,
+      changeFrequency: "daily" as const,
+      priority: 0.7,
+    })),
+    ...blogSlugs.map((slug) => ({
+      url: `${baseUrl}/blog/${slug}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
   ];
 }
