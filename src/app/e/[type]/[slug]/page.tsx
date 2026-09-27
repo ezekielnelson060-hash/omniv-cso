@@ -35,6 +35,7 @@ import {
   type PublicationType,
 } from "@/lib/discovery/types";
 import { getRelatedEntities, recommendForEntity } from "@/lib/discovery/graph";
+import { entityMedia } from "@/lib/discovery/entity-media";
 
 type Props = {
   params: Promise<{ type: string; slug: string }>;
@@ -102,11 +103,27 @@ export default async function EntityPage({ params, searchParams }: Props) {
   const e = await getDiscoveryEntity(supabase, type, slug);
   if (!e) notFound();
 
+  let isOwner = false;
+  if (supabase) {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user && (e as { ownerId?: string }).ownerId === user.id) {
+        isOwner = true;
+      }
+    } catch {
+      /* guest */
+    }
+  }
+
   const seedPubs = publicationsByPublisher(e.id);
   const liveAll = await listLivePublications(supabase, 80);
   const liveForEntity = liveAll.filter((p: LivePublication) => {
     if (p.publisherId === e.id) return true;
     if (p.publisherName?.toLowerCase() === e.name.toLowerCase()) return true;
+    const refs = p.entityRefs || [];
+    if (refs.some((r) => r.slug === e.slug || r.id === e.id)) return true;
     return false;
   });
   const pubsMap = new Map<string, Publication>();
@@ -143,8 +160,11 @@ export default async function EntityPage({ params, searchParams }: Props) {
   const initial = e.name.slice(0, 1).toUpperCase();
   const path = entityPath(e);
   const editPath = `${path}/edit`;
-  const coverUrl = (e as { coverUrl?: string | null }).coverUrl;
-  const avatarUrl = (e as { avatarUrl?: string | null }).avatarUrl;
+  const { coverUrl, avatarUrl } = entityMedia({
+    slug: e.slug,
+    coverUrl: (e as { coverUrl?: string | null }).coverUrl,
+    avatarUrl: (e as { avatarUrl?: string | null }).avatarUrl,
+  });
   const links = e.links || [];
 
   const graphPublications = Array.from(
@@ -216,12 +236,14 @@ export default async function EntityPage({ params, searchParams }: Props) {
               name={e.name}
               variant="icon"
             />
-            <Link
-              href={editPath}
-              className="flex h-9 items-center rounded-full bg-black/55 px-3.5 text-[13px] font-semibold text-white"
-            >
-              Edit
-            </Link>
+            {isOwner && (
+              <Link
+                href={editPath}
+                className="flex h-9 items-center rounded-full bg-black/55 px-3.5 text-[13px] font-semibold text-white"
+              >
+                Edit
+              </Link>
+            )}
           </div>
         </div>
 
@@ -267,18 +289,18 @@ export default async function EntityPage({ params, searchParams }: Props) {
               </p>
             ) : null}
 
-            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[13px] text-zinc-500">
-              <span className="inline-flex items-center gap-1 capitalize">
-                <span aria-hidden className="opacity-70">
-                  ◈
-                </span>
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] text-zinc-500">
+              <span className="inline-flex items-center gap-1.5 capitalize">
+                <svg viewBox="0 0 24 24" className="h-[15px] w-[15px] shrink-0 text-zinc-500" fill="currentColor" aria-hidden>
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
+                </svg>
                 {e.type}
               </span>
               {e.location ? (
-                <span className="inline-flex items-center gap-1">
-                  <span aria-hidden className="opacity-70">
-                    ⌖
-                  </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <svg viewBox="0 0 24 24" className="h-[15px] w-[15px] shrink-0 text-zinc-500" fill="currentColor" aria-hidden>
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                  </svg>
                   {e.location}
                 </span>
               ) : null}
@@ -288,23 +310,35 @@ export default async function EntityPage({ params, searchParams }: Props) {
                   href={l.href.startsWith("http") ? l.href : `https://${l.href}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-omniv-gold hover:underline"
+                  className="inline-flex items-center gap-1.5 text-omniv-gold hover:underline"
                 >
-                  <span aria-hidden className="opacity-80">
-                    ↗
-                  </span>
+                  <svg viewBox="0 0 24 24" className="h-[15px] w-[15px] shrink-0" fill="currentColor" aria-hidden>
+                    <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" />
+                  </svg>
                   {l.label && l.label !== "Website"
                     ? l.label
                     : hostLabel(l.href)}
                 </a>
               ))}
+              {e.publishedAt ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <svg viewBox="0 0 24 24" className="h-[15px] w-[15px] shrink-0 text-zinc-500" fill="currentColor" aria-hidden>
+                    <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z" />
+                  </svg>
+                  Joined{" "}
+                  {new Date(e.publishedAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+              ) : null}
             </div>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-1 text-[14px]">
             <FollowerCount type={e.type} slug={e.slug} />
             <Link href="/following" className="text-zinc-500 hover:text-zinc-300">
-              <span className="font-semibold text-white">—</span> Following
+              <span className="font-semibold text-white">0</span> Following
             </Link>
             <span className="text-zinc-500">
               <span className="font-semibold text-white">{pubs.length}</span>{" "}
@@ -416,7 +450,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
                   ))}
                 </div>
               )}
-              {!e.verified && <GetVerifiedCard />}
+              {!e.verified && isOwner && <GetVerifiedCard />}
               <div id="contact" className="pt-4">
                 <ContactForm entityName={e.name} entityPath={path} />
               </div>
@@ -468,9 +502,24 @@ export default async function EntityPage({ params, searchParams }: Props) {
                     <EntityLatestRow key={p.id} pub={p} />
                   ))}
                   {pubs.length === 0 && (
-                    <p className="py-10 text-center text-[14px] text-zinc-500">
-                      No publications yet.
-                    </p>
+                    <div className="rounded-2xl bg-white/[0.03] px-5 py-10 text-center ring-1 ring-white/[0.06]">
+                      <p className="text-[15px] font-medium text-white">
+                        No publications yet
+                      </p>
+                      <p className="mt-2 text-[13px] text-zinc-500">
+                        {isOwner
+                          ? "Publish the first piece from this identity."
+                          : "Nothing published under this identity yet."}
+                      </p>
+                      {isOwner && (
+                        <Link
+                          href="/publish"
+                          className="mt-5 inline-flex h-10 items-center rounded-full bg-omniv-gold px-5 text-[13px] font-semibold text-black"
+                        >
+                          Publish
+                        </Link>
+                      )}
+                    </div>
                   )}
                 </div>
               ) : (
@@ -492,7 +541,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
                 />
               )}
 
-              {!e.verified && <GetVerifiedCard />}
+              {!e.verified && isOwner && <GetVerifiedCard />}
               <div id="contact" className="pt-8">
                 <ContactForm entityName={e.name} entityPath={path} />
               </div>
