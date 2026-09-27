@@ -8,13 +8,14 @@ import {
   FeedCard,
 } from "@/components/discovery/feed-card";
 import { readInterests, interestMatchScore, hasCompletedInterests } from "@/lib/discovery/interests";
+import { signalBoost, risingScore } from "@/lib/discovery/signals";
 import { readFollows, type FollowedRef } from "@/lib/discovery/local-graph";
 import type { Publication } from "@/lib/discovery/types";
 import { SEED_ENTITIES } from "@/lib/discovery/seed";
 
 const COMPACT = new Set(["music", "product", "opportunity", "announcement"]);
 
-type Tab = "for-you" | "following" | "trending" | "new";
+type Tab = "for-you" | "following" | "trending" | "rising" | "new";
 
 type Props = {
   tab: Tab;
@@ -101,11 +102,19 @@ export function HomeFeedClient({ tab, publications }: Props) {
         )
         .slice(0, 18);
     }
-    // For You — interest + heat + type diversity
+    if (tab === "rising") {
+      return [...list]
+        .map((p) => ({ p, score: risingScore(p) }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 18)
+        .map((x) => x.p);
+    }
+    // For You — interest + behavior signals + heat + type diversity
     const scored = list.map((p) => {
       const interest = interestMatchScore(p.tags || [], p.category, interests);
       const heat = Math.min(1, (p.heat ?? 0) / 100);
-      const score = interest * 0.45 + heat * 0.35 + 0.2;
+      const behavior = signalBoost(p.tags || [], p.category);
+      const score = interest * 0.4 + heat * 0.3 + behavior * 0.2 + 0.1;
       return { p, score };
     });
     scored.sort((a, b) => b.score - a.score);
