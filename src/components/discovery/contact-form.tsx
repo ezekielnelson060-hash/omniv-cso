@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { recordSignal } from "@/lib/discovery/signals";
 
 export function ContactForm({
   entityName,
@@ -33,6 +34,7 @@ export function ContactForm({
       }
       setStatus("ok");
       setMessage("");
+      recordSignal("contact", [entityName, entityPath].filter(Boolean));
     } catch {
       setError("Network error");
       setStatus("err");
