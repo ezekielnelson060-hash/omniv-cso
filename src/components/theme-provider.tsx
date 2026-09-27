@@ -15,11 +15,14 @@ const ThemeCtx = createContext<{
   preference: ThemePreference;
   theme: ResolvedTheme;
   setPreference: (t: ThemePreference) => void;
+  /** @deprecated use setPreference — kept for ThemeToggleCard */
+  setTheme: (t: ThemePreference) => void;
   toggle: () => void;
 }>({
   preference: "dark",
   theme: "dark",
   setPreference: () => {},
+  setTheme: () => {},
   toggle: () => {},
 });
 
@@ -90,7 +93,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [theme, setPreference]);
 
   return (
-    <ThemeCtx.Provider value={{ preference, theme, setPreference, toggle }}>
+    <ThemeCtx.Provider
+      value={{
+        preference,
+        theme,
+        setPreference,
+        setTheme: setPreference,
+        toggle,
+      }}
+    >
       {children}
     </ThemeCtx.Provider>
   );
