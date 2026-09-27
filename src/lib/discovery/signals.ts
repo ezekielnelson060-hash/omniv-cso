@@ -99,21 +99,10 @@ export function signalBoost(tags: string[], category?: string): number {
     }
   }
   if (!n) return 0;
-  return Math.max(-0.3, Math.min(0.5, sum / n / 4));
+  return Math.max(0, Math.min(1, (sum / n + 1) / 4));
 }
 
-export function readTopSignalTopics(limit = 8): { topic: string; weight: number }[] {
-  const w = readWeights();
-  return Object.entries(w)
-    .map(([topic, weight]) => ({ topic, weight }))
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, limit);
-}
-
-/**
- * Rising / velocity proxy — prefer recent pubs with heat.
- * real velocity needs time-bucketed engagement (V2).
- */
+/** Rising score: heat * freshness (velocity proxy until real events) */
 export function risingScore(p: {
   heat?: number;
   publishedAt?: string;
@@ -123,4 +112,29 @@ export function risingScore(p: {
   const ageHours = ts ? Math.max(0, (Date.now() - ts) / 3_600_000) : 72;
   const freshness = Math.max(0, 1 - ageHours / 72);
   return heat * 0.4 + freshness * 0.6;
+}
+
+export type SignalEvent = {
+  kind: SignalKind;
+  tags: string[];
+  at: number;
+};
+
+export function getRecentSignals(limit = 100): SignalEvent[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(EVENTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.slice(0, limit) as SignalEvent[];
+  } catch {
+    return [];
+  }
+}
+
+/** Qualified interactions — saves, follows, completes, contacts, shares */
+export function countQualifiedInteractions(): number {
+  const strong = new Set(["save", "follow", "complete", "contact", "share", "like"]);
+  return getRecentSignals(200).filter((e) => strong.has(e.kind)).length;
 }
