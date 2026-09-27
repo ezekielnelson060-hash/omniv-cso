@@ -15,7 +15,7 @@ import { HomeFeedClient } from "@/components/discovery/home-feed-client";
 export const metadata = {
   title: "Home | Omniv",
   description:
-    "Discover what matters next — For You, Following, Trending, and New on Omniv.",
+    "Discover what matters next — For You, Following, Trending, Rising, and New on Omniv.",
 };
 
 type Props = {
@@ -27,6 +27,7 @@ const TABS = [
   { id: "for-you", label: "For You" },
   { id: "following", label: "Following" },
   { id: "trending", label: "Trending" },
+  { id: "rising", label: "Rising" },
   { id: "new", label: "New" },
 ] as const;
 
@@ -56,7 +57,6 @@ export default async function HomePage({ searchParams }: Props) {
   const supabase = await tryClient();
   const mixed = await listLivePublications(supabase, 40);
 
-  // Pool for client ranking (For You interests + Following graph)
   let feedPool: Publication[] = mixed;
   if (feedPool.length < 8) {
     const seed = trendingPublications(14);
@@ -124,7 +124,9 @@ export default async function HomePage({ searchParams }: Props) {
                   ? "Following"
                   : tab === "trending"
                     ? "Trending"
-                    : "New"}
+                    : tab === "rising"
+                      ? "Rising"
+                      : "New"}
             </h1>
             <p className="mt-1 text-[14px] text-zinc-500">
               {tab === "for-you"
@@ -133,7 +135,9 @@ export default async function HomePage({ searchParams }: Props) {
                   ? "Latest from people and entities you follow."
                   : tab === "trending"
                     ? "Gaining attention across the network."
-                    : "Fresh publications on Omniv."}
+                    : tab === "rising"
+                      ? "Not huge yet — accelerating fast."
+                      : "Fresh publications on Omniv."}
             </p>
           </div>
 
@@ -173,6 +177,7 @@ export default async function HomePage({ searchParams }: Props) {
               tab={
                 tab === "following" ||
                 tab === "trending" ||
+                tab === "rising" ||
                 tab === "new" ||
                 tab === "for-you"
                   ? tab
