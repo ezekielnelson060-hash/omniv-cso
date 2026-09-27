@@ -264,6 +264,8 @@ export default async function PublicationPage({ params }: Props) {
                   path={path}
                   publishedAt={p.publishedAt}
                   heat={p.heat}
+                  tags={p.tags || []}
+                  category={p.category}
                 />
               </div>
             </div>
