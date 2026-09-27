@@ -19,7 +19,7 @@ const DRAFT_KEY = "omniv-create-draft";
 
 const GROUPS: { label: string; types: PublicationType[] }[] = [
   { label: "Content", types: ["article", "music", "video", "research"] },
-  { label: "Things", types: ["product", "event", "file"] },
+  { label: "Things", types: ["product", "event", "file", "image"] },
   { label: "Signals", types: ["announcement", "opportunity"] },
 ];
 
@@ -33,6 +33,7 @@ const TYPE_ICONS: Record<PublicationType, string> = {
   opportunity: "◎",
   announcement: "📣",
   file: "📁",
+  image: "▧",
 };
 
 const TYPE_INDEX: Record<PublicationType, number> = {
@@ -45,6 +46,7 @@ const TYPE_INDEX: Record<PublicationType, number> = {
   announcement: 7,
   opportunity: 8,
   file: 9,
+  image: 10,
 };
 
 const inputCls =

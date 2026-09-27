@@ -113,37 +113,45 @@ export type DiscoveryEntity = {
   slug: string;
   name: string;
   handle?: string;
-  tagline?: string;
-  about?: string;
+  tagline: string;
+  about: string;
   location?: string;
   website?: string;
-  tags?: string[];
+  tags: string[];
   links?: { label: string; href: string }[];
   verified?: boolean;
   coverUrl?: string;
   avatarUrl?: string;
   heat?: number;
-  publishedAt?: string;
-  intents?: EntityIntent[];
+  publishedAt: string;
+  intents: EntityIntent[];
 };
 
 export type ArticleContentBlock =
   | { type: "paragraph"; text: string }
-  | { type: "heading"; text: string; level?: number }
+  | { type: "heading"; text: string; level?: 2 | 3 }
+  | { type: "subheading"; text: string }
+  | { type: "image"; src: string; alt?: string; caption?: string }
+  | { type: "caption"; text: string }
   | { type: "quote"; text: string; attribution?: string }
-  | { type: "callout"; title?: string; text: string }
-  | { type: "list"; items: string[] }
-  | { type: "entity-reference"; slug: string; label: string; entityType?: string };
+  | { type: "divider" }
+  | { type: "entity-reference"; slug: string; label: string; entityType?: string }
+  | { type: "publication-reference"; slug: string; label: string }
+  | { type: "list"; items: string[]; ordered?: boolean }
+  | { type: "callout"; title?: string; text: string };
 
 export type ArticleSource = {
-  label: string;
-  href?: string;
+  name: string;
+  title: string;
+  date?: string;
+  url: string;
 };
 
 export type EntityReference = {
-  type?: string;
+  id?: string;
+  type: string;
   slug: string;
-  label?: string;
+  label: string;
 };
 
 export type Publication = {
