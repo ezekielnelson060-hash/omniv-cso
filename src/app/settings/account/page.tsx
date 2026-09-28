@@ -8,49 +8,45 @@ import { readProfile, writeProfile } from "@/lib/discovery/local-profile";
 
 export default function AccountSettingsPage() {
   const [displayName, setDisplayName] = useState("");
-  const [handle, setHandle] = useState("");
-  const [email, setEmail] = useState("");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    try {
-      const p = readProfile();
-      setDisplayName(p.displayName || "");
-      setHandle(p.handle || "");
-      setEmail((p as { email?: string }).email || "");
-    } catch {
-      /* ignore */
-    }
+    const p = readProfile();
+    setDisplayName(p.displayName || "");
   }, []);
 
   function save() {
-    try {
-      const p = readProfile();
-      writeProfile({
-        ...p,
-        displayName: displayName.trim() || p.displayName,
-        handle: handle.trim().replace(/^@/, "") || p.handle,
-      });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
-    } catch {
-      /* ignore */
-    }
+    const p = readProfile();
+    writeProfile({
+      ...p,
+      displayName: displayName.trim() || p.displayName,
+    });
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 2000);
   }
 
   return (
     <DiscoveryShell>
-      <div className="min-h-dvh bg-[#050505] text-zinc-100">
+      <div className="min-h-dvh overflow-x-hidden bg-[#050505] text-zinc-100">
         <header className="sticky top-0 z-40 border-b border-white/[0.05] bg-[#050505]/95 backdrop-blur-md">
-          <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3 md:max-w-2xl">
-            <Link href="/settings" className="text-zinc-400">
+          <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3">
+            <Link
+              href="/settings"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 hover:bg-white/5"
+            >
               ←
             </Link>
-            <h1 className="text-[17px] font-semibold text-white">Account</h1>
+            <h1 className="text-[17px] font-semibold text-white">
+              Personal information
+            </h1>
           </div>
         </header>
 
-        <main className="mx-auto max-w-lg space-y-5 px-4 pb-28 pt-5 md:max-w-2xl">
+        <main className="mx-auto max-w-lg space-y-5 px-4 pb-28 pt-5">
+          <p className="text-[13px] text-zinc-500">
+            Your display name is how people see you. Username is managed on its
+            own page — unique across Omniv.
+          </p>
           <label className="block">
             <span className="text-[12px] text-zinc-500">Display name</span>
             <input
@@ -60,26 +56,21 @@ export default function AccountSettingsPage() {
             />
           </label>
           <label className="block">
-            <span className="text-[12px] text-zinc-500">Username</span>
-            <div className="mt-1.5 flex h-12 items-center rounded-xl bg-white/[0.04] ring-1 ring-white/[0.08] focus-within:ring-omniv-gold/30">
-              <span className="pl-3.5 text-zinc-500">@</span>
-              <input
-                value={handle}
-                onChange={(e) => setHandle(e.target.value)}
-                className="h-full flex-1 bg-transparent px-2 text-[15px] text-white outline-none"
-              />
-            </div>
-          </label>
-          <label className="block">
             <span className="text-[12px] text-zinc-500">Email</span>
             <input
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              readOnly
               placeholder="Managed via your sign-in provider"
-              className="mt-1.5 h-12 w-full rounded-xl bg-white/[0.04] px-3.5 text-[15px] text-white outline-none ring-1 ring-white/[0.08] placeholder:text-zinc-600 focus:ring-omniv-gold/30"
+              className="mt-1.5 h-12 w-full rounded-xl bg-white/[0.04] px-3.5 text-[15px] text-zinc-500 outline-none ring-1 ring-white/[0.08] placeholder:text-zinc-600"
             />
           </label>
+          <Link
+            href="/settings/username"
+            className="flex h-12 items-center justify-between rounded-xl bg-white/[0.03] px-4 text-[14px] text-white ring-1 ring-white/[0.08]"
+          >
+            <span>Username</span>
+            <span className="text-omniv-gold">Change →</span>
+          </Link>
 
           <button
             type="button"
@@ -89,7 +80,6 @@ export default function AccountSettingsPage() {
             {saved ? "Saved" : "Save"}
           </button>
         </main>
-
         <BottomNav />
       </div>
     </DiscoveryShell>
