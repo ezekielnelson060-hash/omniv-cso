@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PublicationCard } from "@/components/discovery/publication-card";
 import { InterestPicker } from "@/components/discovery/interest-picker";
+import { RecommendationReason } from "@/components/discovery/recommendation-reason";
 import {
   moreLikeThis,
   lessLikeThis,
@@ -16,6 +17,7 @@ import {
   signalBoost,
   risingScore,
   trendingScore,
+  readTopSignalTopics,
 } from "@/lib/discovery/signals";
 import { SEED_ENTITIES } from "@/lib/discovery/seed";
 import type { Publication } from "@/lib/discovery/types";
@@ -47,6 +49,7 @@ export function HomeFeedClient({
   const [serverWeights, setServerWeights] = useState<
     Record<string, number>
   >({});
+  const [momentumTopics, setMomentumTopics] = useState<{ topic: string; weight: number }[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -54,6 +57,7 @@ export function HomeFeedClient({
       try {
         setInterests(readInterests());
         setInterestsDone(interestsChosen());
+        setMomentumTopics(readTopSignalTopics());
         const res = await fetch("/api/discovery/follow");
         const data = await res.json();
         if (!cancelled && Array.isArray(data.follows)) {
@@ -269,6 +273,20 @@ export function HomeFeedClient({
 
   return (
     <div className="space-y-4">
+      {tab === "for-you" && momentumTopics.length > 0 && (
+        <div className="rounded-2xl bg-white/[0.025] px-4 py-3 ring-1 ring-white/[0.05]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-600">
+            Your discovery momentum
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {momentumTopics.map(({ topic }) => (
+              <span key={topic} className="rounded-full bg-omniv-gold/10 px-2.5 py-1 text-[11px] text-omniv-gold">
+                {topic}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       {tab === "trending" && (
         <p className="text-[12px] text-zinc-500">
           Ranked by engagement velocity — heat weighted by recency.
@@ -280,7 +298,9 @@ export function HomeFeedClient({
           <div key={pub.id}>
             <PublicationCard pub={pub} />
             {reason && (
-              <p className="mt-1.5 px-1 text-[11px] text-zinc-600">{reason}</p>
+              <div className="mt-1.5">
+                <RecommendationReason reason={reason} />
+              </div>
             )}
             {tab === "for-you" && (
               <div className="mt-1.5 flex gap-2 px-1">

@@ -13,7 +13,10 @@ import {
 } from "@/lib/discovery/active-account";
 import { readProfile } from "@/lib/discovery/local-profile";
 import { DISCOVERY_PLANS } from "@/lib/discovery/monetization";
-import { countQualifiedInteractions } from "@/lib/discovery/signals";
+import {
+  countQualifiedInteractions,
+  readTopSignalTopics,
+} from "@/lib/discovery/signals";
 
 type Pub = {
   id: string;
@@ -37,12 +40,14 @@ export default function AnalyticsPage() {
   const [saves, setSaves] = useState(0);
   const [likes, setLikes] = useState(0);
   const [qualified, setQualified] = useState(0);
+  const [topTopics, setTopTopics] = useState<{ topic: string; weight: number }[]>([]);
 
   useEffect(() => {
     try {
       setPersonalName(readProfile().displayName || "You");
       setActive(readActiveAccount());
       setQualified(countQualifiedInteractions());
+      setTopTopics(readTopSignalTopics(6));
     } catch {
       /* ignore */
     }
@@ -205,6 +210,27 @@ export default function AnalyticsPage() {
                 complete, contact, share) — not raw views. Trending still ranks
                 by heat.
               </p>
+
+              {topTopics.length > 0 && (
+                <section className="mt-6 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.05]">
+                  <h2 className="text-[12px] font-semibold uppercase tracking-wide text-zinc-500">
+                    Discovery sources
+                  </h2>
+                  <p className="mt-1 text-[12px] text-zinc-600">
+                    Topics strengthened by your recent meaningful actions.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {topTopics.map(({ topic }) => (
+                      <span
+                        key={topic}
+                        className="rounded-full bg-omniv-gold/10 px-3 py-1.5 text-[12px] text-omniv-gold"
+                      >
+                        {topic}
+                      </span>
+                    ))}
+                  </div>
+                </section>
+              )}
 
               <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wide text-zinc-500">
                 Publications by heat

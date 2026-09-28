@@ -174,3 +174,11 @@ export function countQualifiedInteractions(): number {
   ]);
   return getRecentSignals(200).filter((e) => strong.has(e.kind)).length;
 }
+
+export function readTopSignalTopics(limit = 5): { topic: string; weight: number }[] {
+  return Object.entries(readWeights())
+    .filter(([, weight]) => weight > 0)
+    .map(([topic, weight]) => ({ topic, weight }))
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, limit);
+}

@@ -48,6 +48,16 @@ export function deleteCollection(id: string) {
   writeAll(readAll().filter((c) => c.id !== id));
 }
 
+export function renameCollection(id: string, name: string) {
+  const nextName = name.trim().slice(0, 48);
+  if (!nextName) return;
+  const list = readAll();
+  const c = list.find((x) => x.id === id);
+  if (!c) return;
+  c.name = nextName;
+  writeAll(list);
+}
+
 export function addToCollection(collectionId: string, itemKey: string) {
   const list = readAll();
   const c = list.find((x) => x.id === collectionId);

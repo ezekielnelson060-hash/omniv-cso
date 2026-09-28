@@ -12,7 +12,9 @@ import {
   listCollections,
   createCollection,
   deleteCollection,
+  renameCollection,
   addToCollection,
+  removeFromCollection,
   itemKey,
   type Collection,
 } from "@/lib/discovery/collections";
@@ -49,6 +51,8 @@ export default function SavedPage() {
   const [ready, setReady] = useState(false);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [newName, setNewName] = useState("");
+  const [editingCollection, setEditingCollection] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
 
   function refreshCollections() {
     setCollections(listCollections());
@@ -168,23 +172,50 @@ export default function SavedPage() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-[15px] font-semibold text-white">
-                            {c.name}
-                          </p>
+                          {editingCollection === c.id ? (
+                            <input
+                              autoFocus
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key !== "Enter") return;
+                                renameCollection(c.id, editingName);
+                                setEditingCollection(null);
+                                refreshCollections();
+                              }}
+                              className="h-8 w-full rounded-lg border border-white/[0.1] bg-white/[0.05] px-2 text-[14px] text-white outline-none focus:border-omniv-gold/40"
+                            />
+                          ) : (
+                            <p className="text-[15px] font-semibold text-white">
+                              {c.name}
+                            </p>
+                          )}
                           <p className="mt-0.5 text-[12px] text-zinc-500">
                             {c.items.length} item{c.items.length === 1 ? "" : "s"}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            deleteCollection(c.id);
-                            refreshCollections();
-                          }}
-                          className="text-[12px] text-zinc-600 hover:text-rose-400"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex shrink-0 items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingCollection(c.id);
+                              setEditingName(c.name);
+                            }}
+                            className="text-[12px] text-zinc-600 hover:text-zinc-300"
+                          >
+                            Rename
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              deleteCollection(c.id);
+                              refreshCollections();
+                            }}
+                            className="text-[12px] text-zinc-600 hover:text-rose-400"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                       {c.items.length > 0 && (
                         <ul className="mt-3 space-y-1.5 border-t border-white/[0.05] pt-3">
@@ -202,12 +233,24 @@ export default function SavedPage() {
                                 : `/p/${slug}`;
                             return (
                               <li key={k}>
-                                <Link
-                                  href={href}
-                                  className="block truncate text-[13px] text-zinc-300 hover:text-omniv-gold"
-                                >
-                                  {match?.name || slug}
-                                </Link>
+                                <div className="flex items-center gap-2">
+                                  <Link
+                                    href={href}
+                                    className="min-w-0 flex-1 truncate text-[13px] text-zinc-300 hover:text-omniv-gold"
+                                  >
+                                    {match?.name || slug}
+                                  </Link>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      removeFromCollection(c.id, k);
+                                      refreshCollections();
+                                    }}
+                                    className="shrink-0 text-[11px] text-zinc-700 hover:text-rose-400"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
                               </li>
                             );
                           })}
