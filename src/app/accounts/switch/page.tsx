@@ -21,7 +21,7 @@ type EntityRow = {
   verified?: boolean;
 };
 
-/** Mockup screen 6 — Switch Between Entities */
+/** Switch identity — only entities owned by the signed-in user */
 export default function SwitchEntityPage() {
   const router = useRouter();
   const [entities, setEntities] = useState<EntityRow[]>([]);
@@ -45,9 +45,17 @@ export default function SwitchEntityPage() {
         const res = await fetch("/api/discovery/entities");
         const data = await res.json();
         setAuth(Boolean(data.auth));
-        setEntities(data.entities || []);
+        const list = Array.isArray(data.entities) ? data.entities : [];
+        setEntities(list);
+        // Drop stale identity from another session/account
+        const active = readActiveAccount();
+        if (active?.id && !list.some((e: EntityRow) => e.id === active.id)) {
+          writeActiveAccount(null);
+          setActiveId(null);
+        }
       } catch {
         setAuth(false);
+        setEntities([]);
       }
     })();
   }, []);
@@ -83,13 +91,13 @@ export default function SwitchEntityPage() {
 
   return (
     <DiscoveryShell>
-      <div className="min-h-dvh bg-[#050505] text-zinc-100">
+      <div className="min-h-dvh overflow-x-hidden bg-[#050505] text-zinc-100">
         <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-md">
-          <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3 md:max-w-2xl md:px-6">
+          <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3">
             <button
               type="button"
               onClick={() => router.back()}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 hover:bg-white/5 hover:text-white"
+              className="text-zinc-400"
               aria-label="Back"
             >
               ←
@@ -100,26 +108,28 @@ export default function SwitchEntityPage() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-lg px-4 pb-28 pt-2 md:max-w-2xl md:px-6">
-          <div className="relative">
-            <input
-              type="search"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search your entities…"
-              className="h-11 w-full rounded-full bg-white/[0.05] pl-10 pr-4 text-[14px] text-white outline-none ring-1 ring-white/[0.1] placeholder:text-zinc-600 focus:ring-omniv-gold/40"
-            />
+        <main className="mx-auto max-w-lg px-4 pb-28 pt-4">
+          <div className="relative mb-4">
             <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500">
               ⌕
             </span>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search your entities…"
+              className="h-12 w-full rounded-full bg-white/[0.04] pl-10 pr-4 text-[14px] text-white outline-none ring-1 ring-white/[0.08]"
+            />
           </div>
 
           {auth === false && (
-            <div className="mt-10 text-center">
-              <p className="text-zinc-500">Sign in to switch entities.</p>
+            <div className="rounded-2xl bg-white/[0.03] px-5 py-10 text-center ring-1 ring-white/[0.06]">
+              <p className="text-[15px] font-medium text-white">Sign in</p>
+              <p className="mt-2 text-[13px] text-zinc-500">
+                Your entities only appear on the account that created them.
+              </p>
               <Link
-                href="/signup?next=/accounts/switch"
-                className="mt-4 inline-flex h-11 items-center rounded-full bg-omniv-gold px-6 text-[14px] font-semibold text-black"
+                href="/login?next=/accounts/switch"
+                className="mt-5 inline-flex h-10 items-center rounded-full bg-omniv-gold px-5 text-[13px] font-semibold text-black"
               >
                 Sign in
               </Link>
@@ -127,19 +137,18 @@ export default function SwitchEntityPage() {
           )}
 
           {auth && (
-            <ul className="mt-5 space-y-2">
-              {/* Personal always first */}
+            <ul className="space-y-2">
               <li>
                 <button
                   type="button"
                   onClick={pickPersonal}
-                  className={`flex w-full items-center gap-3 rounded-2xl p-3.5 text-left ring-1 ${
+                  className={`flex w-full items-center gap-3 rounded-2xl p-3.5 text-left ring-1 transition ${
                     !activeId
-                      ? "bg-omniv-gold/10 ring-omniv-gold/35"
-                      : "bg-white/[0.03] ring-white/[0.08]"
+                      ? "bg-omniv-gold/10 ring-omniv-gold/40"
+                      : "bg-white/[0.03] ring-white/[0.06]"
                   }`}
                 >
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/25 text-base font-semibold text-omniv-gold">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-800">
                     {avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -148,7 +157,9 @@ export default function SwitchEntityPage() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      displayName.charAt(0).toUpperCase()
+                      <span className="text-[15px] font-semibold text-white">
+                        {(displayName || "Y").slice(0, 1)}
+                      </span>
                     )}
                   </span>
                   <div className="min-w-0 flex-1">
@@ -165,28 +176,24 @@ export default function SwitchEntityPage() {
 
               {filtered.map((e) => {
                 const isActive = activeId === e.id;
+                const initial = (e.name || "?").slice(0, 1).toUpperCase();
                 return (
                   <li key={e.id}>
                     <button
                       type="button"
                       onClick={() => pickEntity(e)}
-                      className={`flex w-full items-center gap-3 rounded-2xl p-3.5 text-left ring-1 ${
+                      className={`flex w-full items-center gap-3 rounded-2xl p-3.5 text-left ring-1 transition ${
                         isActive
-                          ? "bg-omniv-gold/10 ring-omniv-gold/35"
-                          : "bg-white/[0.03] ring-white/[0.08]"
+                          ? "bg-omniv-gold/10 ring-omniv-gold/40"
+                          : "bg-white/[0.03] ring-white/[0.06]"
                       }`}
                     >
-                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10 text-base font-semibold text-white">
-                        {e.name.charAt(0)}
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-[15px] font-semibold text-white">
+                        {initial}
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[15px] font-semibold text-white">
                           {e.name}
-                          {e.verified && (
-                            <span className="ml-1.5 text-[11px] text-sky-400">
-                              Verified
-                            </span>
-                          )}
                         </p>
                         <p className="truncate text-[12px] capitalize text-zinc-500">
                           {e.type}
@@ -200,6 +207,12 @@ export default function SwitchEntityPage() {
                   </li>
                 );
               })}
+
+              {auth && entities.length === 0 && (
+                <p className="py-6 text-center text-[13px] text-zinc-500">
+                  No entities on this account yet.
+                </p>
+              )}
 
               {filtered.length === 0 && entities.length > 0 && (
                 <p className="py-8 text-center text-[13px] text-zinc-500">
