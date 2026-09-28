@@ -54,7 +54,7 @@ type PubRow = {
   reading_time?: number | null;
   entity_refs?: EntityReference[] | null;
   related_publication_ids?: string[] | null;
-  status?: "draft" | "published" | "archived" | null;
+  status?: "draft" | "published" | "archived" | "scheduled" | null;
   seo_title?: string | null;
   seo_description?: string | null;
   canonical_url?: string | null;
@@ -234,7 +234,19 @@ export async function getLivePublication(
           .maybeSingle();
         data = retry.data as PubRow | null;
       }
-      if (data) return rowToPublication(data as PubRow);
+      if (data) {
+        const status = (data as PubRow).status;
+        const at = (data as PubRow).published_at;
+        if (status === "draft" || status === "archived") return null;
+        if (
+          status === "scheduled" &&
+          at &&
+          new Date(at).getTime() > Date.now()
+        ) {
+          return null;
+        }
+        return rowToPublication(data as PubRow);
+      }
     } catch {
       /* fall through */
     }
@@ -275,7 +287,17 @@ export async function listLivePublications(
       return SEED_PUBLICATIONS as LivePublication[];
     }
 
-    const live = (data as PubRow[]).map(rowToPublication);
+    const now = Date.now();
+    const live = (data as PubRow[])
+      .filter((r) => {
+        const s = r.status ?? "published";
+        if (s === "draft" || s === "archived") return false;
+        if (s === "scheduled" && r.published_at) {
+          return new Date(r.published_at).getTime() <= now;
+        }
+        return s === "published" || s === "scheduled";
+      })
+      .map(rowToPublication);
     const liveSlugs = new Set(live.map((p) => p.slug));
     const extras = (SEED_PUBLICATIONS as LivePublication[]).filter(
       (p) => !liveSlugs.has(p.slug)
