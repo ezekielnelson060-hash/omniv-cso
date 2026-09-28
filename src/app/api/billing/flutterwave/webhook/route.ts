@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 const PLAN_AMOUNTS: Record<string, number> = {
   pro: 29,
   business: 99,
-  verify: 19,
+  verify: 9,
 };
 
 function parseTxRef(txRef: string) {
