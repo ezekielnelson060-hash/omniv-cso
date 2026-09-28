@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
   DISCOVERY_PLANS,
-  LEGACY_CHECKOUT_AMOUNTS,
   paymentPlanIdFor,
   PROMOTION_CONFIG,
   VERIFY_MONTHLY_USD,
@@ -36,8 +35,8 @@ export async function POST(req: Request) {
     const prices: Record<string, number> = {
       starter: DISCOVERY_PLANS.pro.priceMonthlyUsd,
       pro: DISCOVERY_PLANS.pro.priceMonthlyUsd,
-      business: LEGACY_CHECKOUT_AMOUNTS.business,
-      label: LEGACY_CHECKOUT_AMOUNTS.label,
+      business: DISCOVERY_PLANS.business.priceMonthlyUsd,
+      label: DISCOVERY_PLANS.business.priceMonthlyUsd,
       promote: PROMOTION_CONFIG.defaultBudgetUsd,
       verify: VERIFY_MONTHLY_USD,
     };
