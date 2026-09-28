@@ -14,8 +14,8 @@ const GROUPS: Group[] = [
     rows: [
       { href: "/profile", label: "Profile" },
       { href: "/settings/account", label: "Personal information" },
-      { href: "/settings/account", label: "Username" },
-      { href: "/settings/account", label: "Email & phone" },
+      { href: "/settings/username", label: "Username" },
+      { href: "/settings/account", label: "Email" },
       { href: "/settings/security", label: "Password & security" },
     ],
   },
@@ -56,9 +56,7 @@ const GROUPS: Group[] = [
   },
   {
     title: "Appearance",
-    rows: [
-      { href: "/settings/appearance", label: "Theme", hint: "Dark" },
-    ],
+    rows: [{ href: "/settings/appearance", label: "Theme", hint: "Dark" }],
   },
   {
     title: "Monetization",
