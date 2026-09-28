@@ -10,7 +10,6 @@ const PLAN_AMOUNTS: Record<string, number> = {
 };
 
 function parseTxRef(txRef: string) {
-  // omniv_{plan}_{userId}_{ts} or omniv_{plan}_anon_{ts}
   const parts = txRef.split("_");
   if (parts[0] !== "omniv" || parts.length < 3) {
     return { plan: "", userId: null as string | null };
@@ -48,9 +47,7 @@ export async function POST(req: Request) {
   }
 
   const data = (body.data as Record<string, unknown>) || body;
-  const eventTxRef = String(
-    data.tx_ref || data.txRef || body.tx_ref || ""
-  );
+  const eventTxRef = String(data.tx_ref || data.txRef || body.tx_ref || "");
   const txId = data.id || body.id;
   const eventMeta =
     data.meta && typeof data.meta === "object"
@@ -95,8 +92,7 @@ export async function POST(req: Request) {
     verified.currency ?? data.currency ?? "USD"
   ).toUpperCase();
 
-  let userId =
-    parsed.userId || String(verifiedMeta.user_id || "") || null;
+  let userId = parsed.userId || String(verifiedMeta.user_id || "") || null;
   const email =
     (verified.customer as { email?: string } | undefined)?.email ||
     String(verifiedMeta.email || "") ||
@@ -162,7 +158,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, plan: "promote" });
   }
 
-  // Verification application fee — mark paid only; badge after admin approve
+  // Verification: mark paid + under_review; badge only after admin approve
   if (rawPlan === "verify" || plan === "verify") {
     const requestId = String(
       verifiedMeta.verification_request_id || verifiedMeta.request_id || ""
@@ -173,9 +169,30 @@ export async function POST(req: Request) {
         .update({
           paid: true,
           payment_ref: verifiedTxRef,
+          status: "under_review",
           updated_at: new Date().toISOString(),
         })
         .eq("id", requestId);
+    } else if (userId) {
+      const { data: latest } = await admin
+        .from("discovery_verification_requests")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("paid", false)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latest?.id) {
+        await admin
+          .from("discovery_verification_requests")
+          .update({
+            paid: true,
+            payment_ref: verifiedTxRef,
+            status: "under_review",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", latest.id);
+      }
     }
     return NextResponse.json({ ok: true, plan: "verify", paid: true, userId });
   }
@@ -186,12 +203,6 @@ export async function POST(req: Request) {
 
   const planExpiresAt = new Date();
   planExpiresAt.setMonth(planExpiresAt.getMonth() + 1);
-
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("id", userId)
-    .maybeSingle();
 
   const { error: profileError } = await admin
     .from("profiles")
@@ -225,17 +236,7 @@ export async function POST(req: Request) {
           .eq("id", entity.id)
           .eq("owner_id", userId);
         if (error) console.error("verify selected entity after pay", error);
-      } else {
-        console.warn("paid verification entity not owned by payer", {
-          entityId,
-          userId,
-        });
       }
-    } else {
-      console.warn("paid plan had no entity_id; no entity was verified", {
-        userId,
-        plan,
-      });
     }
   }
   return NextResponse.json({
