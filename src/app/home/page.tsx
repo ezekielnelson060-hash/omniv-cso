@@ -55,19 +55,19 @@ export default async function HomePage({ searchParams }: Props) {
   const tab = sp.tab ?? "for-you";
 
   const supabase = await tryClient();
-  const mixed = await listLivePublications(supabase, 40);
+  const mixed = await listLivePublications(supabase, 100);
 
   let feedPool: Publication[] = mixed;
   if (feedPool.length < 8) {
-    const seed = trendingPublications(14);
+    const seed = trendingPublications(30);
     const slugs = new Set(feedPool.map((p) => p.slug));
     for (const s of seed) {
       if (!slugs.has(s.slug)) feedPool.push(s);
-      if (feedPool.length >= 20) break;
+      if (feedPool.length >= 60) break;
     }
   }
   if (feedPool.length < 6) {
-    const seed = newestPublications(12);
+    const seed = newestPublications(24);
     const slugs = new Set(feedPool.map((p) => p.slug));
     for (const s of seed) {
       if (!slugs.has(s.slug)) feedPool.push(s);
