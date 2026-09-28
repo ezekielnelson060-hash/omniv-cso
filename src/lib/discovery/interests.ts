@@ -55,6 +55,11 @@ export function hasCompletedInterests(): boolean {
   return localStorage.getItem(DONE_KEY) === "1" || readInterests().length > 0;
 }
 
+/** Alias used by the V2 home feed to describe an initialized explorer vector. */
+export function interestsChosen(): boolean {
+  return hasCompletedInterests();
+}
+
 /** Score 0–1 for how well a publication matches interest tags */
 export function interestMatchScore(
   tags: string[],

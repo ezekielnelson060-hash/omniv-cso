@@ -5,20 +5,18 @@ import Link from "next/link";
 import { PublicationCard } from "@/components/discovery/publication-card";
 import { InterestPicker } from "@/components/discovery/interest-picker";
 import {
-  interestMatchScore,
   moreLikeThis,
   lessLikeThis,
   mutePublisher,
   isPublicationMuted,
-  readInterests,
-  interestsChosen,
-} from "@/lib/discovery/interests";
+  recommendationReason,
+} from "@/lib/discovery/recommend";
+import { interestMatchScore, readInterests, interestsChosen } from "@/lib/discovery/interests";
 import {
   signalBoost,
   risingScore,
   trendingScore,
 } from "@/lib/discovery/signals";
-import { recommendationReason } from "@/lib/discovery/recommend";
 import { SEED_ENTITIES } from "@/lib/discovery/seed";
 import type { Publication } from "@/lib/discovery/types";
 
@@ -164,7 +162,7 @@ export function HomeFeedClient({
     }
 
     const scored = list.map((p) => {
-      const interest = interestMatchScore(p.tags || [], p.category);
+      const interest = interestMatchScore(p.tags || [], p.category, interests);
       const heat = Math.min(1, (p.heat ?? 0) / 100);
       const localBehavior = signalBoost(p.tags || [], p.category);
       let serverBehavior = 0;
