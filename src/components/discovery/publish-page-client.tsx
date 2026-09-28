@@ -1,4 +1,6 @@
 "use client";
 
-/** Re-export kept for thin /publish route; full form lives in page when restored */
-export { default } from "@/app/publish/page";
+/** Legacy path; publish UI is src/app/publish/page.tsx */
+export default function PublishPageClient() {
+  return null;
+}
