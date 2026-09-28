@@ -94,11 +94,11 @@ export default function AnalyticsPage() {
     };
   }, []);
 
-  const entityName =
-    active?.kind === "entity" ? active.name : personalName;
+  // active set = entity identity; null = personal
+  const entityName = active?.name || personalName;
 
   const scopedPubs = useMemo(() => {
-    if (!active || active.kind === "personal") return pubs;
+    if (!active) return pubs;
     return pubs.filter(
       (p) =>
         p.publisherId === active.id ||
