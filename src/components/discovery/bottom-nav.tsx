@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ComponentType } from "react";
 import {
   readActiveAccount,
@@ -29,6 +29,7 @@ const ITEMS: NavItem[] = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const [active, setActive] = useState<ActiveAccount | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -36,6 +37,23 @@ export function BottomNav() {
     setActive(readActiveAccount());
     return onAccountSwitch((a) => setActive(a));
   }, []);
+
+  useEffect(() => {
+    router.prefetch("/publish");
+    for (const type of [
+      "article",
+      "music",
+      "video",
+      "file",
+      "product",
+      "event",
+      "opportunity",
+      "announcement",
+      "research",
+    ]) {
+      router.prefetch(`/publish?type=${type}`);
+    }
+  }, [router]);
 
   void active;
 
@@ -86,17 +104,14 @@ export function BottomNav() {
 
 function HomeIcon({ active }: { active?: boolean }) {
   return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill={active ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth="1.6"
-    >
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <path
-        d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-5.5H10V21H5a1 1 0 0 1-1-1v-9.5z"
+        d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5z"
+        stroke={active ? "currentColor" : "currentColor"}
+        strokeWidth="1.6"
         strokeLinejoin="round"
+        fill={active ? "currentColor" : "none"}
+        fillOpacity={active ? 0.15 : 0}
       />
     </svg>
   );
@@ -104,36 +119,24 @@ function HomeIcon({ active }: { active?: boolean }) {
 
 function ExploreIcon({ active }: { active?: boolean }) {
   return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-    >
-      <circle cx="11" cy="11" r="7.5" />
-      <path d="m20 20-3.2-3.2" strokeLinecap="round" />
-      {active && (
-        <circle cx="11" cy="11" r="2" fill="currentColor" stroke="none" />
-      )}
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M16 16l4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      {active && <circle cx="11" cy="11" r="3" fill="currentColor" fillOpacity={0.25} />}
     </svg>
   );
 }
 
 function SavedIcon({ active }: { active?: boolean }) {
   return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill={active ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth="1.6"
-    >
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <path
-        d="M7 3.5h10a1 1 0 0 1 1 1V21l-6-3.2L6 21V4.5a1 1 0 0 1 1-1z"
+        d="M7 4h10a1 1 0 0 1 1 1v15l-6-3.5L6 20V5a1 1 0 0 1 1-1z"
+        stroke="currentColor"
+        strokeWidth="1.6"
         strokeLinejoin="round"
+        fill={active ? "currentColor" : "none"}
+        fillOpacity={active ? 0.2 : 0}
       />
     </svg>
   );
@@ -141,36 +144,17 @@ function SavedIcon({ active }: { active?: boolean }) {
 
 function ProfileIcon({ active }: { active?: boolean }) {
   return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-    >
-      <circle cx="12" cy="8" r="3.2" fill={active ? "currentColor" : "none"} />
-      <path
-        d="M5 19.5c1.5-3.2 4-4.8 7-4.8s5.5 1.6 7 4.8"
-        strokeLinecap="round"
-        fill={active ? "currentColor" : "none"}
-        opacity={active ? 0.35 : 1}
-      />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.6" fill={active ? "currentColor" : "none"} fillOpacity={active ? 0.2 : 0} />
+      <path d="M5 19c1.5-3 4-4.5 7-4.5s5.5 1.5 7 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
 
 function PlusIcon() {
   return (
-    <svg
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.4"
-    >
-      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
     </svg>
   );
 }
