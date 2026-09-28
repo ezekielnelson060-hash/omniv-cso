@@ -15,14 +15,14 @@ import { HomeFeedClient } from "@/components/discovery/home-feed-client";
 export const metadata = {
   title: "Home | Omniv",
   description:
-    "Discover what matters next — For You, Following, Trending, Rising, and New on Omniv.",
+    "Discover what's moving — stories, people, companies, ideas and opportunities worth finding.",
 };
 
 type Props = {
   searchParams: Promise<{ tab?: string }>;
 };
 
-/** Discovery layers — not a chronological Substack feed */
+/** Discovery layers — not a chronological feed */
 const TABS = [
   { id: "for-you", label: "For You" },
   { id: "following", label: "Following" },
@@ -117,27 +117,11 @@ export default async function HomePage({ searchParams }: Props) {
 
         <main className="mx-auto max-w-lg px-4 pb-28 pt-5 md:max-w-2xl md:px-6">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-white">
-              {tab === "for-you"
-                ? "For You"
-                : tab === "following"
-                  ? "Following"
-                  : tab === "trending"
-                    ? "Trending"
-                    : tab === "rising"
-                      ? "Rising"
-                      : "New"}
+            <h1 className="text-2xl font-semibold tracking-tight text-white md:text-[28px]">
+              Discover what's moving
             </h1>
-            <p className="mt-1 text-[14px] text-zinc-500">
-              {tab === "for-you"
-                ? "Discover what matters to you."
-                : tab === "following"
-                  ? "Latest from people and entities you follow."
-                  : tab === "trending"
-                    ? "Gaining attention across the network."
-                    : tab === "rising"
-                      ? "Not huge yet — accelerating fast."
-                      : "Fresh publications on Omniv."}
+            <p className="mt-1.5 text-[14px] leading-relaxed text-zinc-500">
+              Stories, people, companies, ideas and opportunities worth finding.
             </p>
           </div>
 
