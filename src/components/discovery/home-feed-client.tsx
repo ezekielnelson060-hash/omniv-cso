@@ -305,27 +305,35 @@ export function HomeFeedClient({
         return (
           <div key={pub.id}>
             <PublicationCard pub={pub} />
-            {reason && (
-              <div className="mt-1.5">
-                <RecommendationReason reason={reason} />
-              </div>
-            )}
-            {tab === "for-you" && (
-              <div className="mt-1.5 flex gap-2 px-1">
-                <button
-                  type="button"
-                  onClick={() => onFeedback(pub, "more")}
-                  className="text-[11px] text-zinc-600 hover:text-omniv-gold"
-                >
-                  More like this
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onFeedback(pub, "less")}
-                  className="text-[11px] text-zinc-600 hover:text-zinc-400"
-                >
-                  Less
-                </button>
+            {(reason || tab === "for-you") && (
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 px-1">
+                {reason && <RecommendationReason reason={reason} />}
+                {reason && tab === "for-you" && (
+                  <span className="text-[11px] text-zinc-700" aria-hidden>
+                    ·
+                  </span>
+                )}
+                {tab === "for-you" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onFeedback(pub, "more")}
+                      className="text-[11px] text-zinc-600 hover:text-omniv-gold"
+                    >
+                      More like this
+                    </button>
+                    <span className="text-[11px] text-zinc-700" aria-hidden>
+                      ·
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onFeedback(pub, "less")}
+                      className="text-[11px] text-zinc-600 hover:text-zinc-400"
+                    >
+                      Less
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
