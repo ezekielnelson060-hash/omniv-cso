@@ -16,7 +16,12 @@ export type FeatureId =
   | "team_seats"
   | "api_keys"
   | "fan_gate"
-  | "audience_basic";
+  | "audience_basic"
+  | "scheduling"
+  | "collections"
+  | "lead_capture"
+  | "analytics_export"
+  | "private_publications";
 
 export interface PlanDef {
   id: PlanId;
@@ -67,7 +72,13 @@ export const PLANS: PlanDef[] = [
     blurb: "Deeper stats and verified publisher.",
     cta: "Claim Pro",
     highlighted: true,
-    features: ["Analytics", "Verified entity", "Collections"],
+    features: [
+      "Analytics",
+      "Scheduling",
+      "Collections",
+      "Lead capture",
+      "Verified entity",
+    ],
     limits: { zikiMessagesPerDay: "unlimited", artists: 5, teamSeats: 3 },
   },
   {
@@ -78,8 +89,18 @@ export const PLANS: PlanDef[] = [
     currency: "USD",
     blurb: "Teams and multi-entity verification.",
     cta: "Claim Business",
-    features: ["Everything in Pro", "All entities verified", "Export"],
-    limits: { zikiMessagesPerDay: "unlimited", artists: "unlimited", teamSeats: 10 },
+    features: [
+      "Everything in Pro",
+      "All entities verified",
+      "Private publications",
+      "Analytics export",
+      "Team seats",
+    ],
+    limits: {
+      zikiMessagesPerDay: "unlimited",
+      artists: "unlimited",
+      teamSeats: 10,
+    },
   },
   {
     id: "label",
@@ -115,6 +136,11 @@ export const FEATURE_GATES: Record<FeatureId, PlanId> = {
   api_keys: "business",
   fan_gate: "free",
   audience_basic: "free",
+  scheduling: "pro",
+  collections: "pro",
+  lead_capture: "pro",
+  analytics_export: "business",
+  private_publications: "business",
 };
 
 export const PLAN_ORDER: PlanId[] = [
@@ -160,6 +186,11 @@ export const FEATURE_LABELS: Record<FeatureId, string> = {
   api_keys: "API keys",
   fan_gate: "Fan Gate",
   audience_basic: "Audience (basic)",
+  scheduling: "Scheduling",
+  collections: "Collections",
+  lead_capture: "Lead capture",
+  analytics_export: "Analytics export",
+  private_publications: "Private publications",
 };
 
 export const ROUTE_GATES: Record<string, FeatureId> = {
@@ -170,6 +201,7 @@ export const ROUTE_GATES: Record<string, FeatureId> = {
   "/reports": "reports_basic",
   "/crm": "audience_basic",
   "/label": "label_dashboard",
+  "/leads": "lead_capture",
 };
 
 /** Paid access only after Flutterwave webhook confirms payment */
