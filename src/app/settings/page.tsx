@@ -59,6 +59,14 @@ const GROUPS: Group[] = [
     rows: [{ href: "/settings/appearance", label: "Theme", hint: "Dark" }],
   },
   {
+    title: "Growth",
+    rows: [
+      { href: "/leads", label: "Leads", hint: "Pro" },
+      { href: "/analytics", label: "Analytics", hint: "Pro" },
+      { href: "/settings/team", label: "Team seats", hint: "Business" },
+    ],
+  },
+  {
     title: "Monetization",
     rows: [
       { href: "/pro", label: "Subscription" },
@@ -78,14 +86,7 @@ const GROUPS: Group[] = [
     rows: [
       { href: "/settings/security", label: "Two-factor authentication" },
       { href: "/settings/security", label: "Active sessions" },
-      { href: "/settings/security", label: "Connected accounts" },
-    ],
-  },
-  {
-    title: "Danger zone",
-    rows: [
-      { href: "/settings/danger", label: "Deactivate account" },
-      { href: "/settings/danger", label: "Delete account" },
+      { href: "/settings/danger", label: "Delete account", hint: "Danger" },
     ],
   },
 ];
@@ -94,40 +95,32 @@ export default function SettingsPage() {
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <header className="sticky top-0 z-40 border-b border-white/[0.05] bg-[#050505]/95 backdrop-blur-md">
-          <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3 md:max-w-2xl">
+        <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-md">
+          <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
             <h1 className="text-[17px] font-semibold text-white">Settings</h1>
             <NotificationBell />
           </div>
         </header>
 
-        <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl">
-          <p className="mb-6 text-[13px] text-zinc-500">
-            Configuration grouped by function — not a dumping ground.
-          </p>
-
+        <main className="mx-auto max-w-lg px-4 pb-28 pt-2">
           {GROUPS.map((g) => (
-            <section key={g.title} className="mb-7">
+            <section key={g.title} className="mt-6">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
                 {g.title}
               </p>
               <ul className="overflow-hidden rounded-2xl bg-white/[0.03] ring-1 ring-white/[0.06]">
-                {g.rows.map((row, i) => (
-                  <li key={`${g.title}-${row.label}-${i}`}>
+                {g.rows.map((r) => (
+                  <li key={r.href + r.label} className="border-b border-white/[0.04] last:border-0">
                     <Link
-                      href={row.href}
-                      className={`flex items-center justify-between px-4 py-3.5 transition hover:bg-white/[0.04] ${
-                        i > 0 ? "border-t border-white/[0.05]" : ""
-                      } ${
-                        g.title === "Danger zone"
-                          ? "text-red-400"
-                          : "text-white"
-                      }`}
+                      href={r.href}
+                      className="flex items-center justify-between px-4 py-3.5 transition hover:bg-white/[0.04]"
                     >
-                      <span className="text-[14px] font-medium">{row.label}</span>
-                      <span className="flex items-center gap-2 text-[12px] text-zinc-600">
-                        {row.hint}
-                        <span aria-hidden>›</span>
+                      <span className="text-[15px] text-white">{r.label}</span>
+                      <span className="flex items-center gap-2">
+                        {r.hint && (
+                          <span className="text-[11px] text-zinc-600">{r.hint}</span>
+                        )}
+                        <span className="text-zinc-600">›</span>
                       </span>
                     </Link>
                   </li>
@@ -135,12 +128,7 @@ export default function SettingsPage() {
               </ul>
             </section>
           ))}
-
-          <p className="mt-4 text-center text-[12px] text-zinc-600">
-            Help Center · Contact support
-          </p>
         </main>
-
         <BottomNav />
       </div>
     </DiscoveryShell>
