@@ -87,7 +87,10 @@ export function KeepExploring({
           {title}
         </p>
         <p className="mt-1 text-[13px] text-zinc-500">
-          Related work and people on Omniv.
+          Move from this piece into the people, systems, research, products, and opportunities around it.
+        </p>
+        <p className="mt-3 text-[11px] uppercase tracking-[0.14em] text-zinc-700">
+          Article → entity → another publication → something unexpected
         </p>
       </div>
 

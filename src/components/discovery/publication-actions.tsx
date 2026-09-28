@@ -98,7 +98,7 @@ export function PublicationActions({
         const local = toggleLocalLike(slug, type, count);
         setLiked(local.liked);
         setCount(local.count);
-        if (local.liked) recordSignal("like", tags, category);
+        if (local.liked) recordSignal("like", tags, category, { publicationSlug: slug });
         return;
       }
       const data = await res.json();
@@ -108,18 +108,18 @@ export function PublicationActions({
         if (data.liked !== isLiked(slug)) {
           toggleLocalLike(slug, type, count);
         }
-        if (data.liked) recordSignal("like", tags, category);
+        if (data.liked) recordSignal("like", tags, category, { publicationSlug: slug });
       } else {
         const local = toggleLocalLike(slug, type, count);
         setLiked(local.liked);
         setCount(local.count);
-        if (local.liked) recordSignal("like", tags, category);
+        if (local.liked) recordSignal("like", tags, category, { publicationSlug: slug });
       }
     } catch {
       const local = toggleLocalLike(slug, type, count);
       setLiked(local.liked);
       setCount(local.count);
-      if (local.liked) recordSignal("like", tags, category);
+      if (local.liked) recordSignal("like", tags, category, { publicationSlug: slug });
     } finally {
       setBusy(false);
     }

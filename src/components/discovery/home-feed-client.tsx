@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PublicationCard } from "@/components/discovery/publication-card";
 import { InterestPicker } from "@/components/discovery/interest-picker";
 import { RecommendationReason } from "@/components/discovery/recommendation-reason";
+import { HomeDiscoverySurface } from "@/components/discovery/home-discovery-surface";
 import {
   moreLikeThis,
   lessLikeThis,
@@ -52,6 +53,8 @@ export function HomeFeedClient({
   const [tick, setTick] = useState(0);
   const [visible, setVisible] = useState(12);
   const [serverWeights, setServerWeights] = useState<Record<string, number>>({});
+  const [publicationMomentum, setPublicationMomentum] = useState<Record<string, number>>({});
+  const [topicMomentum, setTopicMomentum] = useState<{ topic: string; weight: number }[]>([]);
   const [momentumTopics, setMomentumTopics] = useState<
     { topic: string; weight: number }[]
   >([]);
@@ -81,6 +84,17 @@ export function HomeFeedClient({
           const sData = await sRes.json();
           if (!cancelled && sData.weights && typeof sData.weights === "object") {
             setServerWeights(sData.weights as Record<string, number>);
+          }
+          if (!cancelled && sData.publicationMomentum && typeof sData.publicationMomentum === "object") {
+            setPublicationMomentum(sData.publicationMomentum as Record<string, number>);
+          }
+          if (!cancelled && sData.topicMomentum && typeof sData.topicMomentum === "object") {
+            setTopicMomentum(
+              Object.entries(sData.topicMomentum as Record<string, number>)
+                .map(([topic, weight]) => ({ topic, weight }))
+                .sort((a, b) => b.weight - a.weight)
+                .slice(0, 5)
+            );
           }
         } catch {
           /* signals optional */
@@ -122,7 +136,10 @@ export function HomeFeedClient({
     }
     if (tab === "trending") {
       return [...list]
-        .map((p) => ({ p, score: trendingScore(p) }))
+        .map((p) => ({
+          p,
+          score: trendingScore(p) * 0.55 + (publicationMomentum[p.slug] || 0) * 0.45,
+        }))
         .sort((a, b) => b.score - a.score)
         .slice(0, 48)
         .map((x) => x.p);
@@ -164,7 +181,10 @@ export function HomeFeedClient({
     }
     if (tab === "rising") {
       return [...list]
-        .map((p) => ({ p, score: risingScore(p) }))
+        .map((p) => ({
+          p,
+          score: risingScore(p) * 0.55 + (publicationMomentum[p.slug] || 0) * 0.45,
+        }))
         .sort((a, b) => b.score - a.score)
         .slice(0, 48)
         .map((x) => x.p);
@@ -193,7 +213,8 @@ export function HomeFeedClient({
         if (n) serverBehavior = Math.max(0, Math.min(1, (sum / n + 1) / 4));
       }
       const behavior = Math.max(localBehavior, serverBehavior);
-      const velocity = risingScore(p);
+      const velocity =
+        risingScore(p) * 0.55 + (publicationMomentum[p.slug] || 0) * 0.45;
       const score =
         interest * 0.32 +
         heat * 0.18 +
@@ -210,7 +231,7 @@ export function HomeFeedClient({
       if (diverse.length >= 48) break;
     }
     return diverse.length ? diverse : scored.slice(0, 48).map((x) => x.p);
-  }, [tab, publications, follows, interests, dimension, tick, serverWeights]);
+  }, [tab, publications, follows, interests, dimension, tick, serverWeights, publicationMomentum]);
 
   function onFeedback(
     pub: Publication,
@@ -278,29 +299,30 @@ export function HomeFeedClient({
 
   return (
     <div className="space-y-4">
-      {tab === "for-you" && momentumTopics.length > 0 && (
+      {tab === "for-you" && (topicMomentum.length > 0 || momentumTopics.length > 0) && (
         <div className="rounded-2xl bg-white/[0.025] px-4 py-3 ring-1 ring-white/[0.05]">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-600">
             Your discovery momentum
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {momentumTopics.map(({ topic }) => (
+            {(topicMomentum.length > 0 ? topicMomentum : momentumTopics).map(({ topic, weight }) => (
               <span
                 key={topic}
                 className="rounded-full bg-omniv-gold/10 px-2.5 py-1 text-[11px] text-omniv-gold"
               >
-                {topic}
+                {topic}{weight > 0.5 ? " · moving" : ""}
               </span>
             ))}
           </div>
         </div>
       )}
+      {tab === "for-you" && <HomeDiscoverySurface items={items.slice(0, 12)} momentumTopics={topicMomentum.length > 0 ? topicMomentum : momentumTopics} />}
       {tab === "trending" && (
         <p className="text-[12px] text-zinc-500">
           Ranked by engagement velocity — heat weighted by recency.
         </p>
       )}
-      {items.slice(0, visible).map((pub) => {
+      {items.slice(tab === "for-you" ? 3 : 0, visible + (tab === "for-you" ? 3 : 0)).map((pub) => {
         const reason = recommendationReason(pub, tab, interests);
         return (
           <div key={pub.id}>

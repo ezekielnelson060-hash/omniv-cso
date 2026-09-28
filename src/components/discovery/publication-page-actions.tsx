@@ -25,7 +25,11 @@ export function PublicationPageActions({
 }) {
   return (
     <>
-      <ViewTracker tags={tags} category={category || type} />
+      <ViewTracker
+        tags={tags}
+        category={category || type}
+        publicationSlug={slug}
+      />
       <div className="flex items-center gap-1">
         <PublicationActions
           slug={slug}

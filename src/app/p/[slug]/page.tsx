@@ -14,15 +14,15 @@ import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { createClient } from "@/lib/supabase/server";
 import {
+  listDiscoveryEntities,
   getDiscoveryEntity,
   getLivePublication,
+  listLivePublications,
   type LivePublication,
 } from "@/lib/discovery/db";
 import {
   getEntityById,
   publicationsByPublisher,
-  SEED_PUBLICATIONS,
-  SEED_ENTITIES,
 } from "@/lib/discovery/seed";
 import {
   PUBLICATION_LABELS,
@@ -109,11 +109,15 @@ export default async function PublicationPage({ params }: Props) {
     ? publicationsByPublisher(publisher.id).filter((x) => x.id !== p.id)
     : [];
 
+  const [liveEntities, livePublications] = await Promise.all([
+    listDiscoveryEntities(supabase),
+    listLivePublications(supabase, 120),
+  ]);
   const graph = {
     entities: publisher
-      ? [...SEED_ENTITIES.filter((e) => e.id !== publisher.id), publisher]
-      : SEED_ENTITIES,
-    publications: SEED_PUBLICATIONS,
+      ? [...liveEntities.filter((e) => e.id !== publisher.id), publisher]
+      : liveEntities,
+    publications: livePublications,
   };
   const connectedEntities = getEntityReferences(p, graph.entities);
   const relatedEntities = publisher
@@ -329,6 +333,7 @@ export default async function PublicationPage({ params }: Props) {
             entities={[...connectedEntities, ...relatedEntities]}
             publications={recommended}
             tags={p.tags}
+            title="You might want to explore next"
           />
 
           {publisher && (

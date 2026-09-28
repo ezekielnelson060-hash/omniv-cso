@@ -54,7 +54,8 @@ function writeWeights(w: WeightMap) {
 export function recordSignal(
   kind: SignalKind,
   tags: string[] = [],
-  category?: string
+  category?: string,
+  context?: { publicationSlug?: string; entityType?: string; entitySlug?: string }
 ) {
   if (typeof window === "undefined") return;
   const delta = WEIGHTS[kind] ?? 0.1;
@@ -73,6 +74,9 @@ export function recordSignal(
       events.unshift({
         kind,
         tags: topics,
+        publicationSlug: context?.publicationSlug,
+        entityType: context?.entityType,
+        entitySlug: context?.entitySlug,
         at: Date.now(),
       });
       localStorage.setItem(EVENTS_KEY, JSON.stringify(events.slice(0, 200)));
@@ -90,6 +94,9 @@ export function recordSignal(
         kind,
         tags: topics,
         category,
+        publicationSlug: context?.publicationSlug,
+        entityType: context?.entityType,
+        entitySlug: context?.entitySlug,
       }),
       keepalive: true,
     });
@@ -146,6 +153,9 @@ export function trendingScore(p: {
 export type SignalEvent = {
   kind: SignalKind;
   tags: string[];
+  publicationSlug?: string;
+  entityType?: string;
+  entitySlug?: string;
   at: number;
 };
 

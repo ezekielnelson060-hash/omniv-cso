@@ -7,7 +7,7 @@ import { risingScore } from "@/lib/discovery/signals";
 import type { Publication } from "@/lib/discovery/types";
 
 function pubPath(p: Publication) {
-  return `/${(p.type || "article").toLowerCase()}/${p.slug}`;
+  return `/p/${p.slug}`;
 }
 
 export function HomeDiscoverySurface({

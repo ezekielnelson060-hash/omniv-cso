@@ -10,10 +10,12 @@ import { recordSignal } from "@/lib/discovery/signals";
 export function ViewTracker({
   tags = [],
   category,
+  publicationSlug,
   dwellMs = 25_000,
 }: {
   tags?: string[];
   category?: string;
+  publicationSlug?: string;
   dwellMs?: number;
 }) {
   const tagsKey = tags.join("|");
@@ -23,9 +25,9 @@ export function ViewTracker({
     if (ran.current) return;
     ran.current = true;
     const tagList = tagsKey ? tagsKey.split("|").filter(Boolean) : [];
-    recordSignal("open", tagList, category);
+    recordSignal("open", tagList, category, { publicationSlug });
     const t = window.setTimeout(() => {
-      recordSignal("complete", tagList, category);
+      recordSignal("complete", tagList, category, { publicationSlug });
     }, dwellMs);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps

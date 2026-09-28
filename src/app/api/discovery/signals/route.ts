@@ -78,7 +78,7 @@ export async function GET() {
     const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
     const { data, error } = await supabase
       .from("discovery_signals")
-      .select("tags, weight, kind, created_at")
+      .select("tags, weight, kind, created_at, publication_slug")
       .eq("user_id", user.id)
       .gte("created_at", since)
       .order("created_at", { ascending: false })
@@ -93,8 +93,17 @@ export async function GET() {
     }
 
     const weights: Record<string, number> = {};
+    const topicMomentum: Record<string, number> = {};
+    const publicationMomentum: Record<string, number> = {};
+    const now = Date.now();
     for (const row of data) {
       const tags = Array.isArray(row.tags) ? row.tags : [];
+      const ageHours = Math.max(
+        0,
+        (now - new Date(row.created_at).getTime()) / 3_600_000
+      );
+      const recency = Math.exp(-ageHours / 72);
+      const contribution = Number(row.weight || 0) * recency;
       for (const t of tags) {
         const key = String(t).toLowerCase();
         if (!key) continue;
@@ -102,10 +111,32 @@ export async function GET() {
           -2,
           Math.min(5, (weights[key] || 0) + Number(row.weight || 0))
         );
+        topicMomentum[key] = (topicMomentum[key] || 0) + contribution;
+      }
+      if (row.publication_slug) {
+        const slug = String(row.publication_slug);
+        publicationMomentum[slug] =
+          (publicationMomentum[slug] || 0) + contribution;
       }
     }
 
-    return NextResponse.json({ auth: true, weights, count: data.length });
+    const normalize = (values: Record<string, number>) => {
+      const max = Math.max(1, ...Object.values(values).map((v) => Math.abs(v)));
+      return Object.fromEntries(
+        Object.entries(values).map(([key, value]) => [
+          key,
+          Math.max(0, Math.min(1, value / max)),
+        ])
+      );
+    };
+
+    return NextResponse.json({
+      auth: true,
+      weights,
+      topicMomentum: normalize(topicMomentum),
+      publicationMomentum: normalize(publicationMomentum),
+      count: data.length,
+    });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ auth: false, weights: {} });
