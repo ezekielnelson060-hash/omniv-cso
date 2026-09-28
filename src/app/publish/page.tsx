@@ -30,6 +30,7 @@ export default function PublishPage() {
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [scheduledAt, setScheduledAt] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [publishedPath, setPublishedPath] = useState("");
@@ -58,7 +59,8 @@ export default function PublishPage() {
             .filter(Boolean),
           coverUrl: coverUrl || undefined,
           mediaUrl: mediaUrl || undefined,
-          status: scheduledAt ? "scheduled" : "published",
+          status: isPrivate ? "draft" : scheduledAt ? "scheduled" : "published",
+          visibility: isPrivate ? "private" : "public",
           scheduledAt: scheduledAt || undefined,
         }),
       });
@@ -85,9 +87,11 @@ export default function PublishPage() {
         <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
           <span className="text-[16px] font-semibold text-white">
             {step === "done"
-              ? scheduledAt
-                ? "Scheduled"
-                : "Published"
+              ? isPrivate
+                ? "Saved private"
+                : scheduledAt
+                  ? "Scheduled"
+                  : "Published"
               : step === "pick"
                 ? "Create"
                 : head?.title || "Publish"}
@@ -182,6 +186,18 @@ export default function PublishPage() {
               inputClassName={inputCls}
             />
 
+            <label className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]">
+              <input
+                type="checkbox"
+                checked={isPrivate}
+                onChange={(e) => setIsPrivate(e.target.checked)}
+                className="h-4 w-4 rounded border-white/20 bg-transparent accent-omniv-gold"
+              />
+              <span className="text-[13px] text-zinc-300">
+                Private (Business) — only you can see this
+              </span>
+            </label>
+
             <div>
               <p className={labelCls}>Body</p>
               <div className="mt-1.5">
@@ -232,9 +248,11 @@ export default function PublishPage() {
             >
               {loading
                 ? "Publishing…"
-                : scheduledAt
-                  ? "Schedule"
-                  : "Publish"}
+                : isPrivate
+                  ? "Save private"
+                  : scheduledAt
+                    ? "Schedule"
+                    : "Publish"}
             </button>
           </div>
         )}
@@ -242,12 +260,18 @@ export default function PublishPage() {
         {step === "done" && (
           <div className="rounded-2xl bg-white/[0.03] p-6 text-center ring-1 ring-white/[0.08]">
             <p className="text-[18px] font-semibold text-white">
-              {scheduledAt ? "Scheduled" : "Live on Omniv"}
+              {isPrivate
+                ? "Saved as private"
+                : scheduledAt
+                  ? "Scheduled"
+                  : "Live on Omniv"}
             </p>
             <p className="mt-2 text-[13px] text-zinc-500">
-              {scheduledAt
-                ? `Goes live ${new Date(scheduledAt).toLocaleString()}`
-                : "Your publication is discoverable."}
+              {isPrivate
+                ? "Only you can see this publication."
+                : scheduledAt
+                  ? `Goes live ${new Date(scheduledAt).toLocaleString()}`
+                  : "Your publication is discoverable."}
             </p>
             <p className="mt-3 font-mono text-[12px] text-omniv-gold">
               omniv.media{publishedPath}
@@ -268,6 +292,7 @@ export default function PublishPage() {
                   setSummary("");
                   setBody("");
                   setScheduledAt("");
+                  setIsPrivate(false);
                   setPublishedPath("");
                 }}
                 className="flex h-11 items-center justify-center rounded-full bg-white/10 text-[14px] font-medium text-white"
