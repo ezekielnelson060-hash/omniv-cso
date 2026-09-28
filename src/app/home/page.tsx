@@ -11,6 +11,7 @@ import {
 } from "@/lib/discovery/seed";
 import type { Publication } from "@/lib/discovery/types";
 import { HomeFeedClient } from "@/components/discovery/home-feed-client";
+import { HomeDiscoverySurface } from "@/components/discovery/home-discovery-surface";
 
 export const metadata = {
   title: "Home | Omniv",
@@ -22,7 +23,6 @@ type Props = {
   searchParams: Promise<{ tab?: string }>;
 };
 
-/** Discovery layers — not a chronological feed */
 const TABS = [
   { id: "for-you", label: "For You" },
   { id: "following", label: "Following" },
@@ -157,6 +157,9 @@ export default async function HomePage({ searchParams }: Props) {
           </div>
 
           <div className="mt-5">
+            {tab === "for-you" && (
+              <HomeDiscoverySurface items={feedPool} momentumTopics={[]} />
+            )}
             <HomeFeedClient
               tab={
                 tab === "following" ||
