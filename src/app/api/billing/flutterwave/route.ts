@@ -5,11 +5,12 @@ import {
   LEGACY_CHECKOUT_AMOUNTS,
   paymentPlanIdFor,
   PROMOTION_CONFIG,
+  VERIFY_MONTHLY_USD,
 } from "@/lib/discovery/monetization";
 
 /**
  * Flutterwave standard checkout.
- * Plans: discovery Pro, business, promote, verification fee.
+ * Plans: discovery Pro, business, promote, verification membership.
  */
 export async function POST(req: Request) {
   const secret = process.env.FLW_SECRET_KEY;
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
       business: LEGACY_CHECKOUT_AMOUNTS.business,
       label: LEGACY_CHECKOUT_AMOUNTS.label,
       promote: PROMOTION_CONFIG.defaultBudgetUsd,
-      verify: 19,
+      verify: VERIFY_MONTHLY_USD,
     };
     let plan = body.plan || "pro";
     if (plan === "starter") plan = "pro";
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
     }
 
     let amount = prices[plan] ?? 29;
-    if (plan === "verify") amount = 19;
+    if (plan === "verify") amount = VERIFY_MONTHLY_USD;
     if (plan === "promote" && typeof body.amount === "number") {
       amount = Math.min(
         PROMOTION_CONFIG.maxBudgetUsd,
@@ -108,13 +109,18 @@ export async function POST(req: Request) {
       ? `omniv_${plan}_${userId}_${Date.now()}`
       : `omniv_${plan}_anon_${Date.now()}`;
 
+    const verifyPlanId =
+      plan === "verify" ? paymentPlanIdFor("verify") : null;
+    const subPlanId =
+      plan === "pro" || plan === "business"
+        ? paymentPlanIdFor(plan)
+        : verifyPlanId;
+
     const payload = {
       tx_ref,
       amount,
       currency: process.env.FLW_CURRENCY || "USD",
-      ...(plan === "pro" || plan === "business"
-        ? { payment_plan: paymentPlanIdFor(plan) as number }
-        : {}),
+      ...(subPlanId ? { payment_plan: subPlanId } : {}),
       redirect_url: redirect,
       customer: {
         email,
@@ -126,7 +132,7 @@ export async function POST(req: Request) {
           plan === "promote"
             ? `Promote publication — $${amount}`
             : plan === "verify"
-              ? "Omniv Verification — application fee"
+              ? "Omniv Verification — $9 / month"
               : plan === "business"
                 ? "Omniv Business — verified + team tools"
                 : "Omniv Pro — verified publisher",
