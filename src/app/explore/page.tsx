@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import { PublicationCard } from "@/components/discovery/publication-card";
+import { ExploreEntitiesList } from "@/components/discovery/explore-entities-list";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { ProfileAvatarLink } from "@/components/discovery/profile-avatar-link";
@@ -82,11 +83,18 @@ export default async function ExplorePage({ searchParams }: Props) {
       if (!slugs.has(s.slug)) publications.push(s);
     }
   }
-  if (entities.length < 4) {
-    const slugs = new Set(entities.map((e) => e.slug));
+  // Live accounts first. Seeds only fill cold start — real publishers replace them over time.
+  if (entities.length < 6) {
+    const slugs = new Set(entities.map((e) => e.slug.toLowerCase()));
+    const liveFirst = [...entities];
     for (const e of SEED_ENTITIES) {
-      if (!slugs.has(e.slug)) entities.push(e);
+      if (slugs.has(e.slug.toLowerCase())) continue;
+      liveFirst.push(e);
+      if (liveFirst.length >= 12) break;
     }
+    entities = liveFirst;
+  } else {
+    entities = entities.slice(0, 48);
   }
 
   let filtered = publications;
@@ -133,7 +141,7 @@ function SearchResults({
   return (
     <section>
       <h2 className="text-xl font-semibold text-white">
-        {results.length} for “{query}”
+        {results.length} for &ldquo;{query}&rdquo;
       </h2>
       <div className="mt-5 space-y-2">
         {results.map((result) =>
@@ -202,42 +210,6 @@ function SearchEntity({ entity }: { entity: DiscoveryEntity }) {
   );
 }
 
-function ExploreEntityRow({ entity }: { entity: DiscoveryEntity }) {
-  const initial = entity.name.charAt(0).toUpperCase();
-  const img = entity.avatarUrl;
-  return (
-    <Link
-      href={entityPath(entity)}
-      className="group flex items-center gap-3 overflow-hidden rounded-2xl bg-gradient-to-br from-white/[0.05] to-white/[0.02] p-3 ring-1 ring-white/[0.07] transition hover:ring-white/15"
-    >
-      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-white/10">
-        {img ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={img} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <span className="flex h-full w-full items-center justify-center text-[15px] font-semibold text-omniv-gold">
-            {initial}
-          </span>
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] font-semibold text-white group-hover:text-omniv-gold">
-          {entity.name}
-        </p>
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-          {ENTITY_LABELS[entity.type]}
-        </p>
-        <p className="mt-0.5 line-clamp-1 text-[12px] text-zinc-400">
-          {entity.tagline || entity.about?.slice(0, 90) || "On Omniv"}
-        </p>
-      </div>
-      <span className="shrink-0 rounded-full bg-white/[0.06] px-3.5 py-1.5 text-[12px] font-medium text-zinc-300 ring-1 ring-white/10 group-hover:bg-omniv-gold/15 group-hover:text-omniv-gold group-hover:ring-omniv-gold/30">
-        Open
-      </span>
-    </Link>
-  );
-}
-
 function DiscoverySections({
   publications,
   entities,
@@ -275,21 +247,7 @@ function DiscoverySections({
         </div>
       </section>
 
-      <section>
-        <div className="flex items-center justify-between">
-          <h2 className="text-[13px] font-semibold uppercase tracking-wide text-zinc-500">
-            Entities
-          </h2>
-          <span className="text-[12px] text-zinc-600">
-            {entities.length} on Omniv
-          </span>
-        </div>
-        <div className="mt-3 space-y-2.5">
-          {entities.slice(0, 24).map((e) => (
-            <ExploreEntityRow key={e.id} entity={e} />
-          ))}
-        </div>
-      </section>
+      <ExploreEntitiesList entities={entities} />
 
       {sections.map(({ type, title }) => {
         const items = byType(type);
@@ -362,7 +320,7 @@ function ExploreShell({
             Explore
           </h1>
           <p className="mt-1 text-[14px] text-zinc-500">
-            Find what you're interested in.
+            Find what you are interested in.
           </p>
 
           <form action="/explore" method="get" className="mt-4 flex gap-2">
