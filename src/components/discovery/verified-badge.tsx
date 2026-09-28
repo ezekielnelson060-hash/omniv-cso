@@ -3,7 +3,62 @@
 import { useState } from "react";
 import Link from "next/link";
 
-/** Verified check — opens trust sheet; optional href to public verification page */
+type BadgeKind = "profile" | "entity" | "company";
+
+function resolveKind(verifyType?: string): BadgeKind {
+  const t = (verifyType || "").toLowerCase();
+  if (
+    t === "personal" ||
+    t === "person" ||
+    t === "profile" ||
+    t === "individual"
+  ) {
+    return "profile";
+  }
+  if (
+    t === "company" ||
+    t === "organization" ||
+    t === "org" ||
+    t === "brand"
+  ) {
+    return "company";
+  }
+  return "entity";
+}
+
+/** Profile = blue · Entity = gold · Company = emerald */
+const BADGE_FILL: Record<BadgeKind, string> = {
+  profile: "#3b82f6",
+  entity: "#C9A227",
+  company: "#10b981",
+};
+
+const BADGE_LABEL: Record<BadgeKind, string> = {
+  profile: "person",
+  entity: "entity",
+  company: "organization",
+};
+
+function BadgeIcon({ kind, size = 18 }: { kind: BadgeKind; size?: number }) {
+  const fill = BADGE_FILL[kind];
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 2.5c-4.8 0-8.5 3.2-8.5 7.6 0 5.1 4.2 9.4 8.5 11.4 4.3-2 8.5-6.3 8.5-11.4C20.5 5.7 16.8 2.5 12 2.5z"
+        fill={fill}
+      />
+      <path
+        d="M8.2 12.2 10.6 14.6 15.8 9.2"
+        stroke="white"
+        strokeWidth="2.1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Verified check — color by identity type */
 export function VerifiedBadge({
   className = "",
   name,
@@ -15,30 +70,21 @@ export function VerifiedBadge({
   name?: string;
   verifiedAt?: string;
   verifyType?: string;
-  /** Public verification page e.g. /e/company/omniv/verified */
   href?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const kind = resolveKind(verifyType);
 
   return (
     <>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={`inline-flex items-center justify-center ${className}`}
-        title="Verified by Omniv"
-        aria-label="Verified"
+        className={`inline-flex shrink-0 items-center justify-center ${className}`}
+        title={`Verified ${BADGE_LABEL[kind]}`}
+        aria-label={`Verified ${BADGE_LABEL[kind]}`}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" fill="#3b82f6" />
-          <path
-            d="M8 12.5 10.5 15 16 9.5"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <BadgeIcon kind={kind} size={18} />
       </button>
 
       {open && (
@@ -51,23 +97,13 @@ export function VerifiedBadge({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" fill="#3b82f6" />
-                <path
-                  d="M8 12.5 10.5 15 16 9.5"
-                  stroke="white"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <BadgeIcon kind={kind} size={22} />
               <p className="text-[16px] font-semibold text-white">
                 Verified by Omniv
               </p>
             </div>
             <p className="mt-3 text-[14px] leading-relaxed text-zinc-400">
-              Omniv has verified the identity of this{" "}
-              {verifyType.toLowerCase()}
+              Omniv has verified the identity of this {BADGE_LABEL[kind]}
               {name ? ` (${name})` : ""} and confirmed that this account is
               associated with it. Verification establishes authenticity — not
               endorsement.
@@ -117,10 +153,8 @@ export function GetVerifiedCard() {
     <div className="mt-8 overflow-hidden rounded-2xl ring-1 ring-white/[0.1]">
       <div className="bg-gradient-to-br from-sky-500/20 via-omniv-gold/10 to-transparent p-5">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-sky-400">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2l2.4 2.4L18 3l.6 3.6L22 9l-2.4 2.4L21 15l-3.6.6L15 19l-2.4-2.4L9 19l-.6-3.6L5 15l2.4-2.4L5 9l3.6-.6L9 5l2.4 2.4L12 2z" />
-            </svg>
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-500/20">
+            <BadgeIcon kind="entity" size={22} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[15px] font-semibold text-white">Get verified</p>
