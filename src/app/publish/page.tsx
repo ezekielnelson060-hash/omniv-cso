@@ -105,7 +105,7 @@ export default function PublishPage() {
               What do you want to publish?
             </h1>
             <p className="mt-1 text-[14px] text-zinc-500">
-              Choose a format. Schedule is optional on the next step.
+              Choose a format. You can schedule on the next step.
             </p>
             {GROUPS.map((g) => (
               <div key={g.label} className="mt-6">
@@ -175,6 +175,13 @@ export default function PublishPage() {
               />
             </label>
 
+            <ScheduleField
+              value={scheduledAt}
+              onChange={setScheduledAt}
+              labelClassName={labelCls}
+              inputClassName={inputCls}
+            />
+
             <div>
               <p className={labelCls}>Body</p>
               <div className="mt-1.5">
@@ -200,13 +207,6 @@ export default function PublishPage() {
                 <MediaUpload value={mediaUrl} onChange={setMediaUrl} />
               </div>
             </div>
-
-            <ScheduleField
-              value={scheduledAt}
-              onChange={setScheduledAt}
-              labelClassName={labelCls}
-              inputClassName={inputCls}
-            />
 
             <label className="block">
               <span className={labelCls}>Tags (comma-separated)</span>
