@@ -22,6 +22,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid email" }, { status: 400 });
     }
 
+    // Store lead for entity owner (Pro lead capture)
+    try {
+      const origin = process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
+      await fetch(`${origin}/api/discovery/leads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          message,
+          entityId: body.entityId || null,
+          entityName,
+          entityPath,
+          ownerId: body.ownerId || null,
+        }),
+      });
+    } catch {
+      /* non-blocking */
+    }
+
     const key = process.env.RESEND_API_KEY;
     if (!key) {
       console.log("[contact]", { name, email, entityName, message });
