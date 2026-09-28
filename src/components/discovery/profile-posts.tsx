@@ -35,13 +35,9 @@ function FollowChip({ e }: { e: DiscoveryEntity }) {
       className="flex w-[120px] shrink-0 flex-col items-center rounded-2xl bg-white/[0.03] px-3 py-3.5 ring-1 ring-white/[0.07] transition hover:bg-white/[0.06]"
     >
       <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-omniv-gold/40 to-omniv-gold/10 ring-1 ring-white/10">
-        {e.avatarUrl || e.imageUrl ? (
+        {e.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={e.avatarUrl || e.imageUrl || ""}
-            alt=""
-            className="h-full w-full object-cover"
-          />
+          <img src={e.avatarUrl} alt="" className="h-full w-full object-cover" />
         ) : (
           <span className="text-[18px] font-semibold text-omniv-gold">
             {initial}
@@ -117,7 +113,6 @@ function ProfileDiscover() {
 
   return (
     <div className="space-y-7 pb-4">
-      {/* Soft publish nudge */}
       <div className="flex items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-omniv-gold/15 via-omniv-gold/5 to-transparent px-4 py-3.5 ring-1 ring-omniv-gold/20">
         <div className="min-w-0">
           <p className="text-[14px] font-semibold text-white">
@@ -135,30 +130,28 @@ function ProfileDiscover() {
         </Link>
       </div>
 
-      {/* People / entities to follow */}
       <section>
         <div className="mb-3 flex items-center justify-between">
           <p className="text-[13px] font-semibold text-white">People to follow</p>
           <Link
-            href="/explore?tab=people"
+            href="/explore"
             className="text-[12px] font-medium text-omniv-gold"
           >
             See all
           </Link>
         </div>
-        <div className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 scrollbar-none">
+        <div className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1">
           {people.map((e) => (
             <FollowChip key={e.id} e={e} />
           ))}
         </div>
       </section>
 
-      {/* Articles */}
       <section>
         <div className="mb-2 flex items-center justify-between">
           <p className="text-[13px] font-semibold text-white">Worth reading</p>
           <Link
-            href="/explore?type=article"
+            href="/explore"
             className="text-[12px] font-medium text-omniv-gold"
           >
             Explore
@@ -173,7 +166,6 @@ function ProfileDiscover() {
         </ul>
       </section>
 
-      {/* Other publications */}
       {more.length > 0 && (
         <section>
           <div className="mb-2 flex items-center justify-between">
