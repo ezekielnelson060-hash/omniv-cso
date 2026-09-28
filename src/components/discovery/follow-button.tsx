@@ -18,11 +18,13 @@ export function FollowButton({
   slug,
   name,
   id,
+  compact = false,
 }: {
   type: string;
   slug: string;
   name: string;
   id?: string;
+  compact?: boolean;
 }) {
   const [following, setFollowing] = useState(false);
   const [ready, setReady] = useState(false);
@@ -158,7 +160,11 @@ export function FollowButton({
         type="button"
         onClick={onClick}
         disabled={!ready || busy}
-        className={`inline-flex h-10 min-w-[96px] items-center justify-center rounded-full px-5 text-[13px] font-semibold transition active:scale-[0.98] ${
+        className={`inline-flex items-center justify-center rounded-full font-semibold transition active:scale-[0.98] ${
+          compact
+            ? "h-8 min-w-[72px] px-3.5 text-[12px]"
+            : "h-10 min-w-[96px] px-5 text-[13px]"
+        } ${
           following
             ? "bg-transparent text-white ring-1 ring-white/20 hover:ring-white/35"
             : "bg-omniv-gold text-black hover:bg-omniv-gold/90"
