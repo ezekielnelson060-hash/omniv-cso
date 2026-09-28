@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PublicationActions } from "@/components/discovery/publication-actions";
-import { SaveButton } from "@/components/discovery/save-button";
+import { FollowButton } from "@/components/discovery/follow-button";
 import { readProfile } from "@/lib/discovery/local-profile";
 import { coverFor } from "@/lib/discovery/seed-covers";
 import { SEED_ENTITIES, SEED_PUBLICATIONS } from "@/lib/discovery/seed";
@@ -82,12 +82,18 @@ function EntityCard({ entity }: { entity: DiscoveryEntity }) {
             )}
           </div>
         </Link>
-        <SaveButton
-          kind="entity"
-          type={entity.type}
-          slug={entity.slug}
-          name={entity.name}
-        />
+        <div
+          onClick={(e) => e.preventDefault()}
+          className="shrink-0"
+        >
+          <FollowButton
+            type={entity.type}
+            slug={entity.slug}
+            name={entity.name}
+            id={entity.id}
+            compact
+          />
+        </div>
       </div>
     </div>
   );
@@ -233,7 +239,7 @@ function ProfileDiscover() {
           <div>
             <h3 className="text-[15px] font-semibold text-white">Entities</h3>
             <p className="mt-1 text-[13px] text-zinc-600">
-              People, entities, and systems to follow on Omniv.
+              People, companies, and brands to follow on Omniv.
             </p>
           </div>
           <span className="text-[11px] text-zinc-700">
@@ -337,7 +343,7 @@ export function ProfilePosts() {
       <div className="mb-1">
         <h3 className="text-[15px] font-semibold text-white">Publications</h3>
         <p className="mt-0.5 text-[13px] text-zinc-600">
-          What you've published on Omniv.
+          What you have published on Omniv.
         </p>
       </div>
       {pubs.map((p) => (
