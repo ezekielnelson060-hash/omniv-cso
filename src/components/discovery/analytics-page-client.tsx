@@ -241,7 +241,7 @@ export default function AnalyticsPage() {
                         className="flex items-center justify-between rounded-xl bg-white/[0.04] px-3.5 py-2.5"
                       >
                         <span className="text-[14px] text-white">{t.topic}</span>
-                        <span className="text-[12px] text-zinc-500">{t.count}</span>
+                        <span className="text-[12px] text-zinc-500">{t.weight.toFixed(1)}</span>
                       </li>
                     ))}
                   </ul>

@@ -170,7 +170,7 @@ export type Publication = {
   readingTime?: number;
   whatThisMeans?: string;
   questionNobodyAsks?: string;
-  status?: "draft" | "published" | "archived";
+  status?: "draft" | "published" | "archived" | "scheduled";
   seoTitle?: string;
   seoDescription?: string;
   canonicalUrl?: string;
