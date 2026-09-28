@@ -31,7 +31,13 @@ interface PlanContextValue {
 const PlanContext = createContext<PlanContextValue | null>(null);
 
 function isPlanId(v: string | null | undefined): v is PlanId {
-  return v === "free" || v === "starter" || v === "pro" || v === "label";
+  return (
+    v === "free" ||
+    v === "starter" ||
+    v === "pro" ||
+    v === "business" ||
+    v === "label"
+  );
 }
 
 export function PlanProvider({ children }: { children: ReactNode }) {
@@ -63,33 +69,33 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         .maybeSingle();
 
       const status = data?.plan_status || data?.billing_status || "none";
-      const dbPlan = data?.plan;
+      let dbPlan = data?.plan as string | undefined;
+      if (dbPlan === "label") dbPlan = "business";
+      if (dbPlan === "starter") dbPlan = "pro";
       const expiresAt = data?.plan_expires_at
         ? new Date(data.plan_expires_at).getTime()
         : null;
       const entitlementActive =
         (status === "active" || status === "cancelled") &&
-        (expiresAt === null || Number.isNaN(expiresAt) || expiresAt > Date.now());
+        (expiresAt === null ||
+          Number.isNaN(expiresAt) ||
+          expiresAt > Date.now());
 
-      // Paid plans only stick when backend marked active (webhook)
       if (isPlanId(dbPlan) && dbPlan !== "free") {
         if (entitlementActive) {
           setPlanState(dbPlan);
           setPlanStatus("active");
         } else {
-          // Payment pending / failed. stay free for gating
           setPlanState(DEFAULT_PLAN);
           setPlanStatus(status);
         }
-      } else if (isPlanId(dbPlan)) {
-        setPlanState("free");
-        setPlanStatus(status);
       } else {
         setPlanState(DEFAULT_PLAN);
         setPlanStatus(status);
       }
     } catch {
-      /* keep default */
+      setPlanState(DEFAULT_PLAN);
+      setPlanStatus("none");
     } finally {
       setLoading(false);
     }
@@ -99,24 +105,18 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     void refreshPlan();
   }, [refreshPlan]);
 
-  // After Flutterwave redirect: ?billing=success
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("billing") === "success") {
-      // Webhook may lag a few seconds. poll briefly
-      let n = 0;
       const id = window.setInterval(() => {
         void refreshPlan();
-        n += 1;
-        if (n >= 8) window.clearInterval(id);
       }, 1500);
       return () => window.clearInterval(id);
     }
   }, [refreshPlan]);
 
   const setPlan = useCallback((p: PlanId) => {
-    // Optimistic free only. paid plans come from webhook/DB
     if (p === "free") setPlanState("free");
   }, []);
 
@@ -135,21 +135,25 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ plan, planStatus, loading, setPlan, can, require, refreshPlan }),
+    () => ({
+      plan,
+      planStatus,
+      loading,
+      setPlan,
+      can,
+      require,
+      refreshPlan,
+    }),
     [plan, planStatus, loading, setPlan, can, require, refreshPlan]
   );
 
   return (
     <PlanContext.Provider value={value}>
       {children}
-      {gateFeature && (
-        <UpgradeModal
-          open={!!gateFeature}
-          feature={gateFeature}
-          currentPlan={plan}
-          onClose={() => setGateFeature(null)}
-        />
-      )}
+      <UpgradeModal
+        feature={gateFeature}
+        onClose={() => setGateFeature(null)}
+      />
     </PlanContext.Provider>
   );
 }
