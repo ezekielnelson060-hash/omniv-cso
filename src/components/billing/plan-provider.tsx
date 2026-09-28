@@ -150,10 +150,14 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   return (
     <PlanContext.Provider value={value}>
       {children}
-      <UpgradeModal
-        feature={gateFeature}
-        onClose={() => setGateFeature(null)}
-      />
+      {gateFeature ? (
+        <UpgradeModal
+          open
+          feature={gateFeature}
+          currentPlan={plan}
+          onClose={() => setGateFeature(null)}
+        />
+      ) : null}
     </PlanContext.Provider>
   );
 }
