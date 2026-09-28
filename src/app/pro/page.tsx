@@ -3,10 +3,7 @@ import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { CurrentIdentityBanner } from "@/components/discovery/current-identity";
 import { PricingCheckoutButton } from "@/components/discovery/pricing-checkout";
-import {
-  DISCOVERY_PLANS,
-  LEGACY_CHECKOUT_AMOUNTS,
-} from "@/lib/discovery/monetization";
+import { DISCOVERY_PLANS } from "@/lib/discovery/monetization";
 
 export const metadata = {
   title: "Pro | Omniv",
@@ -38,7 +35,6 @@ export default function ProPage() {
             <CurrentIdentityBanner action="Pro will apply to" />
           </div>
 
-          {/* Plan cards — match pricing layout */}
           <div className="mt-10 grid gap-4 md:grid-cols-2">
             <div className="relative rounded-2xl bg-omniv-gold/10 p-5 ring-1 ring-omniv-gold/40">
               <span className="absolute -top-2.5 right-4 rounded-full bg-omniv-gold px-2.5 py-0.5 text-[10px] font-bold uppercase text-black">
@@ -78,18 +74,12 @@ export default function ProPage() {
               <p className="text-[15px] font-semibold text-white">Business</p>
               <p className="mt-2">
                 <span className="text-2xl font-semibold text-white">
-                  ${LEGACY_CHECKOUT_AMOUNTS.business}
+                  ${DISCOVERY_PLANS.business.priceMonthlyUsd}
                 </span>
                 <span className="text-[13px] text-zinc-500"> / month</span>
               </p>
               <ul className="mt-4 space-y-2">
-                {[
-                  "Everything in Pro",
-                  "Verified on all entities",
-                  "Team-ready",
-                  "Private publications",
-                  "Priority onboarding",
-                ].map((f) => (
+                {DISCOVERY_PLANS.business.features.map((f) => (
                   <li
                     key={f}
                     className="flex items-start gap-2 text-[13px] text-zinc-400"
