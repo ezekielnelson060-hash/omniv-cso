@@ -7,12 +7,13 @@ import {
   entityPath,
   type DiscoveryEntity,
 } from "@/lib/discovery/types";
+import { entityMedia } from "@/lib/discovery/entity-media";
 
 const INITIAL = 5;
 
 function ExploreEntityRow({ entity }: { entity: DiscoveryEntity }) {
   const initial = entity.name.charAt(0).toUpperCase();
-  const img = entity.avatarUrl;
+  const { avatarUrl: img } = entityMedia(entity);
   return (
     <Link
       href={entityPath(entity)}
