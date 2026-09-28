@@ -75,6 +75,20 @@ export async function POST(req: Request) {
         .maybeSingle();
       resolvedOwner = ent?.owner_id || null;
     }
+    if (!resolvedOwner && entityPath) {
+      const parts = entityPath.split("/").filter(Boolean);
+      if (parts[0] === "e" && parts.length >= 3) {
+        const type = parts[1];
+        const slug = parts[2];
+        const { data: ent } = await supabase
+          .from("discovery_entities")
+          .select("owner_id")
+          .eq("type", type)
+          .eq("slug", slug)
+          .maybeSingle();
+        resolvedOwner = ent?.owner_id || null;
+      }
+    }
 
     if (!resolvedOwner) {
       return NextResponse.json({ ok: true, stored: false });
