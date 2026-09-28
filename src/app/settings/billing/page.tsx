@@ -3,8 +3,35 @@
 import Link from "next/link";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { usePlan } from "@/components/billing/plan-provider";
+import {
+  DISCOVERY_PLANS,
+  normalizeDiscoveryPlan,
+} from "@/lib/discovery/monetization";
+import type { PlanId } from "@/lib/billing";
+
+function discoveryLabel(plan: PlanId): {
+  name: string;
+  price: string;
+  blurb: string;
+} {
+  const d = normalizeDiscoveryPlan(plan);
+  const def = DISCOVERY_PLANS[d];
+  if (d === "free") {
+    return { name: "Free", price: "$0", blurb: def.blurb };
+  }
+  return {
+    name: def.name,
+    price: `$${def.priceMonthlyUsd}/mo`,
+    blurb: def.blurb,
+  };
+}
 
 export default function BillingSettingsPage() {
+  const { plan, planStatus, loading, refreshPlan } = usePlan();
+  const info = discoveryLabel(plan);
+  const paid = plan === "pro" || plan === "business" || plan === "label";
+
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
@@ -20,12 +47,65 @@ export default function BillingSettingsPage() {
         <main className="mx-auto max-w-lg space-y-4 px-4 pb-28 pt-5 md:max-w-2xl">
           <div className="rounded-2xl bg-white/[0.03] px-4 py-5 ring-1 ring-white/[0.06]">
             <p className="text-[12px] text-zinc-500">Current plan</p>
-            <p className="mt-1 text-[18px] font-semibold text-white">Free</p>
+            <p className="mt-1 text-[18px] font-semibold text-white">
+              {loading ? "…" : info.name}
+            </p>
+            <p className="mt-0.5 text-[14px] text-omniv-gold">
+              {loading ? "" : info.price}
+            </p>
+            <p className="mt-2 text-[13px] text-zinc-500">{info.blurb}</p>
+            <p className="mt-2 text-[12px] text-zinc-600">
+              Status:{" "}
+              <span className="text-zinc-400">
+                {loading
+                  ? "checking"
+                  : paid
+                    ? planStatus === "active"
+                      ? "Active"
+                      : planStatus
+                    : "Free"}
+              </span>
+            </p>
+            {!paid && (
+              <Link
+                href="/pro"
+                className="mt-4 inline-flex h-11 items-center rounded-full bg-omniv-gold px-5 text-[13px] font-semibold text-black"
+              >
+                Upgrade to Pro or Business
+              </Link>
+            )}
+            {paid && (
+              <button
+                type="button"
+                onClick={() => void refreshPlan()}
+                className="mt-4 text-[13px] text-zinc-500 underline hover:text-zinc-300"
+              >
+                Refresh status
+              </button>
+            )}
+          </div>
+
+          <div className="rounded-2xl bg-white/[0.03] px-4 py-4 ring-1 ring-white/[0.06]">
+            <p className="text-[13px] font-medium text-white">Plans</p>
+            <ul className="mt-3 space-y-2 text-[13px] text-zinc-400">
+              <li className="flex justify-between">
+                <span>Free</span>
+                <span>$0</span>
+              </li>
+              <li className="flex justify-between">
+                <span>Pro</span>
+                <span>${DISCOVERY_PLANS.pro.priceMonthlyUsd}/mo</span>
+              </li>
+              <li className="flex justify-between">
+                <span>Business</span>
+                <span>${DISCOVERY_PLANS.business.priceMonthlyUsd}/mo</span>
+              </li>
+            </ul>
             <Link
               href="/pro"
-              className="mt-4 inline-flex h-11 items-center rounded-full bg-omniv-gold px-5 text-[13px] font-semibold text-black"
+              className="mt-3 inline-block text-[13px] font-medium text-omniv-gold"
             >
-              Upgrade to Pro
+              Compare plans →
             </Link>
           </div>
 
@@ -38,7 +118,9 @@ export default function BillingSettingsPage() {
             </li>
             <li className="border-t border-white/[0.05] px-4 py-3.5">
               <p className="text-[14px] font-medium text-white">Invoices</p>
-              <p className="mt-1 text-[13px] text-zinc-500">No invoices yet.</p>
+              <p className="mt-1 text-[13px] text-zinc-500">
+                Receipts appear after a successful charge.
+              </p>
             </li>
           </ul>
         </main>
