@@ -1,4 +1,4 @@
-export type DiscoveryPlanId = "free" | "pro";
+export type DiscoveryPlanId = "free" | "pro" | "business";
 
 export type DiscoveryPlan = {
   id: DiscoveryPlanId;
@@ -35,6 +35,7 @@ export const DISCOVERY_PLANS: Record<DiscoveryPlanId, DiscoveryPlan> = {
     blurb:
       "Build a stronger identity and understand what is moving through the network.",
     features: [
+      "Everything in Free",
       "Deeper discovery stats",
       "Audience insights",
       "Discovery sources",
@@ -44,7 +45,25 @@ export const DISCOVERY_PLANS: Record<DiscoveryPlanId, DiscoveryPlan> = {
       "Collections",
       "Lead capture",
       "Enhanced profile",
-      "Verified publisher status for the selected entity",
+      "Verified publisher for one entity",
+    ],
+  },
+  business: {
+    id: "business",
+    name: "Business",
+    priceMonthlyUsd: 99,
+    billingInterval: "monthly",
+    billingLabel: "/ month",
+    blurb:
+      "For companies and teams running multiple identities on Omniv.",
+    features: [
+      "Everything in Pro",
+      "Verified on all your entities",
+      "Team-ready (seats)",
+      "Private publications",
+      "Priority support",
+      "Full analytics export",
+      "Promote credits priority",
     ],
   },
 };
@@ -81,14 +100,38 @@ export const PROMOTION_CONFIG = {
   ] as const,
 };
 
-/** Kept for older settings screens while discovery billing moves to Pro. */
+/** @deprecated use DISCOVERY_PLANS.business.priceMonthlyUsd */
 export const LEGACY_CHECKOUT_AMOUNTS = {
-  business: 99,
-  label: 99,
+  business: DISCOVERY_PLANS.business.priceMonthlyUsd,
+  label: DISCOVERY_PLANS.business.priceMonthlyUsd,
 } as const;
 
 export type PromotionTargetType = (typeof PROMOTION_CONFIG.targetTypes)[number];
 
 export function planAmountUsd(plan: DiscoveryPlanId): number {
   return DISCOVERY_PLANS[plan].priceMonthlyUsd;
+}
+
+export function isPaidDiscoveryPlan(
+  plan: string | null | undefined
+): plan is "pro" | "business" {
+  return plan === "pro" || plan === "business" || plan === "label";
+}
+
+export function normalizeDiscoveryPlan(
+  plan: string | null | undefined
+): DiscoveryPlanId {
+  if (plan === "business" || plan === "label") return "business";
+  if (plan === "pro" || plan === "starter") return "pro";
+  return "free";
+}
+
+export function checkoutPricesUsd(): Record<string, number> {
+  return {
+    pro: DISCOVERY_PLANS.pro.priceMonthlyUsd,
+    business: DISCOVERY_PLANS.business.priceMonthlyUsd,
+    starter: DISCOVERY_PLANS.pro.priceMonthlyUsd,
+    label: DISCOVERY_PLANS.business.priceMonthlyUsd,
+    verify: VERIFY_MONTHLY_USD,
+  };
 }
