@@ -6,9 +6,13 @@ import { recordSignal } from "@/lib/discovery/signals";
 export function ContactForm({
   entityName,
   entityPath,
+  entityId,
+  ownerId,
 }: {
   entityName: string;
   entityPath: string;
+  entityId?: string | null;
+  ownerId?: string | null;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -24,7 +28,15 @@ export function ContactForm({
       const res = await fetch("/api/discovery/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, message, entityName, entityPath }),
+        body: JSON.stringify({
+          name,
+          email,
+          message,
+          entityName,
+          entityPath,
+          entityId,
+          ownerId,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -44,13 +56,16 @@ export function ContactForm({
   if (status === "ok") {
     return (
       <p className="rounded-2xl bg-emerald-500/10 px-4 py-3 text-[13px] text-emerald-300 ring-1 ring-emerald-500/25">
-        Message sent. They'll get back to you if the inbox is monitored.
+        Message sent. They&apos;ll get back to you if the inbox is monitored.
       </p>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-3 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.08]">
+    <form
+      onSubmit={onSubmit}
+      className="space-y-3 rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.08]"
+    >
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
           Connect
@@ -60,33 +75,35 @@ export function ContactForm({
         </p>
       </div>
       <input
-        required
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Your name"
-        className="h-10 w-full rounded-xl bg-white/[0.04] px-3 text-[13px] text-white outline-none ring-1 ring-white/[0.08] focus:ring-omniv-gold/40"
+        required
+        className="h-11 w-full rounded-xl bg-white/[0.04] px-3.5 text-[14px] text-white outline-none ring-1 ring-white/[0.08] placeholder:text-zinc-600 focus:ring-omniv-gold/40"
       />
       <input
-        required
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="Your email"
-        className="h-10 w-full rounded-xl bg-white/[0.04] px-3 text-[13px] text-white outline-none ring-1 ring-white/[0.08] focus:ring-omniv-gold/40"
+        placeholder="Email"
+        required
+        className="h-11 w-full rounded-xl bg-white/[0.04] px-3.5 text-[14px] text-white outline-none ring-1 ring-white/[0.08] placeholder:text-zinc-600 focus:ring-omniv-gold/40"
       />
       <textarea
-        required
-        rows={4}
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        placeholder="What are you reaching out about?"
-        className="w-full rounded-xl bg-white/[0.04] px-3 py-2 text-[13px] text-white outline-none ring-1 ring-white/[0.08] focus:ring-omniv-gold/40"
+        placeholder="Message"
+        required
+        rows={4}
+        className="w-full rounded-xl bg-white/[0.04] px-3.5 py-3 text-[14px] text-white outline-none ring-1 ring-white/[0.08] placeholder:text-zinc-600 focus:ring-omniv-gold/40"
       />
-      {error && <p className="text-[12px] text-rose-400">{error}</p>}
+      {error && (
+        <p className="text-[12px] text-red-400">{error}</p>
+      )}
       <button
         type="submit"
         disabled={status === "loading"}
-        className="h-11 w-full rounded-full bg-omniv-gold text-[13px] font-semibold text-black disabled:opacity-60"
+        className="flex h-11 w-full items-center justify-center rounded-full bg-omniv-gold text-[14px] font-semibold text-black disabled:opacity-60"
       >
         {status === "loading" ? "Sending…" : "Send"}
       </button>
