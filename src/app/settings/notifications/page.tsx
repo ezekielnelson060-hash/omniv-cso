@@ -10,6 +10,7 @@ import {
   writeNotifSettings,
   type NotifSettings,
 } from "@/lib/discovery/notification-settings";
+import { SettingsToggle } from "@/components/discovery/settings-toggle";
 
 type ToggleRow = { key: keyof NotifSettings; label: string };
 
@@ -53,32 +54,6 @@ const SECTIONS: { title: string; rows: ToggleRow[] }[] = [
   },
 ];
 
-function Toggle({
-  on,
-  onChange,
-}: {
-  on: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      onClick={() => onChange(!on)}
-      className={`relative h-7 w-12 shrink-0 rounded-full transition ${
-        on ? "bg-omniv-gold" : "bg-white/15"
-      }`}
-    >
-      <span
-        className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${
-          on ? "left-[22px]" : "left-0.5"
-        }`}
-      />
-    </button>
-  );
-}
-
 export default function NotificationSettingsPage() {
   const [s, setS] = useState<NotifSettings>({ ...DEFAULT_NOTIF_SETTINGS });
   const [ready, setReady] = useState(false);
@@ -98,9 +73,9 @@ export default function NotificationSettingsPage() {
 
   return (
     <DiscoveryShell>
-      <div className="min-h-dvh bg-[#050505] text-zinc-100">
+      <div className="min-h-dvh overflow-x-hidden bg-[#050505] text-zinc-100">
         <header className="sticky top-0 z-40 border-b border-white/[0.05] bg-[#050505]/95 backdrop-blur-md">
-          <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3 md:max-w-2xl">
+          <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-3">
             <Link
               href="/settings"
               className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 hover:bg-white/5"
@@ -113,7 +88,7 @@ export default function NotificationSettingsPage() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl">
+        <main className="mx-auto max-w-lg px-4 pb-28 pt-4">
           {!ready ? (
             <p className="py-12 text-center text-zinc-600">Loading…</p>
           ) : (
@@ -127,16 +102,17 @@ export default function NotificationSettingsPage() {
                     {section.rows.map((row, i) => (
                       <li
                         key={row.key}
-                        className={`flex items-center justify-between px-4 py-3.5 ${
+                        className={`flex items-center justify-between gap-3 px-4 py-3.5 ${
                           i > 0 ? "border-t border-white/[0.05]" : ""
                         }`}
                       >
-                        <span className="text-[14px] text-zinc-200">
+                        <span className="min-w-0 text-[14px] text-zinc-200">
                           {row.label}
                         </span>
-                        <Toggle
+                        <SettingsToggle
                           on={Boolean(s[row.key])}
                           onChange={(v) => setKey(row.key, v)}
+                          label={row.label}
                         />
                       </li>
                     ))}
@@ -149,11 +125,12 @@ export default function NotificationSettingsPage() {
                   Quiet hours
                 </p>
                 <div className="overflow-hidden rounded-2xl bg-white/[0.03] ring-1 ring-white/[0.06]">
-                  <div className="flex items-center justify-between px-4 py-3.5">
+                  <div className="flex items-center justify-between gap-3 px-4 py-3.5">
                     <span className="text-[14px] text-zinc-200">Enabled</span>
-                    <Toggle
+                    <SettingsToggle
                       on={s.quietHours}
                       onChange={(v) => setKey("quietHours", v)}
+                      label="Quiet hours"
                     />
                   </div>
                   {s.quietHours && (
@@ -186,7 +163,6 @@ export default function NotificationSettingsPage() {
             </>
           )}
         </main>
-
         <BottomNav />
       </div>
     </DiscoveryShell>
