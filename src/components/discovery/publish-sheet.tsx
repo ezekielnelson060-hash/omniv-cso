@@ -148,7 +148,8 @@ export function PublishSheet({
   const publishingType = asEntity && active ? active.type : "personal";
 
   function goPublish() {
-    const type = selected || "article";
+    if (!selected) return;
+    const type = selected;
     onClose();
     router.push(`/publish?type=${encodeURIComponent(type)}`);
   }
@@ -187,25 +188,25 @@ export function PublishSheet({
               <button
                 key={t.id}
                 type="button"
-                onClick={() => {
-                  setSelected(t.id);
-                  onClose();
-                  router.push(`/publish?type=${encodeURIComponent(t.id)}`);
-                }}
+                onClick={() => setSelected(t.id)}
                 className={`flex flex-col items-center gap-2 rounded-2xl px-2 py-3.5 transition active:scale-[0.97] ${
                   on
-                    ? "bg-omniv-gold/15 ring-1 ring-omniv-gold/40 text-omniv-gold"
+                    ? "bg-omniv-gold/20 ring-2 ring-omniv-gold text-omniv-gold"
                     : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.07] hover:text-white"
                 }`}
               >
                 <span
                   className={`flex h-11 w-11 items-center justify-center rounded-xl ${
-                    on ? "bg-omniv-gold/20 text-omniv-gold" : "bg-white/[0.06]"
+                    on ? "bg-omniv-gold/25 text-omniv-gold" : "bg-white/[0.06]"
                   }`}
                 >
                   <TypeIcon kind={t.icon} />
                 </span>
-                <span className="text-[12px] font-medium text-white">
+                <span
+                  className={`text-[12px] font-medium ${
+                    on ? "text-omniv-gold" : "text-white"
+                  }`}
+                >
                   {t.label}
                 </span>
               </button>
@@ -248,7 +249,8 @@ export function PublishSheet({
         <button
           type="button"
           onClick={goPublish}
-          className="mt-5 flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black shadow-lg shadow-omniv-gold/20 transition active:scale-[0.98]"
+          disabled={!selected}
+          className="mt-5 flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black shadow-lg shadow-omniv-gold/20 transition active:scale-[0.98] disabled:opacity-40"
         >
           Publish
         </button>
