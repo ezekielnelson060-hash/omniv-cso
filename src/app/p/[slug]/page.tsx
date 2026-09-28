@@ -13,7 +13,11 @@ import { StickyArticleHeader } from "@/components/discovery/sticky-article-heade
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { createClient } from "@/lib/supabase/server";
-import { getLivePublication, type LivePublication } from "@/lib/discovery/db";
+import {
+  getDiscoveryEntity,
+  getLivePublication,
+  type LivePublication,
+} from "@/lib/discovery/db";
 import {
   getEntityById,
   publicationsByPublisher,
@@ -95,13 +99,22 @@ export default async function PublicationPage({ params }: Props) {
   const p = (await getLivePublication(supabase, slug)) as LivePublication | null;
   if (!p) notFound();
 
-  const publisher = getEntityById(p.publisherId);
+  const publisher =
+    getEntityById(p.publisherId) ||
+    (p.publisherName === "Omniv Editorial"
+      ? await getDiscoveryEntity(supabase, "company", "omniv-editorial")
+      : null);
   const publisherName = p.publisherName || publisher?.name || "Publisher";
   const fromPublisher = publisher
     ? publicationsByPublisher(publisher.id).filter((x) => x.id !== p.id)
     : [];
 
-  const graph = { entities: SEED_ENTITIES, publications: SEED_PUBLICATIONS };
+  const graph = {
+    entities: publisher
+      ? [...SEED_ENTITIES.filter((e) => e.id !== publisher.id), publisher]
+      : SEED_ENTITIES,
+    publications: SEED_PUBLICATIONS,
+  };
   const connectedEntities = getEntityReferences(p, graph.entities);
   const relatedEntities = publisher
     ? getRelatedEntities(publisher, graph)
