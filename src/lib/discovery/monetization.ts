@@ -23,7 +23,7 @@ export const DISCOVERY_PLANS: Record<DiscoveryPlanId, DiscoveryPlan> = {
       "Independent entities",
       "Unlimited publishing",
       "Explore, follow, and save",
-      "Basic analytics",
+      "Basic discovery stats",
     ],
   },
   pro: {
@@ -32,9 +32,10 @@ export const DISCOVERY_PLANS: Record<DiscoveryPlanId, DiscoveryPlan> = {
     priceMonthlyUsd: 29,
     billingInterval: "monthly",
     billingLabel: "/ month",
-    blurb: "Build a stronger identity and understand what is moving through the network.",
+    blurb:
+      "Build a stronger identity and understand what is moving through the network.",
     features: [
-      "Advanced analytics",
+      "Deeper discovery stats",
       "Audience insights",
       "Discovery sources",
       "Publication performance",
@@ -52,9 +53,14 @@ export const DISCOVERY_PLANS: Record<DiscoveryPlanId, DiscoveryPlan> = {
 export const FLUTTERWAVE_PAYMENT_PLAN_IDS = {
   pro: process.env.FLW_PRO_PAYMENT_PLAN_ID || "",
   business: process.env.FLW_BUSINESS_PAYMENT_PLAN_ID || "",
+  verify: process.env.FLW_VERIFY_PAYMENT_PLAN_ID || "",
 } as const;
 
-export function paymentPlanIdFor(plan: "pro" | "business"): number | null {
+export const VERIFY_MONTHLY_USD = 9;
+
+export function paymentPlanIdFor(
+  plan: "pro" | "business" | "verify"
+): number | null {
   const raw = FLUTTERWAVE_PAYMENT_PLAN_IDS[plan].trim();
   if (!raw) return null;
   const id = Number(raw);
@@ -66,7 +72,13 @@ export const PROMOTION_CONFIG = {
   maxBudgetUsd: 500,
   defaultBudgetUsd: 50,
   durations: [3, 7, 14] as const,
-  targetTypes: ["publication", "entity", "product", "event", "opportunity"] as const,
+  targetTypes: [
+    "publication",
+    "entity",
+    "product",
+    "event",
+    "opportunity",
+  ] as const,
 };
 
 /** Kept for older settings screens while discovery billing moves to Pro. */
