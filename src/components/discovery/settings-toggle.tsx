@@ -1,6 +1,6 @@
 "use client";
 
-/** Capsule switch — fixed size, no overflow */
+/** iOS-style capsule — fixed geometry so the knob never clips */
 export function SettingsToggle({
   on,
   onChange,
@@ -17,14 +17,14 @@ export function SettingsToggle({
       aria-checked={on}
       aria-label={label}
       onClick={() => onChange(!on)}
-      className={`relative h-7 w-12 shrink-0 overflow-hidden rounded-full transition-colors ${
-        on ? "bg-omniv-gold" : "bg-zinc-600"
-      }`}
+      className="relative inline-flex h-[31px] w-[51px] shrink-0 items-center rounded-full p-[2px] transition-colors duration-200"
+      style={{ backgroundColor: on ? "#C9A227" : "#3f3f46" }}
     >
       <span
-        className={`pointer-events-none absolute top-0.5 left-0.5 block h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out ${
-          on ? "translate-x-5" : "translate-x-0"
-        }`}
+        className="block h-[27px] w-[27px] rounded-full bg-white shadow-md transition-transform duration-200 ease-out"
+        style={{
+          transform: on ? "translateX(20px)" : "translateX(0)",
+        }}
       />
     </button>
   );
