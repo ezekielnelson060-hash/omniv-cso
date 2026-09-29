@@ -74,7 +74,6 @@ export default async function HomePage({ searchParams }: Props) {
       if (!slugs.has(s.slug)) feedPool.push(s);
     }
   }
-  // Prefer newest published first so editorial + user posts surface quickly
   feedPool = [...feedPool].sort((a, b) => {
     const ta = new Date(a.publishedAt || 0).getTime();
     const tb = new Date(b.publishedAt || 0).getTime();
@@ -122,17 +121,8 @@ export default async function HomePage({ searchParams }: Props) {
           </div>
         </header>
 
-        <main className="mx-auto max-w-lg px-4 pb-28 pt-5 md:max-w-2xl md:px-6">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-white md:text-[28px]">
-              Discover what's moving
-            </h1>
-            <p className="mt-1.5 text-[14px] leading-relaxed text-zinc-500">
-              Stories, people, companies, ideas and opportunities worth finding.
-            </p>
-          </div>
-
-          <div className="mt-4 -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
+        <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl md:px-6">
+          <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
             {TABS.map((t) => {
               const active = tab === t.id;
               return (
@@ -163,7 +153,7 @@ export default async function HomePage({ searchParams }: Props) {
             ))}
           </div>
 
-          <div className="mt-5">
+          <div className="mt-4">
             <HomeFeedClient
               tab={
                 tab === "following" ||
@@ -176,18 +166,6 @@ export default async function HomePage({ searchParams }: Props) {
               }
               publications={feedPool}
             />
-          </div>
-
-          <div className="mt-10 rounded-2xl bg-white/[0.03] p-5 text-center">
-            <p className="text-[15px] font-medium text-white">
-              Looking for something specific?
-            </p>
-            <Link
-              href="/explore"
-              className="mt-3 inline-flex h-11 items-center rounded-full bg-omniv-gold px-6 text-[14px] font-semibold text-black"
-            >
-              Open Explore
-            </Link>
           </div>
         </main>
 
