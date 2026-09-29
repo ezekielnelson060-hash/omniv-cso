@@ -43,6 +43,14 @@ export const SEED_COVERS: Record<string, string> = {
     "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1200&h=675&q=80",
   "kai-mendez-after-hours":
     "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&h=675&q=80",
+  "east-asia-clean-manufacturing-notes":
+    "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&h=675&q=80",
+  "the-operator-brief-you-actually-read":
+    "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&h=675&q=80",
+  "signal-room-nyc-meetup":
+    "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&h=675&q=80",
+  "open-maps-lagos-mappers":
+    "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1200&h=675&q=80",
   "nokanda-ai":
     "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1200&h=400&q=80",
   "northline-media":
@@ -97,12 +105,40 @@ export const SEED_AVATARS: Record<string, string> = {
     "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=400&h=400&q=80",
 };
 
-export function coverFor(slug: string): string | undefined {
-  return SEED_COVERS[slug];
+/** Always-available Unsplash pool so every card/entity feels real */
+const FALLBACK_POOL = [
+  "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&w=1200&h=675&q=80",
+  "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1200&h=675&q=80",
+  "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&h=675&q=80",
+  "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=1200&h=675&q=80",
+  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&h=675&q=80",
+  "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&h=675&q=80",
+  "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=1200&h=675&q=80",
+  "https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&h=675&q=80",
+  "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=1200&h=675&q=80",
+  "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=1200&h=675&q=80",
+  "https://images.unsplash.com/photo-1504711434969-e33886168f5c?auto=format&fit=crop&w=1200&h=675&q=80",
+  "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&h=675&q=80",
+];
+
+function hashSlug(slug: string): number {
+  let h = 0;
+  for (let i = 0; i < slug.length; i++) {
+    h = (h * 31 + slug.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
 }
 
-export function avatarFor(slug: string): string | undefined {
-  return SEED_AVATARS[slug] || SEED_COVERS[slug];
+/** Always returns an image URL so every publication/entity feels real */
+export function coverFor(slug: string): string {
+  if (SEED_COVERS[slug]) return SEED_COVERS[slug];
+  return FALLBACK_POOL[hashSlug(slug) % FALLBACK_POOL.length];
+}
+
+export function avatarFor(slug: string): string {
+  if (SEED_AVATARS[slug]) return SEED_AVATARS[slug];
+  if (SEED_COVERS[slug]) return SEED_COVERS[slug];
+  return FALLBACK_POOL[hashSlug(slug + "-av") % FALLBACK_POOL.length];
 }
 
 export const SEED_CTAS: Record<string, { label: string; href: string }> = {
