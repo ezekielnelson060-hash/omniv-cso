@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FollowButton } from "@/components/discovery/follow-button";
 import { SaveButton } from "@/components/discovery/save-button";
 import { PublicationActions } from "@/components/discovery/publication-actions";
 import type { DiscoveryEntity, Publication } from "@/lib/discovery/types";
@@ -87,7 +88,8 @@ export function KeepExploring({
           {title}
         </p>
         <p className="mt-1 text-[13px] text-zinc-500">
-          Move from this piece into the people, systems, research, products, and opportunities around it.
+          Move from this piece into the people, systems, research, products, and
+          opportunities around it.
         </p>
         <p className="mt-3 text-[11px] uppercase tracking-[0.14em] text-zinc-700">
           Article → entity → another publication → something unexpected
@@ -151,11 +153,11 @@ export function KeepExploring({
                         )}
                       </div>
                     </Link>
-                    <SaveButton
-                      kind="entity"
+                    <FollowButton
                       type={entity.type}
                       slug={entity.slug}
                       name={entity.name}
+                      id={entity.id}
                     />
                   </div>
                 </div>
@@ -180,8 +182,7 @@ export function KeepExploring({
           <div className="space-y-3">
             {explorePublications.map((publication) => {
               const tone =
-                PUBLICATION_TONE[publication.type] ||
-                PUBLICATION_TONE.article;
+                PUBLICATION_TONE[publication.type] || PUBLICATION_TONE.article;
               const cover =
                 publication.coverUrl || coverFor(publication.slug);
               return (
