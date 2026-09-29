@@ -2,11 +2,13 @@ import Link from "next/link";
 import {
   PUBLICATION_LABELS,
   publicationPath,
+  entityPath,
   type Publication,
 } from "@/lib/discovery/types";
 import { getEntityById } from "@/lib/discovery/seed";
 import { coverFor } from "@/lib/discovery/seed-covers";
 import { PublicationActions } from "@/components/discovery/publication-actions";
+import { VerifiedBadge } from "@/components/discovery/verified-badge";
 
 type PubWithCover = Publication & {
   coverUrl?: string;
@@ -56,6 +58,65 @@ function TypeLabel({ type }: { type: string }) {
   );
 }
 
+function PublisherLine({
+  name,
+  publisher,
+  meta,
+  light,
+}: {
+  name?: string;
+  publisher?: ReturnType<typeof getEntityById>;
+  meta?: string;
+  light?: boolean;
+}) {
+  if (!name) return null;
+  const href = publisher ? entityPath(publisher) : undefined;
+  const nameClass = light
+    ? "font-semibold text-white/90"
+    : "font-semibold text-white";
+  const metaClass = light ? "text-white/50" : "text-zinc-500";
+
+  const nameEl = href ? (
+    <Link
+      href={href}
+      onClick={(e) => e.stopPropagation()}
+      className={`inline-flex max-w-[70%] items-center gap-1 truncate ${nameClass} hover:text-omniv-gold`}
+    >
+      <span className="truncate">{name}</span>
+      {publisher?.verified && (
+        <VerifiedBadge
+          name={publisher.name}
+          verifyType={publisher.type}
+          className="shrink-0"
+        />
+      )}
+    </Link>
+  ) : (
+    <span className={`inline-flex max-w-[70%] items-center gap-1 truncate ${nameClass}`}>
+      <span className="truncate">{name}</span>
+      {publisher?.verified && (
+        <VerifiedBadge
+          name={publisher.name}
+          verifyType={publisher.type}
+          className="shrink-0"
+        />
+      )}
+    </span>
+  );
+
+  return (
+    <div className="flex items-center gap-1.5 text-[12px]">
+      {nameEl}
+      {meta && (
+        <>
+          <span className={light ? "text-white/40" : "text-zinc-600"}>·</span>
+          <span className={`truncate ${metaClass}`}>{meta}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function FeedFeaturedCard({
   pub,
   showExplore,
@@ -89,10 +150,14 @@ export function FeedFeaturedCard({
             <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-white/70">
               {pub.summary}
             </p>
-            <p className="mt-2 text-[12px] text-white/50">
-              {name}
-              {pub.meta ? ` · ${pub.meta}` : ""}
-            </p>
+            <div className="mt-2">
+              <PublisherLine
+                name={name}
+                publisher={publisher}
+                meta={pub.meta}
+                light
+              />
+            </div>
           </div>
         </div>
       </Link>
@@ -141,10 +206,7 @@ export function FeedCompactRow({ pub }: { pub: PubWithCover }) {
           <p className="mt-0.5 truncate text-[15px] font-semibold tracking-tight text-white group-hover:text-omniv-gold">
             {pub.title}
           </p>
-          <p className="truncate text-[12px] text-zinc-500">
-            {name}
-            {pub.meta ? ` · ${pub.meta}` : ""}
-          </p>
+          <PublisherLine name={name} publisher={publisher} meta={pub.meta} />
         </div>
       </Link>
       <PublicationActions
@@ -184,14 +246,8 @@ export function FeedCard({ pub }: { pub: PubWithCover }) {
           <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-zinc-500">
             {pub.summary}
           </p>
-          <div className="mt-auto flex items-center gap-2 pt-3 text-[12px] text-zinc-600">
-            {name && <span className="truncate text-zinc-500">{name}</span>}
-            {pub.meta && (
-              <>
-                <span>·</span>
-                <span>{pub.meta}</span>
-              </>
-            )}
+          <div className="mt-auto pt-3">
+            <PublisherLine name={name} publisher={publisher} meta={pub.meta} />
           </div>
         </div>
       </Link>
