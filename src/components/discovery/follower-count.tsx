@@ -33,7 +33,6 @@ export function FollowerCount({
     function onFollow(e: Event) {
       const ce = e as CustomEvent<{ type: string; slug: string }>;
       if (ce.detail?.type === type && ce.detail?.slug === slug) {
-        // brief delay so DB write lands
         setTimeout(() => void load(), 200);
       }
     }
@@ -42,10 +41,10 @@ export function FollowerCount({
   }, [type, slug, load]);
 
   return (
-    <span className={className}>
+    <span className={`inline-flex items-baseline gap-1 ${className}`}>
       <span className="text-[16px] font-semibold text-white">
         {count === null ? "·" : count}
-      </span>{" "}
+      </span>
       <span className="text-[13px] text-zinc-500">Followers</span>
     </span>
   );
