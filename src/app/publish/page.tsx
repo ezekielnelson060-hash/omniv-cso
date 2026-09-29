@@ -179,13 +179,6 @@ export default function PublishPage() {
               />
             </label>
 
-            <ScheduleField
-              value={scheduledAt}
-              onChange={setScheduledAt}
-              labelClassName={labelCls}
-              inputClassName={inputCls}
-            />
-
             <label className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]">
               <input
                 type="checkbox"
@@ -233,6 +226,13 @@ export default function PublishPage() {
                 placeholder="music, lagos, independent"
               />
             </label>
+
+            <ScheduleField
+              value={scheduledAt}
+              onChange={setScheduledAt}
+              labelClassName={labelCls}
+              inputClassName={inputCls}
+            />
 
             {error && (
               <p className="rounded-xl bg-red-500/10 px-3 py-2 text-[13px] text-red-300">
