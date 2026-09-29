@@ -37,7 +37,10 @@ export const metadata: Metadata = {
     "products",
     "projects",
   ],
-  icons: { icon: "/logo.svg", apple: "/logo.svg" },
+  icons: {
+    icon: "/file_00000000241c8210b6d121f3de12e7a5.png",
+    apple: "/file_00000000241c8210b6d121f3de12e7a5.png",
+  },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -112,7 +115,7 @@ export default function RootLayout({
                   url: "https://omniv.media/",
                   logo: {
                     "@type": "ImageObject",
-                    url: "https://omniv.media/logo.svg",
+                    url: "https://omniv.media/file_00000000241c8210b6d121f3de12e7a5.png",
                   },
                   description:
                     "Discovery network for people, companies, brands, products, projects, events, and opportunities.",
@@ -125,7 +128,8 @@ export default function RootLayout({
                   publisher: { "@id": "https://omniv.media/#organization" },
                   potentialAction: {
                     "@type": "SearchAction",
-                    target: "https://omniv.media/explore?q={search_term_string}",
+                    target:
+                      "https://omniv.media/explore?q={search_term_string}",
                     "query-input": "required name=search_term_string",
                   },
                 },
