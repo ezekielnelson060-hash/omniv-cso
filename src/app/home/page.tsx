@@ -108,7 +108,7 @@ export default async function HomePage({ searchParams }: Props) {
           <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 md:max-w-2xl md:px-6">
             <div className="flex items-center gap-2.5">
               <Image
-                src="/logo.svg"
+                src="/file_00000000241c8210b6d121f3de12e7a5.png"
                 alt="Omniv"
                 width={28}
                 height={28}
