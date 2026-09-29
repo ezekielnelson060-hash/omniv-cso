@@ -65,6 +65,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    site: "@omniv",
+    creator: "@omniv",
     title: "Omniv — Discovery network for the real world",
     description: DESC,
     images: ["/opengraph-image"],
