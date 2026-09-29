@@ -20,7 +20,6 @@ type NavItem = {
 };
 type NavGroup = { id: string; label: string; items: NavItem[] };
 
-/** Premium structure — identity + network + publish + manage + monetize + account */
 const GROUPS: NavGroup[] = [
   {
     id: "primary",
@@ -43,9 +42,7 @@ const GROUPS: NavGroup[] = [
   {
     id: "publish",
     label: "Publish",
-    items: [
-      { href: "/publish", label: "New publication", icon: "plus" },
-    ],
+    items: [{ href: "/publish", label: "New publication", icon: "plus" }],
   },
   {
     id: "manage",
@@ -389,7 +386,12 @@ export function DiscoveryShell({
   return (
     <div className="flex min-h-dvh bg-[#050505] text-zinc-100">
       <DesktopSidebar />
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-0 flex-1">
+        <div className="mx-auto w-full max-w-[1100px] xl:max-w-[1200px]">
+          {children}
+        </div>
+      </div>
+      <div className="hidden w-[72px] shrink-0 xl:block" aria-hidden />
     </div>
   );
 }
