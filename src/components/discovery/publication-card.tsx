@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { PublicationActions } from "@/components/discovery/publication-actions";
+import { VerifiedBadge } from "@/components/discovery/verified-badge";
 import {
   PUBLICATION_LABELS,
   publicationPath,
+  entityPath,
   type Publication,
 } from "@/lib/discovery/types";
 import { getEntityById } from "@/lib/discovery/seed";
@@ -35,6 +37,7 @@ export function PublicationCard({ pub }: { pub: PubWithCover }) {
   const isEvent = pub.type === "event";
   const isOpp = pub.type === "opportunity";
   const coverSrc = pub.coverUrl || coverFor(pub.slug);
+  const publisherHref = publisher ? entityPath(publisher) : undefined;
 
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06] transition-colors duration-200 hover:bg-[#101010]">
@@ -82,12 +85,38 @@ export function PublicationCard({ pub }: { pub: PubWithCover }) {
               {pub.summary}
             </p>
           )}
-          <div className="mt-2 flex items-center gap-1.5 text-[11px] text-zinc-600">
-            <span className="truncate text-zinc-500">{name}</span>
+          <div className="mt-2 flex items-center gap-1.5 text-[12px]">
+            {publisherHref ? (
+              <Link
+                href={publisherHref}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex max-w-[70%] items-center gap-1 truncate font-semibold text-white hover:text-omniv-gold"
+              >
+                <span className="truncate">{name}</span>
+                {publisher?.verified && (
+                  <VerifiedBadge
+                    name={publisher.name}
+                    verifyType={publisher.type}
+                    className="shrink-0"
+                  />
+                )}
+              </Link>
+            ) : (
+              <span className="inline-flex max-w-[70%] items-center gap-1 truncate font-semibold text-white">
+                <span className="truncate">{name}</span>
+                {publisher?.verified && (
+                  <VerifiedBadge
+                    name={publisher.name}
+                    verifyType={publisher.type}
+                    className="shrink-0"
+                  />
+                )}
+              </span>
+            )}
             {pub.meta && (
               <>
-                <span>·</span>
-                <span className="truncate">{pub.meta}</span>
+                <span className="text-zinc-600">·</span>
+                <span className="truncate text-zinc-500">{pub.meta}</span>
               </>
             )}
           </div>
