@@ -11,6 +11,7 @@ import {
 } from "@/lib/discovery/seed";
 import type { Publication } from "@/lib/discovery/types";
 import { HomeFeedClient } from "@/components/discovery/home-feed-client";
+import { HomeDiscoverySurface } from "@/components/discovery/home-discovery-surface";
 
 export const revalidate = 30;
 
@@ -32,16 +33,6 @@ const TABS = [
   { id: "new", label: "New" },
 ] as const;
 
-const CATEGORIES = [
-  "World",
-  "Technology",
-  "Africa",
-  "Research",
-  "Music",
-  "Business",
-  "People",
-];
-
 async function tryClient() {
   try {
     const { createClient } = await import("@/lib/supabase/server");
@@ -51,12 +42,40 @@ async function tryClient() {
   }
 }
 
+async function firstNameOf(supabase: Awaited<ReturnType<typeof tryClient>>) {
+  if (!supabase) return null;
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+    const meta = user.user_metadata || {};
+    const fromMeta =
+      meta.full_name || meta.name || meta.display_name || meta.first_name;
+    if (typeof fromMeta === "string" && fromMeta.trim()) {
+      return fromMeta.trim().split(/\s+/)[0];
+    }
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+    const n = (profile?.full_name as string | null) || "";
+    if (n.trim()) return n.trim().split(/\s+/)[0];
+    if (user.email) return user.email.split("@")[0];
+  } catch {
+    /* guest */
+  }
+  return null;
+}
+
 export default async function HomePage({ searchParams }: Props) {
   const sp = await searchParams;
   const tab = sp.tab ?? "for-you";
 
   const supabase = await tryClient();
   const mixed = await listLivePublications(supabase, 100);
+  const firstName = await firstNameOf(supabase);
 
   let feedPool: Publication[] = mixed;
   if (feedPool.length < 8) {
@@ -79,6 +98,8 @@ export default async function HomePage({ searchParams }: Props) {
     const tb = new Date(b.publishedAt || 0).getTime();
     return tb - ta;
   });
+
+  const isForYou = tab === "for-you";
 
   return (
     <DiscoveryShell>
@@ -141,31 +162,25 @@ export default async function HomePage({ searchParams }: Props) {
             })}
           </div>
 
-          <div className="mt-3 -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 scrollbar-none">
-            {CATEGORIES.map((c) => (
-              <Link
-                key={c}
-                href={`/explore?interest=${encodeURIComponent(c)}`}
-                className="inline-flex h-7 shrink-0 items-center justify-center rounded-full bg-white/[0.04] px-3.5 text-[12px] font-medium leading-none text-zinc-500 transition hover:bg-white/[0.08] hover:text-zinc-200"
-              >
-                {c}
-              </Link>
-            ))}
-          </div>
-
-          <div className="mt-4">
-            <HomeFeedClient
-              tab={
-                tab === "following" ||
-                tab === "trending" ||
-                tab === "rising" ||
-                tab === "new" ||
-                tab === "for-you"
-                  ? tab
-                  : "for-you"
-              }
-              publications={feedPool}
-            />
+          <div className="mt-5">
+            {isForYou ? (
+              <HomeDiscoverySurface
+                publications={feedPool}
+                firstName={firstName || undefined}
+              />
+            ) : (
+              <HomeFeedClient
+                tab={
+                  tab === "following" ||
+                  tab === "trending" ||
+                  tab === "rising" ||
+                  tab === "new"
+                    ? tab
+                    : "for-you"
+                }
+                publications={feedPool}
+              />
+            )}
           </div>
         </main>
 
