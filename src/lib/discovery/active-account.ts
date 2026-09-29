@@ -46,8 +46,15 @@ export function onAccountSwitch(cb: (a: ActiveAccount | null) => void) {
     const ce = e as CustomEvent<ActiveAccount | null>;
     cb(ce.detail ?? readActiveAccount());
   };
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === KEY) cb(readActiveAccount());
+  };
   window.addEventListener("omniv-account-switch", handler);
-  return () => window.removeEventListener("omniv-account-switch", handler);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    window.removeEventListener("omniv-account-switch", handler);
+    window.removeEventListener("storage", onStorage);
+  };
 }
 
 /** True when an entity identity is selected (not personal) */
