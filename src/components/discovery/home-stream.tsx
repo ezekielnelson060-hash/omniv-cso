@@ -330,33 +330,33 @@ export function HomeStream({
           <div key={pub.id} className="space-y-3">
             <div>
               <PublicationCard pub={pub} />
-              {tab === "for-you" && (
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 px-1">
-                  {reason && <RecommendationReason reason={reason} />}
-                  {reason && (
-                    <span className="text-[11px] text-zinc-700" aria-hidden>
-                      ·
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => onFeedback(pub, "more")}
-                    className="text-[11px] text-zinc-600 hover:text-omniv-gold"
-                  >
-                    More like this
-                  </button>
-                  <span className="text-[11px] text-zinc-700" aria-hidden>
-                    ·
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onFeedback(pub, "less")}
-                    className="text-[11px] text-zinc-600 hover:text-zinc-400"
-                  >
-                    Less
-                  </button>
-                </div>
-              )}
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
+                {reason ? (
+                  <RecommendationReason reason={reason} />
+                ) : (
+                  <span className="text-[11px] text-zinc-600">Why am I seeing this?</span>
+                )}
+                <span className="text-[11px] text-zinc-700" aria-hidden>
+                  ·
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onFeedback(pub, "more")}
+                  className="text-[11px] font-medium text-zinc-500 hover:text-omniv-gold"
+                >
+                  More like this
+                </button>
+                <span className="text-[11px] text-zinc-700" aria-hidden>
+                  ·
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onFeedback(pub, "less")}
+                  className="text-[11px] text-zinc-600 hover:text-zinc-400"
+                >
+                  Less
+                </button>
+              </div>
             </div>
             {relatedEntity && (
               <Link
@@ -392,6 +392,20 @@ export function HomeStream({
           Show more · {items.length - visible} left
         </button>
       )}
+      <div className="mt-6 rounded-2xl bg-white/[0.03] px-5 py-8 text-center ring-1 ring-white/[0.06]">
+        <p className="text-[15px] font-medium text-white">
+          Looking for something specific?
+        </p>
+        <p className="mt-1.5 text-[13px] text-zinc-500">
+          Search people, companies, brands, products, and opportunities.
+        </p>
+        <Link
+          href="/explore"
+          className="mt-5 inline-flex h-10 items-center rounded-full bg-omniv-gold px-5 text-[13px] font-semibold text-black"
+        >
+          Open Explore
+        </Link>
+      </div>
     </div>
   );
 }
