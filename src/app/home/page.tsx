@@ -11,7 +11,8 @@ import {
 } from "@/lib/discovery/seed";
 import type { Publication } from "@/lib/discovery/types";
 import { HomeFeedClient } from "@/components/discovery/home-feed-client";
-import { HomeDiscoverySurface } from "@/components/discovery/home-discovery-surface";
+
+export const revalidate = 30;
 
 export const metadata = {
   title: "Home | Omniv",
@@ -73,6 +74,12 @@ export default async function HomePage({ searchParams }: Props) {
       if (!slugs.has(s.slug)) feedPool.push(s);
     }
   }
+  // Prefer newest published first so editorial + user posts surface quickly
+  feedPool = [...feedPool].sort((a, b) => {
+    const ta = new Date(a.publishedAt || 0).getTime();
+    const tb = new Date(b.publishedAt || 0).getTime();
+    return tb - ta;
+  });
 
   return (
     <DiscoveryShell>
@@ -157,9 +164,6 @@ export default async function HomePage({ searchParams }: Props) {
           </div>
 
           <div className="mt-5">
-            {tab === "for-you" && (
-              <HomeDiscoverySurface items={feedPool} momentumTopics={[]} />
-            )}
             <HomeFeedClient
               tab={
                 tab === "following" ||
