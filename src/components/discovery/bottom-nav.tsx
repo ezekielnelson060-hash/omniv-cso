@@ -18,7 +18,6 @@ type NavItem = {
   primary?: boolean;
 };
 
-/** Discovery product nav: Home · Explore · + · Saved · Profile */
 const ITEMS: NavItem[] = [
   { href: "/home", label: "Home", icon: HomeIcon },
   { href: "/explore", label: "Explore", icon: ExploreIcon },
@@ -55,7 +54,7 @@ export function BottomNav() {
     }
   }, [router]);
 
-  void active;
+  const profileHref = active?.path || "/profile";
 
   return (
     <>
@@ -75,20 +74,28 @@ export function BottomNav() {
                 </button>
               );
             }
-            const activeNav =
-              pathname === item.href ||
-              (item.href !== "/home" && pathname.startsWith(item.href));
             const Icon = item.icon;
             if (!Icon) return null;
+            const href = item.label === "Profile" ? profileHref : item.href;
+            const isProfile = item.label === "Profile";
+            const profileActive =
+              isProfile &&
+              (pathname.startsWith("/profile") ||
+                pathname.startsWith("/e/") ||
+                (active?.path ? pathname.startsWith(active.path) : false));
+            const on = isProfile
+              ? profileActive
+              : pathname === item.href ||
+                (item.href !== "/home" && pathname.startsWith(item.href));
             return (
               <Link
                 key={item.label}
-                href={item.href}
+                href={href}
                 className={`flex w-[18%] min-w-0 flex-col items-center gap-0.5 py-1 transition ${
-                  activeNav ? "text-white" : "text-zinc-600"
+                  on ? "text-white" : "text-zinc-600"
                 }`}
               >
-                <Icon active={activeNav} />
+                <Icon active={on} />
                 <span className="truncate text-[10px] font-medium tracking-wide">
                   {item.label}
                 </span>
@@ -107,7 +114,7 @@ function HomeIcon({ active }: { active?: boolean }) {
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
       <path
         d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5z"
-        stroke={active ? "currentColor" : "currentColor"}
+        stroke="currentColor"
         strokeWidth="1.6"
         strokeLinejoin="round"
         fill={active ? "currentColor" : "none"}
@@ -145,8 +152,21 @@ function SavedIcon({ active }: { active?: boolean }) {
 function ProfileIcon({ active }: { active?: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.6" fill={active ? "currentColor" : "none"} fillOpacity={active ? 0.2 : 0} />
-      <path d="M5 19c1.5-3 4-4.5 7-4.5s5.5 1.5 7 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle
+        cx="12"
+        cy="9"
+        r="3.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        fill={active ? "currentColor" : "none"}
+        fillOpacity={active ? 0.2 : 0}
+      />
+      <path
+        d="M5 19c1.5-3 4-4.5 7-4.5s5.5 1.5 7 4.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -154,7 +174,12 @@ function ProfileIcon({ active }: { active?: boolean }) {
 function PlusIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      <path
+        d="M12 5v14M5 12h14"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
