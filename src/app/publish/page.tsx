@@ -1,13 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import { BottomNav } from "@/components/discovery/bottom-nav";
-import { CoverUpload } from "@/components/discovery/cover-upload";
 import { PublishAsPicker } from "@/components/discovery/publish-as-picker";
-import { MediaUpload } from "@/components/discovery/media-upload";
 import { ScheduleField } from "@/components/discovery/schedule-field";
-import { BodyEditor } from "@/components/discovery/body-editor";
 import {
   GROUPS,
   TYPE_ICONS,
@@ -17,10 +15,59 @@ import {
   PUBLICATION_LABELS,
 } from "@/components/discovery/publish-constants";
 import type { PublicationType } from "@/lib/discovery/types";
+import { TypeSpecificFields } from "@/components/discovery/type-specific-fields";
 
-export default function PublishPage() {
+function PublishInner() {
+  const search = useSearchParams();
+  const router = useRouter();
+  const typeParam = search.get("type");
   const [step, setStep] = useState<"pick" | "form" | "done">("pick");
   const [pubType, setPubType] = useState<PublicationType | null>(null);
+  const [genre, setGenre] = useState("");
+  const [releaseDate, setReleaseDate] = useState("");
+  const [streamLinks, setStreamLinks] = useState("");
+  const [duration, setDuration] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [chapters, setChapters] = useState("");
+  const [authors, setAuthors] = useState("");
+  const [year, setYear] = useState("");
+  const [doi, setDoi] = useState("");
+  const [price, setPrice] = useState("");
+  const [currency, setCurrency] = useState("USD");
+  const [buyLink, setBuyLink] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [eventTime, setEventTime] = useState("");
+  const [venue, setVenue] = useState("");
+  const [ticketLink, setTicketLink] = useState("");
+  const [capacity, setCapacity] = useState("");
+  const [oppType, setOppType] = useState("role");
+  const [deadline, setDeadline] = useState("");
+  const [requirements, setRequirements] = useState("");
+  const [applyLink, setApplyLink] = useState("");
+  const [location, setLocation] = useState("");
+  const [caption, setCaption] = useState("");
+  const [altText, setAltText] = useState("");
+  const [subtitle, setSubtitle] = useState("");
+
+  useEffect(() => {
+    const valid = [
+      "article",
+      "music",
+      "video",
+      "research",
+      "product",
+      "event",
+      "opportunity",
+      "announcement",
+      "file",
+      "image",
+    ];
+    if (typeParam && valid.includes(typeParam)) {
+      setPubType(typeParam as PublicationType);
+      setStep("form");
+    }
+  }, [typeParam]);
+
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [body, setBody] = useState("");
@@ -58,7 +105,36 @@ export default function PublishPage() {
             .map((t) => t.trim())
             .filter(Boolean),
           coverUrl: coverUrl || undefined,
-          mediaUrl: mediaUrl || undefined,
+          mediaUrl: mediaUrl || videoUrl || undefined,
+          meta: JSON.stringify({
+            genre,
+            releaseDate,
+            streamLinks,
+            duration,
+            videoUrl,
+            chapters,
+            authors,
+            year,
+            doi,
+            price,
+            currency,
+            buyLink,
+            eventDate,
+            eventTime,
+            venue,
+            ticketLink,
+            capacity,
+            opportunityType: oppType,
+            deadline,
+            requirements,
+            applyLink,
+            location,
+            caption,
+            altText,
+            subtitle,
+          }),
+          opportunityType: pubType === "opportunity" ? oppType : undefined,
+          subtitle: subtitle || undefined,
           status: isPrivate ? "draft" : scheduledAt ? "scheduled" : "published",
           visibility: isPrivate ? "private" : "public",
           scheduledAt: scheduledAt || undefined,
@@ -109,7 +185,7 @@ export default function PublishPage() {
               What do you want to publish?
             </h1>
             <p className="mt-1 text-[14px] text-zinc-500">
-              Choose a format. You can schedule on the next step.
+              Choose a format — each has its own editor.
             </p>
             {GROUPS.map((g) => (
               <div key={g.label} className="mt-6">
@@ -124,6 +200,7 @@ export default function PublishPage() {
                       onClick={() => {
                         setPubType(t);
                         setStep("form");
+                        router.replace(`/publish?type=${encodeURIComponent(t)}`);
                       }}
                       className="flex items-center gap-3 rounded-2xl bg-white/[0.04] px-3 py-3.5 text-left ring-1 ring-white/[0.06] transition hover:bg-white/[0.07]"
                     >
@@ -142,9 +219,9 @@ export default function PublishPage() {
         {step === "form" && pubType && (
           <div className="space-y-5">
             {head && (
-              <div className="rounded-2xl bg-white/[0.03] px-4 py-3.5 ring-1 ring-white/[0.08]">
+              <div className="rounded-2xl bg-gradient-to-br from-omniv-gold/10 to-transparent px-4 py-3.5 ring-1 ring-omniv-gold/20">
                 <p className="text-[15px] font-semibold text-white">{head.title}</p>
-                <p className="mt-1 text-[13px] text-zinc-500">{head.sub}</p>
+                <p className="mt-1 text-[13px] text-zinc-400">{head.sub}</p>
               </div>
             )}
 
@@ -160,7 +237,15 @@ export default function PublishPage() {
             </div>
 
             <label className="block">
-              <span className={labelCls}>Title</span>
+              <span className={labelCls}>
+                {pubType === "music"
+                  ? "Track title"
+                  : pubType === "product"
+                    ? "Product name"
+                    : pubType === "event"
+                      ? "Event name"
+                      : "Title"}
+              </span>
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -169,15 +254,67 @@ export default function PublishPage() {
               />
             </label>
 
-            <label className="block">
-              <span className={labelCls}>Summary</span>
-              <input
-                value={summary}
-                onChange={(e) => setSummary(e.target.value)}
-                className={inputCls}
-                placeholder="One line that makes people stop"
-              />
-            </label>
+            <TypeSpecificFields
+              pubType={pubType}
+              summary={summary}
+              setSummary={setSummary}
+              body={body}
+              setBody={setBody}
+              coverUrl={coverUrl}
+              setCoverUrl={setCoverUrl}
+              mediaUrl={mediaUrl}
+              setMediaUrl={setMediaUrl}
+              subtitle={subtitle}
+              setSubtitle={setSubtitle}
+              genre={genre}
+              setGenre={setGenre}
+              releaseDate={releaseDate}
+              setReleaseDate={setReleaseDate}
+              streamLinks={streamLinks}
+              setStreamLinks={setStreamLinks}
+              duration={duration}
+              setDuration={setDuration}
+              videoUrl={videoUrl}
+              setVideoUrl={setVideoUrl}
+              chapters={chapters}
+              setChapters={setChapters}
+              authors={authors}
+              setAuthors={setAuthors}
+              year={year}
+              setYear={setYear}
+              doi={doi}
+              setDoi={setDoi}
+              price={price}
+              setPrice={setPrice}
+              currency={currency}
+              setCurrency={setCurrency}
+              buyLink={buyLink}
+              setBuyLink={setBuyLink}
+              eventDate={eventDate}
+              setEventDate={setEventDate}
+              eventTime={eventTime}
+              setEventTime={setEventTime}
+              venue={venue}
+              setVenue={setVenue}
+              ticketLink={ticketLink}
+              setTicketLink={setTicketLink}
+              capacity={capacity}
+              setCapacity={setCapacity}
+              oppType={oppType}
+              setOppType={setOppType}
+              deadline={deadline}
+              setDeadline={setDeadline}
+              requirements={requirements}
+              setRequirements={setRequirements}
+              applyLink={applyLink}
+              setApplyLink={setApplyLink}
+              location={location}
+              setLocation={setLocation}
+              caption={caption}
+              setCaption={setCaption}
+              altText={altText}
+              setAltText={setAltText}
+            />
 
             <label className="flex items-center gap-2.5 rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]">
               <input
@@ -187,35 +324,9 @@ export default function PublishPage() {
                 className="h-4 w-4 rounded border-white/20 bg-transparent accent-omniv-gold"
               />
               <span className="text-[13px] text-zinc-300">
-                Private (Business) — only you can see this
+                Private — only you can see this
               </span>
             </label>
-
-            <div>
-              <p className={labelCls}>Body</p>
-              <div className="mt-1.5">
-                <BodyEditor
-                  value={body}
-                  onChange={setBody}
-                  placeholder="Write the story, notes, or description…"
-                  rows={10}
-                />
-              </div>
-            </div>
-
-            <div>
-              <p className={labelCls}>Cover</p>
-              <div className="mt-1.5">
-                <CoverUpload value={coverUrl} onChange={setCoverUrl} />
-              </div>
-            </div>
-
-            <div>
-              <p className={labelCls}>Media (audio / video / file)</p>
-              <div className="mt-1.5">
-                <MediaUpload value={mediaUrl} onChange={setMediaUrl} />
-              </div>
-            </div>
 
             <label className="block">
               <span className={labelCls}>Tags (comma-separated)</span>
@@ -252,7 +363,7 @@ export default function PublishPage() {
                   ? "Save private"
                   : scheduledAt
                     ? "Schedule"
-                    : "Publish"}
+                    : `Publish ${PUBLICATION_LABELS[pubType]}`}
             </button>
           </div>
         )}
@@ -294,6 +405,7 @@ export default function PublishPage() {
                   setScheduledAt("");
                   setIsPrivate(false);
                   setPublishedPath("");
+                  router.replace("/publish");
                 }}
                 className="flex h-11 items-center justify-center rounded-full bg-white/10 text-[14px] font-medium text-white"
               >
@@ -305,5 +417,19 @@ export default function PublishPage() {
       </main>
       <BottomNav />
     </div>
+  );
+}
+
+export default function PublishPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-dvh items-center justify-center bg-[#050505] text-sm text-zinc-500">
+          Loading…
+        </div>
+      }
+    >
+      <PublishInner />
+    </Suspense>
   );
 }
