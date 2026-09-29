@@ -11,6 +11,18 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "omniv.media" },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: "/logo.png",
+        destination: "/file_00000000241c8210b6d121f3de12e7a5.png",
+      },
+      {
+        source: "/logo.svg",
+        destination: "/file_00000000241c8210b6d121f3de12e7a5.png",
+      },
+    ];
+  },
   async headers() {
     return [
       {
@@ -33,8 +45,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Static assets — long cache
-        source: "/logo.svg",
+        source: "/logo.png",
         headers: [
           {
             key: "Cache-Control",
