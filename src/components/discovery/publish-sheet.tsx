@@ -121,7 +121,6 @@ export function PublishSheet({
   const [mounted, setMounted] = useState(false);
   const [active, setActive] = useState<ActiveAccount | null>(null);
   const [displayName, setDisplayName] = useState("You");
-  const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -137,22 +136,11 @@ export function PublishSheet({
     return onAccountSwitch(setActive);
   }, [open]);
 
-  useEffect(() => {
-    if (!open) setSelected(null);
-  }, [open]);
-
   if (!mounted || !open) return null;
 
   const asEntity = isEntityContext(active);
   const publishingAs = asEntity && active ? active.name : displayName;
   const publishingType = asEntity && active ? active.type : "personal";
-
-  function goPublish() {
-    if (!selected) return;
-    const type = selected;
-    onClose();
-    router.push(`/publish?type=${encodeURIComponent(type)}`);
-  }
 
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center">
@@ -182,36 +170,22 @@ export function PublishSheet({
         </div>
 
         <div className="mt-5 grid grid-cols-3 gap-2.5">
-          {TYPES.map((t) => {
-            const on = selected === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setSelected(t.id)}
-                className={`flex flex-col items-center gap-2 rounded-2xl px-2 py-3.5 transition active:scale-[0.97] ${
-                  on
-                    ? "bg-omniv-gold/20 ring-2 ring-omniv-gold text-omniv-gold"
-                    : "bg-white/[0.04] text-zinc-400 hover:bg-white/[0.07] hover:text-white"
-                }`}
-              >
-                <span
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl ${
-                    on ? "bg-omniv-gold/25 text-omniv-gold" : "bg-white/[0.06]"
-                  }`}
-                >
-                  <TypeIcon kind={t.icon} />
-                </span>
-                <span
-                  className={`text-[12px] font-medium ${
-                    on ? "text-omniv-gold" : "text-white"
-                  }`}
-                >
-                  {t.label}
-                </span>
-              </button>
-            );
-          })}
+          {TYPES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => {
+                onClose();
+                router.push(`/publish?type=${encodeURIComponent(t.id)}`);
+              }}
+              className="flex flex-col items-center gap-2 rounded-2xl bg-white/[0.04] px-2 py-3.5 text-zinc-400 transition active:scale-[0.97] hover:bg-omniv-gold/15 hover:text-omniv-gold"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.06]">
+                <TypeIcon kind={t.icon} />
+              </span>
+              <span className="text-[12px] font-medium text-white">{t.label}</span>
+            </button>
+          ))}
         </div>
 
         <div className="mt-6 border-t border-white/[0.06] pt-4">
@@ -245,15 +219,6 @@ export function PublishSheet({
             </button>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={goPublish}
-          disabled={!selected}
-          className="mt-5 flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black shadow-lg shadow-omniv-gold/20 transition active:scale-[0.98] disabled:opacity-40"
-        >
-          Publish
-        </button>
       </div>
     </div>,
     document.body
