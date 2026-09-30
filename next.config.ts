@@ -21,6 +21,15 @@ const nextConfig: NextConfig = {
         source: "/logo.svg",
         destination: "/file_00000000241c8210b6d121f3de12e7a5.png",
       },
+      // Type-specific permanent public URLs → shared publication page
+      { source: "/research/:slug", destination: "/p/:slug" },
+      { source: "/music/:slug", destination: "/p/:slug" },
+      { source: "/video/:slug", destination: "/p/:slug" },
+      { source: "/product/:slug", destination: "/p/:slug" },
+      { source: "/event/:slug", destination: "/p/:slug" },
+      { source: "/opportunity/:slug", destination: "/p/:slug" },
+      // Entity alias (type still preferred via /e/[type]/[slug])
+      { source: "/entity/:type/:slug", destination: "/e/:type/:slug" },
     ];
   },
   async headers() {

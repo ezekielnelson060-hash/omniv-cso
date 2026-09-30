@@ -17,24 +17,61 @@ async function getPublicData() {
     const supabase = await createClient();
     return {
       entities: await listDiscoveryEntities(supabase),
-      publications: await listLivePublications(supabase, 200),
+      publications: await listLivePublications(supabase, 500),
     };
   } catch {
     return { entities: SEED_ENTITIES, publications: SEED_PUBLICATIONS };
   }
 }
 
-/** Public routes only — auth, checkout, and application surfaces stay out of the index. */
+/**
+ * Dynamic public sitemap — publications, entities, explore categories.
+ * Auth/app surfaces stay out of the index (see robots.ts).
+ * Updates whenever public content is listed from the live DB + seed.
+ */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const { entities, publications } = await getPublicData();
-  const staticRoutes = [
-    { path: "/", changeFrequency: "daily" as const, priority: 1 },
-    { path: "/home", changeFrequency: "daily" as const, priority: 0.95 },
-    { path: "/explore", changeFrequency: "daily" as const, priority: 0.95 },
-    { path: "/publish", changeFrequency: "weekly" as const, priority: 0.85 },
-    { path: "/verify", changeFrequency: "monthly" as const, priority: 0.7 },
+
+  const staticRoutes: {
+    path: string;
+    changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];
+    priority: number;
+  }[] = [
+    { path: "/", changeFrequency: "daily", priority: 1 },
+    { path: "/home", changeFrequency: "daily", priority: 0.95 },
+    { path: "/explore", changeFrequency: "daily", priority: 0.95 },
+    { path: "/search", changeFrequency: "daily", priority: 0.8 },
   ];
+
+  const pubEntries = publications.map((publication) => {
+    const lastMod = publication.updatedAt || publication.publishedAt;
+    return {
+      url: `${baseUrl}${publicationPath(publication)}`,
+      lastModified: lastMod ? new Date(lastMod) : now,
+      changeFrequency: "weekly" as const,
+      priority:
+        publication.type === "research" || publication.type === "article"
+          ? 0.8
+          : 0.75,
+    };
+  });
+
+  const entityEntries = entities.map((entity) => ({
+    url: `${baseUrl}${entityPath(entity)}`,
+    lastModified: entity.publishedAt
+      ? new Date(entity.publishedAt)
+      : now,
+    changeFrequency: "weekly" as const,
+    priority: 0.8,
+  }));
+
+  const categoryEntries = DISCOVERY_CATEGORIES.map((category) => ({
+    url: `${baseUrl}/explore/${category.slug}`,
+    lastModified: now,
+    changeFrequency: "daily" as const,
+    priority: 0.7,
+  }));
 
   return [
     ...staticRoutes.map((route) => ({
@@ -43,23 +80,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: route.changeFrequency,
       priority: route.priority,
     })),
-    ...entities.map((entity) => ({
-      url: `${baseUrl}${entityPath(entity)}`,
-      lastModified: now,
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    })),
-    ...publications.map((publication) => ({
-      url: `${baseUrl}${publicationPath(publication)}`,
-      lastModified: now,
-      changeFrequency: "weekly" as const,
-      priority: 0.75,
-    })),
-    ...DISCOVERY_CATEGORIES.map((category) => ({
-      url: `${baseUrl}/explore/${category.slug}`,
-      lastModified: now,
-      changeFrequency: "daily" as const,
-      priority: 0.7,
-    })),
+    ...entityEntries,
+    ...pubEntries,
+    ...categoryEntries,
   ];
 }
