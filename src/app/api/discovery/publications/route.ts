@@ -5,6 +5,7 @@ import {
   PUBLICATION_TYPES,
   type PublicationType,
 } from "@/lib/discovery/types";
+import { buildPublicationSeo } from "@/lib/discovery/seo";
 
 export async function POST(req: Request) {
   try {
@@ -126,6 +127,32 @@ export async function POST(req: Request) {
       meta,
       heat: 10,
     };
+
+    // Auto SEO for every public publication type
+    {
+      const seo = buildPublicationSeo({
+        type,
+        title,
+        summary,
+        excerpt: body.excerpt ? String(body.excerpt).trim() : summary,
+        body: content,
+        tags,
+        publisherName: publisherName || undefined,
+        slug,
+        coverUrl,
+        seoTitle: body.seoTitle ? String(body.seoTitle).trim() : null,
+        seoDescription: body.seoDescription
+          ? String(body.seoDescription).trim()
+          : null,
+        canonicalUrl: body.canonicalUrl
+          ? String(body.canonicalUrl).trim()
+          : null,
+      });
+      insertRow.seo_title = seo.seoTitle;
+      insertRow.seo_description = seo.seoDescription;
+      insertRow.canonical_url = seo.canonicalUrl;
+    }
+
     if (type === "article") {
       insertRow.author_profile_id = user.id;
       insertRow.subtitle = body.subtitle ? String(body.subtitle).trim() : null;
@@ -135,13 +162,6 @@ export async function POST(req: Request) {
         : null;
       insertRow.reading_time = Number.isFinite(Number(body.readingTime))
         ? Math.max(1, Math.round(Number(body.readingTime)))
-        : null;
-      insertRow.seo_title = body.seoTitle ? String(body.seoTitle).trim() : null;
-      insertRow.seo_description = body.seoDescription
-        ? String(body.seoDescription).trim()
-        : null;
-      insertRow.canonical_url = body.canonicalUrl
-        ? String(body.canonicalUrl).trim()
         : null;
       insertRow.what_this_means = body.whatThisMeans
         ? String(body.whatThisMeans).trim()
@@ -176,7 +196,16 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true, path: `/p/${data.slug}` });
+    const publicPath = buildPublicationSeo({
+      type,
+      title,
+      summary,
+      slug: data.slug,
+      tags,
+      publisherName: publisherName || undefined,
+      coverUrl,
+    }).path;
+    return NextResponse.json({ ok: true, path: publicPath, slug: data.slug });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
@@ -229,7 +258,12 @@ export async function GET(req: Request) {
         summary: publication.summary,
         status: publication.status,
         publishedAt: publication.published_at,
-        path: `/p/${publication.slug}`,
+        path: buildPublicationSeo({
+          type: publication.type as PublicationType,
+          title: publication.title,
+          summary: publication.summary || "",
+          slug: publication.slug,
+        }).path,
       })),
     });
   } catch (e) {
