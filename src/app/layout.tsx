@@ -38,8 +38,8 @@ export const metadata: Metadata = {
     "projects",
   ],
   icons: {
-    icon: "/file_00000000241c8210b6d121f3de12e7a5.png",
-    apple: "/file_00000000241c8210b6d121f3de12e7a5.png",
+    icon: "/logo.svg",
+    apple: "/logo.svg",
   },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -117,7 +117,7 @@ export default function RootLayout({
                   url: "https://omniv.media/",
                   logo: {
                     "@type": "ImageObject",
-                    url: "https://omniv.media/file_00000000241c8210b6d121f3de12e7a5.png",
+                    url: "https://omniv.media/logo.svg",
                   },
                   description:
                     "Discovery network for people, companies, brands, products, projects, events, and opportunities.",
