@@ -57,7 +57,7 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Omniv — discovery network",
+        alt: "Omniv — Publish what matters. Discover what moves next.",
       },
     ],
     locale: "en_US",
@@ -65,11 +65,11 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@omniv",
-    creator: "@omniv",
+    site: "@omnivmedia",
+    creator: "@omnivmedia",
     title: "Omniv — Discovery network for the real world",
     description: DESC,
-    images: ["/opengraph-image"],
+    images: ["/twitter-image"],
   },
   alternates: {
     canonical: "https://omniv.media",
