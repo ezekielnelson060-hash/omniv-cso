@@ -42,23 +42,27 @@ const GROUPS: NavGroup[] = [
   {
     id: "publish",
     label: "Publish",
-    items: [{ href: "/publish", label: "New publication", icon: "plus" }],
-  },
-  {
-    id: "manage",
-    label: "Manage",
     items: [
-      { href: "/analytics", label: "Analytics", icon: "chart" },
-      { href: "/promote", label: "Promote", icon: "boost" },
+      { href: "/publish", label: "New publication", icon: "plus" },
       { href: "/accounts", label: "Entities", icon: "entities" },
     ],
   },
   {
-    id: "monetize",
-    label: "Monetize",
+    id: "grow",
+    label: "Grow",
     items: [
-      { href: "/pro", label: "Pro & Business", badge: "Plans", icon: "star" },
+      { href: "/analytics", label: "Analytics", icon: "chart" },
+      { href: "/audience", label: "Audience", icon: "audience" },
+      { href: "/promote", label: "Promote", icon: "boost" },
+      { href: "/invites", label: "Invites", icon: "invite" },
+    ],
+  },
+  {
+    id: "account",
+    label: "Account",
+    items: [
       { href: "/verify", label: "Get Verified", icon: "check" },
+      { href: "/pro", label: "Upgrade to Pro", badge: "Plans", icon: "star" },
     ],
   },
 ];
@@ -147,6 +151,22 @@ function NavIcon({ name }: { name: string }) {
         <svg {...common}>
           <circle cx="12" cy="12" r="8" />
           <path d="m8.5 12.5 2.2 2.2 4.8-5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case "audience":
+      return (
+        <svg {...common}>
+          <circle cx="9" cy="8" r="3" />
+          <circle cx="16" cy="9" r="2.5" />
+          <path d="M3 19c1.2-3 3.5-4.5 6-4.5s4.8 1.5 6 4.5" strokeLinecap="round" />
+        </svg>
+      );
+    case "invite":
+      return (
+        <svg {...common}>
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" strokeLinecap="round" />
+          <circle cx="9" cy="7" r="3.5" />
+          <path d="M19 8v6M22 11h-6" strokeLinecap="round" />
         </svg>
       );
     case "star":
