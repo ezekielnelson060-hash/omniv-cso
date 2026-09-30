@@ -5,7 +5,7 @@ import Link from "next/link";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { ProfilePosts } from "@/components/discovery/profile-posts";
-import { FirstAccountNudge } from "@/components/discovery/first-account-nudge";
+import { ProfileGrowthStrip } from "@/components/discovery/profile-growth-strip";
 import { NotificationBell } from "@/components/discovery/notification-bell";
 import {
   readSaved,
@@ -265,7 +265,7 @@ export default function ProfilePage() {
                   <span className="text-zinc-500">Saved</span>
                 </Link>
               </div>
-              <FirstAccountNudge />
+              <ProfileGrowthStrip />
               <Link
                 href="/accounts"
                 className="mt-5 flex items-center justify-between rounded-2xl bg-white/[0.03] px-4 py-3.5 ring-1 ring-white/[0.08]"
