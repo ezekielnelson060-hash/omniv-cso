@@ -6,10 +6,8 @@ import { StructuredData } from "@/components/StructuredData";
 import { KeepExploring } from "@/components/discovery/keep-exploring";
 import { FollowButton } from "@/components/discovery/follow-button";
 import { SaveButton } from "@/components/discovery/save-button";
-import { FollowerCount } from "@/components/discovery/follower-count";
 import { EntityStatsRow } from "@/components/discovery/entity-stats-row";
 import { PublicationCard } from "@/components/discovery/publication-card";
-import { EntityLatestRow } from "@/components/discovery/entity-latest-row";
 import {
   VerifiedBadge,
   GetVerifiedCard,
@@ -530,7 +528,12 @@ export default async function EntityPage({ params, searchParams }: Props) {
           )}
 
           <div className="mt-10">
-            <KeepExploring currentSlug={e.slug} />
+            <KeepExploring
+              currentEntity={e}
+              entities={relatedEntities}
+              publications={networkPubs}
+              tags={e.tags || []}
+            />
           </div>
 
           <div id="contact" className="mt-10">
