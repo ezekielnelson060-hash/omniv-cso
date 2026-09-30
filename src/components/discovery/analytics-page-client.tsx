@@ -229,7 +229,13 @@ export default function AnalyticsPage() {
                 />
               </div>
 
-              <AnalyticsGrowthCta show={discoveries > 20 || qualified > 5} />
+              <AnalyticsGrowthCta
+                show={
+                  // Traction on *this identity's* publications — not local browse signals alone
+                  scopedPubs.length > 0 &&
+                  (totalHeat > 0 || discoveries > 20 || saves + follows > 0)
+                }
+              />
 
               {topics.length > 0 && (
                 <section className="mt-8">
