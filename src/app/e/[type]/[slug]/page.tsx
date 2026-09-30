@@ -7,6 +7,7 @@ import { KeepExploring } from "@/components/discovery/keep-exploring";
 import { FollowButton } from "@/components/discovery/follow-button";
 import { SaveButton } from "@/components/discovery/save-button";
 import { FollowerCount } from "@/components/discovery/follower-count";
+import { EntityStatsRow } from "@/components/discovery/entity-stats-row";
 import { PublicationCard } from "@/components/discovery/publication-card";
 import { EntityLatestRow } from "@/components/discovery/entity-latest-row";
 import {
@@ -342,17 +343,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-nowrap items-baseline gap-x-5 overflow-x-auto text-[14px] scrollbar-none">
-            <FollowerCount type={e.type} slug={e.slug} />
-            <Link href="/following" className="inline-flex shrink-0 items-baseline gap-1 text-zinc-500 hover:text-zinc-300">
-              <span className="text-[16px] font-semibold text-white">0</span>
-              <span className="text-[13px]">Following</span>
-            </Link>
-            <span className="inline-flex shrink-0 items-baseline gap-1 text-zinc-500">
-              <span className="text-[16px] font-semibold text-white">{pubs.length}</span>
-              <span className="text-[13px]">Publications</span>
-            </span>
-          </div>
+          <EntityStatsRow type={e.type} slug={e.slug} publicationsCount={pubs.length} />
 
           <div className="mt-4 grid grid-cols-4 gap-2">
             {[
