@@ -41,8 +41,8 @@ export function FollowerCount({
   }, [type, slug, load]);
 
   return (
-    <span className={`inline-flex items-baseline gap-1 ${className}`}>
-      <span className="text-[16px] font-semibold text-white">
+    <span className={`inline-flex shrink-0 items-baseline gap-1 whitespace-nowrap ${className}`}>
+      <span className="text-[15px] font-semibold tabular-nums text-white">
         {count === null ? "·" : count}
       </span>
       <span className="text-[13px] text-zinc-500">Followers</span>
