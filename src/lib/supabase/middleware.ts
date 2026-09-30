@@ -74,7 +74,11 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/blog") ||
     path.startsWith("/partners") ||
     path.startsWith("/data-deletion") ||
-    path === "/policy";
+    path === "/policy" ||
+    path.startsWith("/opengraph-image") ||
+    path.startsWith("/twitter-image") ||
+    path === "/icon" ||
+    path === "/apple-icon";
 
   if (!user && !isPublic) {
     const redirect = request.nextUrl.clone();
