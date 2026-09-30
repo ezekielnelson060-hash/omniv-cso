@@ -1,9 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { PublicationActions } from "@/components/discovery/publication-actions";
 import { ShareButton } from "@/components/discovery/share-button";
 import { ViewTracker } from "@/components/discovery/view-tracker";
 
+/**
+ * Engagement + publisher control bar.
+ * Like · Save · Share · ⚡ Promote
+ * Promote is always one tap away on the publication itself.
+ */
 export function PublicationPageActions({
   slug,
   type,
@@ -22,6 +28,7 @@ export function PublicationPageActions({
   heat?: number;
   tags?: string[];
   category?: string;
+  isOwner?: boolean;
 }) {
   return (
     <>
@@ -30,7 +37,7 @@ export function PublicationPageActions({
         category={category || type}
         publicationSlug={slug}
       />
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-1.5">
         <PublicationActions
           slug={slug}
           type={type}
@@ -42,6 +49,13 @@ export function PublicationPageActions({
           category={category || type}
         />
         <ShareButton title={title} path={path} />
+        <Link
+          href={`/promote?slug=${encodeURIComponent(slug)}`}
+          className="ml-1 inline-flex h-9 items-center gap-1.5 rounded-full bg-omniv-gold px-3.5 text-[12px] font-semibold text-black shadow-sm shadow-omniv-gold/20 transition hover:brightness-110"
+        >
+          <span aria-hidden>⚡</span>
+          Promote
+        </Link>
       </div>
     </>
   );
