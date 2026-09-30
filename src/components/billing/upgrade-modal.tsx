@@ -101,12 +101,12 @@ export function UpgradeModal({
           {featureLabel} is not on your tier
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-omniv-text-secondary">
-          You&apos;re on{" "}
+          You're on{" "}
           <span className="text-omniv-gold">{planName(currentPlan)}</span>.{" "}
           <strong className="font-medium text-omniv-text">{featureLabel}</strong>{" "}
           is part of the intelligence stack from{" "}
-          <span className="text-omniv-gold">{target.name}</span>. Payment confirms
-          via Flutterwave before access opens. No soft unlocks.
+          <span className="text-omniv-gold">{target.name}</span>. Payment{" "}
+          is confirmed securely before access opens. No soft unlocks.
         </p>
 
         <div className="mt-5 space-y-2">
@@ -162,12 +162,15 @@ export function UpgradeModal({
             }
           >
             <CreditCard className="h-3.5 w-3.5" />
-            Pay with Flutterwave
+            Pay securely
           </Button>
           <Button variant="outline" className="flex-1" onClick={onClose}>
             Stay limited
           </Button>
         </div>
+        <p className="mt-2 text-center text-[10px] text-omniv-text-muted">
+          Secure card checkout · no soft unlocks
+        </p>
 
         <ul className="mt-4 space-y-1 border-t border-omniv-border pt-4">
           {target.features.slice(0, 4).map((f) => (
