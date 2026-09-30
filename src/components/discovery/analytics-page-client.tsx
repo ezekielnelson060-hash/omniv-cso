@@ -167,7 +167,6 @@ export default function AnalyticsPage() {
               [
                 { id: "7d" as const, label: "7D" },
                 { id: "30d" as const, label: "30D" },
-                { id: "90d" as const, label: "1Y" },
                 { id: "90d" as const, label: "90D" },
                 { id: "1y" as const, label: "1Y" },
               ] as const
