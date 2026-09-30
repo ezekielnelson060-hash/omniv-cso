@@ -117,7 +117,6 @@ export default async function PublicationPage({ params }: Props) {
 
   const path = publicationPath(p);
   const origin = process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
-  const pageUrl = p.canonicalUrl || `${origin}${path}`;
   const bodyText =
     p.body ||
     (p.content || [])
@@ -241,6 +240,8 @@ export default async function PublicationPage({ params }: Props) {
                   heat={p.heat}
                   tags={p.tags || []}
                   category={p.category}
+                  publisherId={p.publisherId}
+                  publisherName={p.publisherName}
                 />
               </div>
             </div>
