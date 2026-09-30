@@ -18,6 +18,7 @@ import {
   countQualifiedInteractions,
   readTopSignalTopics,
 } from "@/lib/discovery/signals";
+import { AnalyticsGrowthCta } from "@/components/discovery/analytics-growth-cta";
 
 type Pub = {
   id: string;
@@ -94,7 +95,6 @@ export default function AnalyticsPage() {
     };
   }, []);
 
-  // active set = entity identity; null = personal
   const entityName = active?.name || personalName;
 
   const scopedPubs = useMemo(() => {
@@ -228,6 +228,8 @@ export default function AnalyticsPage() {
                   note="This identity"
                 />
               </div>
+
+              <AnalyticsGrowthCta show={discoveries > 20 || qualified > 5} />
 
               {topics.length > 0 && (
                 <section className="mt-8">
