@@ -9,18 +9,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "**.supabase.co" },
       { protocol: "https", hostname: "omniv.media" },
+      { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
   async rewrites() {
     return [
-      {
-        source: "/logo.png",
-        destination: "/file_00000000241c8210b6d121f3de12e7a5.png",
-      },
-      {
-        source: "/logo.svg",
-        destination: "/file_00000000241c8210b6d121f3de12e7a5.png",
-      },
       // Type-specific permanent public URLs → shared publication page
       { source: "/research/:slug", destination: "/p/:slug" },
       { source: "/music/:slug", destination: "/p/:slug" },
@@ -54,7 +47,7 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        source: "/logo.png",
+        source: "/logo.svg",
         headers: [
           {
             key: "Cache-Control",

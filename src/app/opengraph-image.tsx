@@ -5,7 +5,6 @@ export const alt = "Omniv — Publish what matters. Discover what moves next.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-/** Twitter / Open Graph card — mirrors the Omniv landing headline */
 export default function OgImage() {
   return new ImageResponse(
     (
@@ -19,9 +18,8 @@ export default function OgImage() {
           justifyContent: "center",
           background: "#050505",
           color: "#fff",
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          padding: "64px 72px",
-          position: "relative",
+          fontFamily: "system-ui, sans-serif",
+          padding: "72px 80px",
         }}
       >
         <div
@@ -30,115 +28,80 @@ export default function OgImage() {
             top: 0,
             left: 0,
             right: 0,
-            height: 5,
+            height: 6,
             background: "#F5B800",
           }}
         />
         <div
           style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: 5,
-            background: "#F5B800",
-          }}
-        />
-
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 12,
-              background: "#0a0a0a",
-              border: "2px solid #F5B800",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <div
-              style={{
-                width: 16,
-                height: 16,
-                borderRadius: 999,
-                background: "#F5B800",
-              }}
-            />
-          </div>
-          <div
-            style={{
-              fontSize: 28,
-              fontWeight: 700,
-              letterSpacing: 4,
-              color: "#F5B800",
-            }}
-          >
-            OMNIV
-          </div>
-        </div>
-
-        <div
-          style={{
-            marginTop: 36,
-            fontSize: 18,
+            fontSize: 22,
             fontWeight: 600,
-            letterSpacing: 5,
+            letterSpacing: 6,
             color: "#F5B800",
             textTransform: "uppercase",
           }}
         >
           Discovery Network
         </div>
-
         <div
           style={{
-            marginTop: 20,
-            fontSize: 54,
+            marginTop: 28,
+            fontSize: 56,
             fontWeight: 700,
             color: "#ffffff",
-            lineHeight: 1.12,
-            maxWidth: 1000,
+            lineHeight: 1.15,
+            maxWidth: 980,
           }}
         >
           Publish what matters.
         </div>
         <div
           style={{
-            marginTop: 6,
-            fontSize: 54,
+            marginTop: 8,
+            fontSize: 56,
             fontWeight: 700,
             color: "#a1a1aa",
-            lineHeight: 1.12,
-            maxWidth: 1000,
+            lineHeight: 1.15,
+            maxWidth: 980,
           }}
         >
           Discover what moves next.
         </div>
-
         <div
           style={{
-            marginTop: 28,
-            fontSize: 22,
+            marginTop: 36,
+            fontSize: 24,
             color: "#71717a",
-            maxWidth: 900,
+            maxWidth: 860,
             lineHeight: 1.45,
           }}
         >
           Articles, research, music, products, events, and opportunities — from
           people, companies, and brands putting real work into the world.
         </div>
-
         <div
           style={{
-            marginTop: 40,
-            fontSize: 18,
-            color: "#52525b",
+            position: "absolute",
+            bottom: 40,
+            left: 80,
+            fontSize: 20,
+            fontWeight: 600,
+            letterSpacing: 3,
+            color: "#F5B800",
           }}
         >
-          omniv.media
+          OMNIV
         </div>
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 6,
+            background: "#F5B800",
+          }}
+        />
       </div>
     ),
     { ...size }
