@@ -35,6 +35,10 @@ import {
   recommendPublications,
 } from "@/lib/discovery/graph";
 import { coverFor, ctaFor } from "@/lib/discovery/seed-covers";
+import {
+  publicationMetadata,
+  publicationJsonLd,
+} from "@/lib/discovery/seo";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -64,28 +68,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     /* seed fallback */
   }
   const p = await getLivePublication(supabase, slug);
-  if (!p) return { title: "Not found" };
-  const origin = process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
-  const url = p.canonicalUrl || `${origin}/p/${p.slug}`;
-  const title = p.seoTitle || p.title;
-  const description = p.seoDescription || p.excerpt || p.summary;
-  const image = p.coverUrl || coverFor(p.slug) || `${origin}/opengraph-image`;
-  return {
-    title,
-    description,
-    metadataBase: new URL(origin),
-    alternates: { canonical: url },
-    openGraph: {
-      title,
-      description,
-      url,
-      type: "article",
-      siteName: "Omniv",
-      images: [{ url: image }],
-      publishedTime: p.publishedAt,
-      modifiedTime: p.updatedAt,
-    },
-  };
+  if (!p) return { title: "Not found", robots: { index: false, follow: false } };
+  return publicationMetadata(p);
 }
 
 export default async function PublicationPage({ params }: Props) {
@@ -131,7 +115,7 @@ export default async function PublicationPage({ params }: Props) {
     ...recommended.filter((r) => !fromPublisher.some((f) => f.id === r.id)),
   ].slice(0, 6);
 
-  const path = `/p/${p.slug}`;
+  const path = publicationPath(p);
   const origin = process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
   const pageUrl = p.canonicalUrl || `${origin}${path}`;
   const bodyText =
@@ -148,21 +132,7 @@ export default async function PublicationPage({ params }: Props) {
   const coverUrl = p.coverUrl || coverFor(p.slug);
   const resolvedCta = ctaFor(p.slug) || p.cta;
 
-  const articleLd = {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    headline: p.title,
-    description: p.seoDescription || p.excerpt || p.summary,
-    url: pageUrl,
-    datePublished: p.publishedAt || undefined,
-    dateModified: p.updatedAt || p.publishedAt || undefined,
-    author: { "@type": "Organization", name: publisherName, url: origin },
-    publisher: { "@type": "Organization", name: "Omniv", url: origin },
-    image: coverUrl || `${origin}/opengraph-image`,
-    articleSection: p.category || undefined,
-    keywords: p.tags?.join(", ") || undefined,
-    mainEntityOfPage: { "@type": "WebPage", "@id": pageUrl },
-  };
+  const articleLd = publicationJsonLd(p, origin);
 
   const isPdf = mediaUrl?.toLowerCase().includes(".pdf");
   const ytMatch = mediaUrl?.match(
