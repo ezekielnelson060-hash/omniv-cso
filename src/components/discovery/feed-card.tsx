@@ -9,6 +9,7 @@ import { getEntityById } from "@/lib/discovery/seed";
 import { coverFor } from "@/lib/discovery/seed-covers";
 import { PublicationActions } from "@/components/discovery/publication-actions";
 import { VerifiedBadge } from "@/components/discovery/verified-badge";
+import { cleanPublisherMeta } from "@/lib/discovery/publisher-meta";
 
 type PubWithCover = Publication & {
   coverUrl?: string;
@@ -75,6 +76,7 @@ function PublisherLine({
     ? "font-semibold text-white/90"
     : "font-semibold text-white";
   const metaClass = light ? "text-white/50" : "text-zinc-500";
+  const displayMeta = cleanPublisherMeta(name, meta);
 
   const nameEl = href ? (
     <Link
@@ -107,10 +109,10 @@ function PublisherLine({
   return (
     <div className="flex items-center gap-1.5 text-[12px]">
       {nameEl}
-      {meta && (
+      {displayMeta && (
         <>
           <span className={light ? "text-white/40" : "text-zinc-600"}>·</span>
-          <span className={`truncate ${metaClass}`}>{meta}</span>
+          <span className={`truncate ${metaClass}`}>{displayMeta}</span>
         </>
       )}
     </div>
