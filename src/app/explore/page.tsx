@@ -83,7 +83,6 @@ export default async function ExplorePage({ searchParams }: Props) {
       if (!slugs.has(s.slug)) publications.push(s);
     }
   }
-  // Live accounts first. Seeds only fill cold start — real publishers replace them over time.
   if (entities.length < 6) {
     const slugs = new Set(entities.map((e) => e.slug.toLowerCase()));
     const liveFirst = [...entities];
@@ -297,7 +296,7 @@ function ExploreShell({
           <div className="mx-auto flex max-w-lg items-center justify-between gap-3 px-4 py-3 md:max-w-2xl md:px-6">
             <div className="flex items-center gap-2">
               <Image
-                src="/logo.svg"
+                src="/logo.png"
                 alt="Omniv"
                 width={28}
                 height={28}
