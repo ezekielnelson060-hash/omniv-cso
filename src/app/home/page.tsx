@@ -13,7 +13,7 @@ import type { Publication } from "@/lib/discovery/types";
 import { HomeFeedClient } from "@/components/discovery/home-feed-client";
 import { HomeDiscoverySurface } from "@/components/discovery/home-discovery-surface";
 
-export const revalidate = 30;
+export const revalidate = 15;
 
 export const metadata = {
   title: "Home | Omniv",
@@ -93,7 +93,10 @@ export default async function HomePage({ searchParams }: Props) {
       if (!slugs.has(s.slug)) feedPool.push(s);
     }
   }
+
   feedPool = [...feedPool].sort((a, b) => {
+    const heatDiff = (b.heat || 0) - (a.heat || 0);
+    if (Math.abs(heatDiff) > 2) return heatDiff;
     const ta = new Date(a.publishedAt || 0).getTime();
     const tb = new Date(b.publishedAt || 0).getTime();
     return tb - ta;
