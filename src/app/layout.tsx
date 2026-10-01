@@ -38,8 +38,8 @@ export const metadata: Metadata = {
     "projects",
   ],
   icons: {
-    icon: "/logo.svg",
-    apple: "/logo.svg",
+    icon: "/logo.png",
+    apple: "/logo.png",
   },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     siteName: "Omniv",
     images: [
       {
-        url: "/opengraph-image",
+        url: "/og-card.jpg",
         width: 1200,
         height: 630,
         alt: "Omniv — Publish what matters. Discover what moves next.",
@@ -69,7 +69,7 @@ export const metadata: Metadata = {
     creator: "@omnivmedia",
     title: "Omniv — Discovery network for the real world",
     description: DESC,
-    images: ["/twitter-image"],
+    images: ["/og-card.jpg"],
   },
   alternates: {
     canonical: "https://omniv.media",
@@ -117,7 +117,7 @@ export default function RootLayout({
                   url: "https://omniv.media/",
                   logo: {
                     "@type": "ImageObject",
-                    url: "https://omniv.media/logo.svg",
+                    url: "https://omniv.media/logo.png",
                   },
                   description:
                     "Discovery network for people, companies, brands, products, projects, events, and opportunities.",
