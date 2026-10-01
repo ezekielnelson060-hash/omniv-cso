@@ -134,32 +134,46 @@ export default function ProfilePage() {
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-omniv-gold/20 via-zinc-900 to-black" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-black/40 to-transparent" />
-          <div className="absolute right-3 top-3 flex items-center gap-2">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#050505] via-black/40 to-transparent" />
+          <div className="absolute right-3 top-3 z-20 flex items-center gap-2">
             <NotificationBell />
           </div>
           {editing && (
-            <button
-              type="button"
-              onClick={() => coverInputRef.current?.click()}
-              className="absolute bottom-3 right-3 flex h-9 items-center gap-1.5 rounded-full bg-black/60 px-3 text-[12px] font-medium text-white ring-1 ring-white/20 backdrop-blur"
-            >
-              <CameraIcon />
-              Edit cover
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => coverInputRef.current?.click()}
+                className="absolute inset-0 z-10 cursor-pointer"
+                aria-label="Change cover photo"
+              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  coverInputRef.current?.click();
+                }}
+                className="absolute bottom-3 right-3 z-20 flex h-9 items-center gap-1.5 rounded-full bg-black/70 px-3 text-[12px] font-medium text-white ring-1 ring-white/25 backdrop-blur"
+              >
+                <CameraIcon />
+                Edit cover
+              </button>
+            </>
           )}
           <input
             ref={coverInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/gif"
             className="hidden"
-            onChange={(e) => onPickMedia("cover", e.target.files?.[0])}
+            onChange={(e) => {
+              onPickMedia("cover", e.target.files?.[0]);
+              e.target.value = "";
+            }}
           />
         </div>
 
         <main className="relative w-full px-4 pb-28">
           <div className="-mt-12 flex items-end justify-between gap-3">
-            <div className="relative">
+            <div className="relative z-20">
               <div className="h-[88px] w-[88px] overflow-hidden rounded-full bg-gradient-to-br from-omniv-gold to-amber-700 ring-4 ring-[#050505]">
                 {show.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -187,9 +201,12 @@ export default function ProfilePage() {
               <input
                 ref={avatarInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/gif"
                 className="hidden"
-                onChange={(e) => onPickMedia("avatar", e.target.files?.[0])}
+                onChange={(e) => {
+                  onPickMedia("avatar", e.target.files?.[0]);
+                  e.target.value = "";
+                }}
               />
             </div>
             {!editing ? (
@@ -234,8 +251,13 @@ export default function ProfilePage() {
                   {show.bio}
                 </p>
               )}
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-zinc-500">
-                {show.location && <span>⌖ {show.location}</span>}
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-zinc-500">
+                {show.location && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <LocationIcon />
+                    {show.location}
+                  </span>
+                )}
                 {show.website && (
                   <a
                     href={
@@ -245,9 +267,10 @@ export default function ProfilePage() {
                     }
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-omniv-gold"
+                    className="inline-flex items-center gap-1.5 text-omniv-gold hover:underline"
                   >
-                    ↗ {show.website.replace(/^https?:\/\//, "")}
+                    <LinkIcon />
+                    {show.website.replace(/^https?:\/\//, "")}
                   </a>
                 )}
               </div>
@@ -288,13 +311,13 @@ export default function ProfilePage() {
               </p>
               {(
                 [
-                  ["displayName", "Display name"],
-                  ["handle", "Handle"],
-                  ["bio", "Bio"],
-                  ["location", "Location"],
-                  ["website", "Website"],
+                  ["displayName", "Display name", null],
+                  ["handle", "Handle", null],
+                  ["bio", "Bio", null],
+                  ["location", "Location", "location"],
+                  ["website", "Website", "link"],
                 ] as const
-              ).map(([key, label]) => (
+              ).map(([key, label, icon]) => (
                 <label key={key} className="block">
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                     {label}
@@ -306,16 +329,37 @@ export default function ProfilePage() {
                         setDraft({ ...draft, bio: e.target.value })
                       }
                       rows={3}
-                      className="mt-1 w-full resize-none rounded-xl bg-white/[0.04] px-3 py-2.5 text-[14px] text-white outline-none ring-1 ring-white/10"
+                      className="mt-1 w-full resize-none rounded-xl bg-white/[0.04] px-3 py-2.5 text-[14px] text-white outline-none ring-1 ring-white/10 focus:ring-omniv-gold/40"
                     />
                   ) : (
-                    <input
-                      value={(draft as Record<string, string>)[key] || ""}
-                      onChange={(e) =>
-                        setDraft({ ...draft, [key]: e.target.value })
-                      }
-                      className="mt-1 w-full rounded-xl bg-white/[0.04] px-3 py-2.5 text-[14px] text-white outline-none ring-1 ring-white/10"
-                    />
+                    <div className="relative mt-1">
+                      {icon === "location" && (
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                          <LocationIcon />
+                        </span>
+                      )}
+                      {icon === "link" && (
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+                          <LinkIcon />
+                        </span>
+                      )}
+                      <input
+                        value={(draft as Record<string, string>)[key] || ""}
+                        onChange={(e) =>
+                          setDraft({ ...draft, [key]: e.target.value })
+                        }
+                        placeholder={
+                          key === "location"
+                            ? "City, country"
+                            : key === "website"
+                              ? "omniv.media"
+                              : undefined
+                        }
+                        className={`w-full rounded-xl bg-white/[0.04] py-2.5 text-[14px] text-white outline-none ring-1 ring-white/10 focus:ring-omniv-gold/40 ${
+                          icon ? "pl-9 pr-3" : "px-3"
+                        }`}
+                      />
+                    </div>
                   )}
                 </label>
               ))}
@@ -383,6 +427,39 @@ export default function ProfilePage() {
         <BottomNav />
       </div>
     </DiscoveryShell>
+  );
+}
+
+function LocationIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 21s-7-5.5-7-11a7 7 0 1 1 14 0c0 5.5-7 11-7 11z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="10" r="2.2" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function LinkIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M10 13a5 5 0 0 0 7.07 0l1.41-1.41a5 5 0 0 0-7.07-7.07L10 5.93"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M14 11a5 5 0 0 0-7.07 0L5.52 12.4a5 5 0 0 0 7.07 7.07L14 18.07"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
