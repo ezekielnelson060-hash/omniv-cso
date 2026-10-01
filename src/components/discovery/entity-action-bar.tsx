@@ -10,9 +10,8 @@ import {
 } from "@/lib/discovery/active-account";
 
 /**
- * Owner sees Edit profile + Contact (never Follow).
- * Viewer sees Follow + Contact.
- * Ownership: server flag OR active identity matches this entity.
+ * Owner: Edit profile only (no Follow, no Contact).
+ * Viewer: Follow + Contact.
  */
 export function EntityActionBar({
   type,
@@ -52,7 +51,6 @@ export function EntityActionBar({
         (identity.path.includes(`/e/${type}/${slug}`) ||
           identity.path.endsWith(`/${slug}`))));
 
-  // Owner if server says so OR active publishing identity is this entity
   const isOwner = Boolean(serverIsOwner || matchIdentity);
 
   if (!ready && !serverIsOwner) {
@@ -73,12 +71,6 @@ export function EntityActionBar({
         >
           Edit profile
         </Link>
-        <a
-          href="#contact"
-          className="inline-flex h-10 items-center rounded-full border border-white/20 bg-transparent px-5 text-[13px] font-semibold text-white transition hover:bg-white/[0.06]"
-        >
-          Contact
-        </a>
       </div>
     );
   }
