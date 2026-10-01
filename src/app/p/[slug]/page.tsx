@@ -384,12 +384,6 @@ export default async function PublicationPage({ params }: Props) {
           )}
 
           <div className="mt-10 flex flex-wrap gap-2">
-            <Link
-              href={`/promote?slug=${p.slug}`}
-              className="inline-flex h-11 items-center rounded-full bg-omniv-gold/15 px-5 text-[13px] font-semibold text-omniv-gold"
-            >
-              Promote this
-            </Link>
             <SaveButton
               kind="publication"
               type={p.type}
