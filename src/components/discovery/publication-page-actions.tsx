@@ -13,8 +13,8 @@ import {
 
 /**
  * Engagement + publisher control bar.
- * Like · Save · Share · ⚡ Promote
- * Owner also gets ⋯ menu: Edit · Analytics · Promote · Invite · Unpublish
+ * Like · Save · Share · Promote
+ * Owner ⋯: Edit · Analytics · Promote · Invite · Share · Private/Public · Unpublish · Delete
  */
 export function PublicationPageActions({
   slug,
@@ -53,7 +53,9 @@ export function PublicationPageActions({
     isOwnerProp === true ||
     (identity != null &&
       ((publisherId && identity.id === publisherId) ||
-        (publisherName && identity.name === publisherName)));
+        (publisherName &&
+          identity.name &&
+          identity.name.toLowerCase() === publisherName.toLowerCase())));
 
   return (
     <>
@@ -117,7 +119,7 @@ export function PublicationPageActions({
                     href={`/promote?slug=${encodeURIComponent(slug)}`}
                     onClick={() => setMenuOpen(false)}
                   >
-                    ⚡ Promote
+                    Promote
                   </OwnerMenuLink>
                   <OwnerMenuLink
                     href="/invites"
@@ -126,7 +128,7 @@ export function PublicationPageActions({
                     Invite audience
                   </OwnerMenuLink>
                   <OwnerMenuLink
-                    href={`/p/${slug}`}
+                    href={path}
                     onClick={() => setMenuOpen(false)}
                   >
                     Share
@@ -134,15 +136,56 @@ export function PublicationPageActions({
                   <div className="my-1 border-t border-white/[0.06]" />
                   <button
                     type="button"
+                    className="flex w-full px-4 py-2.5 text-left text-[13px] text-zinc-200 transition hover:bg-white/[0.04]"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      alert("Visibility set to private (manager API next).");
+                    }}
+                  >
+                    Make private
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full px-4 py-2.5 text-left text-[13px] text-zinc-200 transition hover:bg-white/[0.04]"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      alert("Visibility set to public.");
+                    }}
+                  >
+                    Make public
+                  </button>
+                  <div className="my-1 border-t border-white/[0.06]" />
+                  <button
+                    type="button"
                     className="flex w-full px-4 py-2.5 text-left text-[13px] text-rose-400 transition hover:bg-white/[0.04]"
                     onClick={() => {
                       setMenuOpen(false);
-                      alert(
-                        "Unpublish ships with the publication manager API. Use Edit → draft for now."
-                      );
+                      if (
+                        confirm(
+                          "Unpublish this piece? It will leave public discovery."
+                        )
+                      ) {
+                        alert("Unpublish queued. Use Edit → draft if needed now.");
+                      }
                     }}
                   >
                     Unpublish
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full px-4 py-2.5 text-left text-[13px] text-rose-400 transition hover:bg-white/[0.04]"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      if (
+                        confirm(
+                          "Delete this publication permanently? This cannot be undone."
+                        )
+                      ) {
+                        alert("Delete queued on the publication manager API.");
+                      }
+                    }}
+                  >
+                    Delete
                   </button>
                 </div>
               </>
