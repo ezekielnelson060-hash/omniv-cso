@@ -231,19 +231,13 @@ export default async function EntityPage({ params, searchParams }: Props) {
             ←
           </Link>
           <div className="absolute right-4 top-4 z-10 flex gap-1">
-            <SaveButton
-              type={e.type}
-              slug={e.slug}
-              name={e.name}
-              variant="icon"
-            />
-            {isOwner && (
-              <Link
-                href={editPath}
-                className="flex h-9 items-center rounded-full bg-black/55 px-3.5 text-[13px] font-semibold text-white"
-              >
-                Edit
-              </Link>
+            {!isOwner && (
+              <SaveButton
+                type={e.type}
+                slug={e.slug}
+                name={e.name}
+                variant="icon"
+              />
             )}
           </div>
         </div>
@@ -404,7 +398,14 @@ export default async function EntityPage({ params, searchParams }: Props) {
               </p>
               {!e.verified && isOwner && <GetVerifiedCard />}
               <div id="contact" className="pt-4">
-                <ContactForm entityName={e.name} entityPath={path} />
+                {!isOwner && (
+                  <ContactForm
+                    entityName={e.name}
+                    entityPath={path}
+                    entityId={e.id}
+                    ownerId={(e as { ownerId?: string }).ownerId}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -492,7 +493,14 @@ export default async function EntityPage({ params, searchParams }: Props) {
           </div>
 
           <div id="contact" className="mt-10">
-            <ContactForm entityName={e.name} entityPath={path} />
+            {!isOwner && (
+              <ContactForm
+                entityName={e.name}
+                entityPath={path}
+                entityId={e.id}
+                ownerId={(e as { ownerId?: string }).ownerId}
+              />
+            )}
           </div>
         </main>
 
