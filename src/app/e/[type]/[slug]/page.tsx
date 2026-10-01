@@ -53,7 +53,7 @@ async function tryClient() {
 function hostLabel(href: string) {
   try {
     return new URL(href.startsWith("http") ? href : `https://${href}`).hostname.replace(
-      /^www\\./,
+      /^www\./,
       ""
     );
   } catch {
@@ -185,7 +185,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
 
   const origin = (
     process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
-  ).replace(/\\/$/, "");
+  ).replace(/\/$/, "");
   const pageUrl = `${origin}${path}`;
   const entityLd = {
     "@context": "https://schema.org",
@@ -439,6 +439,19 @@ export default async function EntityPage({ params, searchParams }: Props) {
               <p className="text-[15px] leading-relaxed text-zinc-300">
                 {e.about || e.tagline || "No about text yet."}
               </p>
+              {e.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {e.tags.map((tag) => (
+                    <Link
+                      key={tag}
+                      href={`/explore?q=${encodeURIComponent(tag)}`}
+                      className="rounded-full bg-white/[0.06] px-3 py-1 text-[12px] text-zinc-400 hover:text-white"
+                    >
+                      {tag}
+                    </Link>
+                  ))}
+                </div>
+              )}
               {!e.verified && isOwner && <GetVerifiedCard />}
               <div id="contact" className="pt-4">
                 <ContactForm entityName={e.name} entityPath={path} />
@@ -482,14 +495,15 @@ export default async function EntityPage({ params, searchParams }: Props) {
               <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
                 {activeTab === "overview" ? "Latest" : "Publications"}
               </p>
-              {(activeTab === "overview" ? pubs.slice(0, 6) : filtered).length === 0 ? (
+              {(activeTab === "overview" ? pubs.slice(0, 6) : filtered).length ===
+              0 ? (
                 <p className="py-10 text-center text-[14px] text-zinc-500">
                   No publications yet.
                 </p>
               ) : (
-                (activeTab === "overview" ? pubs.slice(0, 6) : filtered).map((p) => (
-                  <PublicationCard key={p.id} pub={p} />
-                ))
+                (activeTab === "overview" ? pubs.slice(0, 6) : filtered).map(
+                  (p) => <PublicationCard key={p.id} pub={p} />
+                )
               )}
             </div>
           )}
@@ -524,10 +538,7 @@ export default async function EntityPage({ params, searchParams }: Props) {
           )}
 
           <div className="mt-10">
-            <KeepExploring
-              publications={networkPubs}
-              tags={e.tags || []}
-            />
+            <KeepExploring publications={networkPubs} tags={e.tags || []} />
           </div>
 
           <div id="contact" className="mt-10">
