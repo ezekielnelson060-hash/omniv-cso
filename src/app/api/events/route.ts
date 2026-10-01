@@ -4,7 +4,7 @@ import { createClient as createAdmin } from "@supabase/supabase-js";
 
 /**
  * POST { name, path?, meta? }
- * Authenticated → user_id attached. Anonymous allowed for public pages (fan gate).
+ * Authenticated → user_id attached. Anonymous allowed for public discovery pages.
  */
 export async function POST(req: Request) {
   try {
@@ -39,7 +39,6 @@ export async function POST(req: Request) {
     const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    // Prefer service role so anonymous fan-gate events still insert
     if (url && service) {
       const admin = createAdmin(url, service, {
         auth: { persistSession: false, autoRefreshToken: false },
@@ -51,10 +50,28 @@ export async function POST(req: Request) {
         meta: body.meta || {},
       });
       if (error) console.error("events insert", error);
+
+      // Live ranking: real views raise heat so Home/Explore feature active work
+      if (name === "discovery_view" && body.meta) {
+        const slug =
+          typeof body.meta.publication_slug === "string"
+            ? body.meta.publication_slug
+            : null;
+        if (slug) {
+          try {
+            await admin.rpc("discovery_bump_heat", {
+              p_slug: slug,
+              p_delta: 1,
+            });
+          } catch (e) {
+            console.error("bump heat", e);
+          }
+        }
+      }
+
       return NextResponse.json({ ok: true });
     }
 
-    // Fallback: user session client (own events only)
     if (url && anon && userId) {
       try {
         const supabase = await createClient();
@@ -72,6 +89,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ ok: true }); // never fail client UX
+    return NextResponse.json({ ok: true });
   }
 }
