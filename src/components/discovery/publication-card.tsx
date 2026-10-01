@@ -11,6 +11,7 @@ import {
 } from "@/lib/discovery/types";
 import { getEntityById } from "@/lib/discovery/seed";
 import { coverFor } from "@/lib/discovery/seed-covers";
+import { cleanPublisherMeta } from "@/lib/discovery/publisher-meta";
 
 type PubWithCover = Publication & {
   coverUrl?: string;
@@ -38,6 +39,7 @@ export function PublicationCard({ pub }: { pub: PubWithCover }) {
   const isOpp = pub.type === "opportunity";
   const coverSrc = pub.coverUrl || coverFor(pub.slug);
   const publisherHref = publisher ? entityPath(publisher) : undefined;
+  const displayMeta = cleanPublisherMeta(name, pub.meta);
 
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06] transition-colors duration-200 hover:bg-[#101010]">
@@ -113,10 +115,10 @@ export function PublicationCard({ pub }: { pub: PubWithCover }) {
                 )}
               </span>
             )}
-            {pub.meta && (
+            {displayMeta && (
               <>
                 <span className="text-zinc-600">·</span>
-                <span className="truncate text-zinc-500">{pub.meta}</span>
+                <span className="truncate text-zinc-500">{displayMeta}</span>
               </>
             )}
           </div>
