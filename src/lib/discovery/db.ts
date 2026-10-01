@@ -67,7 +67,6 @@ export type LivePublication = Publication & {
   coverUrl?: string;
 };
 
-/** Entity with optional media (after migration) */
 export type LiveEntity = DiscoveryEntity & {
   avatarUrl?: string;
   coverUrl?: string;
@@ -298,10 +297,20 @@ export async function listLivePublications(
         return s === "published" || s === "scheduled";
       })
       .map(rowToPublication);
+
+    live.sort((a, b) => {
+      const heatDiff = (b.heat || 0) - (a.heat || 0);
+      if (heatDiff !== 0) return heatDiff;
+      return (b.publishedAt || "").localeCompare(a.publishedAt || "");
+    });
+
     const liveSlugs = new Set(live.map((p) => p.slug));
-    const extras = (SEED_PUBLICATIONS as LivePublication[]).filter(
-      (p) => !liveSlugs.has(p.slug)
-    );
+    const extras =
+      live.length >= 24
+        ? []
+        : (SEED_PUBLICATIONS as LivePublication[])
+            .filter((p) => !liveSlugs.has(p.slug))
+            .slice(0, Math.max(0, 24 - live.length));
     return [...live, ...extras];
   } catch {
     return SEED_PUBLICATIONS as LivePublication[];
