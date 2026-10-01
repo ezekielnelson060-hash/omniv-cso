@@ -7,7 +7,7 @@ export function NetworkHeader() {
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5">
         <Link href="/home" className="flex items-center gap-2">
           <Image
-            src="/logo.svg"
+            src="/logo.png"
             alt="Omniv"
             width={28}
             height={28}
