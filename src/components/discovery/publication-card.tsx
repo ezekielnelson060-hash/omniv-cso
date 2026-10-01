@@ -43,13 +43,15 @@ export function PublicationCard({ pub }: { pub: PubWithCover }) {
 
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06] transition-colors duration-200 hover:bg-[#101010]">
-      <Link href={publicationPath(pub)} className="group flex flex-1 flex-col">
+      <Link href={publicationPath(pub)} prefetch className="group flex flex-1 flex-col">
         <div className="relative flex aspect-[16/10] items-end overflow-hidden">
           {coverSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={coverSrc}
               alt=""
+              loading="lazy"
+              decoding="async"
               className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
             />
           ) : (
