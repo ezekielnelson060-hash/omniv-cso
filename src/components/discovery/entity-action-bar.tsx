@@ -40,13 +40,20 @@ export function EntityActionBar({
 
   const matchIdentity =
     identity != null &&
-    ((id && identity.id === id) ||
-      (identity.slug && identity.slug.toLowerCase() === slug.toLowerCase()) ||
+    ((id && identity.id && identity.id === id) ||
+      (identity.slug &&
+        identity.slug.toLowerCase() === slug.toLowerCase()) ||
+      (identity.handle &&
+        identity.handle.toLowerCase() === slug.toLowerCase()) ||
       (identity.name &&
-        identity.name.toLowerCase() === name.toLowerCase()) ||
-      (identity.path && identity.path.includes(`/e/${type}/${slug}`)));
+        name &&
+        identity.name.toLowerCase().trim() === name.toLowerCase().trim()) ||
+      (identity.path &&
+        (identity.path.includes(`/e/${type}/${slug}`) ||
+          identity.path.endsWith(`/${slug}`))));
 
-  const isOwner = serverIsOwner || matchIdentity;
+  // Owner if server says so OR active publishing identity is this entity
+  const isOwner = Boolean(serverIsOwner || matchIdentity);
 
   if (!ready && !serverIsOwner) {
     return (
