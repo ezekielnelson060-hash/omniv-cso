@@ -215,7 +215,7 @@ export function DesktopSidebar() {
       <div className="sticky top-0 flex h-dvh flex-col overflow-hidden bg-[#050505]">
         <div className="flex items-center gap-2.5 px-5 pb-3 pt-5">
           <Image
-            src="/logo.svg"
+            src="/logo.png"
             alt="Omniv"
             width={28}
             height={28}
