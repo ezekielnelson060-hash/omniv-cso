@@ -10,41 +10,75 @@ import {
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
 
-const DEMO = {
-  people: 18421,
-  growthPct: 28,
-  sources: [
-    { label: "Omniv Explore", pct: 41 },
-    { label: "Google", pct: 24 },
-    { label: "Direct", pct: 17 },
-    { label: "Shared links", pct: 11 },
-    { label: "Other", pct: 7 },
-  ],
-  interests: [
-    { label: "AI", w: 92 },
-    { label: "Technology", w: 78 },
-    { label: "Infrastructure", w: 64 },
-    { label: "Africa", w: 52 },
-    { label: "Business", w: 40 },
-  ],
+type AudienceData = {
+  live?: boolean;
+  note?: string;
+  people: number;
+  growthPct: number;
+  weekOpened?: number;
+  sources: { label: string; pct: number }[];
+  interests: { label: string; w: number }[];
   actions: {
-    opened: 2184,
-    saved: 684,
-    followed: 327,
-    contacted: 91,
-  },
+    opened: number;
+    saved: number;
+    followed: number;
+    contacted: number;
+  };
+  topPublications?: {
+    slug: string;
+    title: string;
+    heat: number;
+    type: string;
+  }[];
+  publicationCount?: number;
 };
 
 export default function AudiencePage() {
   const [identity, setIdentity] = useState<ActiveAccount | null>(null);
+  const [data, setData] = useState<AudienceData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setIdentity(readActiveAccount());
     return onAccountSwitch((a) => setIdentity(a));
   }, []);
 
+  useEffect(() => {
+    if (!identity) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    const q = new URLSearchParams();
+    if (identity.name) q.set("name", identity.name);
+    if (identity.slug) q.set("slug", identity.slug);
+    void fetch(`/api/discovery/audience?${q}`)
+      .then((r) => r.json())
+      .then((j: AudienceData) => {
+        if (!cancelled) setData(j);
+      })
+      .catch(() => {
+        if (!cancelled)
+          setData({
+            live: false,
+            people: 0,
+            growthPct: 0,
+            sources: [],
+            interests: [],
+            actions: { opened: 0, saved: 0, followed: 0, contacted: 0 },
+          });
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [identity?.id, identity?.name, identity?.slug]);
+
   const name = identity?.name || "Your identity";
-  const d = DEMO;
+  const d = data;
 
   return (
     <DiscoveryShell>
@@ -72,131 +106,165 @@ export default function AudiencePage() {
         </header>
 
         <main className="mx-auto max-w-lg space-y-8 px-4 py-6 pb-28 md:max-w-2xl">
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
-              Your publishing is reaching
-            </p>
-            <p className="mt-2 text-4xl font-semibold tabular-nums text-white">
-              {d.people.toLocaleString()}
-            </p>
-            <p className="mt-1 text-[13px] text-zinc-500">
-              people
-              <span className="ml-2 text-emerald-400">
-                +{d.growthPct}% this month
-              </span>
-            </p>
-          </section>
-
-          <section className="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              Discovery
-            </p>
-            <p className="mt-1 text-[13px] text-zinc-400">How people find you</p>
-            <ul className="mt-4 space-y-3">
-              {d.sources.map((s) => (
-                <li key={s.label} className="flex items-center gap-3">
-                  <span className="w-28 shrink-0 text-[13px] text-zinc-300">
-                    {s.label}
-                  </span>
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-                    <div
-                      className="h-full rounded-full bg-omniv-gold"
-                      style={{ width: `${s.pct}%` }}
-                    />
-                  </div>
-                  <span className="w-10 text-right text-[12px] tabular-nums text-zinc-500">
-                    {s.pct}%
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              Interests
-            </p>
-            <ul className="mt-4 space-y-2.5">
-              {d.interests.map((i) => (
-                <li key={i.label} className="flex items-center gap-3">
-                  <span className="w-28 shrink-0 text-[13px] text-zinc-300">
-                    {i.label}
-                  </span>
-                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-omniv-gold/80 to-omniv-gold"
-                      style={{ width: `${i.w}%` }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              Audience actions
-            </p>
-            <ul className="mt-4 space-y-2.5 text-[14px] text-zinc-300">
-              <li>
-                <span className="font-semibold tabular-nums text-white">
-                  {d.actions.opened.toLocaleString()}
-                </span>{" "}
-                opened your publications
-              </li>
-              <li>
-                <span className="font-semibold tabular-nums text-white">
-                  {d.actions.saved.toLocaleString()}
-                </span>{" "}
-                saved
-              </li>
-              <li>
-                <span className="font-semibold tabular-nums text-white">
-                  {d.actions.followed.toLocaleString()}
-                </span>{" "}
-                followed
-              </li>
-              <li>
-                <span className="font-semibold tabular-nums text-white">
-                  {d.actions.contacted.toLocaleString()}
-                </span>{" "}
-                contacted you
-              </li>
-            </ul>
-          </section>
-
-          <section>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              People interested in your work
-            </p>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {[
-                { n: d.actions.followed, label: "new followers" },
-                { n: d.actions.saved, label: "savers" },
-                { n: d.actions.contacted, label: "contacts" },
-              ].map((c) => (
-                <div
-                  key={c.label}
-                  className="rounded-xl bg-white/[0.03] px-3 py-3 text-center ring-1 ring-white/[0.06]"
-                >
-                  <p className="text-[18px] font-semibold tabular-nums text-white">
-                    {c.n.toLocaleString()}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-zinc-500">{c.label}</p>
-                </div>
-              ))}
+          {loading && (
+            <div className="space-y-3">
+              <div className="h-16 animate-pulse rounded-2xl bg-white/[0.04]" />
+              <div className="h-32 animate-pulse rounded-2xl bg-white/[0.04]" />
             </div>
-            <Link
-              href="/invites"
-              className="mt-4 flex h-11 items-center justify-center rounded-full bg-omniv-gold text-[14px] font-semibold text-black"
-            >
-              Invite to discover more →
-            </Link>
-          </section>
+          )}
 
-          <p className="text-center text-[11px] text-zinc-600">
-            Aggregate insights only. Individual readers stay private.
-          </p>
+          {!loading && d && (
+            <>
+              <section>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                  Your publishing is reaching
+                </p>
+                <p className="mt-2 text-4xl font-semibold tabular-nums tracking-tight text-white">
+                  {d.people.toLocaleString()}
+                </p>
+                <p className="mt-1 text-[14px] text-zinc-400">
+                  people · discovery views (30 days)
+                </p>
+                <p
+                  className={`mt-2 text-[13px] font-medium ${
+                    (d.growthPct || 0) >= 0
+                      ? "text-emerald-400"
+                      : "text-rose-400"
+                  }`}
+                >
+                  {(d.growthPct || 0) >= 0 ? "+" : ""}
+                  {d.growthPct}% this period
+                  {typeof d.weekOpened === "number"
+                    ? ` · ${d.weekOpened} this week`
+                    : ""}
+                </p>
+                {!d.live && d.note && (
+                  <p className="mt-2 text-[12px] text-zinc-600">{d.note}</p>
+                )}
+                {d.live && d.people === 0 && (
+                  <p className="mt-2 text-[13px] text-zinc-500">
+                    No discovery views yet. Share a publication or open it
+                    yourself to start the graph.
+                  </p>
+                )}
+              </section>
+
+              <section>
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                  Discovery
+                </h2>
+                <p className="mt-1 text-[13px] text-zinc-500">
+                  How people find you
+                </p>
+                <ul className="mt-4 space-y-2.5">
+                  {d.sources.map((s) => (
+                    <li
+                      key={s.label}
+                      className="flex items-center justify-between gap-3 text-[14px]"
+                    >
+                      <span className="text-zinc-300">{s.label}</span>
+                      <span className="tabular-nums text-zinc-500">
+                        {s.pct}%
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+
+              <section>
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                  Interests
+                </h2>
+                <div className="mt-4 space-y-2.5">
+                  {d.interests.map((i) => (
+                    <div key={i.label}>
+                      <div className="mb-1 flex justify-between text-[13px]">
+                        <span className="text-zinc-300">{i.label}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
+                        <div
+                          className="h-full rounded-full bg-omniv-gold/80"
+                          style={{ width: `${Math.max(8, i.w)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                  Audience actions
+                </h2>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  {[
+                    { label: "Opened your publications", n: d.actions.opened },
+                    { label: "Saved", n: d.actions.saved },
+                    { label: "Followed", n: d.actions.followed },
+                    { label: "Contacted you", n: d.actions.contacted },
+                  ].map((a) => (
+                    <div
+                      key={a.label}
+                      className="rounded-2xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]"
+                    >
+                      <p className="text-[20px] font-semibold tabular-nums text-white">
+                        {a.n.toLocaleString()}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-zinc-500">
+                        {a.label}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {d.topPublications && d.topPublications.length > 0 && (
+                <section>
+                  <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                    Strongest pieces
+                  </h2>
+                  <ul className="mt-3 space-y-2">
+                    {d.topPublications.map((p) => (
+                      <li key={p.slug}>
+                        <Link
+                          href={`/p/${p.slug}`}
+                          className="flex items-center justify-between gap-3 rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]"
+                        >
+                          <span className="min-w-0 truncate text-[14px] font-medium text-white">
+                            {p.title}
+                          </span>
+                          <span className="shrink-0 text-[12px] tabular-nums text-omniv-gold">
+                            heat {p.heat}
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              <section className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-transparent p-5">
+                <p className="text-[15px] font-semibold text-white">
+                  People interested in your work
+                </p>
+                <p className="mt-1 text-[13px] text-zinc-500">
+                  {d.publicationCount || 0} publications · invite more readers
+                </p>
+                <Link
+                  href="/invites"
+                  className="mt-4 inline-flex h-11 items-center rounded-full bg-omniv-gold px-5 text-[13px] font-semibold text-black"
+                >
+                  Invite to discover more →
+                </Link>
+              </section>
+            </>
+          )}
+
+          {!loading && !identity && (
+            <p className="text-center text-[14px] text-zinc-500">
+              Switch to a publishing identity to see Audience.
+            </p>
+          )}
         </main>
 
         <BottomNav />
