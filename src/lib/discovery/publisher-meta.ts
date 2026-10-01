@@ -1,4 +1,4 @@
-/** Drop publisher name if it was baked into meta ("Name · analysis" → "analysis"). */
+/** Drop publisher name if baked into meta ("Name · analysis" → "analysis"). */
 export function cleanPublisherMeta(
   name?: string | null,
   meta?: string | null
@@ -9,10 +9,8 @@ export function cleanPublisherMeta(
   if (name) {
     const n = name.trim();
     if (n) {
-      const re = new RegExp(
-        `^${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\s*[·•|\\-]\s*`,
-        "i"
-      );
+      const escaped = n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`^${escaped}\\s*[·•|\\-–—:]*\\s*`, "i");
       m = m.replace(re, "").trim();
       if (m.toLowerCase() === n.toLowerCase()) m = "";
     }
