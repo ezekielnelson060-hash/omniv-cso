@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 
 /**
- * Omniv Verified — one checkmark shape for everyone.
- * Color communicates verification category, not a different symbol.
+ * Omniv Verified — mature shield check (not a plain circle).
+ * Color communicates verification category.
  *
  * Person → Blue · Company → Gold · Brand → Purple · Artist → Pink
  * Organization → Teal · Project → Orange · Media → Red
@@ -60,6 +60,7 @@ export function resolveVerifyCategory(verifyType?: string): VerifyCategory {
   return "entity";
 }
 
+/** Shield + check — not a flat circle */
 function CheckmarkIcon({
   color,
   size = 18,
@@ -75,11 +76,14 @@ function CheckmarkIcon({
       fill="none"
       aria-hidden
     >
-      <circle cx="12" cy="12" r="11" fill={color} />
       <path
-        d="M7.5 12.2 10.4 15.1 16.5 9"
-        stroke="#fff"
-        strokeWidth="2.2"
+        d="M12 2.2 4.8 5.4v5.3c0 5.2 3.4 9.9 7.2 11.1 3.8-1.2 7.2-5.9 7.2-11.1V5.4L12 2.2z"
+        fill={color}
+      />
+      <path
+        d="M8.2 12.1 10.7 14.6 15.8 9.4"
+        stroke="#0a0a0a"
+        strokeWidth="2.1"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -111,10 +115,14 @@ export function VerifiedBadge({
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        className={`inline-flex shrink-0 items-center justify-center ${className}`}
-        title={label}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen(true);
+        }}
+        className={`inline-flex shrink-0 items-center justify-center align-middle ${className}`}
         aria-label={label}
+        title={label}
       >
         <CheckmarkIcon color={color} size={size} />
       </button>
@@ -123,36 +131,37 @@ export function VerifiedBadge({
         <div
           className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-4 sm:items-center"
           onClick={() => setOpen(false)}
+          role="dialog"
+          aria-modal
         >
           <div
             className="w-full max-w-sm rounded-2xl bg-[#121212] p-5 ring-1 ring-white/10"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-2.5">
-              <CheckmarkIcon color={color} size={22} />
-              <p className="text-[16px] font-semibold text-white">{label}</p>
+            <div className="flex items-start gap-3">
+              <CheckmarkIcon color={color} size={28} />
+              <div className="min-w-0 flex-1">
+                <p className="text-[16px] font-semibold text-white">{label}</p>
+                {name && (
+                  <p className="mt-1 text-[13px] text-zinc-400">
+                    {name} is verified on Omniv.
+                  </p>
+                )}
+                {verifiedAt && (
+                  <p className="mt-2 text-[12px] text-zinc-500">
+                    Verified{" "}
+                    {new Date(verifiedAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                )}
+                <p className="mt-3 text-[12px] leading-relaxed text-zinc-500">
+                  Verification confirms identity or representation — not an
+                  endorsement of content.
+                </p>
+              </div>
             </div>
-            <p className="mt-3 text-[14px] leading-relaxed text-zinc-400">
-              Omniv has verified that this{" "}
-              {category === "person" ? "person" : "entity"}
-              {name ? ` (${name})` : ""} is represented by the account claiming
-              ownership of it. Verification establishes authenticity — not
-              endorsement by Omniv.
-            </p>
-            {verifiedAt && (
-              <p className="mt-3 text-[12px] text-zinc-500">
-                Verified:{" "}
-                {(() => {
-                  const d = Date.parse(verifiedAt);
-                  return Number.isFinite(d)
-                    ? new Date(d).toLocaleDateString("en-US", {
-                        month: "long",
-                        year: "numeric",
-                      })
-                    : verifiedAt;
-                })()}
-              </p>
-            )}
             <div className="mt-5 flex flex-col gap-2">
               {href && (
                 <Link
@@ -201,7 +210,7 @@ export function GetVerifiedCard({ compact = false }: { compact?: boolean }) {
     <div className="mt-8 overflow-hidden rounded-2xl ring-1 ring-white/[0.1]">
       <div className="bg-gradient-to-br from-sky-500/15 via-omniv-gold/10 to-transparent p-5">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-omniv-gold/15">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-omniv-gold/15">
             <CheckmarkIcon color="#C9A227" size={22} />
           </div>
           <div className="min-w-0 flex-1">
