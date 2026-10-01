@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     siteName: "Omniv",
     images: [
       {
-        url: "/og-card.jpg",
+        url: "https://omniv.media/og-card.jpg",
         width: 1200,
         height: 630,
         alt: "Omniv — Publish what matters. Discover what moves next.",
@@ -69,7 +69,7 @@ export const metadata: Metadata = {
     creator: "@omnivmedia",
     title: "Omniv — Discovery network for the real world",
     description: DESC,
-    images: ["/og-card.jpg"],
+    images: ["https://omniv.media/og-card.jpg"],
   },
   alternates: {
     canonical: "https://omniv.media",
