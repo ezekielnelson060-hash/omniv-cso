@@ -55,7 +55,7 @@ export function recordSignal(
   kind: SignalKind,
   tags: string[] = [],
   category?: string,
-  context?: { publicationSlug?: string; entityType?: string; entitySlug?: string }
+  context?: { publicationSlug?: string; entityType?: string; entitySlug?: string; source?: string }
 ) {
   if (typeof window === "undefined") return;
   const delta = WEIGHTS[kind] ?? 0.1;
@@ -77,6 +77,7 @@ export function recordSignal(
         publicationSlug: context?.publicationSlug,
         entityType: context?.entityType,
         entitySlug: context?.entitySlug,
+        source: context?.source,
         at: Date.now(),
       });
       localStorage.setItem(EVENTS_KEY, JSON.stringify(events.slice(0, 200)));
@@ -97,6 +98,9 @@ export function recordSignal(
         publicationSlug: context?.publicationSlug,
         entityType: context?.entityType,
         entitySlug: context?.entitySlug,
+        source:
+          context?.source ||
+          (document.referrer ? new URL(document.referrer).hostname : "direct"),
       }),
       keepalive: true,
     });
@@ -156,6 +160,7 @@ export type SignalEvent = {
   publicationSlug?: string;
   entityType?: string;
   entitySlug?: string;
+  source?: string;
   at: number;
 };
 

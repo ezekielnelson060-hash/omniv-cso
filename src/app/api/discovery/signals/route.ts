@@ -47,6 +47,7 @@ export async function POST(req: Request) {
       entity_slug: body.entitySlug ? String(body.entitySlug) : null,
       tags,
       category: body.category ? String(body.category) : null,
+      source: body.source ? String(body.source).slice(0, 120) : "direct",
       weight: WEIGHTS[kind],
     });
 
@@ -78,7 +79,7 @@ export async function GET() {
     const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
     const { data, error } = await supabase
       .from("discovery_signals")
-      .select("tags, weight, kind, created_at, publication_slug")
+      .select("tags, weight, kind, created_at, publication_slug, source")
       .eq("user_id", user.id)
       .gte("created_at", since)
       .order("created_at", { ascending: false })
@@ -95,6 +96,7 @@ export async function GET() {
     const weights: Record<string, number> = {};
     const topicMomentum: Record<string, number> = {};
     const publicationMomentum: Record<string, number> = {};
+    const sourceCounts: Record<string, number> = {};
     const now = Date.now();
     for (const row of data) {
       const tags = Array.isArray(row.tags) ? row.tags : [];
@@ -104,6 +106,8 @@ export async function GET() {
       );
       const recency = Math.exp(-ageHours / 72);
       const contribution = Number(row.weight || 0) * recency;
+      const source = String(row.source || "direct");
+      sourceCounts[source] = (sourceCounts[source] || 0) + 1;
       for (const t of tags) {
         const key = String(t).toLowerCase();
         if (!key) continue;
@@ -135,6 +139,7 @@ export async function GET() {
       weights,
       topicMomentum: normalize(topicMomentum),
       publicationMomentum: normalize(publicationMomentum),
+      sources: sourceCounts,
       count: data.length,
     });
   } catch (e) {

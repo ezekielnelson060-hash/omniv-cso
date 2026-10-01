@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     let query = supabase
       .from("discovery_publications")
       .select(
-        "id, type, slug, title, summary, body, tags, meta, cover_url, heat, published_at, publisher_id, publisher_name, owner_id"
+        "id, type, slug, title, summary, body, tags, meta, cover_url, heat, published_at, publisher_id, publisher_name, owner_id, visibility"
       )
       .order("published_at", { ascending: false })
       .limit(limit);
@@ -28,6 +28,8 @@ export async function GET(req: Request) {
         return NextResponse.json({ publications: [], auth: false });
       }
       query = query.eq("owner_id", user.id);
+    } else {
+      query = query.eq("visibility", "public");
     }
 
     const { data, error } = await query;
@@ -54,6 +56,7 @@ export async function GET(req: Request) {
       publishedAt: r.published_at?.slice?.(0, 10) ?? r.published_at,
       publisherId: r.publisher_id,
       publisherName: r.publisher_name,
+      visibility: r.visibility || "public",
     }));
 
     return NextResponse.json({ publications });

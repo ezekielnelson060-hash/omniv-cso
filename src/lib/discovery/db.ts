@@ -28,6 +28,7 @@ type Row = {
   avatar_url?: string | null;
   cover_url?: string | null;
   owner_id?: string | null;
+  visibility?: "public" | "private" | null;
 };
 
 type PubRow = {
@@ -45,6 +46,8 @@ type PubRow = {
   published_at: string;
   publisher_id: string | null;
   publisher_name: string | null;
+  owner_id?: string | null;
+  visibility?: "public" | "private" | null;
   subtitle?: string | null;
   excerpt?: string | null;
   content?: ArticleContentBlock[] | null;
@@ -119,7 +122,9 @@ function rowToPublication(r: PubRow): LivePublication {
     canonicalUrl: r.canonical_url ?? undefined,
     updatedAt: r.updated_at ?? undefined,
     publisherId: r.publisher_id || "live",
+    ownerId: r.owner_id ?? undefined,
     publisherName: r.publisher_name ?? undefined,
+    visibility: r.visibility ?? "public",
     mediaUrl: r.media_url ?? undefined,
     coverUrl: r.cover_url ?? undefined,
     tags: Array.isArray(r.tags) ? r.tags : [],
@@ -130,7 +135,7 @@ function rowToPublication(r: PubRow): LivePublication {
 }
 
 const PUB_SELECT =
-  "id, type, slug, title, summary, body, tags, meta, cover_url, media_url, heat, published_at, publisher_id, publisher_name";
+  "id, type, slug, title, summary, body, tags, meta, cover_url, media_url, heat, published_at, publisher_id, publisher_name, owner_id, visibility";
 const PUB_SELECT_ARTICLE =
   `${PUB_SELECT}, subtitle, excerpt, content, entity_refs, related_publication_ids, sources, what_this_means, question_nobody_asks, reading_time, status, seo_title, seo_description, canonical_url, updated_at`;
 

@@ -10,6 +10,7 @@ import { KeepExploring } from "@/components/discovery/keep-exploring";
 import { PublicationMedia } from "@/components/discovery/publication-media";
 import { PublicationBody } from "@/components/discovery/publication-body";
 import { StickyArticleHeader } from "@/components/discovery/sticky-article-header";
+import { PublisherPublicationMenu } from "@/components/discovery/publisher-publication-menu";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { createClient } from "@/lib/supabase/server";
@@ -82,6 +83,8 @@ export default async function PublicationPage({ params }: Props) {
   }
   const p = (await getLivePublication(supabase, slug)) as LivePublication | null;
   if (!p) notFound();
+  const currentUser = supabase ? (await supabase.auth.getUser()).data.user : null;
+  const canManage = Boolean(currentUser && p.ownerId === currentUser.id);
 
   const publisher =
     getEntityById(p.publisherId) ||
@@ -186,6 +189,14 @@ export default async function PublicationPage({ params }: Props) {
               </Link>
               <div className="flex items-center gap-1">
                 <ShareButton title={p.title} path={path} />
+                {canManage && (
+                  <PublisherPublicationMenu
+                    id={p.id}
+                    slug={p.slug}
+                    title={p.title}
+                    visibility={p.visibility}
+                  />
+                )}
               </div>
             </div>
 

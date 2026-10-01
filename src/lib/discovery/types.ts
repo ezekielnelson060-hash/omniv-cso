@@ -177,7 +177,9 @@ export type Publication = {
   updatedAt?: string;
   /** publisher entity id */
   publisherId: string;
+  ownerId?: string;
   publisherName?: string;
+  visibility?: "public" | "private";
   category?: string;
   location?: string;
   tags: string[];
