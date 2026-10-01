@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { ContactForm } from "@/components/discovery/contact-form";
 import { StructuredData } from "@/components/StructuredData";
 import { KeepExploring } from "@/components/discovery/keep-exploring";
-import { FollowButton } from "@/components/discovery/follow-button";
+import { EntityActionBar } from "@/components/discovery/entity-action-bar";
 import { SaveButton } from "@/components/discovery/save-button";
 import { EntityStatsRow } from "@/components/discovery/entity-stats-row";
 import { PublicationCard } from "@/components/discovery/publication-card";
@@ -260,39 +260,14 @@ export default async function EntityPage({ params, searchParams }: Props) {
                 initial
               )}
             </div>
-            <div className="mb-1 flex flex-wrap justify-end gap-2">
-              {isOwner ? (
-                <>
-                  <Link
-                    href={editPath}
-                    className="inline-flex h-10 items-center rounded-full bg-omniv-gold px-5 text-[13px] font-semibold text-black transition hover:bg-omniv-gold/90"
-                  >
-                    Edit profile
-                  </Link>
-                  <a
-                    href="#contact"
-                    className="inline-flex h-10 items-center rounded-full border border-white/20 bg-transparent px-5 text-[13px] font-semibold text-white transition hover:bg-white/[0.06]"
-                  >
-                    Contact
-                  </a>
-                </>
-              ) : (
-                <>
-                  <FollowButton
-                    type={e.type}
-                    slug={e.slug}
-                    name={e.name}
-                    id={e.id}
-                  />
-                  <a
-                    href="#contact"
-                    className="inline-flex h-10 items-center rounded-full border border-white/20 bg-transparent px-5 text-[13px] font-semibold text-white transition hover:bg-white/[0.06]"
-                  >
-                    Contact
-                  </a>
-                </>
-              )}
-            </div>
+            <EntityActionBar
+              type={e.type}
+              slug={e.slug}
+              name={e.name}
+              id={e.id}
+              editPath={editPath}
+              serverIsOwner={isOwner}
+            />
           </div>
 
           <div className="mt-3">
@@ -404,20 +379,6 @@ export default async function EntityPage({ params, searchParams }: Props) {
             ))}
           </div>
 
-          {(e.intents?.length ?? 0) > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {e.intents?.map((i) => (
-                <span
-                  key={i.kind + (i.detail ?? "")}
-                  className="rounded-full bg-omniv-gold/10 px-3 py-1 text-[12px] text-omniv-gold"
-                >
-                  {INTENT_LABELS[i.kind] || i.kind}
-                  {i.detail ? ` · ${i.detail}` : ""}
-                </span>
-              ))}
-            </div>
-          )}
-
           <div className="mt-6 -mx-4 flex gap-2 overflow-x-auto border-b border-white/[0.06] px-4 pb-0 scrollbar-none">
             {tabs.map((t) => (
               <Link
@@ -439,19 +400,6 @@ export default async function EntityPage({ params, searchParams }: Props) {
               <p className="text-[15px] leading-relaxed text-zinc-300">
                 {e.about || e.tagline || "No about text yet."}
               </p>
-              {e.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {e.tags.map((tag) => (
-                    <Link
-                      key={tag}
-                      href={`/explore?q=${encodeURIComponent(tag)}`}
-                      className="rounded-full bg-white/[0.06] px-3 py-1 text-[12px] text-zinc-400 hover:text-white"
-                    >
-                      {tag}
-                    </Link>
-                  ))}
-                </div>
-              )}
               {!e.verified && isOwner && <GetVerifiedCard />}
               <div id="contact" className="pt-4">
                 <ContactForm entityName={e.name} entityPath={path} />
