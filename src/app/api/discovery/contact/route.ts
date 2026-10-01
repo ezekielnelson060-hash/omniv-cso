@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { createClient as createAdmin } from "@supabase/supabase-js";
 
-const TO = process.env.CONTACT_INBOX || "hello@omniv.media";
+const FALLBACK_TO = process.env.CONTACT_INBOX || "hello@omniv.media";
 const FROM = process.env.RESEND_FROM || "Omniv <onboarding@omniv.media>";
 
 export async function POST(req: Request) {
@@ -11,6 +12,7 @@ export async function POST(req: Request) {
     const message = String(body.message || "").trim();
     const entityName = String(body.entityName || "Listing").trim();
     const entityPath = String(body.entityPath || "").trim();
+    const ownerId = body.ownerId ? String(body.ownerId) : null;
 
     if (!name || !email || !message) {
       return NextResponse.json(
@@ -22,7 +24,34 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid email" }, { status: 400 });
     }
 
-    // Store lead for entity owner (Pro lead capture)
+    let to = FALLBACK_TO;
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (ownerId && url && service) {
+      try {
+        const admin = createAdmin(url, service, {
+          auth: { persistSession: false, autoRefreshToken: false },
+        });
+        const { data, error } = await admin.auth.admin.getUserById(ownerId);
+        if (!error && data?.user?.email) {
+          to = data.user.email;
+        } else {
+          const { data: profile } = await admin
+            .from("profiles")
+            .select("email, contact_email")
+            .eq("id", ownerId)
+            .maybeSingle();
+          const pe =
+            (profile as { contact_email?: string; email?: string } | null)
+              ?.contact_email ||
+            (profile as { email?: string } | null)?.email;
+          if (pe && pe.includes("@")) to = pe;
+        }
+      } catch (e) {
+        console.error("owner email lookup", e);
+      }
+    }
+
     try {
       const origin = process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
       await fetch(`${origin}/api/discovery/leads`, {
@@ -35,7 +64,7 @@ export async function POST(req: Request) {
           entityId: body.entityId || null,
           entityName,
           entityPath,
-          ownerId: body.ownerId || null,
+          ownerId: ownerId || null,
         }),
       });
     } catch {
@@ -44,10 +73,11 @@ export async function POST(req: Request) {
 
     const key = process.env.RESEND_API_KEY;
     if (!key) {
-      console.log("[contact]", { name, email, entityName, message });
+      console.log("[contact]", { name, email, entityName, to, message });
       return NextResponse.json({
         ok: true,
         note: "Logged (RESEND_API_KEY not set)",
+        deliveredTo: to,
       });
     }
 
@@ -59,7 +89,7 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         from: FROM,
-        to: [TO],
+        to: [to],
         reply_to: email,
         subject: `Omniv contact: ${entityName}`,
         text: [
