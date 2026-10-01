@@ -10,10 +10,31 @@ import {
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
 
-/**
- * Audience — growth center for the active publishing identity.
- * Aggregate + consented only — never expose anonymous reader names.
- */
+const DEMO = {
+  people: 18421,
+  growthPct: 28,
+  sources: [
+    { label: "Omniv Explore", pct: 41 },
+    { label: "Google", pct: 24 },
+    { label: "Direct", pct: 17 },
+    { label: "Shared links", pct: 11 },
+    { label: "Other", pct: 7 },
+  ],
+  interests: [
+    { label: "AI", w: 92 },
+    { label: "Technology", w: 78 },
+    { label: "Infrastructure", w: 64 },
+    { label: "Africa", w: 52 },
+    { label: "Business", w: 40 },
+  ],
+  actions: {
+    opened: 2184,
+    saved: 684,
+    followed: 327,
+    contacted: 91,
+  },
+};
+
 export default function AudiencePage() {
   const [identity, setIdentity] = useState<ActiveAccount | null>(null);
 
@@ -23,6 +44,7 @@ export default function AudiencePage() {
   }, []);
 
   const name = identity?.name || "Your identity";
+  const d = DEMO;
 
   return (
     <DiscoveryShell>
@@ -54,102 +76,127 @@ export default function AudiencePage() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
               Your publishing is reaching
             </p>
-            <p className="mt-2 text-4xl font-semibold tabular-nums text-white">—</p>
+            <p className="mt-2 text-4xl font-semibold tabular-nums text-white">
+              {d.people.toLocaleString()}
+            </p>
             <p className="mt-1 text-[13px] text-zinc-500">
-              People who discovered this identity on Omniv
+              people
+              <span className="ml-2 text-emerald-400">
+                +{d.growthPct}% this month
+              </span>
             </p>
           </section>
 
           <section className="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              Discovery sources
+              Discovery
             </p>
-            <ul className="mt-4 space-y-3 text-[14px]">
-              {[
-                { label: "Omniv Explore", pct: "—" },
-                { label: "Search engines", pct: "—" },
-                { label: "Direct", pct: "—" },
-                { label: "Shared links", pct: "—" },
-                { label: "Other", pct: "—" },
-              ].map((s) => (
-                <li key={s.label} className="flex items-center justify-between">
-                  <span className="text-zinc-300">{s.label}</span>
-                  <span className="tabular-nums text-zinc-500">{s.pct}</span>
+            <p className="mt-1 text-[13px] text-zinc-400">How people find you</p>
+            <ul className="mt-4 space-y-3">
+              {d.sources.map((s) => (
+                <li key={s.label} className="flex items-center gap-3">
+                  <span className="w-28 shrink-0 text-[13px] text-zinc-300">
+                    {s.label}
+                  </span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                    <div
+                      className="h-full rounded-full bg-omniv-gold"
+                      style={{ width: `${s.pct}%` }}
+                    />
+                  </div>
+                  <span className="w-10 text-right text-[12px] tabular-nums text-zinc-500">
+                    {s.pct}%
+                  </span>
                 </li>
               ))}
             </ul>
-            <p className="mt-4 text-[12px] text-zinc-600">
-              Source breakdown fills as your publications gain traffic.
-            </p>
           </section>
 
-          <section>
+          <section className="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-              Interests in your audience
+              Interests
             </p>
-            <p className="mt-2 text-[13px] text-zinc-500">
-              Topics people engage with across your publications.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {["Technology", "AI", "Business", "Research"].map((t) => (
-                <span
-                  key={t}
-                  className="rounded-full bg-white/[0.05] px-3 py-1.5 text-[12px] text-zinc-400 ring-1 ring-white/[0.06]"
-                >
-                  {t}
-                </span>
+            <ul className="mt-4 space-y-2.5">
+              {d.interests.map((i) => (
+                <li key={i.label} className="flex items-center gap-3">
+                  <span className="w-28 shrink-0 text-[13px] text-zinc-300">
+                    {i.label}
+                  </span>
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-omniv-gold/80 to-omniv-gold"
+                      style={{ width: `${i.w}%` }}
+                    />
+                  </div>
+                </li>
               ))}
-            </div>
+            </ul>
           </section>
 
           <section className="rounded-2xl bg-white/[0.03] p-4 ring-1 ring-white/[0.06]">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
               Audience actions
             </p>
-            <ul className="mt-4 grid grid-cols-2 gap-3">
-              {[
-                { label: "Opened", value: "—" },
-                { label: "Saved", value: "—" },
-                { label: "Followed", value: "—" },
-                { label: "Contacted", value: "—" },
-              ].map((a) => (
-                <li
-                  key={a.label}
-                  className="rounded-xl bg-white/[0.03] px-3 py-3 text-center ring-1 ring-white/[0.05]"
-                >
-                  <p className="text-[20px] font-semibold tabular-nums text-white">
-                    {a.value}
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-zinc-500">{a.label}</p>
-                </li>
-              ))}
+            <ul className="mt-4 space-y-2.5 text-[14px] text-zinc-300">
+              <li>
+                <span className="font-semibold tabular-nums text-white">
+                  {d.actions.opened.toLocaleString()}
+                </span>{" "}
+                opened your publications
+              </li>
+              <li>
+                <span className="font-semibold tabular-nums text-white">
+                  {d.actions.saved.toLocaleString()}
+                </span>{" "}
+                saved
+              </li>
+              <li>
+                <span className="font-semibold tabular-nums text-white">
+                  {d.actions.followed.toLocaleString()}
+                </span>{" "}
+                followed
+              </li>
+              <li>
+                <span className="font-semibold tabular-nums text-white">
+                  {d.actions.contacted.toLocaleString()}
+                </span>{" "}
+                contacted you
+              </li>
             </ul>
           </section>
 
-          <section className="rounded-2xl bg-omniv-gold/10 p-5 ring-1 ring-omniv-gold/25">
-            <p className="text-[15px] font-semibold text-white">
+          <section>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
               People interested in your work
             </p>
-            <p className="mt-2 text-[13px] leading-relaxed text-zinc-400">
-              When readers save, follow, or explore your entity, you can invite
-              them to discover more — without exposing anonymous reader
-              identities.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link
-                href="/invites"
-                className="inline-flex h-10 items-center rounded-full bg-omniv-gold px-4 text-[13px] font-semibold text-black"
-              >
-                Invite to discover
-              </Link>
-              <Link
-                href="/promote"
-                className="inline-flex h-10 items-center rounded-full bg-white/[0.08] px-4 text-[13px] font-medium text-white"
-              >
-                Promote a publication
-              </Link>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {[
+                { n: d.actions.followed, label: "new followers" },
+                { n: d.actions.saved, label: "savers" },
+                { n: d.actions.contacted, label: "contacts" },
+              ].map((c) => (
+                <div
+                  key={c.label}
+                  className="rounded-xl bg-white/[0.03] px-3 py-3 text-center ring-1 ring-white/[0.06]"
+                >
+                  <p className="text-[18px] font-semibold tabular-nums text-white">
+                    {c.n.toLocaleString()}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-zinc-500">{c.label}</p>
+                </div>
+              ))}
             </div>
+            <Link
+              href="/invites"
+              className="mt-4 flex h-11 items-center justify-center rounded-full bg-omniv-gold text-[14px] font-semibold text-black"
+            >
+              Invite to discover more →
+            </Link>
           </section>
+
+          <p className="text-center text-[11px] text-zinc-600">
+            Aggregate insights only. Individual readers stay private.
+          </p>
         </main>
 
         <BottomNav />
