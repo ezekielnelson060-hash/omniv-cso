@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 /**
  * Premium document-style body editor (Google Docs-like toolbar).
  * Stores HTML in value for rich formatting.
+ * Images: upload from device or paste URL.
  */
 export function BodyEditor({
   value,
@@ -52,6 +53,23 @@ export function BodyEditor({
       /* ignore */
     }
     emit();
+  }
+
+  function insertImageFile() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = String(reader.result || "");
+        if (dataUrl) cmd("insertImage", dataUrl);
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
   }
 
   return (
@@ -105,14 +123,18 @@ export function BodyEditor({
         <Tool onClick={() => cmd("unlink")} title="Remove link">
           ⊘
         </Tool>
+        <Tool onClick={insertImageFile} title="Insert image from device">
+          ▣
+        </Tool>
         <Tool
           onClick={() => {
             const url = window.prompt("Image URL");
             if (url) cmd("insertImage", url);
           }}
-          title="Image"
+          title="Image from URL"
+          className="text-[10px]"
         >
-          ▣
+          URL
         </Tool>
         <Sep />
         <Tool onClick={() => cmd("justifyLeft")} title="Align left">
