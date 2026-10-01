@@ -51,7 +51,6 @@ export async function POST(req: Request) {
       });
       if (error) console.error("events insert", error);
 
-      // Live ranking: real views raise heat so Home/Explore feature active work
       if (name === "discovery_view" && body.meta) {
         const slug =
           typeof body.meta.publication_slug === "string"
@@ -65,6 +64,25 @@ export async function POST(req: Request) {
             });
           } catch (e) {
             console.error("bump heat", e);
+          }
+        }
+        const entityType =
+          typeof body.meta.entity_type === "string"
+            ? body.meta.entity_type
+            : null;
+        const entitySlug =
+          typeof body.meta.entity_slug === "string"
+            ? body.meta.entity_slug
+            : null;
+        if (entityType && entitySlug) {
+          try {
+            await admin.rpc("discovery_bump_entity_heat", {
+              p_type: entityType,
+              p_slug: entitySlug,
+              p_delta: 1,
+            });
+          } catch (e) {
+            console.error("bump entity heat", e);
           }
         }
       }
