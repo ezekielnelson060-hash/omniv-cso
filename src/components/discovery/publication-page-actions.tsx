@@ -52,7 +52,7 @@ export function PublicationPageActions({
 
   useEffect(() => {
     if (!menuOpen) return;
-    function onDoc(e: MouseEvent) {
+    function onDoc(e: Event) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
       }
@@ -123,7 +123,13 @@ export function PublicationPageActions({
               onClick={() => setMenuOpen((o) => !o)}
               className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/[0.06] hover:text-white"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden
+              >
                 <circle cx="12" cy="5" r="1.75" />
                 <circle cx="12" cy="12" r="1.75" />
                 <circle cx="12" cy="19" r="1.75" />
