@@ -221,7 +221,7 @@ export default async function PublicationPage({ params }: Props) {
                     className="flex items-center gap-1.5 font-medium hover:text-white"
                   >
                     <OmnivAvatar
-                      src={publisher.avatarUrl || publisher.imageUrl}
+                      src={publisher.avatarUrl}
                       name={publisher.name}
                       size={24}
                     />
@@ -336,7 +336,7 @@ export default async function PublicationPage({ params }: Props) {
                   className="flex min-w-0 flex-1 items-center gap-3"
                 >
                   <OmnivAvatar
-                    src={publisher.avatarUrl || publisher.imageUrl}
+                    src={publisher.avatarUrl}
                     name={publisher.name}
                     size={48}
                   />
