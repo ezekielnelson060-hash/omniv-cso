@@ -31,6 +31,7 @@ export async function POST(req: Request) {
     const tagsRaw = String(body.tags || "");
     const coverUrl = body.coverUrl ? String(body.coverUrl).trim() : null;
     const mediaUrl = body.mediaUrl ? String(body.mediaUrl).trim() : null;
+    const visibility = body.visibility === "private" ? "private" : "public";
     const opportunityType = body.opportunityType
       ? String(body.opportunityType).trim()
       : null;
@@ -126,6 +127,7 @@ export async function POST(req: Request) {
       tags,
       meta,
       heat: 10,
+      visibility,
     };
 
     // Auto SEO for every public publication type
@@ -230,7 +232,7 @@ export async function GET(req: Request) {
     let query = supabase
       .from("discovery_publications")
       .select(
-        "id, type, slug, title, summary, body, subtitle, publisher_id, publisher_name, status, updated_at, published_at, heat, tags, cover_url, media_url, entity_refs, seo_title, seo_description, category_id"
+        "id, type, slug, title, summary, body, subtitle, excerpt, publisher_id, publisher_name, status, updated_at, published_at, heat, tags, cover_url, media_url, entity_refs, related_publication_ids, seo_title, seo_description, category_id, reading_time, what_this_means, question_nobody_asks, sources, content, visibility"
       )
       .eq("owner_id", user.id)
       .order("updated_at", { ascending: false })
@@ -264,10 +266,74 @@ export async function GET(req: Request) {
           summary: publication.summary || "",
           slug: publication.slug,
         }).path,
+        visibility: publication.visibility || "public",
+        publisherId: publication.publisher_id,
+        body: publication.body,
+        subtitle: publication.subtitle,
+        excerpt: publication.excerpt,
+        tags: publication.tags || [],
+        coverUrl: publication.cover_url,
+        mediaUrl: publication.media_url,
+        entityRefs: publication.entity_refs || [],
+        relatedPublicationIds: publication.related_publication_ids || [],
+        content: publication.content || [],
+        sources: publication.sources || [],
       })),
     });
   } catch (e) {
     console.error(e);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
+    const body = await req.json();
+    const id = String(body.id || "").trim();
+    if (!id) return NextResponse.json({ error: "Publication id required" }, { status: 400 });
+    const patch: Record<string, unknown> = {};
+    const fields: Record<string, string> = {
+      title: "title", summary: "summary", body: "body", publisherName: "publisher_name",
+      meta: "meta", coverUrl: "cover_url", mediaUrl: "media_url", visibility: "visibility", status: "status",
+      subtitle: "subtitle", excerpt: "excerpt", seoTitle: "seo_title", seoDescription: "seo_description",
+      canonicalUrl: "canonical_url", whatThisMeans: "what_this_means", questionNobodyAsks: "question_nobody_asks",
+    };
+    for (const [input, column] of Object.entries(fields)) if (body[input] !== undefined) patch[column] = body[input];
+    if (patch.visibility && !["public", "private"].includes(String(patch.visibility))) return NextResponse.json({ error: "Invalid visibility" }, { status: 400 });
+    if (patch.status && !["draft", "published", "archived", "scheduled"].includes(String(patch.status))) return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    if (body.tags !== undefined) patch.tags = Array.isArray(body.tags) ? body.tags.map((tag: unknown) => String(tag).trim()).filter(Boolean).slice(0, 12) : String(body.tags).split(",").map((tag: string) => tag.trim()).filter(Boolean).slice(0, 12);
+    if (body.entityRefs !== undefined) patch.entity_refs = Array.isArray(body.entityRefs) ? body.entityRefs : [];
+    if (body.relatedPublicationIds !== undefined) patch.related_publication_ids = Array.isArray(body.relatedPublicationIds) ? body.relatedPublicationIds.slice(0, 20) : [];
+    if (body.content !== undefined) patch.content = Array.isArray(body.content) ? body.content : [];
+    if (body.sources !== undefined) patch.sources = Array.isArray(body.sources) ? body.sources : [];
+    patch.updated_at = new Date().toISOString();
+    const { data, error } = await supabase.from("discovery_publications").update(patch).eq("id", id).eq("owner_id", user.id).select("id, slug, status, visibility").maybeSingle();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (!data) return NextResponse.json({ error: "Publication not found or not yours" }, { status: 404 });
+    return NextResponse.json({ ok: true, publication: data, path: `/p/${data.slug}` });
+  } catch (e) {
+    console.error("publication patch", e);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
+    const id = new URL(req.url).searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "Publication id required" }, { status: 400 });
+    const { data: existing } = await supabase.from("discovery_publications").select("id").eq("id", id).eq("owner_id", user.id).maybeSingle();
+    if (!existing) return NextResponse.json({ error: "Publication not found or not yours" }, { status: 404 });
+    const { error } = await supabase.from("discovery_publications").delete().eq("id", id).eq("owner_id", user.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error("publication delete", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

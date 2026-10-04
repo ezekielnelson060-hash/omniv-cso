@@ -54,7 +54,11 @@ export default function AnalyticsPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/discovery/publications");
+        const publicationId = new URLSearchParams(window.location.search).get("publication");
+        const endpoint = publicationId
+          ? `/api/discovery/publications?id=${encodeURIComponent(publicationId)}`
+          : "/api/discovery/publications";
+        const res = await fetch(endpoint);
         const data = await res.json();
         if (cancelled) return;
         setAuth(Boolean(data.auth));

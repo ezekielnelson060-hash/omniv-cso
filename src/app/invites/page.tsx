@@ -16,10 +16,12 @@ import {
  */
 export default function InvitesPage() {
   const [identity, setIdentity] = useState<ActiveAccount | null>(null);
+  const [publication, setPublication] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>(["saved", "followed"]);
 
   useEffect(() => {
     setIdentity(readActiveAccount());
+    setPublication(new URLSearchParams(window.location.search).get("publication"));
     return onAccountSwitch((a) => setIdentity(a));
   }, []);
 
@@ -66,6 +68,11 @@ export default function InvitesPage() {
             Omniv only surfaces profiles that are public or consented — never
             private identities of anonymous readers.
           </p>
+          {publication && (
+            <div className="rounded-xl bg-omniv-gold/10 px-4 py-3 text-[12px] text-omniv-gold ring-1 ring-omniv-gold/20">
+              Audience invitation for <span className="font-medium">/{publication}</span>
+            </div>
+          )}
 
           <section>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">

@@ -195,6 +195,7 @@ export default async function PublicationPage({ params }: Props) {
                     slug={p.slug}
                     title={p.title}
                     visibility={p.visibility}
+                    status={p.status}
                   />
                 )}
               </div>

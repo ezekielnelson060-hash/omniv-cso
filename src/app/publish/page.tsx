@@ -68,6 +68,33 @@ function PublishInner() {
     }
   }, [typeParam]);
 
+  useEffect(() => {
+    const id = search.get("edit") || search.get("draft");
+    if (!id) return;
+    setEditId(id);
+    void (async () => {
+      try {
+        const res = await fetch(`/api/discovery/publications?id=${encodeURIComponent(id)}`);
+        const data = await res.json();
+        const p = data.publications?.[0];
+        if (!res.ok || !p) return;
+        setPubType(p.type);
+        setTitle(p.title || "");
+        setSummary(p.summary || "");
+        setBody(p.body || "");
+        setPublisherName(p.publisherName || "");
+        setPublisherId(p.publisherId || null);
+        setTags(Array.isArray(p.tags) ? p.tags.join(", ") : "");
+        setCoverUrl(p.coverUrl || null);
+        setMediaUrl(p.mediaUrl || null);
+        setIsPrivate(p.visibility === "private");
+        setStep("form");
+      } catch {
+        setError("Could not load this publication");
+      }
+    })();
+  }, [search]);
+
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [body, setBody] = useState("");
@@ -81,6 +108,7 @@ function PublishInner() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [publishedPath, setPublishedPath] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
 
   async function onPublish() {
     if (!pubType || !title.trim()) {
@@ -91,10 +119,10 @@ function PublishInner() {
     setError(null);
     try {
       const res = await fetch("/api/discovery/publications", {
-        method: "POST",
+        method: editId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: pubType,
+          ...(editId ? { id: editId } : { type: pubType }),
           title: title.trim(),
           summary: summary.trim() || title.trim(),
           body: body.trim() || undefined,
@@ -135,7 +163,7 @@ function PublishInner() {
           }),
           opportunityType: pubType === "opportunity" ? oppType : undefined,
           subtitle: subtitle || undefined,
-          status: isPrivate ? "draft" : scheduledAt ? "scheduled" : "published",
+          status: editId ? (scheduledAt ? "scheduled" : "published") : isPrivate ? "draft" : scheduledAt ? "scheduled" : "published",
           visibility: isPrivate ? "private" : "public",
           scheduledAt: scheduledAt || undefined,
         }),
