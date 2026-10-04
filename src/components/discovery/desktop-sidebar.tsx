@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { IdentitySwitcher } from "@/components/discovery/identity-switcher";
+import { OmnivAvatar } from "@/components/discovery/omniv-avatar";
 import { readProfile } from "@/lib/discovery/local-profile";
 import {
   readActiveAccount,
@@ -64,7 +65,6 @@ const GROUPS: NavGroup[] = [
     items: [
       { href: "/verify", label: "Get Verified", icon: "check" },
       { href: "/pro", label: "Upgrade to Pro", badge: "Plans", icon: "star" },
-      { href: "/accounts", label: "Settings", icon: "entities" },
     ],
   },
 ];
@@ -235,20 +235,7 @@ export function DesktopSidebar() {
             onClick={() => setSwitchOpen((v) => !v)}
             className="flex w-full items-center gap-3 rounded-2xl bg-white/[0.03] px-3 py-2.5 text-left transition hover:bg-white/[0.05]"
           >
-            <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-omniv-gold/20">
-              {identityAvatar ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={identityAvatar}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center text-sm font-semibold text-omniv-gold">
-                  {identityName.charAt(0).toUpperCase()}
-                </span>
-              )}
-            </div>
+            <OmnivAvatar src={identityAvatar} name={identityName} size={40} />
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1 truncate text-[13px] font-semibold text-white">
                 {identityName}
@@ -356,20 +343,7 @@ export function DesktopSidebar() {
                 : "text-zinc-400 hover:bg-white/[0.04] hover:text-white"
             }`}
           >
-            <div className="h-7 w-7 shrink-0 overflow-hidden rounded-full bg-white/10">
-              {identityAvatar ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={identityAvatar}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-white">
-                  {identityName.charAt(0).toUpperCase()}
-                </span>
-              )}
-            </div>
+            <OmnivAvatar src={identityAvatar} name={identityName} size={28} />
             Profile
           </Link>
           <Link
