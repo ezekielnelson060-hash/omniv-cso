@@ -21,7 +21,10 @@ function PublishInner() {
   const search = useSearchParams();
   const router = useRouter();
   const typeParam = search.get("type");
-  const [step, setStep] = useState<"pick" | "form" | "done">("pick");
+  const editParam = search.get("edit") || search.get("draft");
+  const [step, setStep] = useState<"pick" | "form" | "done">(() =>
+    editParam ? "form" : "pick"
+  );
   const [pubType, setPubType] = useState<PublicationType | null>(null);
   const [genre, setGenre] = useState("");
   const [releaseDate, setReleaseDate] = useState("");
@@ -69,15 +72,19 @@ function PublishInner() {
   }, [typeParam]);
 
   useEffect(() => {
-    const id = search.get("edit") || search.get("draft");
+    const id = editParam;
     if (!id) return;
     setEditId(id);
+    setStep("form");
     void (async () => {
       try {
         const res = await fetch(`/api/discovery/publications?id=${encodeURIComponent(id)}`);
         const data = await res.json();
         const p = data.publications?.[0];
-        if (!res.ok || !p) return;
+        if (!res.ok || !p) {
+          setError(data.error || "Could not load this publication");
+          return;
+        }
         setPubType(p.type);
         setTitle(p.title || "");
         setSummary(p.summary || "");
@@ -88,12 +95,11 @@ function PublishInner() {
         setCoverUrl(p.coverUrl || null);
         setMediaUrl(p.mediaUrl || null);
         setIsPrivate(p.visibility === "private");
-        setStep("form");
       } catch {
         setError("Could not load this publication");
       }
     })();
-  }, [search]);
+  }, [editParam]);
 
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -206,8 +212,13 @@ function PublishInner() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-lg px-4 pb-32 pt-5">
-        {step === "pick" && (
+        <main className="mx-auto max-w-lg px-4 pb-32 pt-5">
+        {editParam && !pubType && !error && (
+          <div className="rounded-2xl bg-white/[0.04] px-4 py-5 text-[14px] text-zinc-400 ring-1 ring-white/[0.06]">
+            Loading your publication editor…
+          </div>
+        )}
+        {step === "pick" && !editParam && (
           <>
             <h1 className="text-2xl font-semibold tracking-tight text-white">
               What do you want to publish?
