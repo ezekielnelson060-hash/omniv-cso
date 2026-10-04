@@ -17,6 +17,7 @@ import {
  * Owner only: Promote + ⋯ dropdown below the button (not full-screen sheet)
  */
 export function PublicationPageActions({
+  id,
   slug,
   type,
   title,
@@ -27,8 +28,11 @@ export function PublicationPageActions({
   category,
   publisherId,
   publisherName,
+  visibility = "public",
+  status = "published",
   isOwner: isOwnerProp,
 }: {
+  id: string;
   slug: string;
   type: string;
   title: string;
@@ -39,10 +43,16 @@ export function PublicationPageActions({
   category?: string;
   publisherId?: string | null;
   publisherName?: string | null;
+  visibility?: "public" | "private";
+  status?: "draft" | "published" | "archived" | "scheduled";
   isOwner?: boolean;
 }) {
   const [identity, setIdentity] = useState<ActiveAccount | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [currentVisibility, setCurrentVisibility] = useState(visibility);
+  const [currentStatus, setCurrentStatus] = useState(status);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -82,8 +92,59 @@ export function PublicationPageActions({
           identity.slug.toLowerCase() ===
             publisherName.toLowerCase().replace(/\s+/g, "-"))));
 
+  async function patchPublication(
+    patch: Record<string, string>,
+    success: string
+  ) {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/discovery/publications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...patch }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not update publication");
+      if (patch.visibility)
+        setCurrentVisibility(patch.visibility as "public" | "private");
+      if (patch.status)
+        setCurrentStatus(patch.status as typeof currentStatus);
+      setMessage(success);
+    } catch (error) {
+      setMessage(
+        error instanceof Error ? error.message : "Could not update publication"
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copyShareLink() {
+    const url =
+      typeof window !== "undefined"
+        ? `${window.location.origin}${path}`
+        : path;
+    try {
+      await navigator.clipboard.writeText(url);
+      setMessage("Link copied");
+    } catch {
+      setMessage("Could not copy link");
+    }
+  }
+
+  async function unpublish() {
+    if (
+      !window.confirm(
+        "Unpublish this piece? It will leave public discovery and return to your drafts."
+      )
+    )
+      return;
+    await patchPublication({ status: "draft" }, "Unpublished — saved to drafts");
+  }
+
   const itemCls =
-    "flex w-full px-3.5 py-2.5 text-left text-[13px] text-zinc-200 hover:bg-white/[0.06] active:bg-white/[0.08]";
+    "flex w-full px-3.5 py-2.5 text-left text-[13px] text-zinc-200 hover:bg-white/[0.06] active:bg-white/[0.08] disabled:opacity-50";
 
   return (
     <>
@@ -145,7 +206,7 @@ export function PublicationPageActions({
                   Manage
                 </p>
                 <Link
-                  href={`/publish?edit=${encodeURIComponent(slug)}`}
+                  href={`/publish?edit=${encodeURIComponent(id)}`}
                   className={itemCls}
                   role="menuitem"
                   onClick={() => setMenuOpen(false)}
@@ -153,7 +214,7 @@ export function PublicationPageActions({
                   Edit
                 </Link>
                 <Link
-                  href="/analytics"
+                  href={`/analytics?publication=${encodeURIComponent(id)}`}
                   className={itemCls}
                   role="menuitem"
                   onClick={() => setMenuOpen(false)}
@@ -169,7 +230,7 @@ export function PublicationPageActions({
                   Promote this {type || "piece"}
                 </Link>
                 <Link
-                  href="/invites"
+                  href={`/invites?publication=${encodeURIComponent(slug)}`}
                   className={itemCls}
                   role="menuitem"
                   onClick={() => setMenuOpen(false)}
@@ -178,15 +239,11 @@ export function PublicationPageActions({
                 </Link>
                 <button
                   type="button"
+                  disabled={busy}
                   className={itemCls}
                   role="menuitem"
                   onClick={() => {
-                    setMenuOpen(false);
-                    const url =
-                      typeof window !== "undefined"
-                        ? `${window.location.origin}${path}`
-                        : path;
-                    void navigator.clipboard?.writeText(url);
+                    void copyShareLink();
                   }}
                 >
                   Copy share link
@@ -194,67 +251,63 @@ export function PublicationPageActions({
 
                 <div className="my-1 border-t border-white/[0.08]" />
 
-                <button
-                  type="button"
-                  className={itemCls}
-                  role="menuitem"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    alert("Visibility set to private (manager API next).");
-                  }}
-                >
-                  Make private
-                </button>
-                <button
-                  type="button"
-                  className={itemCls}
-                  role="menuitem"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    alert("Visibility set to public.");
-                  }}
-                >
-                  Make public
-                </button>
-
-                <div className="my-1 border-t border-white/[0.08]" />
-
-                <button
-                  type="button"
-                  className={`${itemCls} text-rose-400`}
-                  role="menuitem"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    if (
-                      confirm(
-                        "Unpublish this piece? It will leave public discovery."
+                {currentVisibility === "public" ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className={itemCls}
+                    role="menuitem"
+                    onClick={() =>
+                      void patchPublication(
+                        { visibility: "private" },
+                        "Article is now private"
                       )
-                    ) {
-                      alert(
-                        "Unpublish queued. Use Edit → draft if needed now."
-                      );
                     }
-                  }}
-                >
-                  Unpublish
-                </button>
-                <button
-                  type="button"
-                  className={`${itemCls} text-rose-400`}
-                  role="menuitem"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    if (
-                      confirm(
-                        "Delete this publication permanently? This cannot be undone."
+                  >
+                    Make private
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className={itemCls}
+                    role="menuitem"
+                    onClick={() =>
+                      void patchPublication(
+                        { visibility: "public" },
+                        "Article is now public"
                       )
-                    ) {
-                      alert("Delete queued on the publication manager API.");
                     }
-                  }}
-                >
-                  Delete
-                </button>
+                  >
+                    Make public
+                  </button>
+                )}
+
+                {currentStatus === "published" && (
+                  <>
+                    <div className="my-1 border-t border-white/[0.08]" />
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className={`${itemCls} text-rose-400`}
+                      role="menuitem"
+                      onClick={() => void unpublish()}
+                    >
+                      Unpublish
+                    </button>
+                  </>
+                )}
+
+                {(message ||
+                  currentVisibility === "private" ||
+                  currentStatus === "draft") && (
+                  <p className="px-3.5 pb-2 pt-1 text-[11px] text-omniv-gold">
+                    {message ||
+                      (currentStatus === "draft"
+                        ? "Saved to drafts"
+                        : "Private publication")}
+                  </p>
+                )}
               </div>
             )}
           </div>
