@@ -13,6 +13,7 @@ import { StickyArticleHeader } from "@/components/discovery/sticky-article-heade
 import { PublisherPublicationMenu } from "@/components/discovery/publisher-publication-menu";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { OmnivAvatar } from "@/components/discovery/omniv-avatar";
 import { createClient } from "@/lib/supabase/server";
 import {
   listDiscoveryEntities,
@@ -219,9 +220,11 @@ export default async function PublicationPage({ params }: Props) {
                     href={entityPath(publisher)}
                     className="flex items-center gap-1.5 font-medium hover:text-white"
                   >
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-omniv-gold/30 text-[10px] font-bold text-omniv-gold">
-                      {publisher.name.charAt(0)}
-                    </span>
+                    <OmnivAvatar
+                      src={publisher.avatarUrl || publisher.imageUrl}
+                      name={publisher.name}
+                      size={24}
+                    />
                     {publisher.name}
                   </Link>
                 ) : (
@@ -244,6 +247,7 @@ export default async function PublicationPage({ params }: Props) {
               </div>
               <div className="mt-4 -mx-1 rounded-xl bg-black/25 px-1 py-0.5 backdrop-blur-sm">
                 <PublicationPageActions
+                  id={p.id}
                   slug={p.slug}
                   type={p.type}
                   title={p.title}
@@ -254,6 +258,8 @@ export default async function PublicationPage({ params }: Props) {
                   category={p.category}
                   publisherId={p.publisherId}
                   publisherName={p.publisherName}
+                  visibility={p.visibility}
+                  status={p.status}
                 />
               </div>
             </div>
@@ -329,9 +335,11 @@ export default async function PublicationPage({ params }: Props) {
                   href={entityPath(publisher)}
                   className="flex min-w-0 flex-1 items-center gap-3"
                 >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold/20 text-base font-semibold text-omniv-gold">
-                    {publisher.name.slice(0, 1)}
-                  </div>
+                  <OmnivAvatar
+                    src={publisher.avatarUrl || publisher.imageUrl}
+                    name={publisher.name}
+                    size={48}
+                  />
                   <div className="min-w-0">
                     <p className="truncate text-[15px] font-medium text-white">
                       {publisher.name}
