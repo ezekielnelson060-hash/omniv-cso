@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { IdentitySwitcher } from "@/components/discovery/identity-switcher";
+import { OmnivAvatar } from "@/components/discovery/omniv-avatar";
 import { readProfile } from "@/lib/discovery/local-profile";
 import {
   readActiveAccount,
@@ -42,7 +43,6 @@ const GROW: NavItem[] = [
 const ACCOUNT: NavItem[] = [
   { href: "/verify", label: "Get Verified", icon: "check" },
   { href: "/pro", label: "Upgrade to Pro", badge: "Popular", icon: "star" },
-  { href: "/settings", label: "Settings", icon: "settings" },
 ];
 
 function Icon({ name }: { name: string }) {
@@ -276,20 +276,7 @@ export function MobileMenuButton() {
                   onClick={() => setMode(mode === "switch" ? "nav" : "switch")}
                   className="flex w-full items-center gap-3 rounded-2xl bg-white/[0.04] px-3 py-2.5 text-left"
                 >
-                  <div className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-omniv-gold/20">
-                    {identityAvatar ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={identityAvatar}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center text-sm font-semibold text-omniv-gold">
-                        {identityName.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
+                  <OmnivAvatar src={identityAvatar} name={identityName} size={44} />
                   <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-1 truncate text-[14px] font-semibold text-white">
                       {identityName}
@@ -349,20 +336,7 @@ export function MobileMenuButton() {
                   onClick={close}
                   className="flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-zinc-300"
                 >
-                  <div className="h-7 w-7 shrink-0 overflow-hidden rounded-full bg-white/10">
-                    {identityAvatar ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={identityAvatar}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-white">
-                        {identityName.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
+                  <OmnivAvatar src={identityAvatar} name={identityName} size={28} />
                   Profile
                 </Link>
                 <Link
@@ -391,18 +365,7 @@ export function MobileMenuButton() {
         className="relative z-10 h-9 w-9 shrink-0 overflow-hidden rounded-full bg-omniv-gold/20 ring-1 ring-white/10"
         aria-label="Open menu"
       >
-        {identityAvatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={identityAvatar}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <span className="flex h-full w-full items-center justify-center text-[13px] font-semibold text-omniv-gold">
-            {identityName.charAt(0).toUpperCase()}
-          </span>
-        )}
+        <OmnivAvatar src={identityAvatar} name={identityName} size={36} />
       </button>
       {drawer}
     </>
