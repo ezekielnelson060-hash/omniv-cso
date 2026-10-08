@@ -11,7 +11,6 @@ import { PublicationMedia } from "@/components/discovery/publication-media";
 import { PublicationBody } from "@/components/discovery/publication-body";
 import { StickyArticleHeader } from "@/components/discovery/sticky-article-header";
 import { PublisherPublicationMenu } from "@/components/discovery/publisher-publication-menu";
-import { PromoteBanner } from "@/components/discovery/promote-banner";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { OmnivAvatar } from "@/components/discovery/omniv-avatar";
@@ -268,12 +267,6 @@ export default async function PublicationPage({ params }: Props) {
         </div>
 
         <main className="mx-auto max-w-2xl px-4 pb-28 pt-2">
-          {canManage && (
-            <div className="mb-6">
-              <PromoteBanner slug={p.slug} type={p.type} />
-            </div>
-          )}
-
           <PublicationMedia
             p={p}
             publisher={publisher}
