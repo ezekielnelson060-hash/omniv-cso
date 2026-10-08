@@ -10,6 +10,12 @@ import {
   onAccountSwitch,
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
+import { OmnivAvatar } from "@/components/discovery/omniv-avatar";
+import {
+  VerifiedBadge,
+  isAlwaysVerified,
+} from "@/components/discovery/verified-badge";
+import { resolveEntityAvatar } from "@/lib/discovery/resolve-avatar";
 
 type EntityRow = {
   id: string;
@@ -21,10 +27,17 @@ type EntityRow = {
   avatar_url?: string | null;
 };
 
-/**
- * Professional identity switcher.
- * Personal account owns entities; each entity behaves as its own account.
- */
+function dedupeEntities(list: EntityRow[]): EntityRow[] {
+  const seen = new Set<string>();
+  const out: EntityRow[] = [];
+  for (const e of list) {
+    if (seen.has(e.id)) continue;
+    seen.add(e.id);
+    out.push(e);
+  }
+  return out;
+}
+
 export function IdentitySwitcher({
   onClose,
   compact,
@@ -61,7 +74,7 @@ export function IdentitySwitcher({
         const data = await res.json();
         if (cancelled) return;
         setAuth(Boolean(data.auth));
-        setEntities(data.entities || []);
+        setEntities(dedupeEntities(data.entities || []));
       } catch {
         if (!cancelled) setAuth(false);
       }
@@ -85,9 +98,17 @@ export function IdentitySwitcher({
       slug: e.slug,
       name: e.name,
       path: e.path,
-      verified: e.verified,
+      verified: isAlwaysVerified({
+        verified: e.verified,
+        slug: e.slug,
+        name: e.name,
+      }),
       handle: e.slug,
-      avatarUrl: e.avatar_url,
+      avatarUrl: resolveEntityAvatar({
+        avatarUrl: e.avatar_url,
+        slug: e.slug,
+        name: e.name,
+      }),
     };
     writeActiveAccount(next);
     setActive(next);
@@ -97,7 +118,6 @@ export function IdentitySwitcher({
 
   return (
     <div className={compact ? "" : "px-1 py-1"}>
-      {/* PERSONAL */}
       <p className="px-3 pb-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
         Personal
       </p>
@@ -111,14 +131,7 @@ export function IdentitySwitcher({
             : "hover:bg-white/[0.04]"
         }`}
       >
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            displayName.charAt(0).toUpperCase()
-          )}
-        </div>
+        <OmnivAvatar src={avatarUrl} name={displayName} size={44} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-semibold text-white">
             {displayName}
@@ -134,13 +147,22 @@ export function IdentitySwitcher({
         )}
       </button>
 
-      {/* ENTITIES */}
       <p className="mt-4 px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
         Entities
       </p>
 
       {entities.map((e) => {
         const isActive = active?.id === e.id;
+        const verified = isAlwaysVerified({
+          verified: e.verified,
+          slug: e.slug,
+          name: e.name,
+        });
+        const src = resolveEntityAvatar({
+          avatarUrl: e.avatar_url,
+          slug: e.slug,
+          name: e.name,
+        });
         return (
           <button
             key={e.id}
@@ -152,30 +174,21 @@ export function IdentitySwitcher({
                 : "hover:bg-white/[0.04]"
             }`}
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 text-sm font-semibold text-white">
-              {e.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={e.avatar_url}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                e.name.charAt(0)
-              )}
-            </div>
+            <OmnivAvatar src={src} name={e.name} size={44} />
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1.5 truncate text-[14px] font-semibold text-white">
-                {e.name}
-                {e.verified && (
-                  <span className="text-sky-400" title="Verified">
-                    ✓
-                  </span>
+                <span className="truncate">{e.name}</span>
+                {verified && (
+                  <VerifiedBadge
+                    name={e.name}
+                    verifyType={e.type}
+                    size={14}
+                  />
                 )}
               </p>
               <p className="text-[12px] capitalize text-zinc-500">
                 {e.type}
-                {e.verified ? " · Verified" : ""}
+                {verified ? " · Verified" : ""}
               </p>
             </div>
             {isActive ? (

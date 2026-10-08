@@ -5,11 +5,17 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
+import { OmnivAvatar } from "@/components/discovery/omniv-avatar";
+import {
+  VerifiedBadge,
+  isAlwaysVerified,
+} from "@/components/discovery/verified-badge";
 import {
   readActiveAccount,
   writeActiveAccount,
 } from "@/lib/discovery/active-account";
 import { readProfile } from "@/lib/discovery/local-profile";
+import { resolveEntityAvatar } from "@/lib/discovery/resolve-avatar";
 
 type EntityRow = {
   id: string;
@@ -19,9 +25,20 @@ type EntityRow = {
   tagline?: string;
   path: string;
   verified?: boolean;
+  avatar_url?: string | null;
 };
 
-/** Switch identity — only entities owned by the signed-in user */
+function dedupeEntities(list: EntityRow[]): EntityRow[] {
+  const seen = new Set<string>();
+  const out: EntityRow[] = [];
+  for (const e of list) {
+    if (seen.has(e.id)) continue;
+    seen.add(e.id);
+    out.push(e);
+  }
+  return out;
+}
+
 export default function SwitchEntityPage() {
   const router = useRouter();
   const [entities, setEntities] = useState<EntityRow[]>([]);
@@ -45,11 +62,12 @@ export default function SwitchEntityPage() {
         const res = await fetch("/api/discovery/entities");
         const data = await res.json();
         setAuth(Boolean(data.auth));
-        const list = Array.isArray(data.entities) ? data.entities : [];
+        const list = dedupeEntities(
+          Array.isArray(data.entities) ? data.entities : []
+        );
         setEntities(list);
-        // Drop stale identity from another session/account
         const active = readActiveAccount();
-        if (active?.id && !list.some((e: EntityRow) => e.id === active.id)) {
+        if (active?.id && !list.some((e) => e.id === active.id)) {
           writeActiveAccount(null);
           setActiveId(null);
         }
@@ -84,6 +102,17 @@ export default function SwitchEntityPage() {
       slug: e.slug,
       name: e.name,
       path: e.path,
+      verified: isAlwaysVerified({
+        verified: e.verified,
+        slug: e.slug,
+        name: e.name,
+      }),
+      handle: e.slug,
+      avatarUrl: resolveEntityAvatar({
+        avatarUrl: e.avatar_url,
+        slug: e.slug,
+        name: e.name,
+      }),
     });
     setActiveId(e.id);
     router.push(e.path);
@@ -148,20 +177,7 @@ export default function SwitchEntityPage() {
                       : "bg-white/[0.03] ring-white/[0.06]"
                   }`}
                 >
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-zinc-800">
-                    {avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={avatarUrl}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-[15px] font-semibold text-white">
-                        {(displayName || "Y").slice(0, 1)}
-                      </span>
-                    )}
-                  </span>
+                  <OmnivAvatar src={avatarUrl} name={displayName} size={48} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[15px] font-semibold text-white">
                       {displayName}
@@ -176,7 +192,16 @@ export default function SwitchEntityPage() {
 
               {filtered.map((e) => {
                 const isActive = activeId === e.id;
-                const initial = (e.name || "?").slice(0, 1).toUpperCase();
+                const verified = isAlwaysVerified({
+                  verified: e.verified,
+                  slug: e.slug,
+                  name: e.name,
+                });
+                const src = resolveEntityAvatar({
+                  avatarUrl: e.avatar_url,
+                  slug: e.slug,
+                  name: e.name,
+                });
                 return (
                   <li key={e.id}>
                     <button
@@ -188,15 +213,21 @@ export default function SwitchEntityPage() {
                           : "bg-white/[0.03] ring-white/[0.06]"
                       }`}
                     >
-                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-[15px] font-semibold text-white">
-                        {initial}
-                      </span>
+                      <OmnivAvatar src={src} name={e.name} size={48} />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[15px] font-semibold text-white">
-                          {e.name}
+                        <p className="flex items-center gap-1.5 truncate text-[15px] font-semibold text-white">
+                          <span className="truncate">{e.name}</span>
+                          {verified && (
+                            <VerifiedBadge
+                              name={e.name}
+                              verifyType={e.type}
+                              size={14}
+                            />
+                          )}
                         </p>
                         <p className="truncate text-[12px] capitalize text-zinc-500">
                           {e.type}
+                          {verified ? " · Verified" : ""}
                           {e.tagline ? ` · ${e.tagline}` : ""}
                         </p>
                       </div>
