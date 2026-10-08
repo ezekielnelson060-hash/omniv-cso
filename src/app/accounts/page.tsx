@@ -10,6 +10,12 @@ import {
   writeActiveAccount,
 } from "@/lib/discovery/active-account";
 import { readProfile } from "@/lib/discovery/local-profile";
+import { OmnivAvatar } from "@/components/discovery/omniv-avatar";
+import {
+  VerifiedBadge,
+  isAlwaysVerified,
+} from "@/components/discovery/verified-badge";
+import { resolveEntityAvatar } from "@/lib/discovery/resolve-avatar";
 
 type EntityRow = {
   id: string;
@@ -20,7 +26,23 @@ type EntityRow = {
   location?: string;
   path: string;
   verified?: boolean;
+  avatar_url?: string | null;
 };
+
+function dedupeEntities(list: EntityRow[]): EntityRow[] {
+  const seenId = new Set<string>();
+  const seenSlug = new Set<string>();
+  const out: EntityRow[] = [];
+  for (const e of list) {
+    if (seenId.has(e.id)) continue;
+    const slugKey = `${e.type}:${e.slug}`;
+    if (seenSlug.has(slugKey)) continue;
+    seenId.add(e.id);
+    seenSlug.add(slugKey);
+    out.push(e);
+  }
+  return out;
+}
 
 type Tab = "entities" | "activity" | "settings";
 
@@ -63,7 +85,7 @@ export default function AccountsPage() {
       const res = await fetch("/api/discovery/entities");
       const data = await res.json();
       setAuth(Boolean(data.auth));
-      setEntities(data.entities || []);
+      setEntities(dedupeEntities(data.entities || []));
     } catch {
       setAuth(false);
       setEntities([]);
@@ -89,6 +111,17 @@ export default function AccountsPage() {
       slug: e.slug,
       name: e.name,
       path: e.path,
+      verified: isAlwaysVerified({
+        verified: e.verified,
+        slug: e.slug,
+        name: e.name,
+      }),
+      handle: e.slug,
+      avatarUrl: resolveEntityAvatar({
+        avatarUrl: e.avatar_url,
+        slug: e.slug,
+        name: e.name,
+      }),
     });
     setActiveId(e.id);
   }
@@ -124,6 +157,10 @@ export default function AccountsPage() {
           slug: data.entity.slug,
           name: data.entity.name,
           path: data.path || `/e/${data.entity.type}/${data.entity.slug}`,
+          avatarUrl: resolveEntityAvatar({
+            slug: data.entity.slug,
+            name: data.entity.name,
+          }),
         });
         setActiveId(data.entity.id);
       }
@@ -145,20 +182,8 @@ export default function AccountsPage() {
         <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[#050505]/95 backdrop-blur-md">
           <div className="mx-auto max-w-lg px-4 py-4 md:max-w-2xl md:px-6">
             <div className="flex items-center gap-3">
-              <Link
-                href="/profile"
-                className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/20 text-lg font-semibold text-omniv-gold ring-2 ring-white/10"
-              >
-                {avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={avatarUrl}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  displayName.charAt(0).toUpperCase()
-                )}
+              <Link href="/profile" className="shrink-0 ring-2 ring-white/10 rounded-full">
+                <OmnivAvatar src={avatarUrl} name={displayName} size={48} />
               </Link>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[16px] font-semibold text-white">
@@ -254,6 +279,16 @@ export default function AccountsPage() {
                 <ul className="mt-4 space-y-2.5">
                   {entities.map((e) => {
                     const isActive = activeId === e.id;
+                    const showVerified = isAlwaysVerified({
+                      verified: e.verified,
+                      slug: e.slug,
+                      name: e.name,
+                    });
+                    const av = resolveEntityAvatar({
+                      avatarUrl: e.avatar_url,
+                      slug: e.slug,
+                      name: e.name,
+                    });
                     return (
                       <li key={e.id}>
                         <div
@@ -267,17 +302,22 @@ export default function AccountsPage() {
                             href={e.path}
                             className="flex min-w-0 flex-1 items-center gap-3"
                           >
-                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold/20 text-base font-semibold text-omniv-gold">
-                              {e.name.charAt(0)}
-                            </span>
+                            <OmnivAvatar src={av} name={e.name} size={48} />
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-[15px] font-semibold text-white">
-                                {e.name}
+                              <p className="flex items-center gap-1.5 truncate text-[15px] font-semibold text-white">
+                                <span className="truncate">{e.name}</span>
+                                {showVerified && (
+                                  <VerifiedBadge
+                                    name={e.name}
+                                    verifyType={e.type}
+                                    size={14}
+                                  />
+                                )}
                               </p>
                               <p className="truncate text-[12px] text-zinc-500">
                                 <span className="capitalize">{e.type}</span>
-                                {e.verified && (
-                                  <span className="text-sky-400">
+                                {showVerified && (
+                                  <span className="text-zinc-400">
                                     {" "}
                                     · Verified
                                   </span>
