@@ -52,6 +52,22 @@ function PublishInner() {
   const [altText, setAltText] = useState("");
   const [subtitle, setSubtitle] = useState("");
 
+  const [title, setTitle] = useState("");
+  const [summary, setSummary] = useState("");
+  const [body, setBody] = useState("");
+  const [publisherName, setPublisherName] = useState("");
+  const [publisherId, setPublisherId] = useState<string | null>(null);
+  const [tags, setTags] = useState("");
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(Boolean(editParam));
+  const [error, setError] = useState<string | null>(null);
+  const [publishedPath, setPublishedPath] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
+
   useEffect(() => {
     const valid = [
       "article",
@@ -73,16 +89,32 @@ function PublishInner() {
 
   useEffect(() => {
     const id = editParam;
-    if (!id) return;
+    if (!id) {
+      setLoadingEdit(false);
+      return;
+    }
     setEditId(id);
     setStep("form");
+    setLoadingEdit(true);
+    setError(null);
     void (async () => {
       try {
-        const res = await fetch(`/api/discovery/publications?id=${encodeURIComponent(id)}`);
-        const data = await res.json();
+        const res = await fetch(
+          `/api/discovery/publications?id=${encodeURIComponent(id)}`
+        );
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+          setError("Sign in required to edit this publication.");
+          setLoadingEdit(false);
+          return;
+        }
         const p = data.publications?.[0];
         if (!res.ok || !p) {
-          setError(data.error || "Could not load this publication");
+          setError(
+            data.error ||
+              "Could not load this publication. It may have been deleted or you may not own it."
+          );
+          setLoadingEdit(false);
           return;
         }
         setPubType(p.type);
@@ -95,26 +127,14 @@ function PublishInner() {
         setCoverUrl(p.coverUrl || null);
         setMediaUrl(p.mediaUrl || null);
         setIsPrivate(p.visibility === "private");
+        setSubtitle(p.subtitle || "");
+        setLoadingEdit(false);
       } catch {
-        setError("Could not load this publication");
+        setError("Could not load this publication. Check your connection.");
+        setLoadingEdit(false);
       }
     })();
   }, [editParam]);
-
-  const [title, setTitle] = useState("");
-  const [summary, setSummary] = useState("");
-  const [body, setBody] = useState("");
-  const [publisherName, setPublisherName] = useState("");
-  const [publisherId, setPublisherId] = useState<string | null>(null);
-  const [tags, setTags] = useState("");
-  const [coverUrl, setCoverUrl] = useState<string | null>(null);
-  const [mediaUrl, setMediaUrl] = useState<string | null>(null);
-  const [scheduledAt, setScheduledAt] = useState("");
-  const [isPrivate, setIsPrivate] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [publishedPath, setPublishedPath] = useState("");
-  const [editId, setEditId] = useState<string | null>(null);
 
   async function onPublish() {
     if (!pubType || !title.trim()) {
@@ -169,7 +189,15 @@ function PublishInner() {
           }),
           opportunityType: pubType === "opportunity" ? oppType : undefined,
           subtitle: subtitle || undefined,
-          status: editId ? (scheduledAt ? "scheduled" : "published") : isPrivate ? "draft" : scheduledAt ? "scheduled" : "published",
+          status: editId
+            ? scheduledAt
+              ? "scheduled"
+              : "published"
+            : isPrivate
+              ? "draft"
+              : scheduledAt
+                ? "scheduled"
+                : "published",
           visibility: isPrivate ? "private" : "public",
           scheduledAt: scheduledAt || undefined,
         }),
@@ -204,20 +232,42 @@ function PublishInner() {
                   : "Published"
               : step === "pick"
                 ? "Create"
-                : head?.title || "Publish"}
+                : editParam
+                  ? head?.title
+                    ? `Edit ${head.title}`
+                    : "Edit publication"
+                  : head?.title || "Publish"}
           </span>
-          <Link href="/home" className="text-[13px] text-zinc-500 hover:text-white">
+          <Link
+            href="/home"
+            className="text-[13px] text-zinc-500 hover:text-white"
+          >
             Cancel
           </Link>
         </div>
       </header>
 
-        <main className="mx-auto max-w-lg px-4 pb-32 pt-5">
-        {editParam && !pubType && !error && (
+      <main className="mx-auto max-w-lg px-4 pb-32 pt-5">
+        {editParam && loadingEdit && (
           <div className="rounded-2xl bg-white/[0.04] px-4 py-5 text-[14px] text-zinc-400 ring-1 ring-white/[0.06]">
             Loading your publication editor…
           </div>
         )}
+
+        {editParam && !loadingEdit && error && !pubType && (
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-red-500/10 px-4 py-4 text-[14px] text-red-300 ring-1 ring-red-500/20">
+              {error}
+            </div>
+            <Link
+              href="/publish"
+              className="flex h-11 items-center justify-center rounded-full bg-white/10 text-[14px] font-medium text-white"
+            >
+              Create something new
+            </Link>
+          </div>
+        )}
+
         {step === "pick" && !editParam && (
           <>
             <h1 className="text-2xl font-semibold tracking-tight text-white">
@@ -239,7 +289,9 @@ function PublishInner() {
                       onClick={() => {
                         setPubType(t);
                         setStep("form");
-                        router.replace(`/publish?type=${encodeURIComponent(t)}`);
+                        router.replace(
+                          `/publish?type=${encodeURIComponent(t)}`
+                        );
                       }}
                       className="flex items-center gap-3 rounded-2xl bg-white/[0.04] px-3 py-3.5 text-left ring-1 ring-white/[0.06] transition hover:bg-white/[0.07]"
                     >
@@ -255,11 +307,13 @@ function PublishInner() {
           </>
         )}
 
-        {step === "form" && pubType && (
+        {step === "form" && pubType && !loadingEdit && (
           <div className="space-y-5">
             {head && (
               <div className="rounded-2xl bg-gradient-to-br from-omniv-gold/10 to-transparent px-4 py-3.5 ring-1 ring-omniv-gold/20">
-                <p className="text-[15px] font-semibold text-white">{head.title}</p>
+                <p className="text-[15px] font-semibold text-white">
+                  {editParam ? `Edit · ${head.title}` : head.title}
+                </p>
                 <p className="mt-1 text-[13px] text-zinc-400">{head.sub}</p>
               </div>
             )}
@@ -397,12 +451,20 @@ function PublishInner() {
               className="flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black disabled:opacity-60"
             >
               {loading
-                ? "Publishing…"
-                : isPrivate
-                  ? "Save private"
-                  : scheduledAt
-                    ? "Schedule"
-                    : `Publish ${PUBLICATION_LABELS[pubType]}`}
+                ? editParam
+                  ? "Saving…"
+                  : "Publishing…"
+                : editParam
+                  ? isPrivate
+                    ? "Save private"
+                    : scheduledAt
+                      ? "Save schedule"
+                      : "Save changes"
+                  : isPrivate
+                    ? "Save private"
+                    : scheduledAt
+                      ? "Schedule"
+                      : `Publish ${PUBLICATION_LABELS[pubType]}`}
             </button>
           </div>
         )}
@@ -414,7 +476,9 @@ function PublishInner() {
                 ? "Saved as private"
                 : scheduledAt
                   ? "Scheduled"
-                  : "Live on Omniv"}
+                  : editParam
+                    ? "Changes saved"
+                    : "Live on Omniv"}
             </p>
             <p className="mt-2 text-[13px] text-zinc-500">
               {isPrivate
@@ -444,6 +508,7 @@ function PublishInner() {
                   setScheduledAt("");
                   setIsPrivate(false);
                   setPublishedPath("");
+                  setEditId(null);
                   router.replace("/publish");
                 }}
                 className="flex h-11 items-center justify-center rounded-full bg-white/10 text-[14px] font-medium text-white"
