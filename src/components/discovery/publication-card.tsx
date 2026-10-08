@@ -16,6 +16,7 @@ import {
 import { getEntityById } from "@/lib/discovery/seed";
 import { coverFor } from "@/lib/discovery/seed-covers";
 import { cleanPublisherMeta } from "@/lib/discovery/publisher-meta";
+import { resolvePublisherPath } from "@/lib/discovery/resolve-publisher";
 
 type PubWithCover = Publication & {
   coverUrl?: string;
@@ -42,13 +43,20 @@ export function PublicationCard({
   showManage?: boolean;
 }) {
   const publisher = getEntityById(pub.publisherId);
-  const name = pub.publisherName || publisher?.name || "Publisher";
+  const name = publisher?.name || pub.publisherName || "Publisher";
   const cover = TONE[pub.type] ?? "from-zinc-800 to-zinc-950";
   const isMusic = pub.type === "music";
   const isEvent = pub.type === "event";
   const isOpp = pub.type === "opportunity";
   const coverSrc = pub.coverUrl || coverFor(pub.slug);
-  const publisherHref = publisher ? entityPath(publisher) : undefined;
+  const publisherHref =
+    (publisher ? entityPath(publisher) : undefined) ||
+    resolvePublisherPath({
+      type: publisher?.type,
+      slug: publisher?.slug,
+      name,
+      publisherId: pub.publisherId,
+    });
   const displayMeta = cleanPublisherMeta(name, pub.meta);
   const showVerified = isAlwaysVerified({
     verified: publisher?.verified,

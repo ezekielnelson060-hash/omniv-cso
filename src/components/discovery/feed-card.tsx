@@ -13,6 +13,7 @@ import {
   isAlwaysVerified,
 } from "@/components/discovery/verified-badge";
 import { cleanPublisherMeta } from "@/lib/discovery/publisher-meta";
+import { resolvePublisherPath } from "@/lib/discovery/resolve-publisher";
 
 type PubWithCover = Publication & {
   coverUrl?: string;
@@ -74,7 +75,13 @@ function PublisherLine({
   light?: boolean;
 }) {
   if (!name) return null;
-  const href = publisher ? entityPath(publisher) : undefined;
+  const href =
+    (publisher ? entityPath(publisher) : undefined) ||
+    resolvePublisherPath({
+      type: publisher?.type,
+      slug: publisher?.slug,
+      name,
+    });
   const nameClass = light
     ? "font-semibold text-white/90"
     : "font-semibold text-white";
@@ -139,7 +146,7 @@ export function FeedFeaturedCard({
   showExplore?: boolean;
 }) {
   const publisher = getEntityById(pub.publisherId);
-  const name = pub.publisherName || publisher?.name;
+  const name = publisher?.name || pub.publisherName;
   const resolvedCover = pub.coverUrl || coverFor(pub.slug);
 
   return (
@@ -198,7 +205,7 @@ export function FeedFeaturedCard({
 
 export function FeedCompactRow({ pub }: { pub: PubWithCover }) {
   const publisher = getEntityById(pub.publisherId);
-  const name = pub.publisherName || publisher?.name;
+  const name = publisher?.name || pub.publisherName;
   const resolvedCover = pub.coverUrl || coverFor(pub.slug);
 
   return (
@@ -237,7 +244,7 @@ export function FeedCompactRow({ pub }: { pub: PubWithCover }) {
 
 export function FeedCard({ pub }: { pub: PubWithCover }) {
   const publisher = getEntityById(pub.publisherId);
-  const name = pub.publisherName || publisher?.name;
+  const name = publisher?.name || pub.publisherName;
   const resolvedCover = pub.coverUrl || coverFor(pub.slug);
 
   return (
