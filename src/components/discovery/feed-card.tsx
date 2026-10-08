@@ -8,7 +8,10 @@ import {
 import { getEntityById } from "@/lib/discovery/seed";
 import { coverFor } from "@/lib/discovery/seed-covers";
 import { PublicationActions } from "@/components/discovery/publication-actions";
-import { VerifiedBadge } from "@/components/discovery/verified-badge";
+import {
+  VerifiedBadge,
+  isAlwaysVerified,
+} from "@/components/discovery/verified-badge";
 import { cleanPublisherMeta } from "@/lib/discovery/publisher-meta";
 
 type PubWithCover = Publication & {
@@ -77,6 +80,11 @@ function PublisherLine({
     : "font-semibold text-white";
   const metaClass = light ? "text-white/50" : "text-zinc-500";
   const displayMeta = cleanPublisherMeta(name, meta);
+  const showVerified = isAlwaysVerified({
+    verified: publisher?.verified,
+    slug: publisher?.slug,
+    name,
+  });
 
   const nameEl = href ? (
     <Link
@@ -85,22 +93,26 @@ function PublisherLine({
       className={`inline-flex max-w-[70%] items-center gap-1 truncate ${nameClass} hover:text-omniv-gold`}
     >
       <span className="truncate">{name}</span>
-      {publisher?.verified && (
+      {showVerified && (
         <VerifiedBadge
-          name={publisher.name}
-          verifyType={publisher.type}
+          name={name}
+          verifyType={publisher?.type || "company"}
           className="shrink-0"
+          size={14}
         />
       )}
     </Link>
   ) : (
-    <span className={`inline-flex max-w-[70%] items-center gap-1 truncate ${nameClass}`}>
+    <span
+      className={`inline-flex max-w-[70%] items-center gap-1 truncate ${nameClass}`}
+    >
       <span className="truncate">{name}</span>
-      {publisher?.verified && (
+      {showVerified && (
         <VerifiedBadge
-          name={publisher.name}
-          verifyType={publisher.type}
+          name={name}
+          verifyType={publisher?.type || "company"}
           className="shrink-0"
+          size={14}
         />
       )}
     </span>
