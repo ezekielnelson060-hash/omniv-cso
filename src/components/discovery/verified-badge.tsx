@@ -6,9 +6,6 @@ import Link from "next/link";
 /**
  * Omniv Verified — classic circle check (readable at small sizes).
  * Color communicates verification category.
- *
- * Person → Blue · Company → Gold · Brand → Purple · Artist → Pink
- * Organization → Teal · Project → Orange · Media → Red
  */
 export type VerifyCategory =
   | "person"
@@ -42,7 +39,6 @@ const VERIFY_LABEL: Record<VerifyCategory, string> = {
   entity: "Omniv Verified",
 };
 
-/** Known platform / always-verified identities */
 const ALWAYS_VERIFIED_SLUGS = new Set([
   "omniv",
   "omniv-editorial",
@@ -87,7 +83,6 @@ export function resolveVerifyCategory(verifyType?: string): VerifyCategory {
   return "entity";
 }
 
-/** Classic filled circle + white check */
 function CheckmarkIcon({
   color,
   size = 18,
@@ -135,6 +130,13 @@ export function VerifiedBadge({
   const color = VERIFY_COLOR[category];
   const label = VERIFY_LABEL[category];
 
+  const verifiedDate = verifiedAt
+    ? new Date(verifiedAt).toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      })
+    : null;
+
   return (
     <>
       <button
@@ -159,39 +161,39 @@ export function VerifiedBadge({
           aria-modal
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-[#121212] p-5 ring-1 ring-white/10"
+            className="w-full max-w-sm rounded-2xl bg-[#121212] p-6 ring-1 ring-white/10"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start gap-3">
-              <CheckmarkIcon color={color} size={28} />
-              <div className="min-w-0 flex-1">
-                <p className="text-[16px] font-semibold text-white">{label}</p>
+            <div className="flex items-start gap-4">
+              <div className="mt-0.5 shrink-0">
+                <CheckmarkIcon color={color} size={32} />
+              </div>
+              <div className="min-w-0 flex-1 space-y-2">
+                <p className="text-[17px] font-semibold leading-snug text-white">
+                  {label}
+                </p>
                 {name && (
-                  <p className="mt-1 text-[13px] text-zinc-400">
+                  <p className="text-[14px] leading-relaxed text-zinc-300">
                     {name} is verified on Omniv.
                   </p>
                 )}
-                {verifiedAt && (
-                  <p className="mt-2 text-[12px] text-zinc-500">
-                    Verified{" "}
-                    {new Date(verifiedAt).toLocaleDateString("en-US", {
-                      month: "short",
-                      year: "numeric",
-                    })}
+                {verifiedDate && (
+                  <p className="text-[13px] text-zinc-500">
+                    {`Verified ${verifiedDate}`}
                   </p>
                 )}
-                <p className="mt-3 text-[12px] leading-relaxed text-zinc-500">
+                <p className="pt-1 text-[13px] leading-relaxed text-zinc-500">
                   Verification confirms identity or representation — not an
                   endorsement of content.
                 </p>
               </div>
             </div>
-            <div className="mt-5 flex flex-col gap-2">
+            <div className="mt-6 flex flex-col gap-2.5">
               {href && (
                 <Link
                   href={href}
                   onClick={() => setOpen(false)}
-                  className="flex h-11 items-center justify-center rounded-full bg-omniv-gold text-[14px] font-semibold text-black"
+                  className="flex h-12 items-center justify-center rounded-full bg-omniv-gold text-[14px] font-semibold text-black"
                 >
                   View verification details
                 </Link>
@@ -199,7 +201,7 @@ export function VerifiedBadge({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="h-11 rounded-full bg-white/[0.06] text-[14px] font-medium text-white"
+                className="h-12 rounded-full bg-white/[0.06] text-[14px] font-medium text-white"
               >
                 Close
               </button>

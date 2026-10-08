@@ -10,6 +10,12 @@ import {
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
 import { readProfile } from "@/lib/discovery/local-profile";
+import { OmnivAvatar } from "@/components/discovery/omniv-avatar";
+import {
+  VerifiedBadge,
+  isAlwaysVerified,
+} from "@/components/discovery/verified-badge";
+import { resolveEntityAvatar } from "@/lib/discovery/resolve-avatar";
 
 const TYPES: {
   id: string;
@@ -121,6 +127,7 @@ export function PublishSheet({
   const [mounted, setMounted] = useState(false);
   const [active, setActive] = useState<ActiveAccount | null>(null);
   const [displayName, setDisplayName] = useState("You");
+  const [personalAvatar, setPersonalAvatar] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -129,7 +136,9 @@ export function PublishSheet({
   useEffect(() => {
     setActive(readActiveAccount());
     try {
-      setDisplayName(readProfile().displayName || "You");
+      const p = readProfile();
+      setDisplayName(p.displayName || "You");
+      setPersonalAvatar(p.avatarUrl || null);
     } catch {
       /* ignore */
     }
@@ -141,6 +150,22 @@ export function PublishSheet({
   const asEntity = isEntityContext(active);
   const publishingAs = asEntity && active ? active.name : displayName;
   const publishingType = asEntity && active ? active.type : "personal";
+  const avatarSrc =
+    asEntity && active
+      ? resolveEntityAvatar({
+          avatarUrl: active.avatarUrl,
+          slug: active.slug,
+          name: active.name,
+        })
+      : personalAvatar;
+  const showVerified =
+    asEntity &&
+    active &&
+    isAlwaysVerified({
+      verified: active.verified,
+      slug: active.slug,
+      name: active.name,
+    });
 
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center">
@@ -193,18 +218,24 @@ export function PublishSheet({
             Publish as
           </p>
           <p className="mt-1 text-[12px] text-zinc-500">
-            Choose who you're publishing for.
+            Choose who you&apos;re publishing for.
           </p>
           <div className="mt-2 flex items-center gap-3 rounded-2xl bg-white/[0.03] px-3 py-3 ring-1 ring-white/[0.06]">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-omniv-gold/20 text-sm font-semibold text-omniv-gold">
-              {publishingAs.charAt(0).toUpperCase()}
-            </span>
+            <OmnivAvatar src={avatarSrc} name={publishingAs} size={40} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[14px] font-semibold text-white">
-                {publishingAs}
+              <p className="flex items-center gap-1.5 truncate text-[14px] font-semibold text-white">
+                <span className="truncate">{publishingAs}</span>
+                {showVerified && (
+                  <VerifiedBadge
+                    name={publishingAs}
+                    verifyType={publishingType}
+                    size={14}
+                  />
+                )}
               </p>
               <p className="text-[12px] capitalize text-zinc-500">
                 {publishingType}
+                {showVerified ? " · Verified" : ""}
               </p>
             </div>
             <button
