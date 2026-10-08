@@ -130,7 +130,6 @@ export async function POST(req: Request) {
       visibility,
     };
 
-    // Auto SEO for every public publication type
     {
       const seo = buildPublicationSeo({
         type,
@@ -268,6 +267,7 @@ export async function GET(req: Request) {
         }).path,
         visibility: publication.visibility || "public",
         publisherId: publication.publisher_id,
+        publisherName: publication.publisher_name || undefined,
         body: publication.body,
         subtitle: publication.subtitle,
         excerpt: publication.excerpt,
