@@ -131,12 +131,20 @@ export function VerifiedBadge({
   const color = VERIFY_COLOR[category];
   const label = VERIFY_LABEL[category];
 
-  const verifiedDate = verifiedAt
-    ? new Date(verifiedAt).toLocaleDateString("en-US", {
-        month: "short",
-        year: "numeric",
-      })
-    : null;
+  // Always produce "Mon YYYY" with a real space (e.g. "Sep 2026")
+  let verifiedDate: string | null = null;
+  if (verifiedAt) {
+    try {
+      const d = new Date(verifiedAt);
+      if (!Number.isNaN(d.getTime())) {
+        const month = d.toLocaleDateString("en-US", { month: "short" });
+        const year = d.getFullYear();
+        verifiedDate = `${month} ${year}`;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
 
   return (
     <>
@@ -156,41 +164,41 @@ export function VerifiedBadge({
 
       {open && (
         <div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/65 p-5 sm:items-center"
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-4 sm:items-center"
           onClick={() => setOpen(false)}
           role="dialog"
           aria-modal
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-[#121212] p-6 ring-1 ring-white/10 sm:p-7"
+            className="w-full max-w-sm rounded-2xl bg-[#121212] p-6 ring-1 ring-white/10"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-4">
               <div className="mt-0.5 shrink-0">
-                <CheckmarkIcon color={color} size={36} />
+                <CheckmarkIcon color={color} size={32} />
               </div>
-              <div className="min-w-0 flex-1 space-y-2.5">
+              <div className="min-w-0 flex-1 space-y-2">
                 <p className="text-[17px] font-semibold leading-snug text-white">
                   {label}
                 </p>
-                {name && (
+                {name ? (
                   <p className="text-[14px] leading-relaxed text-zinc-300">
-                    {name} is verified on Omniv.
+                    {`${name} is verified on Omniv.`}
                   </p>
-                )}
-                {verifiedDate && (
+                ) : null}
+                {verifiedDate ? (
                   <p className="text-[13px] text-zinc-500">
                     {`Verified ${verifiedDate}`}
                   </p>
-                )}
+                ) : null}
                 <p className="pt-1 text-[13px] leading-relaxed text-zinc-500">
                   Verification confirms identity or representation — not an
                   endorsement of content.
                 </p>
               </div>
             </div>
-            <div className="mt-7 flex flex-col gap-3">
-              {href && (
+            <div className="mt-6 flex flex-col gap-2.5">
+              {href ? (
                 <Link
                   href={href}
                   onClick={() => setOpen(false)}
@@ -198,7 +206,7 @@ export function VerifiedBadge({
                 >
                   View verification details
                 </Link>
-              )}
+              ) : null}
               <button
                 type="button"
                 onClick={() => setOpen(false)}
