@@ -96,6 +96,13 @@ export async function PATCH(req: Request, ctx: Ctx) {
             { status: 500 }
           );
         }
+        // Still try to sync publisher_name if name changed
+        if (typeof patch.name === "string" && retry.data) {
+          await supabase
+            .from("discovery_publications")
+            .update({ publisher_name: patch.name as string })
+            .eq("publisher_id", id);
+        }
         return NextResponse.json({
           ok: true,
           entity: retry.data,
@@ -110,6 +117,18 @@ export async function PATCH(req: Request, ctx: Ctx) {
         { error: "Not found or not owner" },
         { status: 404 }
       );
+    }
+
+    // Keep denormalized publisher_name in sync on every publication from this entity
+    if (typeof patch.name === "string") {
+      try {
+        await supabase
+          .from("discovery_publications")
+          .update({ publisher_name: data.name })
+          .eq("publisher_id", id);
+      } catch (syncErr) {
+        console.error("publisher_name sync", syncErr);
+      }
     }
 
     return NextResponse.json({

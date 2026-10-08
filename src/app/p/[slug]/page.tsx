@@ -14,6 +14,10 @@ import { PublisherPublicationMenu } from "@/components/discovery/publisher-publi
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { OmnivAvatar } from "@/components/discovery/omniv-avatar";
+import {
+  VerifiedBadge,
+  isAlwaysVerified,
+} from "@/components/discovery/verified-badge";
 import { createClient } from "@/lib/supabase/server";
 import {
   listDiscoveryEntities,
@@ -21,6 +25,7 @@ import {
   getLivePublication,
   listLivePublications,
   type LivePublication,
+  type LiveEntity,
 } from "@/lib/discovery/db";
 import {
   getEntityById,
@@ -41,6 +46,8 @@ import {
   publicationMetadata,
   publicationJsonLd,
 } from "@/lib/discovery/seo";
+import { resolveEntityAvatar } from "@/lib/discovery/resolve-avatar";
+import { resolvePublisherPath } from "@/lib/discovery/resolve-publisher";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -59,6 +66,50 @@ const HERO: Record<string, string> = {
 function readMinutes(text: string) {
   const words = text.trim().split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.round(words / 200));
+}
+
+async function resolvePublisher(
+  supabase: Awaited<ReturnType<typeof createClient>> | null,
+  p: LivePublication,
+  liveEntities: LiveEntity[]
+): Promise<LiveEntity | null> {
+  // 1. Seed lookup
+  const seed = getEntityById(p.publisherId);
+  if (seed) return seed as LiveEntity;
+
+  // 2. Live list by publisher_id
+  if (p.publisherId) {
+    const byId = liveEntities.find((e) => e.id === p.publisherId);
+    if (byId) return byId;
+  }
+
+  // 3. Live DB by known Omniv slugs
+  const name = (p.publisherName || "").toLowerCase().trim();
+  if (
+    name === "omniv editorial" ||
+    name === "omniv" ||
+    name === "omniv media" ||
+    name.startsWith("omniv")
+  ) {
+    const editorial = await getDiscoveryEntity(
+      supabase,
+      "company",
+      "omniv-editorial"
+    );
+    if (editorial) return editorial;
+    const omniv = await getDiscoveryEntity(supabase, "company", "omniv");
+    if (omniv) return omniv;
+  }
+
+  // 4. Match by name in live list
+  if (p.publisherName) {
+    const byName = liveEntities.find(
+      (e) => e.name.toLowerCase() === p.publisherName!.toLowerCase()
+    );
+    if (byName) return byName;
+  }
+
+  return null;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -87,20 +138,37 @@ export default async function PublicationPage({ params }: Props) {
   const currentUser = supabase ? (await supabase.auth.getUser()).data.user : null;
   const canManage = Boolean(currentUser && p.ownerId === currentUser.id);
 
-  const publisher =
-    getEntityById(p.publisherId) ||
-    (p.publisherName === "Omniv Editorial"
-      ? await getDiscoveryEntity(supabase, "company", "omniv-editorial")
-      : null);
-  const publisherName = p.publisherName || publisher?.name || "Publisher";
-  const fromPublisher = publisher
-    ? publicationsByPublisher(publisher.id).filter((x) => x.id !== p.id)
-    : [];
-
   const [liveEntities, livePublications] = await Promise.all([
     listDiscoveryEntities(supabase),
     listLivePublications(supabase, 120),
   ]);
+
+  const publisher = await resolvePublisher(supabase, p, liveEntities as LiveEntity[]);
+  // Prefer live entity name (after rename) over stale denormalized publisher_name
+  const publisherName = publisher?.name || p.publisherName || "Publisher";
+  const publisherHref =
+    (publisher ? entityPath(publisher) : undefined) ||
+    resolvePublisherPath({
+      type: publisher?.type,
+      slug: publisher?.slug,
+      name: publisherName,
+      publisherId: p.publisherId,
+    });
+  const showVerified = isAlwaysVerified({
+    verified: publisher?.verified,
+    slug: publisher?.slug,
+    name: publisherName,
+  });
+  const avatarSrc = resolveEntityAvatar({
+    avatarUrl: publisher?.avatarUrl,
+    slug: publisher?.slug,
+    name: publisherName,
+  });
+
+  const fromPublisher = publisher
+    ? publicationsByPublisher(publisher.id).filter((x) => x.id !== p.id)
+    : [];
+
   const graph = {
     entities: publisher
       ? [...liveEntities.filter((e) => e.id !== publisher.id), publisher]
@@ -215,20 +283,41 @@ export default async function PublicationPage({ params }: Props) {
                 </p>
               )}
               <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-zinc-300">
-                {publisher ? (
+                {publisherHref ? (
                   <Link
-                    href={entityPath(publisher)}
+                    href={publisherHref}
                     className="flex items-center gap-1.5 font-medium hover:text-white"
                   >
                     <OmnivAvatar
-                      src={publisher.avatarUrl}
-                      name={publisher.name}
+                      src={avatarSrc}
+                      name={publisherName}
                       size={24}
                     />
-                    {publisher.name}
+                    <span>{publisherName}</span>
+                    {showVerified && (
+                      <VerifiedBadge
+                        name={publisherName}
+                        verifyType={publisher?.type || "company"}
+                        size={14}
+                      />
+                    )}
                   </Link>
                 ) : (
-                  <span className="font-medium">{publisherName}</span>
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <OmnivAvatar
+                      src={avatarSrc}
+                      name={publisherName}
+                      size={24}
+                    />
+                    <span>{publisherName}</span>
+                    {showVerified && (
+                      <VerifiedBadge
+                        name={publisherName}
+                        verifyType={publisher?.type || "company"}
+                        size={14}
+                      />
+                    )}
+                  </span>
                 )}
                 <span className="text-zinc-600">·</span>
                 <span>{p.readingTime || mins} min read</span>
@@ -257,7 +346,7 @@ export default async function PublicationPage({ params }: Props) {
                   tags={p.tags || []}
                   category={p.category}
                   publisherId={p.publisherId}
-                  publisherName={p.publisherName}
+                  publisherName={publisherName}
                   visibility={p.visibility}
                   status={p.status}
                 />
@@ -336,13 +425,28 @@ export default async function PublicationPage({ params }: Props) {
                   className="flex min-w-0 flex-1 items-center gap-3"
                 >
                   <OmnivAvatar
-                    src={publisher.avatarUrl}
+                    src={resolveEntityAvatar({
+                      avatarUrl: publisher.avatarUrl,
+                      slug: publisher.slug,
+                      name: publisher.name,
+                    })}
                     name={publisher.name}
                     size={48}
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-[15px] font-medium text-white">
-                      {publisher.name}
+                    <p className="flex items-center gap-1.5 truncate text-[15px] font-medium text-white">
+                      <span className="truncate">{publisher.name}</span>
+                      {isAlwaysVerified({
+                        verified: publisher.verified,
+                        slug: publisher.slug,
+                        name: publisher.name,
+                      }) && (
+                        <VerifiedBadge
+                          name={publisher.name}
+                          verifyType={publisher.type}
+                          size={14}
+                        />
+                      )}
                     </p>
                     <p className="truncate text-[12px] text-zinc-500">
                       {publisher.tagline}
