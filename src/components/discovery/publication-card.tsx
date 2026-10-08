@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { PublicationActions } from "@/components/discovery/publication-actions";
 import { ProfilePubMenu } from "@/components/discovery/profile-pub-menu";
-import { VerifiedBadge } from "@/components/discovery/verified-badge";
+import {
+  VerifiedBadge,
+  isAlwaysVerified,
+} from "@/components/discovery/verified-badge";
 import {
   PUBLICATION_LABELS,
   publicationPath,
@@ -47,6 +50,12 @@ export function PublicationCard({
   const coverSrc = pub.coverUrl || coverFor(pub.slug);
   const publisherHref = publisher ? entityPath(publisher) : undefined;
   const displayMeta = cleanPublisherMeta(name, pub.meta);
+  const showVerified = isAlwaysVerified({
+    verified: publisher?.verified,
+    slug: publisher?.slug,
+    name: name,
+  });
+  const verifyType = publisher?.type || "company";
 
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06] transition-colors duration-200 hover:bg-[#101010]">
@@ -98,37 +107,27 @@ export function PublicationCard({
               </p>
             )}
             <div className="mt-2 flex items-center gap-1.5 text-[12px]">
-              {publisherHref ? (
-                <span
-                  onClick={(e) => e.stopPropagation()}
-                  className="inline-flex max-w-[70%] items-center gap-1 truncate font-semibold text-white"
-                >
+              <span className="inline-flex max-w-[75%] items-center gap-1 truncate font-semibold text-white">
+                {publisherHref ? (
                   <Link
                     href={publisherHref}
+                    onClick={(e) => e.stopPropagation()}
                     className="truncate hover:text-omniv-gold"
                   >
                     {name}
                   </Link>
-                  {publisher?.verified && (
-                    <VerifiedBadge
-                      name={publisher.name}
-                      verifyType={publisher.type}
-                      className="shrink-0"
-                    />
-                  )}
-                </span>
-              ) : (
-                <span className="inline-flex max-w-[70%] items-center gap-1 truncate font-semibold text-white">
+                ) : (
                   <span className="truncate">{name}</span>
-                  {publisher?.verified && (
-                    <VerifiedBadge
-                      name={publisher.name}
-                      verifyType={publisher.type}
-                      className="shrink-0"
-                    />
-                  )}
-                </span>
-              )}
+                )}
+                {showVerified && (
+                  <VerifiedBadge
+                    name={name}
+                    verifyType={verifyType}
+                    className="shrink-0"
+                    size={14}
+                  />
+                )}
+              </span>
               {displayMeta && (
                 <>
                   <span className="text-zinc-600">·</span>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 
 /**
- * Omniv Verified — mature shield check (not a plain circle).
+ * Omniv Verified — classic circle check (readable at small sizes).
  * Color communicates verification category.
  *
  * Person → Blue · Company → Gold · Brand → Purple · Artist → Pink
@@ -42,6 +42,33 @@ const VERIFY_LABEL: Record<VerifyCategory, string> = {
   entity: "Omniv Verified",
 };
 
+/** Known platform / always-verified identities */
+const ALWAYS_VERIFIED_SLUGS = new Set([
+  "omniv",
+  "omniv-editorial",
+  "omniv-media",
+  "omniv-media-inc",
+]);
+
+const ALWAYS_VERIFIED_NAMES = new Set([
+  "omniv",
+  "omniv editorial",
+  "omniv media",
+]);
+
+export function isAlwaysVerified(opts: {
+  slug?: string | null;
+  name?: string | null;
+  verified?: boolean | null;
+}): boolean {
+  if (opts.verified) return true;
+  const slug = (opts.slug || "").toLowerCase().trim();
+  if (slug && ALWAYS_VERIFIED_SLUGS.has(slug)) return true;
+  const name = (opts.name || "").toLowerCase().trim();
+  if (name && ALWAYS_VERIFIED_NAMES.has(name)) return true;
+  return false;
+}
+
 export function resolveVerifyCategory(verifyType?: string): VerifyCategory {
   const t = (verifyType || "").toLowerCase().trim();
   if (
@@ -60,7 +87,7 @@ export function resolveVerifyCategory(verifyType?: string): VerifyCategory {
   return "entity";
 }
 
-/** Shield + check — not a flat circle */
+/** Classic filled circle + white check */
 function CheckmarkIcon({
   color,
   size = 18,
@@ -76,14 +103,11 @@ function CheckmarkIcon({
       fill="none"
       aria-hidden
     >
+      <circle cx="12" cy="12" r="10" fill={color} />
       <path
-        d="M12 2.2 4.8 5.4v5.3c0 5.2 3.4 9.9 7.2 11.1 3.8-1.2 7.2-5.9 7.2-11.1V5.4L12 2.2z"
-        fill={color}
-      />
-      <path
-        d="M8.2 12.1 10.7 14.6 15.8 9.4"
+        d="M7.8 12.2 10.6 15l5.6-6.2"
         stroke="#0a0a0a"
-        strokeWidth="2.1"
+        strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -97,7 +121,7 @@ export function VerifiedBadge({
   verifiedAt,
   verifyType = "entity",
   href,
-  size = 18,
+  size = 16,
 }: {
   className?: string;
   name?: string;
