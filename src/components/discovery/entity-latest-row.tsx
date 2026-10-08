@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { PublicationActions } from "@/components/discovery/publication-actions";
+import { ProfilePubMenu } from "@/components/discovery/profile-pub-menu";
 import {
   PUBLICATION_LABELS,
   publicationPath,
   type Publication,
 } from "@/lib/discovery/types";
+import { cleanPublisherMeta } from "@/lib/discovery/publisher-meta";
 
 type Pub = Publication & { coverUrl?: string };
 
@@ -23,12 +25,19 @@ const TONE: Record<string, string> = {
 };
 
 /** Horizontal list row — Entity "Latest" as in mockup */
-export function EntityLatestRow({ pub }: { pub: Pub }) {
+export function EntityLatestRow({
+  pub,
+  showManage = false,
+}: {
+  pub: Pub;
+  showManage?: boolean;
+}) {
   const tone = TONE[pub.type] ?? "from-zinc-700 to-zinc-900";
+  const displayMeta = cleanPublisherMeta("", pub.meta) || pub.publishedAt;
 
   return (
     <div className="overflow-hidden rounded-2xl bg-white/[0.03] ring-1 ring-white/[0.08]">
-      <div className="flex items-center gap-3 p-2.5 pr-3">
+      <div className="flex items-center gap-2 p-2.5 pr-2">
         <Link
           href={publicationPath(pub)}
           className="flex min-w-0 flex-1 items-center gap-3"
@@ -59,14 +68,23 @@ export function EntityLatestRow({ pub }: { pub: Pub }) {
               {pub.title}
             </p>
             <p className="truncate text-[11px] text-zinc-500">
-              {pub.meta || pub.publishedAt}
+              {displayMeta}
               {pub.type === "article" ? " · read" : ""}
             </p>
           </div>
         </Link>
-        <Link href={publicationPath(pub)} className="text-zinc-600">
-          ›
-        </Link>
+        {showManage && pub.id ? (
+          <ProfilePubMenu
+            id={pub.id}
+            slug={pub.slug}
+            type={pub.type}
+            title={pub.title}
+          />
+        ) : (
+          <Link href={publicationPath(pub)} className="text-zinc-600">
+            ›
+          </Link>
+        )}
       </div>
       <div className="border-t border-white/[0.05] px-2 py-0.5">
         <PublicationActions
