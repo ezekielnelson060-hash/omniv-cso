@@ -7,6 +7,7 @@ import { FollowButton } from "@/components/discovery/follow-button";
 import { ProfilePubMenu } from "@/components/discovery/profile-pub-menu";
 import { readProfile } from "@/lib/discovery/local-profile";
 import { coverFor } from "@/lib/discovery/seed-covers";
+import { cleanPublisherMeta } from "@/lib/discovery/publisher-meta";
 import { SEED_ENTITIES, SEED_PUBLICATIONS } from "@/lib/discovery/seed";
 import {
   ENTITY_LABELS,
@@ -111,9 +112,11 @@ function PubCard({
   const tone = PUBLICATION_TONE[type] || PUBLICATION_TONE.article;
   const label =
     PUBLICATION_LABELS[type as keyof typeof PUBLICATION_LABELS] || type;
-  const meta =
-    ("meta" in p && p.meta) ||
-    [label, publisherName].filter(Boolean).join(" · ");
+  const cleaned = cleanPublisherMeta(
+    publisherName,
+    "meta" in p ? p.meta : undefined
+  );
+  const meta = cleaned || label;
 
   return (
     <div className="group overflow-hidden rounded-2xl bg-[#0b0b0b] ring-1 ring-white/[0.08] transition hover:ring-omniv-gold/35">
@@ -154,7 +157,7 @@ function PubCard({
               />
             )}
           </div>
-          <div className="mt-1 flex items-center gap-1">
+          <div className="mt-1">
             <PublicationActions
               slug={p.slug}
               type={type}
@@ -163,15 +166,6 @@ function PubCard({
               initialLikes={0}
               compact
             />
-            {showManage && (
-              <Link
-                href={`/promote?slug=${encodeURIComponent(p.slug)}`}
-                onClick={(e) => e.stopPropagation()}
-                className="ml-auto inline-flex h-7 items-center rounded-full bg-omniv-gold/15 px-2.5 text-[11px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/25 transition hover:bg-omniv-gold/25"
-              >
-                Promote
-              </Link>
-            )}
           </div>
         </div>
       </div>
