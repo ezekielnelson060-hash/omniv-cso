@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+
 /**
  * Omniv-branded avatar.
  * Real image when available, otherwise a premium dark + gold orbital fallback
@@ -16,10 +18,18 @@ export function OmnivAvatar({
   size?: number;
   className?: string;
 }) {
+  const [failed, setFailed] = useState(false);
   const initial = (name || "?").charAt(0).toUpperCase();
   const style = { width: size, height: size } as const;
 
-  if (src) {
+  // Reset failure when src changes
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  const showImage = Boolean(src) && !failed;
+
+  if (showImage) {
     return (
       <div
         className={`relative shrink-0 overflow-hidden rounded-full bg-omniv-gold/15 ${className}`}
@@ -27,15 +37,10 @@ export function OmnivAvatar({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={src}
+          src={src!}
           alt=""
           className="h-full w-full object-cover"
-          onError={(e) => {
-            // Fall back to branded mark if the image 404s
-            (e.target as HTMLImageElement).style.display = "none";
-            const parent = (e.target as HTMLImageElement).parentElement;
-            if (parent) parent.dataset.fallback = "1";
-          }}
+          onError={() => setFailed(true)}
         />
       </div>
     );

@@ -60,6 +60,7 @@ export function isAlwaysVerified(opts: {
   if (opts.verified) return true;
   const slug = (opts.slug || "").toLowerCase().trim();
   if (slug && ALWAYS_VERIFIED_SLUGS.has(slug)) return true;
+  if (slug.startsWith("omniv-")) return true;
   const name = (opts.name || "").toLowerCase().trim();
   if (name && ALWAYS_VERIFIED_NAMES.has(name)) return true;
   return false;
@@ -155,20 +156,20 @@ export function VerifiedBadge({
 
       {open && (
         <div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-4 sm:items-center"
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/65 p-5 sm:items-center"
           onClick={() => setOpen(false)}
           role="dialog"
           aria-modal
         >
           <div
-            className="w-full max-w-sm rounded-2xl bg-[#121212] p-6 ring-1 ring-white/10"
+            className="w-full max-w-sm rounded-2xl bg-[#121212] p-6 ring-1 ring-white/10 sm:p-7"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-4">
               <div className="mt-0.5 shrink-0">
-                <CheckmarkIcon color={color} size={32} />
+                <CheckmarkIcon color={color} size={36} />
               </div>
-              <div className="min-w-0 flex-1 space-y-2">
+              <div className="min-w-0 flex-1 space-y-2.5">
                 <p className="text-[17px] font-semibold leading-snug text-white">
                   {label}
                 </p>
@@ -188,7 +189,7 @@ export function VerifiedBadge({
                 </p>
               </div>
             </div>
-            <div className="mt-6 flex flex-col gap-2.5">
+            <div className="mt-7 flex flex-col gap-3">
               {href && (
                 <Link
                   href={href}

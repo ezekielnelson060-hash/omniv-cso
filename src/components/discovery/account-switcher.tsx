@@ -9,6 +9,12 @@ import {
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
 import { readProfile } from "@/lib/discovery/local-profile";
+import { OmnivAvatar } from "@/components/discovery/omniv-avatar";
+import {
+  VerifiedBadge,
+  isAlwaysVerified,
+} from "@/components/discovery/verified-badge";
+import { resolveEntityAvatar } from "@/lib/discovery/resolve-avatar";
 
 type EntityRow = {
   id: string;
@@ -17,7 +23,24 @@ type EntityRow = {
   name: string;
   path: string;
   verified?: boolean;
+  avatar_url?: string | null;
 };
+
+function dedupeEntities(list: EntityRow[]): EntityRow[] {
+  const seen = new Set<string>();
+  const out: EntityRow[] = [];
+  for (const e of list) {
+    const key = e.id || `${e.type}:${e.slug}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    // also skip duplicate slug+type
+    const slugKey = `${e.type}:${e.slug}`;
+    if (seen.has(slugKey) && e.id) continue;
+    seen.add(slugKey);
+    out.push(e);
+  }
+  return out;
+}
 
 /**
  * Personal profile ≠ entity accounts.
@@ -51,7 +74,7 @@ export function AccountSwitcher({
         const res = await fetch("/api/discovery/entities");
         const data = await res.json();
         setAuth(Boolean(data.auth));
-        setEntities(data.entities || []);
+        setEntities(dedupeEntities(data.entities || []));
       } catch {
         setAuth(false);
       }
@@ -67,12 +90,24 @@ export function AccountSwitcher({
   }
 
   function switchEntity(e: EntityRow) {
+    const verified = isAlwaysVerified({
+      verified: e.verified,
+      slug: e.slug,
+      name: e.name,
+    });
     const a: ActiveAccount = {
       id: e.id,
       type: e.type,
       slug: e.slug,
       name: e.name,
       path: e.path,
+      verified,
+      handle: e.slug,
+      avatarUrl: resolveEntityAvatar({
+        avatarUrl: e.avatar_url,
+        slug: e.slug,
+        name: e.name,
+      }),
     };
     writeActiveAccount(a);
     setActive(a);
@@ -92,14 +127,7 @@ export function AccountSwitcher({
             : "hover:bg-white/5"
         }`}
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-omniv-gold/25 text-sm font-semibold text-omniv-gold">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            displayName.charAt(0).toUpperCase()
-          )}
-        </div>
+        <OmnivAvatar src={avatarUrl} name={displayName} size={40} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-semibold text-white">
             {displayName}
@@ -115,6 +143,16 @@ export function AccountSwitcher({
 
       {entities.map((e) => {
         const isActive = active?.id === e.id;
+        const showVerified = isAlwaysVerified({
+          verified: e.verified,
+          slug: e.slug,
+          name: e.name,
+        });
+        const av = resolveEntityAvatar({
+          avatarUrl: e.avatar_url,
+          slug: e.slug,
+          name: e.name,
+        });
         return (
           <button
             key={e.id}
@@ -126,15 +164,22 @@ export function AccountSwitcher({
                 : "hover:bg-white/5"
             }`}
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">
-              {e.name.charAt(0)}
-            </div>
+            <OmnivAvatar src={av} name={e.name} size={40} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[14px] font-semibold text-white">
-                {e.name}
-                {e.verified && <span className="ml-1 text-sky-400">✓</span>}
+              <p className="flex items-center gap-1.5 truncate text-[14px] font-semibold text-white">
+                <span className="truncate">{e.name}</span>
+                {showVerified && (
+                  <VerifiedBadge
+                    name={e.name}
+                    verifyType={e.type}
+                    size={14}
+                  />
+                )}
               </p>
-              <p className="text-[12px] capitalize text-zinc-500">{e.type}</p>
+              <p className="text-[12px] capitalize text-zinc-500">
+                {e.type}
+                {showVerified ? " · Verified" : ""}
+              </p>
             </div>
             {isActive && <span className="text-omniv-gold">✓</span>}
           </button>

@@ -13,8 +13,13 @@ export function resolveEntityAvatar(opts: {
   const slug = (opts.slug || "").toLowerCase().trim();
   const name = (opts.name || "").toLowerCase().trim();
 
+  // Official Omniv identities always get the brand mark
   if (
-    slug.startsWith("omniv") ||
+    slug === "omniv" ||
+    slug === "omniv-editorial" ||
+    slug === "omniv-media" ||
+    slug === "omniv-media-inc" ||
+    slug.startsWith("omniv-") ||
     name === "omniv" ||
     name === "omniv editorial" ||
     name === "omniv media"
