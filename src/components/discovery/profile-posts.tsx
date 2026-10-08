@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PublicationActions } from "@/components/discovery/publication-actions";
 import { FollowButton } from "@/components/discovery/follow-button";
+import { ProfilePubMenu } from "@/components/discovery/profile-pub-menu";
 import { readProfile } from "@/lib/discovery/local-profile";
 import { coverFor } from "@/lib/discovery/seed-covers";
 import { SEED_ENTITIES, SEED_PUBLICATIONS } from "@/lib/discovery/seed";
@@ -82,10 +83,7 @@ function EntityCard({ entity }: { entity: DiscoveryEntity }) {
             )}
           </div>
         </Link>
-        <div
-          onClick={(e) => e.preventDefault()}
-          className="shrink-0"
-        >
+        <div onClick={(e) => e.preventDefault()} className="shrink-0">
           <FollowButton
             type={entity.type}
             slug={entity.slug}
@@ -102,9 +100,11 @@ function EntityCard({ entity }: { entity: DiscoveryEntity }) {
 function PubCard({
   p,
   publisherName,
+  showManage = false,
 }: {
   p: LivePub | Publication;
   publisherName?: string;
+  showManage?: boolean;
 }) {
   const type = p.type;
   const cover = ("coverUrl" in p && p.coverUrl) || coverFor(p.slug);
@@ -133,18 +133,28 @@ function PubCard({
           </span>
         </Link>
         <div className="min-w-0 flex-1 py-0.5">
-          <Link href={`/p/${p.slug}`}>
-            <p className="line-clamp-2 text-[15px] font-semibold leading-snug text-white group-hover:text-omniv-gold">
-              {p.title}
-            </p>
-            {p.summary && (
-              <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-zinc-500">
-                {p.summary}
+          <div className="flex items-start gap-1">
+            <Link href={`/p/${p.slug}`} className="min-w-0 flex-1">
+              <p className="line-clamp-2 text-[15px] font-semibold leading-snug text-white group-hover:text-omniv-gold">
+                {p.title}
               </p>
+              {p.summary && (
+                <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-zinc-500">
+                  {p.summary}
+                </p>
+              )}
+              <p className="mt-1.5 text-[11px] text-zinc-600">{meta}</p>
+            </Link>
+            {showManage && "id" in p && p.id && (
+              <ProfilePubMenu
+                id={p.id}
+                slug={p.slug}
+                type={type}
+                title={p.title}
+              />
             )}
-            <p className="mt-1.5 text-[11px] text-zinc-600">{meta}</p>
-          </Link>
-          <div className="mt-1">
+          </div>
+          <div className="mt-1 flex items-center gap-1">
             <PublicationActions
               slug={p.slug}
               type={type}
@@ -153,6 +163,15 @@ function PubCard({
               initialLikes={0}
               compact
             />
+            {showManage && (
+              <Link
+                href={`/promote?slug=${encodeURIComponent(p.slug)}`}
+                onClick={(e) => e.stopPropagation()}
+                className="ml-auto inline-flex h-7 items-center rounded-full bg-omniv-gold/15 px-2.5 text-[11px] font-semibold text-omniv-gold ring-1 ring-omniv-gold/25 transition hover:bg-omniv-gold/25"
+              >
+                Promote
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -347,7 +366,12 @@ export function ProfilePosts() {
         </p>
       </div>
       {pubs.map((p) => (
-        <PubCard key={p.id} p={p} publisherName={p.publisherName || name} />
+        <PubCard
+          key={p.id}
+          p={p}
+          publisherName={p.publisherName || name}
+          showManage
+        />
       ))}
       <div className="pt-4">
         <p className="mb-3 text-[13px] font-semibold text-white">Discover more</p>
