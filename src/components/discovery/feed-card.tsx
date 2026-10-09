@@ -93,19 +93,21 @@ function PublisherLine({
     name,
   });
 
-  // Name, tick, and meta as siblings — never nest truncate on a flex parent
   return (
-    <div className="flex min-w-0 items-center gap-1 text-[12px]">
+    <div className="flex min-w-0 flex-nowrap items-center gap-1 text-[12px]">
       {href ? (
         <Link
           href={href}
           onClick={(e) => e.stopPropagation()}
-          className={`min-w-0 max-w-[45%] truncate leading-none ${nameClass} hover:text-omniv-gold`}
+          data-inline
+          className={`inline-link min-h-0 min-w-0 max-w-[45%] truncate leading-none ${nameClass} hover:text-omniv-gold`}
         >
           {name}
         </Link>
       ) : (
-        <span className={`min-w-0 max-w-[45%] truncate leading-none ${nameClass}`}>
+        <span
+          className={`inline-link min-h-0 min-w-0 max-w-[45%] truncate leading-none ${nameClass}`}
+        >
           {name}
         </span>
       )}
@@ -119,7 +121,9 @@ function PublisherLine({
       ) : null}
       {displayMeta ? (
         <>
-          <span className={`shrink-0 leading-none ${light ? "text-white/40" : "text-zinc-600"}`}>
+          <span
+            className={`shrink-0 leading-none ${light ? "text-white/40" : "text-zinc-600"}`}
+          >
             ·
           </span>
           <span className={`min-w-0 truncate leading-none ${metaClass}`}>
@@ -187,7 +191,10 @@ export function FeedFeaturedCard({
       </div>
       {showExplore && (
         <div className="border-t border-white/[0.05] px-4 py-2 text-right">
-          <Link href="/explore" className="text-[12px] font-medium text-omniv-gold">
+          <Link
+            href="/explore"
+            className="text-[12px] font-medium text-omniv-gold"
+          >
             Explore
           </Link>
         </div>

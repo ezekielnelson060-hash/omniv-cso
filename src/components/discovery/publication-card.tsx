@@ -114,17 +114,18 @@ export function PublicationCard({
             )}
           </Link>
 
-          {/* Name · tick · meta as siblings on one row */}
-          <div className="mt-2 flex min-w-0 items-center gap-1 text-[12px]">
+          {/* Name · tick · meta as siblings — same baseline on mobile */}
+          <div className="mt-2 flex min-w-0 flex-nowrap items-center gap-1 text-[12px]">
             {publisherHref ? (
               <Link
                 href={publisherHref}
-                className="min-w-0 max-w-[45%] truncate text-[12px] font-semibold leading-none text-white hover:text-omniv-gold"
+                data-inline
+                className="inline-link min-h-0 min-w-0 max-w-[45%] truncate text-[12px] font-semibold leading-none text-white hover:text-omniv-gold"
               >
                 {name}
               </Link>
             ) : (
-              <span className="min-w-0 max-w-[45%] truncate text-[12px] font-semibold leading-none text-white">
+              <span className="inline-link min-h-0 min-w-0 max-w-[45%] truncate text-[12px] font-semibold leading-none text-white">
                 {name}
               </span>
             )}
