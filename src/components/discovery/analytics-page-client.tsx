@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
@@ -14,32 +14,41 @@ import {
 } from "@/lib/discovery/active-account";
 import { readProfile } from "@/lib/discovery/local-profile";
 import { DISCOVERY_PLANS } from "@/lib/discovery/monetization";
-import {
-  countQualifiedInteractions,
-  readTopSignalTopics,
-} from "@/lib/discovery/signals";
 import { AnalyticsGrowthCta } from "@/components/discovery/analytics-growth-cta";
-
-type Pub = {
-  id: string;
-  title: string;
-  type: string;
-  slug: string;
-  heat?: number;
-  publisherId?: string;
-  publisherName?: string;
-};
 
 type Range = "7d" | "30d" | "90d" | "1y";
 
+type Metrics = {
+  views: number;
+  opens: number;
+  completes: number;
+  likes: number;
+  shares: number;
+  saves: number;
+  follows: number;
+  qualified: number;
+};
+
+type TopPub = {
+  id: string;
+  slug: string;
+  title: string;
+  type: string;
+  heat: number;
+};
+
 export default function AnalyticsPage() {
-  const [pubs, setPubs] = useState<Pub[]>([]);
   const [auth, setAuth] = useState<boolean | null>(null);
   const [range, setRange] = useState<Range>("30d");
   const [active, setActive] = useState<ActiveAccount | null>(null);
   const [personalName, setPersonalName] = useState("You");
-  const [follows, setFollows] = useState(0);
-  const [saves, setSaves] = useState(0);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [heat, setHeat] = useState(0);
+  const [pubCount, setPubCount] = useState(0);
+  const [topPubs, setTopPubs] = useState<TopPub[]>([]);
+  const [sources, setSources] = useState<Record<string, number>>({});
+  const [real, setReal] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setActive(readActiveAccount());
@@ -52,75 +61,55 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     (async () => {
       try {
-        const publicationId = new URLSearchParams(window.location.search).get("publication");
-        const endpoint = publicationId
-          ? `/api/discovery/publications?id=${encodeURIComponent(publicationId)}`
-          : "/api/discovery/publications";
-        const res = await fetch(endpoint);
+        const qs = new URLSearchParams({ range });
+        if (active?.id) qs.set("entityId", active.id);
+        const res = await fetch(`/api/discovery/analytics?${qs}`);
         const data = await res.json();
         if (cancelled) return;
         setAuth(Boolean(data.auth));
-        const list = Array.isArray(data.publications) ? data.publications : [];
-        setPubs(
-          list.map((p: Record<string, unknown>) => ({
-            id: String(p.id || p.slug || ""),
-            title: String(p.title || ""),
-            type: String(p.type || "article"),
-            slug: String(p.slug || ""),
-            heat: Number(p.heat || 0),
-            publisherId: p.publisher_id ? String(p.publisher_id) : undefined,
-            publisherName: p.publisher_name
-              ? String(p.publisher_name)
-              : undefined,
-          }))
-        );
+        if (data.auth && data.metrics) {
+          setMetrics(data.metrics as Metrics);
+          setHeat(Number(data.heat || 0));
+          setPubCount(Number(data.publications || 0));
+          setTopPubs(
+            Array.isArray(data.topPublications) ? data.topPublications : []
+          );
+          setSources(
+            data.sources && typeof data.sources === "object"
+              ? data.sources
+              : {}
+          );
+          setReal(Boolean(data.real));
+        }
       } catch {
         if (!cancelled) setAuth(false);
-      }
-      try {
-        const fr = await fetch("/api/discovery/followers");
-        const fd = await fr.json();
-        if (!cancelled && typeof fd.count === "number") setFollows(fd.count);
-      } catch {
-        /* optional */
-      }
-      try {
-        const sr = await fetch("/api/discovery/save");
-        const sd = await sr.json();
-        if (!cancelled && Array.isArray(sd.saves)) setSaves(sd.saves.length);
-      } catch {
-        /* optional */
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [range, active?.id]);
 
   const entityName = active?.name || personalName;
+  const m = metrics || {
+    views: 0,
+    opens: 0,
+    completes: 0,
+    likes: 0,
+    shares: 0,
+    saves: 0,
+    follows: 0,
+    qualified: 0,
+  };
 
-  const scopedPubs = useMemo(() => {
-    if (!active) return pubs;
-    return pubs.filter(
-      (p) =>
-        p.publisherId === active.id ||
-        p.publisherName === active.name
-    );
-  }, [pubs, active]);
-
-  const totalHeat = scopedPubs.reduce((s, p) => s + (p.heat || 0), 0);
-  const rangeFactor =
-    range === "7d" ? 0.25 : range === "30d" ? 1 : range === "90d" ? 2.2 : 5;
-  const discoveries = Math.round(
-    Math.max(totalHeat, scopedPubs.length) * rangeFactor
-  );
-  const profileViews = Math.round(
-    Math.max(follows * 8, scopedPubs.length * 3) * rangeFactor
-  );
-  const qualified = countQualifiedInteractions();
-  const topics = readTopSignalTopics(5);
+  const sourceRows = Object.entries(sources)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6);
 
   return (
     <DiscoveryShell>
@@ -145,10 +134,12 @@ export default function AnalyticsPage() {
             <div className="flex items-center gap-3">
               <AnalyticsExport
                 rows={[
-                  { metric: "heat", value: discoveries, range },
-                  { metric: "profile_reach", value: profileViews, range },
-                  { metric: "saves", value: saves, range },
-                  { metric: "follows", value: follows, range },
+                  { metric: "views", value: m.views, range },
+                  { metric: "opens", value: m.opens, range },
+                  { metric: "saves", value: m.saves, range },
+                  { metric: "follows", value: m.follows, range },
+                  { metric: "qualified", value: m.qualified, range },
+                  { metric: "heat", value: heat, range },
                 ]}
               />
               <Link
@@ -202,70 +193,84 @@ export default function AnalyticsPage() {
             </div>
           )}
 
-          {auth && (
+          {auth && loading && (
+            <p className="mt-12 text-center text-[14px] text-zinc-600">
+              Loading…
+            </p>
+          )}
+
+          {auth && !loading && (
             <>
-              <div className="mt-5 grid grid-cols-2 gap-3">
+              <p className="mt-3 text-[11px] text-zinc-600">
+                {real
+                  ? "Live counts from signals, saves, and follows"
+                  : "Waiting for event data"}
+              </p>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <Stat
+                  label="Opens / views"
+                  value={formatNum(m.views || m.opens)}
+                  note="Real"
+                />
                 <Stat
                   label="Heat score"
-                  value={formatNum(discoveries)}
-                  note="From likes + engagement"
+                  value={formatNum(heat)}
+                  note="Publication heat sum"
                 />
-                <Stat
-                  label="Profile reach"
-                  value={formatNum(profileViews)}
-                  note="Estimated from network"
-                />
-                <Stat label="Saves" value={formatNum(saves)} note="Real count" />
+                <Stat label="Saves" value={formatNum(m.saves)} note="Real" />
                 <Stat
                   label="Follows"
-                  value={formatNum(follows)}
-                  note="Real count"
+                  value={formatNum(m.follows)}
+                  note="Real"
                 />
                 <Stat
                   label="Qualified"
-                  value={formatNum(qualified)}
-                  note="Saves · follows · completes"
+                  value={formatNum(m.qualified)}
+                  note="Saves · follows · completes · likes"
                 />
                 <Stat
                   label="Publications"
-                  value={formatNum(scopedPubs.length)}
+                  value={formatNum(pubCount)}
                   note="This identity"
                 />
               </div>
 
               <AnalyticsGrowthCta
                 show={
-                  scopedPubs.length > 0 &&
-                  (totalHeat > 0 || discoveries > 20 || saves + follows > 0)
+                  pubCount > 0 &&
+                  (heat > 0 || m.saves + m.follows + m.opens > 0)
                 }
               />
 
-              {topics.length > 0 && (
+              {sourceRows.length > 0 && (
                 <section className="mt-8">
                   <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    Top interest signals
+                    Sources
                   </h2>
                   <ul className="mt-3 space-y-2">
-                    {topics.map((t) => (
+                    {sourceRows.map(([src, n]) => (
                       <li
-                        key={t.topic}
+                        key={src}
                         className="flex items-center justify-between rounded-xl bg-white/[0.04] px-3.5 py-2.5"
                       >
-                        <span className="text-[14px] text-white">{t.topic}</span>
-                        <span className="text-[12px] text-zinc-500">{t.weight.toFixed(1)}</span>
+                        <span className="truncate text-[14px] text-white">
+                          {src}
+                        </span>
+                        <span className="text-[12px] text-zinc-500">{n}</span>
                       </li>
                     ))}
                   </ul>
                 </section>
               )}
 
-              {scopedPubs.length > 0 && (
+              {topPubs.length > 0 && (
                 <section className="mt-8">
                   <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
                     Publications
                   </h2>
                   <ul className="mt-3 space-y-2">
-                    {scopedPubs.slice(0, 12).map((p) => (
+                    {topPubs.map((p) => (
                       <li key={p.id}>
                         <Link
                           href={`/p/${p.slug}`}
@@ -292,8 +297,7 @@ export default function AnalyticsPage() {
                   {DISCOVERY_PLANS.pro.name} unlocks deeper stats
                 </p>
                 <p className="mt-2 text-[13px] text-zinc-500">
-                  Per-identity demand, sources, and export when event tracking is
-                  fully wired.
+                  Funnels, cohort retention, and export-ready demand graphs.
                 </p>
                 <Link
                   href="/pricing"

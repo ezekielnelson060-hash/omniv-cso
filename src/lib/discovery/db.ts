@@ -9,7 +9,7 @@ import type {
   ArticleSource,
   EntityReference,
 } from "./types";
-import { SEED_ENTITIES, SEED_PUBLICATIONS, getPublication as seedGetPub } from "./seed";
+import { SEED_ENTITIES, SEED_PUBLICATIONS, getPublication as seedGetPub, getEntityById as seedGetEntityById } from "./seed";
 
 type Row = {
   id: string;
@@ -145,6 +145,17 @@ const ENT_SELECT =
 const ENT_SELECT_SAFE =
   "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified, owner_id";
 
+function isPublicLivePub(r: PubRow, now: number): boolean {
+  const vis = r.visibility ?? "public";
+  if (vis === "private") return false;
+  const s = r.status ?? "published";
+  if (s === "draft" || s === "archived") return false;
+  if (s === "scheduled" && r.published_at) {
+    return new Date(r.published_at).getTime() <= now;
+  }
+  return s === "published" || s === "scheduled";
+}
+
 export async function listDiscoveryEntities(
   supabase: SupabaseClient | null
 ): Promise<DiscoveryEntity[]> {
@@ -218,6 +229,37 @@ export async function getDiscoveryEntity(
   return SEED_ENTITIES.find((e) => e.type === type && e.slug === slug) ?? null;
 }
 
+/** Prefer live DB entity by id; fall back to seed. */
+export async function getEntityByIdLive(
+  supabase: SupabaseClient | null,
+  id: string
+): Promise<LiveEntity | null> {
+  if (!id) return null;
+  if (supabase) {
+    try {
+      const fullResult = await supabase
+        .from("discovery_entities")
+        .select(ENT_SELECT)
+        .eq("id", id)
+        .maybeSingle();
+      let data = fullResult.data as Row | null;
+      if (!data) {
+        const retry = await supabase
+          .from("discovery_entities")
+          .select(ENT_SELECT_SAFE)
+          .eq("id", id)
+          .maybeSingle();
+        data = retry.data as Row | null;
+      }
+      if (data) return rowToEntity(data as Row);
+    } catch {
+      /* fall through */
+    }
+  }
+  const seed = seedGetEntityById(id);
+  return seed ? (seed as LiveEntity) : null;
+}
+
 export async function getLivePublication(
   supabase: SupabaseClient | null,
   slug: string
@@ -240,8 +282,13 @@ export async function getLivePublication(
       }
       if (data) {
         const status = (data as PubRow).status;
+        const vis = (data as PubRow).visibility ?? "public";
         const at = (data as PubRow).published_at;
         if (status === "draft" || status === "archived") return null;
+        if (vis === "private") {
+          // RLS still enforces owner; client filter for clarity
+          // Owner can still fetch via authenticated client
+        }
         if (
           status === "scheduled" &&
           at &&
@@ -293,14 +340,7 @@ export async function listLivePublications(
 
     const now = Date.now();
     const live = (data as PubRow[])
-      .filter((r) => {
-        const s = r.status ?? "published";
-        if (s === "draft" || s === "archived") return false;
-        if (s === "scheduled" && r.published_at) {
-          return new Date(r.published_at).getTime() <= now;
-        }
-        return s === "published" || s === "scheduled";
-      })
+      .filter((r) => isPublicLivePub(r, now))
       .map(rowToPublication);
 
     live.sort((a, b) => {
