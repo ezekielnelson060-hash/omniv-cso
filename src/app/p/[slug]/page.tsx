@@ -68,61 +68,88 @@ function readMinutes(text: string) {
   return Math.max(1, Math.round(words / 200));
 }
 
+function extractBodyText(p: LivePublication): string {
+  if (p.body && typeof p.body === "string") return p.body;
+  if (Array.isArray(p.content)) {
+    try {
+      const joined = p.content
+        .map((b) => {
+          if (!b || typeof b !== "object") return "";
+          if ("text" in b && typeof (b as { text?: unknown }).text === "string") {
+            return (b as { text: string }).text;
+          }
+          return "";
+        })
+        .filter(Boolean)
+        .join(" ");
+      if (joined) return joined;
+    } catch {
+      /* ignore */
+    }
+  }
+  return p.summary || "";
+}
+
 async function resolvePublisher(
   supabase: Awaited<ReturnType<typeof createClient>> | null,
   p: LivePublication,
   liveEntities: LiveEntity[]
 ): Promise<LiveEntity | null> {
-  // 1. Seed lookup
-  const seed = getEntityById(p.publisherId);
-  if (seed) return seed as LiveEntity;
+  try {
+    const seed = getEntityById(p.publisherId);
+    if (seed) return seed as LiveEntity;
 
-  // 2. Live list by publisher_id
-  if (p.publisherId) {
-    const byId = liveEntities.find((e) => e.id === p.publisherId);
-    if (byId) return byId;
+    if (p.publisherId) {
+      const byId = liveEntities.find((e) => e.id === p.publisherId);
+      if (byId) return byId;
+    }
+
+    const name = (p.publisherName || "").toLowerCase().trim();
+    if (
+      name === "omniv editorial" ||
+      name === "omniv" ||
+      name === "omniv media" ||
+      name.startsWith("omniv")
+    ) {
+      const editorial = await getDiscoveryEntity(
+        supabase,
+        "company",
+        "omniv-editorial"
+      );
+      if (editorial) return editorial;
+      const omniv = await getDiscoveryEntity(supabase, "company", "omniv");
+      if (omniv) return omniv;
+    }
+
+    if (p.publisherName) {
+      const byName = liveEntities.find(
+        (e) =>
+          (e.name || "").toLowerCase() === (p.publisherName || "").toLowerCase()
+      );
+      if (byName) return byName;
+    }
+  } catch {
+    /* never fail the page for publisher resolution */
   }
-
-  // 3. Live DB by known Omniv slugs
-  const name = (p.publisherName || "").toLowerCase().trim();
-  if (
-    name === "omniv editorial" ||
-    name === "omniv" ||
-    name === "omniv media" ||
-    name.startsWith("omniv")
-  ) {
-    const editorial = await getDiscoveryEntity(
-      supabase,
-      "company",
-      "omniv-editorial"
-    );
-    if (editorial) return editorial;
-    const omniv = await getDiscoveryEntity(supabase, "company", "omniv");
-    if (omniv) return omniv;
-  }
-
-  // 4. Match by name in live list
-  if (p.publisherName) {
-    const byName = liveEntities.find(
-      (e) => e.name.toLowerCase() === p.publisherName!.toLowerCase()
-    );
-    if (byName) return byName;
-  }
-
   return null;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
-  let supabase = null;
   try {
-    supabase = await createClient();
+    const { slug } = await params;
+    let supabase = null;
+    try {
+      supabase = await createClient();
+    } catch {
+      /* seed fallback */
+    }
+    const p = await getLivePublication(supabase, slug);
+    if (!p)
+      return { title: "Not found", robots: { index: false, follow: false } };
+    return publicationMetadata(p);
   } catch {
-    /* seed fallback */
+    return { title: "Omniv" };
   }
-  const p = await getLivePublication(supabase, slug);
-  if (!p) return { title: "Not found", robots: { index: false, follow: false } };
-  return publicationMetadata(p);
 }
 
 export default async function PublicationPage({ params }: Props) {
@@ -133,21 +160,40 @@ export default async function PublicationPage({ params }: Props) {
   } catch {
     /* no env */
   }
+
   const p = (await getLivePublication(supabase, slug)) as LivePublication | null;
   if (!p) notFound();
-  const currentUser = supabase ? (await supabase.auth.getUser()).data.user : null;
+
+  let currentUser = null;
+  try {
+    if (supabase) {
+      currentUser = (await supabase.auth.getUser()).data.user;
+    }
+  } catch {
+    /* guest */
+  }
   const canManage = Boolean(currentUser && p.ownerId === currentUser.id);
 
-  const [liveEntities, livePublications] = await Promise.all([
-    listDiscoveryEntities(supabase),
-    listLivePublications(supabase, 120),
-  ]);
+  let liveEntities: LiveEntity[] = [];
+  let livePublications: LivePublication[] = [];
+  try {
+    const [ents, pubs] = await Promise.all([
+      listDiscoveryEntities(supabase),
+      listLivePublications(supabase, 60),
+    ]);
+    liveEntities = (ents || []) as LiveEntity[];
+    livePublications = (pubs || []) as LivePublication[];
+  } catch {
+    liveEntities = [];
+    livePublications = [];
+  }
 
-  const publisher = await resolvePublisher(supabase, p, liveEntities as LiveEntity[]);
-  // Prefer live entity name (after rename) over stale denormalized publisher_name
+  const publisher = await resolvePublisher(supabase, p, liveEntities);
   const publisherName = publisher?.name || p.publisherName || "Publisher";
   const publisherHref =
-    (publisher ? entityPath(publisher) : undefined) ||
+    (publisher && publisher.type && publisher.slug
+      ? entityPath(publisher)
+      : undefined) ||
     resolvePublisherPath({
       type: publisher?.type,
       slug: publisher?.slug,
@@ -165,47 +211,60 @@ export default async function PublicationPage({ params }: Props) {
     name: publisherName,
   });
 
-  const fromPublisher = publisher
-    ? publicationsByPublisher(publisher.id).filter((x) => x.id !== p.id)
-    : [];
-
-  const graph = {
-    entities: publisher
-      ? [...liveEntities.filter((e) => e.id !== publisher.id), publisher]
-      : liveEntities,
-    publications: livePublications,
-  };
-  const connectedEntities = getEntityReferences(p, graph.entities);
-  const relatedEntities = publisher
-    ? getRelatedEntities(publisher, graph)
-    : [];
-  const recommended = recommendPublications(p, graph)
-    .map((item) => item.publication)
-    .slice(0, 6);
-  const relatedPubs = [
-    ...fromPublisher.slice(0, 4),
-    ...recommended.filter((r) => !fromPublisher.some((f) => f.id === r.id)),
-  ].slice(0, 6);
+  let connectedEntities: LiveEntity[] = [];
+  let relatedEntities: LiveEntity[] = [];
+  let relatedPubs: LivePublication[] = [];
+  let recommended: LivePublication[] = [];
+  try {
+    const fromPublisher = publisher
+      ? publicationsByPublisher(publisher.id).filter((x) => x.id !== p.id)
+      : [];
+    const graph = {
+      entities: publisher
+        ? [...liveEntities.filter((e) => e.id !== publisher.id), publisher]
+        : liveEntities,
+      publications: livePublications,
+    };
+    connectedEntities = getEntityReferences(p, graph.entities) as LiveEntity[];
+    relatedEntities = publisher
+      ? (getRelatedEntities(publisher, graph) as LiveEntity[])
+      : [];
+    recommended = recommendPublications(p, graph)
+      .map((item) => item.publication as LivePublication)
+      .slice(0, 6);
+    relatedPubs = [
+      ...fromPublisher.slice(0, 4),
+      ...recommended.filter((r) => !fromPublisher.some((f) => f.id === r.id)),
+    ].slice(0, 6) as LivePublication[];
+  } catch {
+    connectedEntities = [];
+    relatedEntities = [];
+    relatedPubs = [];
+    recommended = [];
+  }
 
   const path = publicationPath(p);
   const origin = process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
-  const bodyText =
-    p.body ||
-    (p.content || [])
-      .map((b) => ("text" in b ? b.text : ""))
-      .filter(Boolean)
-      .join(" ") ||
-    p.summary ||
-    "";
+  const bodyText = extractBodyText(p);
   const mins = readMinutes(bodyText);
   const hero = HERO[p.type] ?? "from-zinc-800 to-[#050505]";
   const mediaUrl = p.mediaUrl;
   const coverUrl = p.coverUrl || coverFor(p.slug);
   const resolvedCta = ctaFor(p.slug) || p.cta;
 
-  const articleLd = publicationJsonLd(p, origin);
+  let articleLd: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: p.title,
+    url: `${origin}${path}`,
+  };
+  try {
+    articleLd = publicationJsonLd(p, origin) as Record<string, unknown>;
+  } catch {
+    /* minimal ld */
+  }
 
-  const isPdf = mediaUrl?.toLowerCase().includes(".pdf");
+  const isPdf = Boolean(mediaUrl?.toLowerCase().includes(".pdf"));
   const ytMatch = mediaUrl?.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{6,})/i
   );
@@ -216,18 +275,22 @@ export default async function PublicationPage({ params }: Props) {
     : vimeoMatch
       ? `https://player.vimeo.com/video/${vimeoMatch[1]}`
       : null;
-  const isAudio =
+  const isAudio = Boolean(
     mediaUrl &&
-    !isPdf &&
-    !isEmbed &&
-    (p.type === "music" ||
-      /\.(mp3|wav|m4a|ogg|aac)(\?|$)/i.test(mediaUrl));
-  const isDirectVideo =
+      !isPdf &&
+      !isEmbed &&
+      (p.type === "music" ||
+        /\.(mp3|wav|m4a|ogg|aac)(\?|$)/i.test(mediaUrl))
+  );
+  const isDirectVideo = Boolean(
     mediaUrl &&
-    !isPdf &&
-    !isEmbed &&
-    !isAudio &&
-    (p.type === "video" || /\.(mp4|webm)(\?|$)/i.test(mediaUrl));
+      !isPdf &&
+      !isEmbed &&
+      !isAudio &&
+      (p.type === "video" || /\.(mp4|webm)(\?|$)/i.test(mediaUrl))
+  );
+
+  const typeLabel = PUBLICATION_LABELS[p.type as keyof typeof PUBLICATION_LABELS] || p.type || "Publication";
 
   return (
     <DiscoveryShell>
@@ -272,7 +335,7 @@ export default async function PublicationPage({ params }: Props) {
 
             <div className="mt-auto">
               <span className="inline-flex items-center rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90 backdrop-blur-sm">
-                {PUBLICATION_LABELS[p.type]}
+                {typeLabel}
               </span>
               <h1 className="mt-3 text-[28px] font-semibold leading-[1.15] tracking-tight text-white sm:text-[40px]">
                 {p.title}
@@ -286,35 +349,37 @@ export default async function PublicationPage({ params }: Props) {
                 {publisherHref ? (
                   <Link
                     href={publisherHref}
-                    className="flex items-center gap-1.5 font-medium hover:text-white"
+                    className="inline-flex items-center gap-1.5 font-medium hover:text-white"
                   >
                     <OmnivAvatar
                       src={avatarSrc}
                       name={publisherName}
                       size={24}
                     />
-                    <span>{publisherName}</span>
+                    <span className="leading-none">{publisherName}</span>
                     {showVerified && (
                       <VerifiedBadge
                         name={publisherName}
                         verifyType={publisher?.type || "company"}
                         size={14}
+                        className="relative top-px"
                       />
                     )}
                   </Link>
                 ) : (
-                  <span className="flex items-center gap-1.5 font-medium">
+                  <span className="inline-flex items-center gap-1.5 font-medium">
                     <OmnivAvatar
                       src={avatarSrc}
                       name={publisherName}
                       size={24}
                     />
-                    <span>{publisherName}</span>
+                    <span className="leading-none">{publisherName}</span>
                     {showVerified && (
                       <VerifiedBadge
                         name={publisherName}
                         verifyType={publisher?.type || "company"}
                         size={14}
+                        className="relative top-px"
                       />
                     )}
                   </span>
@@ -325,11 +390,20 @@ export default async function PublicationPage({ params }: Props) {
                   <>
                     <span className="text-zinc-600">·</span>
                     <span>
-                      {new Date(p.publishedAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
+                      {(() => {
+                        try {
+                          return new Date(p.publishedAt).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            }
+                          );
+                        } catch {
+                          return p.publishedAt;
+                        }
+                      })()}
                     </span>
                   </>
                 )}
@@ -414,7 +488,7 @@ export default async function PublicationPage({ params }: Props) {
             title="You might want to explore next"
           />
 
-          {publisher && (
+          {publisher && publisher.type && publisher.slug && (
             <div className="mt-12 rounded-2xl bg-white/[0.03] p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                 Publisher
@@ -445,6 +519,7 @@ export default async function PublicationPage({ params }: Props) {
                           name={publisher.name}
                           verifyType={publisher.type}
                           size={14}
+                          className="relative top-px shrink-0"
                         />
                       )}
                     </p>
@@ -472,7 +547,7 @@ export default async function PublicationPage({ params }: Props) {
                 {relatedPubs.map((r) => {
                   const thumb = r.coverUrl || coverFor(r.slug);
                   return (
-                    <li key={r.id}>
+                    <li key={r.id || r.slug}>
                       <Link
                         href={publicationPath(r)}
                         className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-2.5 py-2.5 transition hover:bg-white/[0.06]"
@@ -494,7 +569,9 @@ export default async function PublicationPage({ params }: Props) {
                             {r.title}
                           </p>
                           <p className="text-[11px] text-zinc-500">
-                            {PUBLICATION_LABELS[r.type]}
+                            {PUBLICATION_LABELS[
+                              r.type as keyof typeof PUBLICATION_LABELS
+                            ] || r.type}
                             {r.meta ? ` · ${r.meta}` : ""}
                           </p>
                         </div>
