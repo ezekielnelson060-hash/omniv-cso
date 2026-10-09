@@ -1,11 +1,47 @@
-/* Omniv global styles */
+@import "tailwindcss";
 
 :root {
   --omniv-black: #050505;
-  --omniv-gold: #c9a227;
-  --omniv-gold-dim: rgba(201, 162, 39, 0.35);
-  --background: #050505;
-  --foreground: #f4f4f5;
+  --omniv-black-elevated: #0a0a0a;
+  --omniv-black-card: #0c0c0c;
+  --omniv-black-hover: #121212;
+  --omniv-border: rgba(255, 255, 255, 0.06);
+  --omniv-border-subtle: rgba(255, 255, 255, 0.1);
+  --omniv-gold: #d4af37;
+  --omniv-gold-soft: #c9a227;
+  --omniv-gold-muted: #a68b1f;
+  --omniv-gold-glow: rgba(212, 175, 55, 0.12);
+  --omniv-gold-glow-strong: rgba(212, 175, 55, 0.22);
+  --omniv-text-primary: #f4f4f2;
+  --omniv-text-secondary: #9b9b97;
+  --omniv-text-muted: #6e6e6a;
+  --omniv-success: #22c55e;
+  --omniv-warning: #f59e0b;
+  --omniv-danger: #ef4444;
+  --omniv-info: #3b82f6;
+
+  --background: var(--omniv-black);
+  --foreground: var(--omniv-text-primary);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --read-width: 42rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-omniv-black: var(--omniv-black);
+  --color-omniv-black-elevated: var(--omniv-black-elevated);
+  --color-omniv-black-card: var(--omniv-black-card);
+  --color-omniv-black-hover: var(--omniv-black-hover);
+  --color-omniv-border: var(--omniv-border);
+  --color-omniv-gold: var(--omniv-gold);
+  --color-omniv-gold-soft: var(--omniv-gold-soft);
+  --color-omniv-gold-muted: var(--omniv-gold-muted);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
 * {
@@ -22,18 +58,9 @@ body {
   margin: 0;
   padding: 0;
   background: var(--omniv-black);
-  color: var(--foreground);
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    "Helvetica Neue",
-    Arial,
-    "Noto Sans",
-    sans-serif;
+  color: var(--omniv-text-primary);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -42,7 +69,6 @@ body {
   min-height: 100dvh;
 }
 
-/* Remove default focus ring noise; we use gold ring */
 :focus {
   outline: none;
 }
@@ -70,7 +96,70 @@ select:focus-visible {
   border-bottom: 1px solid rgba(255, 255, 255, 0.045);
 }
 
-/* Scrollbar */
+.text-omniv-gold {
+  color: var(--omniv-gold);
+}
+
+.bg-omniv-gold {
+  background-color: var(--omniv-gold);
+}
+
+.ring-omniv-gold\/25 {
+  --tw-ring-color: rgba(212, 175, 55, 0.25);
+}
+
+.ring-omniv-gold\/30 {
+  --tw-ring-color: rgba(212, 175, 55, 0.3);
+}
+
+.ring-omniv-gold\/35 {
+  --tw-ring-color: rgba(212, 175, 55, 0.35);
+}
+
+.ring-omniv-gold\/40 {
+  --tw-ring-color: rgba(212, 175, 55, 0.4);
+}
+
+.hover\:text-omniv-gold:hover {
+  color: var(--omniv-gold);
+}
+
+.hover\:ring-omniv-gold\/25:hover {
+  --tw-ring-color: rgba(212, 175, 55, 0.25);
+}
+
+.hover\:ring-omniv-gold\/30:hover {
+  --tw-ring-color: rgba(212, 175, 55, 0.3);
+}
+
+.hover\:ring-omniv-gold\/35:hover {
+  --tw-ring-color: rgba(212, 175, 55, 0.35);
+}
+
+.hover\:bg-omniv-gold\/15:hover {
+  background-color: rgba(212, 175, 55, 0.15);
+}
+
+.bg-omniv-gold\/10 {
+  background-color: rgba(212, 175, 55, 0.1);
+}
+
+.bg-omniv-gold\/15 {
+  background-color: rgba(212, 175, 55, 0.15);
+}
+
+.bg-omniv-gold\/\[0\.06\] {
+  background-color: rgba(212, 175, 55, 0.06);
+}
+
+.border-omniv-gold\/30 {
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+.border-omniv-gold\/40 {
+  border-color: rgba(212, 175, 55, 0.4);
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -86,7 +175,6 @@ select:focus-visible {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -103,7 +191,6 @@ select:focus-visible {
   font-feature-settings: "tnum";
 }
 
-/* Skeleton shimmer */
 @keyframes omniv-shimmer {
   0% {
     background-position: -200% 0;
@@ -119,14 +206,13 @@ select:focus-visible {
   animation: omniv-shimmer 1.4s ease-in-out infinite;
 }
 
-/* Number inputs */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-/* Touch targets — only block-level controls, not inline bylines/icons */
+/* Touch targets — block controls only; inline bylines/icons stay tight */
 @media (pointer: coarse) {
   a:not(.inline-link):not([data-inline]),
   button:not(.inline-control):not([data-inline]) {
