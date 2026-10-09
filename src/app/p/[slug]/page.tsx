@@ -7,6 +7,7 @@ import { PublicationPageActions } from "@/components/discovery/publication-page-
 import { FollowButton } from "@/components/discovery/follow-button";
 import { StickyArticleHeader } from "@/components/discovery/sticky-article-header";
 import { PublisherPublicationMenu } from "@/components/discovery/publisher-publication-menu";
+import { KeepExploring } from "@/components/discovery/keep-exploring";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { OmnivAvatar } from "@/components/discovery/omniv-avatar";
@@ -15,7 +16,10 @@ import { isAlwaysVerified } from "@/lib/discovery/verified";
 import { createClient } from "@/lib/supabase/server";
 import {
   getDiscoveryEntity,
+  getEntityByIdLive,
   getLivePublication,
+  listDiscoveryEntities,
+  listLivePublications,
   type LivePublication,
   type LiveEntity,
 } from "@/lib/discovery/db";
@@ -24,6 +28,11 @@ import {
   entityPath,
   publicationPath,
 } from "@/lib/discovery/types";
+import {
+  getEntityReferences,
+  getRelatedEntities,
+  recommendPublications,
+} from "@/lib/discovery/graph";
 import { coverFor } from "@/lib/discovery/seed-covers";
 import { publicationMetadata } from "@/lib/discovery/seo";
 import { resolveEntityAvatar } from "@/lib/discovery/resolve-avatar";
@@ -48,50 +57,24 @@ function readMinutes(text: string) {
   return Math.max(1, Math.round(words / 200));
 }
 
+/** Always prefer live entity name (after rename) over denormalized publisher_name. */
 async function resolvePublisher(
   supabase: Awaited<ReturnType<typeof createClient>> | null,
   p: LivePublication
 ): Promise<LiveEntity | null> {
   try {
-    const name = (p.publisherName || "").toLowerCase().trim();
-    if (name.includes("omniv")) {
-      const editorial = await getDiscoveryEntity(
-        supabase,
-        "company",
-        "omniv-editorial"
-      );
-      if (editorial) return editorial;
-      const omniv = await getDiscoveryEntity(supabase, "company", "omniv");
-      if (omniv) return omniv;
+    // 1. Live DB by publisher_id (source of truth after rename)
+    if (p.publisherId) {
+      const byId = await getEntityByIdLive(supabase, p.publisherId);
+      if (byId) return byId;
     }
-    if (p.publisherId && supabase) {
-      const { data } = await supabase
-        .from("discovery_entities")
-        .select(
-          "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified, avatar_url, cover_url, owner_id"
-        )
-        .eq("id", p.publisherId)
-        .maybeSingle();
-      if (data) {
-        return {
-          id: data.id,
-          type: data.type,
-          slug: data.slug,
-          name: data.name || "Publisher",
-          tagline: data.tagline || "",
-          about: data.about || "",
-          location: data.location ?? undefined,
-          intents: Array.isArray(data.intents) ? data.intents : [],
-          tags: Array.isArray(data.tags) ? data.tags : [],
-          publishedAt: data.published_at
-            ? String(data.published_at).slice(0, 10)
-            : new Date().toISOString().slice(0, 10),
-          heat: data.heat ?? 0,
-          verified: Boolean(data.verified),
-          avatarUrl: data.avatar_url ?? undefined,
-          coverUrl: data.cover_url ?? undefined,
-          ownerId: data.owner_id ?? undefined,
-        } as LiveEntity;
+
+    // 2. Known Omniv slugs (live)
+    const name = (p.publisherName || "").toLowerCase().trim();
+    if (name.includes("omniv") || !p.publisherId) {
+      for (const slug of ["omniv-editorial", "omniv", "omniv-media"]) {
+        const e = await getDiscoveryEntity(supabase, "company", slug);
+        if (e) return e;
       }
     }
   } catch {
@@ -170,7 +153,7 @@ function BodyBlocks({
       ) : null}
 
       {blocks.length > 0 ? (
-        <div className={`space-y-7 ${showLead ? "mt-8" : ""}`}>
+        <div className={`space-y-7 ${showLead ? "mt-8" : ""`}>
           {blocks.map((block, index) => {
             if (block.type === "divider") {
               return (
@@ -278,6 +261,7 @@ export default async function PublicationPage({ params }: Props) {
   const canManage = Boolean(currentUser && p.ownerId === currentUser.id);
 
   const publisher = await resolvePublisher(supabase, p);
+  // Live entity name wins over stale denormalized publisher_name
   const publisherName = publisher?.name || p.publisherName || "Publisher";
   const publisherHref =
     (publisher && publisher.type && publisher.slug
@@ -300,6 +284,37 @@ export default async function PublicationPage({ params }: Props) {
     slug: publisher?.slug,
     name: publisherName,
   });
+
+  // Secondary discovery data — must never crash the article
+  let exploreEntities: LiveEntity[] = [];
+  let explorePublications: LivePublication[] = [];
+  try {
+    const [ents, pubs] = await Promise.all([
+      listDiscoveryEntities(supabase),
+      listLivePublications(supabase, 40),
+    ]);
+    const liveEntities = (ents || []) as LiveEntity[];
+    const livePublications = (pubs || []) as LivePublication[];
+    const graph = {
+      entities: publisher
+        ? [...liveEntities.filter((e) => e.id !== publisher.id), publisher]
+        : liveEntities,
+      publications: livePublications,
+    };
+    exploreEntities = [
+      ...((getEntityReferences(p, graph.entities) as LiveEntity[]) || []),
+      ...((publisher
+        ? (getRelatedEntities(publisher, graph) as LiveEntity[])
+        : []) || []),
+    ];
+    explorePublications = recommendPublications(p, graph)
+      .map((item) => item.publication as LivePublication)
+      .filter((r) => r.slug !== p.slug)
+      .slice(0, 6);
+  } catch {
+    exploreEntities = [];
+    explorePublications = [];
+  }
 
   const path = publicationPath({ slug: p.slug, type: p.type });
   const bodyText =
@@ -373,16 +388,17 @@ export default async function PublicationPage({ params }: Props) {
                 {p.title}
               </h1>
 
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-zinc-300">
+              {/* Name + tick on one baseline */}
+              <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-zinc-300">
                 {publisherHref ? (
                   <Link
                     href={publisherHref}
-                    className="inline-flex items-center gap-1.5 font-medium hover:text-white"
+                    className="inline-flex items-center gap-1.5 font-medium leading-none hover:text-white"
                   >
                     <OmnivAvatar
                       src={avatarSrc}
                       name={publisherName}
-                      size={24}
+                      size={22}
                     />
                     <span className="leading-none">{publisherName}</span>
                     {showVerified ? (
@@ -390,16 +406,16 @@ export default async function PublicationPage({ params }: Props) {
                         name={publisherName}
                         verifyType={publisher?.type || "company"}
                         size={14}
-                        className="relative top-px"
+                        className="inline-flex shrink-0 translate-y-[0.5px]"
                       />
                     ) : null}
                   </Link>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 font-medium">
+                  <span className="inline-flex items-center gap-1.5 font-medium leading-none">
                     <OmnivAvatar
                       src={avatarSrc}
                       name={publisherName}
-                      size={24}
+                      size={22}
                     />
                     <span className="leading-none">{publisherName}</span>
                     {showVerified ? (
@@ -407,17 +423,19 @@ export default async function PublicationPage({ params }: Props) {
                         name={publisherName}
                         verifyType="company"
                         size={14}
-                        className="relative top-px"
+                        className="inline-flex shrink-0 translate-y-[0.5px]"
                       />
                     ) : null}
                   </span>
                 )}
-                <span className="text-zinc-600">·</span>
-                <span>{p.readingTime || mins} min read</span>
+                <span className="text-zinc-600 leading-none">·</span>
+                <span className="leading-none">
+                  {p.readingTime || mins} min read
+                </span>
                 {publishedLabel ? (
                   <>
-                    <span className="text-zinc-600">·</span>
-                    <span>{publishedLabel}</span>
+                    <span className="text-zinc-600 leading-none">·</span>
+                    <span className="leading-none">{publishedLabel}</span>
                   </>
                 ) : null}
               </div>
@@ -453,6 +471,14 @@ export default async function PublicationPage({ params }: Props) {
             questionNobodyAsks={p.questionNobodyAsks}
           />
 
+          <KeepExploring
+            currentPublication={p}
+            entities={exploreEntities}
+            publications={explorePublications}
+            tags={Array.isArray(p.tags) ? p.tags : []}
+            title="You might want to explore next"
+          />
+
           {publisher && publisher.type && publisher.slug ? (
             <div className="mt-12 rounded-2xl bg-white/[0.03] p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
@@ -473,7 +499,7 @@ export default async function PublicationPage({ params }: Props) {
                     size={48}
                   />
                   <div className="min-w-0">
-                    <p className="flex items-center gap-1.5 truncate text-[15px] font-medium text-white">
+                    <p className="flex items-center gap-1.5 text-[15px] font-medium leading-none text-white">
                       <span className="truncate">{publisher.name}</span>
                       {isAlwaysVerified({
                         verified: publisher.verified,
@@ -484,12 +510,12 @@ export default async function PublicationPage({ params }: Props) {
                           name={publisher.name}
                           verifyType={publisher.type}
                           size={14}
-                          className="relative top-px shrink-0"
+                          className="inline-flex shrink-0 translate-y-[0.5px]"
                         />
                       ) : null}
                     </p>
                     {publisher.tagline ? (
-                      <p className="truncate text-[12px] text-zinc-500">
+                      <p className="mt-1 truncate text-[12px] text-zinc-500">
                         {publisher.tagline}
                       </p>
                     ) : null}
