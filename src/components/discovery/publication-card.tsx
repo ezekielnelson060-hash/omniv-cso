@@ -64,11 +64,13 @@ export function PublicationCard({
     name: name,
   });
   const verifyType = publisher?.type || "company";
+  const href = publicationPath(pub);
 
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06] transition-colors duration-200 hover:bg-[#101010]">
       <div className="relative">
-        <Link href={publicationPath(pub)} prefetch className="group flex flex-1 flex-col">
+        {/* Cover — single link, no nested anchors */}
+        <Link href={href} prefetch className="group block">
           <div className="relative flex aspect-[16/10] items-end overflow-hidden">
             {coverSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -104,8 +106,10 @@ export function PublicationCard({
               </span>
             )}
           </div>
+        </Link>
 
-          <div className="flex flex-1 flex-col px-3.5 pb-1 pt-3">
+        <div className="flex flex-1 flex-col px-3.5 pb-1 pt-3">
+          <Link href={href} prefetch className="group">
             <p className="text-[15px] font-semibold leading-snug tracking-tight text-white group-hover:text-omniv-gold">
               {pub.title}
             </p>
@@ -114,39 +118,41 @@ export function PublicationCard({
                 {pub.summary}
               </p>
             )}
-            <div className="mt-2 flex items-center gap-1.5 text-[12px]">
-              <span className="inline-flex max-w-[75%] items-center gap-1 truncate font-semibold text-white">
-                {publisherHref ? (
-                  <Link
-                    href={publisherHref}
-                    onClick={(e) => e.stopPropagation()}
-                    className="truncate hover:text-omniv-gold"
-                  >
-                    {name}
-                  </Link>
-                ) : (
-                  <span className="truncate">{name}</span>
-                )}
-                {showVerified && (
-                  <VerifiedBadge
-                    name={name}
-                    verifyType={verifyType}
-                    className="shrink-0"
-                    size={14}
-                  />
-                )}
-              </span>
-              {displayMeta && (
-                <>
-                  <span className="text-zinc-600">·</span>
-                  <span className="truncate text-zinc-500">{displayMeta}</span>
-                </>
-              )}
-            </div>
-          </div>
-        </Link>
+          </Link>
 
-        {/* Always show ⋯ — owner manage or visitor report */}
+          {/* Name + tick on ONE baseline — no truncate on flex parent */}
+          <div className="mt-2 flex min-w-0 items-center gap-1.5 text-[12px]">
+            <span className="inline-flex min-w-0 items-center gap-1 font-semibold text-white">
+              {publisherHref ? (
+                <Link
+                  href={publisherHref}
+                  className="truncate hover:text-omniv-gold"
+                >
+                  {name}
+                </Link>
+              ) : (
+                <span className="truncate">{name}</span>
+              )}
+              {showVerified && (
+                <VerifiedBadge
+                  name={name}
+                  verifyType={verifyType}
+                  className="relative top-px shrink-0"
+                  size={14}
+                />
+              )}
+            </span>
+            {displayMeta && (
+              <>
+                <span className="shrink-0 text-zinc-600">·</span>
+                <span className="min-w-0 truncate text-zinc-500">
+                  {displayMeta}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
         {pub.id && (
           <div className="absolute right-2 top-2 z-10">
             <div className="rounded-full bg-black/55 backdrop-blur-sm">
