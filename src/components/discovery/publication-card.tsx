@@ -69,39 +69,33 @@ export function PublicationCard({
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06] transition-colors duration-200 hover:bg-[#101010]">
       <div className="relative">
-        {/* Cover — single link, no nested anchors */}
         <Link href={href} prefetch className="group block">
-          <div className="relative flex aspect-[16/10] items-end overflow-hidden">
+          <div className="relative aspect-[16/10] overflow-hidden">
             {coverSrc ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={coverSrc}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+              <div
+                className="absolute inset-0 bg-cover bg-center transition duration-300 group-hover:scale-[1.02]"
+                style={{ backgroundImage: `url(${coverSrc})` }}
               />
             ) : (
               <div className={`absolute inset-0 bg-gradient-to-br ${cover}`} />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-            <span className="absolute left-2.5 top-2.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90 backdrop-blur-sm">
-              {PUBLICATION_LABELS[pub.type] ?? pub.type}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+            <span className="absolute left-3 top-3 rounded-md bg-black/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90 backdrop-blur-sm">
+              {PUBLICATION_LABELS[pub.type as keyof typeof PUBLICATION_LABELS] ||
+                pub.type}
             </span>
             {isMusic && (
-              <span className="absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
+              <span className="absolute bottom-3 right-3 text-[11px] font-semibold uppercase tracking-wide text-omniv-gold">
+                Listen
               </span>
             )}
-            {isEvent && displayMeta && (
-              <span className="absolute right-2.5 top-2.5 rounded-md bg-black/55 px-2 py-1 text-[10px] font-medium text-white/90">
-                {displayMeta.split(" · ")[0]}
+            {isEvent && (
+              <span className="absolute bottom-3 right-3 text-[11px] font-semibold uppercase tracking-wide text-omniv-gold">
+                Event
               </span>
             )}
             {isOpp && (
-              <span className="absolute right-2.5 top-2.5 text-[10px] font-semibold uppercase tracking-wide text-omniv-gold">
+              <span className="absolute bottom-3 right-3 text-[11px] font-semibold uppercase tracking-wide text-omniv-gold">
                 Open
               </span>
             )}
@@ -120,36 +114,36 @@ export function PublicationCard({
             )}
           </Link>
 
-          {/* Name + tick on ONE baseline — no truncate on flex parent */}
-          <div className="mt-2 flex min-w-0 items-center gap-1.5 text-[12px]">
-            <span className="inline-flex min-w-0 items-center gap-1 font-semibold text-white">
-              {publisherHref ? (
-                <Link
-                  href={publisherHref}
-                  className="truncate hover:text-omniv-gold"
-                >
-                  {name}
-                </Link>
-              ) : (
-                <span className="truncate">{name}</span>
-              )}
-              {showVerified && (
-                <VerifiedBadge
-                  name={name}
-                  verifyType={verifyType}
-                  className="relative top-px shrink-0"
-                  size={14}
-                />
-              )}
-            </span>
-            {displayMeta && (
+          {/* Name · tick · meta as siblings on one row */}
+          <div className="mt-2 flex min-w-0 items-center gap-1 text-[12px]">
+            {publisherHref ? (
+              <Link
+                href={publisherHref}
+                className="min-w-0 max-w-[45%] truncate text-[12px] font-semibold leading-none text-white hover:text-omniv-gold"
+              >
+                {name}
+              </Link>
+            ) : (
+              <span className="min-w-0 max-w-[45%] truncate text-[12px] font-semibold leading-none text-white">
+                {name}
+              </span>
+            )}
+            {showVerified ? (
+              <VerifiedBadge
+                name={name}
+                verifyType={verifyType}
+                className="inline-flex shrink-0"
+                size={13}
+              />
+            ) : null}
+            {displayMeta ? (
               <>
-                <span className="shrink-0 text-zinc-600">·</span>
-                <span className="min-w-0 truncate text-zinc-500">
+                <span className="shrink-0 leading-none text-zinc-600">·</span>
+                <span className="min-w-0 truncate leading-none text-zinc-500">
                   {displayMeta}
                 </span>
               </>
-            )}
+            ) : null}
           </div>
         </div>
 
