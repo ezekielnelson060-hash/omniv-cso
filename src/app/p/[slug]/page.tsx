@@ -21,13 +21,12 @@ import {
   type LivePublication,
   type LiveEntity,
 } from "@/lib/discovery/db";
-import { getEntityById } from "@/lib/discovery/seed";
 import {
   PUBLICATION_LABELS,
   entityPath,
   publicationPath,
 } from "@/lib/discovery/types";
-import { coverFor, ctaFor } from "@/lib/discovery/seed-covers";
+import { coverFor } from "@/lib/discovery/seed-covers";
 import { publicationMetadata } from "@/lib/discovery/seo";
 import { resolveEntityAvatar } from "@/lib/discovery/resolve-avatar";
 import { resolvePublisherPath } from "@/lib/discovery/resolve-publisher";
@@ -56,10 +55,6 @@ async function resolvePublisher(
   p: LivePublication
 ): Promise<LiveEntity | null> {
   try {
-    if (p.publisherId) {
-      const seed = getEntityById(p.publisherId);
-      if (seed) return seed as LiveEntity;
-    }
     const name = (p.publisherName || "").toLowerCase().trim();
     if (name.includes("omniv")) {
       const editorial = await getDiscoveryEntity(
@@ -70,6 +65,37 @@ async function resolvePublisher(
       if (editorial) return editorial;
       const omniv = await getDiscoveryEntity(supabase, "company", "omniv");
       if (omniv) return omniv;
+    }
+    // Try publisher_id as entity id via direct lookup when possible
+    if (p.publisherId && supabase) {
+      const { data } = await supabase
+        .from("discovery_entities")
+        .select(
+          "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified, avatar_url, cover_url, owner_id"
+        )
+        .eq("id", p.publisherId)
+        .maybeSingle();
+      if (data) {
+        return {
+          id: data.id,
+          type: data.type,
+          slug: data.slug,
+          name: data.name || "Publisher",
+          tagline: data.tagline || "",
+          about: data.about || "",
+          location: data.location ?? undefined,
+          intents: Array.isArray(data.intents) ? data.intents : [],
+          tags: Array.isArray(data.tags) ? data.tags : [],
+          publishedAt: data.published_at
+            ? String(data.published_at).slice(0, 10)
+            : new Date().toISOString().slice(0, 10),
+          heat: data.heat ?? 0,
+          verified: Boolean(data.verified),
+          avatarUrl: data.avatar_url ?? undefined,
+          coverUrl: data.cover_url ?? undefined,
+          ownerId: data.owner_id ?? undefined,
+        } as LiveEntity;
+      }
     }
   } catch {
     /* ignore */
@@ -132,7 +158,6 @@ function BodyBlocks({
     }
   }
 
-  // Avoid duplicating the same text as lead + first paragraph
   const lead = excerpt || summary || "";
   const leadNorm = lead.replace(/\s+/g, " ").trim().slice(0, 120);
   const firstBlockNorm =
@@ -285,12 +310,6 @@ export default async function PublicationPage({ params }: Props) {
   const mins = readMinutes(bodyText);
   const hero = HERO[p.type] || "from-zinc-800 to-[#050505]";
   const coverUrl = p.coverUrl || coverFor(p.slug) || null;
-  let resolvedCta: { label: string; href: string } | null = null;
-  try {
-    resolvedCta = ctaFor(p.slug) || p.cta || null;
-  } catch {
-    resolvedCta = p.cta || null;
-  }
   const typeLabel =
     PUBLICATION_LABELS[p.type as keyof typeof PUBLICATION_LABELS] ||
     p.type ||
@@ -356,11 +375,6 @@ export default async function PublicationPage({ params }: Props) {
               <h1 className="mt-3 text-[28px] font-semibold leading-[1.15] tracking-tight text-white sm:text-[40px]">
                 {p.title}
               </h1>
-              {p.subtitle ? (
-                <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-zinc-200 sm:text-[17px]">
-                  {p.subtitle}
-                </p>
-              ) : null}
 
               <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-zinc-300">
                 {publisherHref ? (
@@ -441,15 +455,6 @@ export default async function PublicationPage({ params }: Props) {
             whatThisMeans={p.whatThisMeans}
             questionNobodyAsks={p.questionNobodyAsks}
           />
-
-          {resolvedCta ? (
-            <a
-              href={resolvedCta.href}
-              className="mt-8 inline-flex h-12 items-center rounded-full bg-omniv-gold px-6 text-[14px] font-semibold text-black transition hover:bg-omniv-gold/90"
-            >
-              {resolvedCta.label}
-            </a>
-          ) : null}
 
           {publisher && publisher.type && publisher.slug ? (
             <div className="mt-12 rounded-2xl bg-white/[0.03] p-4">
