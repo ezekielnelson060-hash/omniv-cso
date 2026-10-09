@@ -16,14 +16,14 @@ type Row = {
   type: EntityType;
   slug: string;
   name: string;
-  tagline: string;
+  tagline: string | null;
   location: string | null;
-  about: string;
+  about: string | null;
   intents: EntityIntent[] | null;
   tags: string[] | null;
   links: { label: string; href: string }[] | null;
   heat: number | null;
-  published_at: string;
+  published_at: string | null;
   verified?: boolean | null;
   avatar_url?: string | null;
   cover_url?: string | null;
@@ -36,14 +36,14 @@ type PubRow = {
   type: PublicationType;
   slug: string;
   title: string;
-  summary: string;
+  summary: string | null;
   body: string | null;
   tags: string[] | null;
   meta: string | null;
   cover_url: string | null;
   media_url: string | null;
   heat: number | null;
-  published_at: string;
+  published_at: string | null;
   publisher_id: string | null;
   publisher_name: string | null;
   owner_id?: string | null;
@@ -76,19 +76,32 @@ export type LiveEntity = DiscoveryEntity & {
   ownerId?: string;
 };
 
+function safeDate(value: string | null | undefined): string {
+  if (!value) return new Date().toISOString().slice(0, 10);
+  try {
+    const s = String(value);
+    if (s.length >= 10) return s.slice(0, 10);
+    const d = new Date(s);
+    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  } catch {
+    /* ignore */
+  }
+  return new Date().toISOString().slice(0, 10);
+}
+
 function rowToEntity(r: Row): LiveEntity {
   return {
     id: r.id,
     type: r.type,
     slug: r.slug,
-    name: r.name,
-    tagline: r.tagline,
+    name: r.name || "Untitled",
+    tagline: r.tagline || "",
     location: r.location ?? undefined,
-    about: r.about,
+    about: r.about || "",
     intents: Array.isArray(r.intents) ? r.intents : [],
     tags: Array.isArray(r.tags) ? r.tags : [],
     links: Array.isArray(r.links) ? r.links : undefined,
-    publishedAt: r.published_at.slice(0, 10),
+    publishedAt: safeDate(r.published_at),
     heat: r.heat ?? 0,
     verified: Boolean(r.verified),
     avatarUrl: r.avatar_url ?? undefined,
@@ -98,16 +111,19 @@ function rowToEntity(r: Row): LiveEntity {
 }
 
 function rowToPublication(r: PubRow): LivePublication {
+  const content = Array.isArray(r.content)
+    ? r.content.filter((b) => b && typeof b === "object")
+    : undefined;
   return {
     id: r.id,
     type: r.type,
     slug: r.slug,
-    title: r.title,
-    summary: r.summary,
+    title: r.title || "Untitled",
+    summary: r.summary || "",
     body: r.body ?? undefined,
     subtitle: r.subtitle ?? undefined,
     excerpt: r.excerpt ?? undefined,
-    content: Array.isArray(r.content) ? r.content : undefined,
+    content,
     sources: Array.isArray(r.sources) ? r.sources : undefined,
     whatThisMeans: r.what_this_means ?? undefined,
     questionNobodyAsks: r.question_nobody_asks ?? undefined,
@@ -129,7 +145,7 @@ function rowToPublication(r: PubRow): LivePublication {
     coverUrl: r.cover_url ?? undefined,
     tags: Array.isArray(r.tags) ? r.tags : [],
     meta: r.meta ?? undefined,
-    publishedAt: (r.published_at || "").slice(0, 10),
+    publishedAt: safeDate(r.published_at),
     heat: r.heat ?? 10,
   };
 }
@@ -151,7 +167,11 @@ function isPublicLivePub(r: PubRow, now: number): boolean {
   const s = r.status ?? "published";
   if (s === "draft" || s === "archived") return false;
   if (s === "scheduled" && r.published_at) {
-    return new Date(r.published_at).getTime() <= now;
+    try {
+      return new Date(r.published_at).getTime() <= now;
+    } catch {
+      return true;
+    }
   }
   return s === "published" || s === "scheduled";
 }
@@ -184,7 +204,16 @@ export async function listDiscoveryEntities(
       return SEED_ENTITIES;
     }
 
-    const live = (data as Row[]).map(rowToEntity);
+    const live = (data as Row[])
+      .filter((r) => r && r.id && r.slug)
+      .map((r) => {
+        try {
+          return rowToEntity(r);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean) as LiveEntity[];
     const liveKeys = new Set(live.map((e) => `${e.type}:${e.slug}`));
     const extras = SEED_ENTITIES.filter(
       (e) => !liveKeys.has(`${e.type}:${e.slug}`)
@@ -282,13 +311,8 @@ export async function getLivePublication(
       }
       if (data) {
         const status = (data as PubRow).status;
-        const vis = (data as PubRow).visibility ?? "public";
         const at = (data as PubRow).published_at;
         if (status === "draft" || status === "archived") return null;
-        if (vis === "private") {
-          // RLS still enforces owner; client filter for clarity
-          // Owner can still fetch via authenticated client
-        }
         if (
           status === "scheduled" &&
           at &&
@@ -340,8 +364,15 @@ export async function listLivePublications(
 
     const now = Date.now();
     const live = (data as PubRow[])
-      .filter((r) => isPublicLivePub(r, now))
-      .map(rowToPublication);
+      .filter((r) => r && r.slug && isPublicLivePub(r, now))
+      .map((r) => {
+        try {
+          return rowToPublication(r);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean) as LivePublication[];
 
     live.sort((a, b) => {
       const heatDiff = (b.heat || 0) - (a.heat || 0);
