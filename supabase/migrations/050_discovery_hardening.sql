@@ -1,7 +1,7 @@
 -- Omniv discovery hardening (2026-10-09)
 -- Run in Supabase SQL editor if migrations are not auto-applied.
 
--- 1) Ensure visibility + status columns exist
+-- 1) Ensure visibility + status + media columns exist
 alter table public.discovery_publications
   add column if not exists visibility text not null default 'public';
 alter table public.discovery_publications
@@ -9,7 +9,31 @@ alter table public.discovery_publications
 alter table public.discovery_publications
   add column if not exists media_url text;
 
--- 2) Private publications: public can only read public+published (or own)
+-- 1b) Expand status check to allow scheduled (drop any existing check on status)
+do $fix$
+declare
+  cname text;
+begin
+  for cname in
+    select con.conname
+    from pg_constraint con
+    join pg_class rel on rel.oid = con.conrelid
+    join pg_namespace nsp on nsp.oid = rel.relnamespace
+    where nsp.nspname = 'public'
+      and rel.relname = 'discovery_publications'
+      and con.contype = 'c'
+      and pg_get_constraintdef(con.oid) ilike '%status%'
+  loop
+    execute format('alter table public.discovery_publications drop constraint if exists %I', cname);
+  end loop;
+end
+$fix$;
+
+alter table public.discovery_publications
+  add constraint discovery_publications_status_check
+  check (status in ('draft', 'published', 'archived', 'scheduled'));
+
+-- 2) Private publications: public can only read public+published/scheduled (or own)
 alter table public.discovery_publications enable row level security;
 
 drop policy if exists "discovery_publications_public_read" on public.discovery_publications;
@@ -31,21 +55,32 @@ alter table public.discovery_entities
 alter table public.discovery_entities
   add column if not exists verified boolean not null default false;
 
--- 4) Sync denormalized publisher_name from entity (callable after renames)
+-- 4) Sync denormalized publisher_name (owner or service_role only)
 create or replace function public.sync_publisher_names_for_entity(p_entity_id uuid)
 returns integer
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $fn$
 declare
   n text;
+  owner uuid;
   updated int := 0;
 begin
-  select name into n from public.discovery_entities where id = p_entity_id;
+  select name, owner_id into n, owner
+  from public.discovery_entities
+  where id = p_entity_id;
+
   if n is null then
     return 0;
   end if;
+
+  -- Allow service_role always; authenticated only if they own the entity
+  if auth.role() is distinct from 'service_role'
+     and auth.uid() is distinct from owner then
+    raise exception 'not authorized to sync this entity';
+  end if;
+
   update public.discovery_publications
     set publisher_name = n, updated_at = now()
     where publisher_id = p_entity_id
@@ -53,7 +88,7 @@ begin
   get diagnostics updated = row_count;
   return updated;
 end;
-$$;
+$fn$;
 
 revoke all on function public.sync_publisher_names_for_entity(uuid) from public;
 grant execute on function public.sync_publisher_names_for_entity(uuid) to authenticated;
@@ -98,8 +133,8 @@ create index if not exists discovery_entities_owner_idx
 create index if not exists discovery_entities_slug_idx
   on public.discovery_entities (slug);
 
--- 7) Allow authenticated rate-friendly signal inserts (already in 037); ensure source column
-do $$
+-- 7) Signals source column (if table exists)
+do $sig$
 begin
   if exists (
     select 1 from information_schema.tables
@@ -108,4 +143,5 @@ begin
     alter table public.discovery_signals
       add column if not exists source text;
   end if;
-end $$;
+end
+$sig$;
