@@ -1,7 +1,7 @@
 -- Omniv discovery hardening (2026-10-09)
--- Run in Supabase SQL editor if migrations are not auto-applied.
+-- No dollar-quotes (safe to paste from chat/WhatsApp).
 
--- 1) Ensure visibility + status + media columns exist
+-- 1) Columns
 alter table public.discovery_publications
   add column if not exists visibility text not null default 'public';
 alter table public.discovery_publications
@@ -9,8 +9,8 @@ alter table public.discovery_publications
 alter table public.discovery_publications
   add column if not exists media_url text;
 
--- 1b) Expand status check to allow scheduled (drop any existing check on status)
-do $fix$
+-- 1b) Expand status check to include scheduled
+do '
 declare
   cname text;
 begin
@@ -19,21 +19,24 @@ begin
     from pg_constraint con
     join pg_class rel on rel.oid = con.conrelid
     join pg_namespace nsp on nsp.oid = rel.relnamespace
-    where nsp.nspname = 'public'
-      and rel.relname = 'discovery_publications'
-      and con.contype = 'c'
-      and pg_get_constraintdef(con.oid) ilike '%status%'
+    where nsp.nspname = ''public''
+      and rel.relname = ''discovery_publications''
+      and con.contype = ''c''
+      and pg_get_constraintdef(con.oid) ilike ''%status%''
   loop
-    execute format('alter table public.discovery_publications drop constraint if exists %I', cname);
+    execute format(''alter table public.discovery_publications drop constraint if exists %I'', cname);
   end loop;
 end
-$fix$;
+';
+
+alter table public.discovery_publications
+  drop constraint if exists discovery_publications_status_check;
 
 alter table public.discovery_publications
   add constraint discovery_publications_status_check
   check (status in ('draft', 'published', 'archived', 'scheduled'));
 
--- 2) Private publications: public can only read public+published/scheduled (or own)
+-- 2) RLS
 alter table public.discovery_publications enable row level security;
 
 drop policy if exists "discovery_publications_public_read" on public.discovery_publications;
@@ -47,7 +50,7 @@ create policy "discovery_publications_public_read"
     )
   );
 
--- 3) Entity media columns
+-- 3) Entity media
 alter table public.discovery_entities
   add column if not exists avatar_url text;
 alter table public.discovery_entities
@@ -55,13 +58,13 @@ alter table public.discovery_entities
 alter table public.discovery_entities
   add column if not exists verified boolean not null default false;
 
--- 4) Sync denormalized publisher_name (owner or service_role only)
+-- 4) Sync function (owner or service_role only)
 create or replace function public.sync_publisher_names_for_entity(p_entity_id uuid)
 returns integer
 language plpgsql
 security definer
 set search_path = public
-as $fn$
+as '
 declare
   n text;
   owner uuid;
@@ -75,10 +78,9 @@ begin
     return 0;
   end if;
 
-  -- Allow service_role always; authenticated only if they own the entity
-  if auth.role() is distinct from 'service_role'
+  if auth.role() is distinct from ''service_role''
      and auth.uid() is distinct from owner then
-    raise exception 'not authorized to sync this entity';
+    raise exception ''not authorized to sync this entity'';
   end if;
 
   update public.discovery_publications
@@ -88,13 +90,13 @@ begin
   get diagnostics updated = row_count;
   return updated;
 end;
-$fn$;
+';
 
 revoke all on function public.sync_publisher_names_for_entity(uuid) from public;
 grant execute on function public.sync_publisher_names_for_entity(uuid) to authenticated;
 grant execute on function public.sync_publisher_names_for_entity(uuid) to service_role;
 
--- 5) Content reports
+-- 5) Reports
 create table if not exists public.discovery_reports (
   id uuid primary key default gen_random_uuid(),
   reporter_id uuid references auth.users(id) on delete set null,
@@ -125,7 +127,7 @@ create policy "discovery_reports_select_own"
   to authenticated
   using (auth.uid() = reporter_id);
 
--- 6) Performance indexes
+-- 6) Indexes
 create index if not exists discovery_publications_publisher_name_idx
   on public.discovery_publications (publisher_name);
 create index if not exists discovery_entities_owner_idx
@@ -133,15 +135,15 @@ create index if not exists discovery_entities_owner_idx
 create index if not exists discovery_entities_slug_idx
   on public.discovery_entities (slug);
 
--- 7) Signals source column (if table exists)
-do $sig$
+-- 7) Signals source column
+do '
 begin
   if exists (
     select 1 from information_schema.tables
-    where table_schema = 'public' and table_name = 'discovery_signals'
+    where table_schema = ''public'' and table_name = ''discovery_signals''
   ) then
     alter table public.discovery_signals
       add column if not exists source text;
   end if;
 end
-$sig$;
+';

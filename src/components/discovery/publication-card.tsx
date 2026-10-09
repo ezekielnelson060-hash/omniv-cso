@@ -146,7 +146,8 @@ export function PublicationCard({
           </div>
         </Link>
 
-        {showManage && pub.id && (
+        {/* Always show ⋯ — owner manage or visitor report */}
+        {pub.id && (
           <div className="absolute right-2 top-2 z-10">
             <div className="rounded-full bg-black/55 backdrop-blur-sm">
               <ProfilePubMenu
@@ -154,6 +155,7 @@ export function PublicationCard({
                 slug={pub.slug}
                 type={pub.type}
                 title={pub.title}
+                mode={showManage ? "owner" : "visitor"}
               />
             </div>
           </div>
