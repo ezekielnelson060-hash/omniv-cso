@@ -95,7 +95,8 @@ export function VerifiedBadge({
           e.stopPropagation();
           setOpen(true);
         }}
-        className={`inline-flex shrink-0 items-center justify-center ${className}`}
+        data-inline
+        className={`inline-control inline-flex h-auto min-h-0 shrink-0 items-center justify-center p-0 ${className}`}
         aria-label={label}
         title={label}
       >
@@ -115,58 +116,40 @@ export function VerifiedBadge({
             <div className="flex items-center gap-3">
               <CheckmarkIcon color={color} size={28} />
               <div>
-                <p className="text-[16px] font-semibold text-white">{label}</p>
+                <p className="text-[15px] font-semibold text-white">{label}</p>
                 {name ? (
-                  <p className="text-[13px] text-zinc-400">{name}</p>
+                  <p className="mt-0.5 text-[13px] text-zinc-400">{name}</p>
+                ) : null}
+                {verifiedAt ? (
+                  <p className="mt-1 text-[11px] text-zinc-600">
+                    Verified {verifiedAt}
+                  </p>
                 ) : null}
               </div>
             </div>
-            {verifiedAt ? (
-              <p className="mt-3 text-[12px] text-zinc-500">
-                Verified {verifiedAt}
-              </p>
-            ) : null}
-            <p className="mt-3 text-[13px] leading-relaxed text-zinc-400">
-              This account is verified on Omniv. The badge color shows the
-              verification category.
+            <p className="mt-4 text-[13px] leading-relaxed text-zinc-400">
+              This account has been verified on Omniv. The checkmark color shows
+              the type of verified presence.
             </p>
-            <div className="mt-5 flex gap-2">
-              {href ? (
-                <Link
-                  href={href}
-                  className="flex h-11 flex-1 items-center justify-center rounded-full bg-omniv-gold text-[14px] font-semibold text-black"
-                  onClick={() => setOpen(false)}
-                >
-                  View profile
-                </Link>
-              ) : null}
-              <button
-                type="button"
+            {href ? (
+              <Link
+                href={href}
+                className="mt-4 inline-flex h-10 items-center rounded-full bg-omniv-gold px-4 text-[13px] font-semibold text-black"
                 onClick={() => setOpen(false)}
-                className="h-11 flex-1 rounded-full bg-white/[0.08] text-[14px] font-medium text-white"
               >
-                Close
-              </button>
-            </div>
+                View profile
+              </Link>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="mt-3 w-full rounded-full py-2.5 text-[13px] text-zinc-400"
+            >
+              Close
+            </button>
           </div>
         </div>
       ) : null}
     </>
-  );
-}
-
-export function GetVerifiedCard({ compact = false }: { compact?: boolean }) {
-  return (
-    <Link
-      href="/verify"
-      className={`block rounded-2xl border border-omniv-gold/25 bg-omniv-gold/[0.06] ${
-        compact ? "p-3" : "p-4"
-      }`}
-    >
-      <p className="text-[13px] font-semibold text-omniv-gold">Get verified</p>
-      <p className="mt-1 text-[12px] leading-relaxed text-zinc-400">
-        Verified accounts get a badge and higher trust in discovery.
-      </p>
-    </Link>
   );
 }
