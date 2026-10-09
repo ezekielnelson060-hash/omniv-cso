@@ -5,10 +5,6 @@ import { SaveButton } from "@/components/discovery/save-button";
 import { ShareButton } from "@/components/discovery/share-button";
 import { PublicationPageActions } from "@/components/discovery/publication-page-actions";
 import { FollowButton } from "@/components/discovery/follow-button";
-import { StructuredData } from "@/components/StructuredData";
-import { KeepExploring } from "@/components/discovery/keep-exploring";
-import { PublicationMedia } from "@/components/discovery/publication-media";
-import { PublicationBody } from "@/components/discovery/publication-body";
 import { StickyArticleHeader } from "@/components/discovery/sticky-article-header";
 import { PublisherPublicationMenu } from "@/components/discovery/publisher-publication-menu";
 import { BottomNav } from "@/components/discovery/bottom-nav";
@@ -20,34 +16,22 @@ import {
 } from "@/components/discovery/verified-badge";
 import { createClient } from "@/lib/supabase/server";
 import {
-  listDiscoveryEntities,
   getDiscoveryEntity,
   getLivePublication,
-  listLivePublications,
   type LivePublication,
   type LiveEntity,
 } from "@/lib/discovery/db";
-import {
-  getEntityById,
-  publicationsByPublisher,
-} from "@/lib/discovery/seed";
+import { getEntityById } from "@/lib/discovery/seed";
 import {
   PUBLICATION_LABELS,
   entityPath,
   publicationPath,
 } from "@/lib/discovery/types";
-import {
-  getEntityReferences,
-  getRelatedEntities,
-  recommendPublications,
-} from "@/lib/discovery/graph";
 import { coverFor, ctaFor } from "@/lib/discovery/seed-covers";
-import {
-  publicationMetadata,
-  publicationJsonLd,
-} from "@/lib/discovery/seo";
+import { publicationMetadata } from "@/lib/discovery/seo";
 import { resolveEntityAvatar } from "@/lib/discovery/resolve-avatar";
 import { resolvePublisherPath } from "@/lib/discovery/resolve-publisher";
+import { bodyFor } from "@/lib/discovery/seed-bodies";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -64,31 +48,21 @@ const HERO: Record<string, string> = {
 };
 
 function readMinutes(text: string) {
-  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  const words = (text || "").trim().split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.round(words / 200));
 }
 
 async function resolvePublisher(
   supabase: Awaited<ReturnType<typeof createClient>> | null,
-  p: LivePublication,
-  liveEntities: LiveEntity[]
+  p: LivePublication
 ): Promise<LiveEntity | null> {
   try {
-    const seed = getEntityById(p.publisherId);
-    if (seed) return seed as LiveEntity;
-
     if (p.publisherId) {
-      const byId = liveEntities.find((e) => e.id === p.publisherId);
-      if (byId) return byId;
+      const seed = getEntityById(p.publisherId);
+      if (seed) return seed as LiveEntity;
     }
-
     const name = (p.publisherName || "").toLowerCase().trim();
-    if (
-      name === "omniv editorial" ||
-      name === "omniv" ||
-      name === "omniv media" ||
-      name.startsWith("omniv")
-    ) {
+    if (name.includes("omniv")) {
       const editorial = await getDiscoveryEntity(
         supabase,
         "company",
@@ -98,19 +72,166 @@ async function resolvePublisher(
       const omniv = await getDiscoveryEntity(supabase, "company", "omniv");
       if (omniv) return omniv;
     }
-
-    if (p.publisherName) {
-      const byName = liveEntities.find(
-        (e) =>
-          (e.name || "").toLowerCase() ===
-          (p.publisherName || "").toLowerCase()
-      );
-      if (byName) return byName;
-    }
   } catch {
-    /* never fail the page for publisher resolution */
+    /* ignore */
   }
   return null;
+}
+
+/** Safe body paragraphs — never throws on bad content JSON */
+function BodyBlocks({
+  slug,
+  body,
+  content,
+  summary,
+  excerpt,
+  whatThisMeans,
+  questionNobodyAsks,
+}: {
+  slug: string;
+  body?: string;
+  content?: unknown;
+  summary?: string;
+  excerpt?: string;
+  whatThisMeans?: string;
+  questionNobodyAsks?: string;
+}) {
+  let seed: ReturnType<typeof bodyFor> = undefined;
+  try {
+    seed = bodyFor(slug);
+  } catch {
+    seed = undefined;
+  }
+
+  const displayBody =
+    (typeof body === "string" && body) ||
+    (typeof seed?.body === "string" && seed.body) ||
+    "";
+  const displayWhat = whatThisMeans || seed?.whatThisMeans;
+  const displayQuestion = questionNobodyAsks || seed?.questionNobodyAsks;
+
+  // Prefer structured content blocks when valid; else split plain body
+  const blocks: { type: string; text: string; level?: number }[] = [];
+  try {
+    const raw =
+      Array.isArray(content) && content.length
+        ? content
+        : Array.isArray(seed?.content) && seed!.content!.length
+          ? seed!.content!
+          : null;
+    if (raw) {
+      for (const b of raw) {
+        if (!b || typeof b !== "object") continue;
+        const type = String((b as { type?: unknown }).type || "");
+        const text = (b as { text?: unknown }).text;
+        if (type === "divider") {
+          blocks.push({ type: "divider", text: "" });
+          continue;
+        }
+        if (typeof text === "string" && text.trim()) {
+          blocks.push({
+            type: type || "paragraph",
+            text,
+            level: Number((b as { level?: unknown }).level) || undefined,
+          });
+        }
+      }
+    }
+  } catch {
+    /* fall through to plain body */
+  }
+
+  if (!blocks.length && displayBody) {
+    for (const para of displayBody.split(/\n\n+/)) {
+      const t = para.trim();
+      if (!t) continue;
+      if (t.startsWith("## "))
+        blocks.push({ type: "heading", text: t.slice(3), level: 2 });
+      else if (t.startsWith("### "))
+        blocks.push({ type: "heading", text: t.slice(4), level: 3 });
+      else if (t.startsWith("> "))
+        blocks.push({ type: "quote", text: t.slice(2) });
+      else blocks.push({ type: "paragraph", text: t });
+    }
+  }
+
+  const lead = excerpt || summary;
+
+  return (
+    <>
+      {lead ? (
+        <p className="text-[19px] font-medium leading-[1.75] text-zinc-200">
+          {lead}
+        </p>
+      ) : null}
+
+      {blocks.length > 0 ? (
+        <div className="mt-8 space-y-7">
+          {blocks.map((block, index) => {
+            if (block.type === "divider") {
+              return (
+                <hr
+                  key={index}
+                  className="border-0 border-t border-white/10"
+                />
+              );
+            }
+            if (block.type === "heading" || block.type === "subheading") {
+              const Tag = block.level === 3 ? "h3" : "h2";
+              return (
+                <Tag
+                  key={index}
+                  className="text-[22px] font-semibold leading-snug text-white"
+                >
+                  {block.text}
+                </Tag>
+              );
+            }
+            if (block.type === "quote") {
+              return (
+                <blockquote
+                  key={index}
+                  className="border-l-2 border-omniv-gold/60 pl-4 text-[17px] italic leading-relaxed text-zinc-300"
+                >
+                  {block.text}
+                </blockquote>
+              );
+            }
+            return (
+              <p
+                key={index}
+                className="text-[17px] leading-[1.85] text-zinc-300"
+              >
+                {block.text}
+              </p>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {displayWhat ? (
+        <section className="mt-16 border-t border-white/10 pt-8">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
+            What this means
+          </p>
+          <p className="mt-3 text-[18px] leading-relaxed text-zinc-200">
+            {displayWhat}
+          </p>
+        </section>
+      ) : null}
+
+      {displayQuestion ? (
+        <section className="mt-8 rounded-2xl border border-omniv-gold/30 bg-omniv-gold/[0.06] p-6">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
+            The question nobody asks
+          </p>
+          <p className="mt-3 text-[20px] font-medium leading-snug text-white">
+            {displayQuestion}
+          </p>
+        </section>
+      ) : null}
+    </>
+  );
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -120,7 +241,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     try {
       supabase = await createClient();
     } catch {
-      /* seed fallback */
+      /* */
     }
     const p = await getLivePublication(supabase, slug);
     if (!p)
@@ -133,13 +254,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PublicationPage({ params }: Props) {
   const { slug } = await params;
+
   let supabase = null;
   try {
     supabase = await createClient();
   } catch {
-    /* no env */
+    /* */
   }
-  const p = (await getLivePublication(supabase, slug)) as LivePublication | null;
+
+  const p = await getLivePublication(supabase, slug);
   if (!p) notFound();
 
   let currentUser = null;
@@ -150,25 +273,7 @@ export default async function PublicationPage({ params }: Props) {
   }
   const canManage = Boolean(currentUser && p.ownerId === currentUser.id);
 
-  let liveEntities: LiveEntity[] = [];
-  let livePublications: LivePublication[] = [];
-  try {
-    const [ents, pubs] = await Promise.all([
-      listDiscoveryEntities(supabase),
-      listLivePublications(supabase, 120),
-    ]);
-    liveEntities = (ents || []) as LiveEntity[];
-    livePublications = (pubs || []) as LivePublication[];
-  } catch {
-    liveEntities = [];
-    livePublications = [];
-  }
-
-  const publisher = await resolvePublisher(
-    supabase,
-    p,
-    liveEntities as LiveEntity[]
-  );
+  const publisher = await resolvePublisher(supabase, p);
   const publisherName = publisher?.name || p.publisherName || "Publisher";
   const publisherHref =
     (publisher && publisher.type && publisher.slug
@@ -180,6 +285,7 @@ export default async function PublicationPage({ params }: Props) {
       name: publisherName,
       publisherId: p.publisherId,
     });
+
   const showVerified = isAlwaysVerified({
     verified: publisher?.verified,
     slug: publisher?.slug,
@@ -191,107 +297,34 @@ export default async function PublicationPage({ params }: Props) {
     name: publisherName,
   });
 
-  let connectedEntities: LiveEntity[] = [];
-  let relatedEntities: LiveEntity[] = [];
-  let recommended: LivePublication[] = [];
-  let relatedPubs: LivePublication[] = [];
-  try {
-    const fromPublisher = publisher
-      ? publicationsByPublisher(publisher.id).filter((x) => x.id !== p.id)
-      : [];
-    const graph = {
-      entities: publisher
-        ? [...liveEntities.filter((e) => e.id !== publisher.id), publisher]
-        : liveEntities,
-      publications: livePublications,
-    };
-    connectedEntities = getEntityReferences(p, graph.entities) as LiveEntity[];
-    relatedEntities = (
-      publisher ? getRelatedEntities(publisher, graph) : []
-    ) as LiveEntity[];
-    recommended = recommendPublications(p, graph)
-      .map((item) => item.publication as LivePublication)
-      .slice(0, 6);
-    relatedPubs = [
-      ...fromPublisher.slice(0, 4),
-      ...recommended.filter((r) => !fromPublisher.some((f) => f.id === r.id)),
-    ].slice(0, 6) as LivePublication[];
-  } catch {
-    /* secondary discovery data must never take down the article */
-  }
-
-  const path = publicationPath(p);
-  const origin = process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
-  let bodyText = "";
-  try {
-    if (typeof p.body === "string" && p.body) bodyText = p.body;
-    else if (Array.isArray(p.content)) {
-      bodyText = p.content
-        .map((b) => {
-          if (!b || typeof b !== "object") return "";
-          const t = (b as { text?: unknown }).text;
-          return typeof t === "string" ? t : "";
-        })
-        .filter(Boolean)
-        .join(" ");
-    }
-    if (!bodyText) bodyText = p.summary || "";
-  } catch {
-    bodyText = p.summary || "";
-  }
+  const path = publicationPath({ slug: p.slug, type: p.type });
+  const bodyText =
+    (typeof p.body === "string" && p.body) || p.summary || "";
   const mins = readMinutes(bodyText);
-  const hero = HERO[p.type] ?? "from-zinc-800 to-[#050505]";
-  const mediaUrl = p.mediaUrl;
-  const coverUrl = p.coverUrl || coverFor(p.slug);
+  const hero = HERO[p.type] || "from-zinc-800 to-[#050505]";
+  const coverUrl = p.coverUrl || coverFor(p.slug) || null;
   const resolvedCta = ctaFor(p.slug) || p.cta;
-
-  let articleLd: Record<string, unknown> = {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    headline: p.title,
-    url: `${origin}${path}`,
-  };
-  try {
-    articleLd = publicationJsonLd(p, origin) as Record<string, unknown>;
-  } catch {
-    /* minimal */
-  }
-
-  const isPdf = Boolean(mediaUrl?.toLowerCase().includes(".pdf"));
-  const ytMatch = mediaUrl?.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{6,})/i
-  );
-  const vimeoMatch = mediaUrl?.match(/vimeo\.com\/(?:video\/)?(\d+)/i);
-  const isEmbed = Boolean(ytMatch || vimeoMatch);
-  const embedSrc = ytMatch
-    ? `https://www.youtube.com/embed/${ytMatch[1]}`
-    : vimeoMatch
-      ? `https://player.vimeo.com/video/${vimeoMatch[1]}`
-      : null;
-  const isAudio = Boolean(
-    mediaUrl &&
-      !isPdf &&
-      !isEmbed &&
-      (p.type === "music" ||
-        /\.(mp3|wav|m4a|ogg|aac)(\?|$)/i.test(mediaUrl))
-  );
-  const isDirectVideo = Boolean(
-    mediaUrl &&
-      !isPdf &&
-      !isEmbed &&
-      !isAudio &&
-      (p.type === "video" || /\.(mp4|webm)(\?|$)/i.test(mediaUrl))
-  );
-
   const typeLabel =
     PUBLICATION_LABELS[p.type as keyof typeof PUBLICATION_LABELS] ||
     p.type ||
     "Publication";
 
+  let publishedLabel = "";
+  if (p.publishedAt) {
+    try {
+      publishedLabel = new Date(p.publishedAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch {
+      publishedLabel = String(p.publishedAt).slice(0, 10);
+    }
+  }
+
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <StructuredData id={`publication-${p.slug}`} data={articleLd} />
         <StickyArticleHeader title={p.title} backHref="/home" />
 
         <div
@@ -317,7 +350,7 @@ export default async function PublicationPage({ params }: Props) {
               </Link>
               <div className="flex items-center gap-1">
                 <ShareButton title={p.title} path={path} />
-                {canManage && (
+                {canManage ? (
                   <PublisherPublicationMenu
                     id={p.id}
                     slug={p.slug}
@@ -325,7 +358,7 @@ export default async function PublicationPage({ params }: Props) {
                     visibility={p.visibility}
                     status={p.status}
                   />
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -341,6 +374,7 @@ export default async function PublicationPage({ params }: Props) {
                   {p.subtitle || p.excerpt}
                 </p>
               )}
+
               <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-zinc-300">
                 {publisherHref ? (
                   <Link
@@ -353,14 +387,14 @@ export default async function PublicationPage({ params }: Props) {
                       size={24}
                     />
                     <span className="leading-none">{publisherName}</span>
-                    {showVerified && (
+                    {showVerified ? (
                       <VerifiedBadge
                         name={publisherName}
                         verifyType={publisher?.type || "company"}
                         size={14}
                         className="relative top-px"
                       />
-                    )}
+                    ) : null}
                   </Link>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 font-medium">
@@ -370,45 +404,31 @@ export default async function PublicationPage({ params }: Props) {
                       size={24}
                     />
                     <span className="leading-none">{publisherName}</span>
-                    {showVerified && (
+                    {showVerified ? (
                       <VerifiedBadge
                         name={publisherName}
-                        verifyType={publisher?.type || "company"}
+                        verifyType="company"
                         size={14}
                         className="relative top-px"
                       />
-                    )}
+                    ) : null}
                   </span>
                 )}
                 <span className="text-zinc-600">·</span>
                 <span>{p.readingTime || mins} min read</span>
-                {p.publishedAt && (
+                {publishedLabel ? (
                   <>
                     <span className="text-zinc-600">·</span>
-                    <span>
-                      {(() => {
-                        try {
-                          return new Date(p.publishedAt).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            }
-                          );
-                        } catch {
-                          return String(p.publishedAt).slice(0, 10);
-                        }
-                      })()}
-                    </span>
+                    <span>{publishedLabel}</span>
                   </>
-                )}
+                ) : null}
               </div>
+
               <div className="mt-4 -mx-1 rounded-xl bg-black/25 px-1 py-0.5 backdrop-blur-sm">
                 <PublicationPageActions
                   id={p.id}
                   slug={p.slug}
-                  type={p.type}
+                  type={p.type || "article"}
                   title={p.title}
                   path={path}
                   publishedAt={p.publishedAt}
@@ -417,8 +437,8 @@ export default async function PublicationPage({ params }: Props) {
                   category={p.category}
                   publisherId={p.publisherId}
                   publisherName={publisherName}
-                  visibility={p.visibility}
-                  status={p.status}
+                  visibility={p.visibility || "public"}
+                  status={p.status || "published"}
                 />
               </div>
             </div>
@@ -426,69 +446,26 @@ export default async function PublicationPage({ params }: Props) {
         </div>
 
         <main className="mx-auto max-w-2xl px-4 pb-28 pt-2">
-          <PublicationMedia
-            p={p}
-            publisher={publisher}
-            publisherName={publisherName}
-            path={path}
-            coverUrl={coverUrl}
-            mediaUrl={mediaUrl}
-            isAudio={!!isAudio}
-            isDirectVideo={!!isDirectVideo}
-            isEmbed={!!isEmbed}
-            embedSrc={embedSrc}
-          />
-
-          {isPdf && mediaUrl && (
-            <a
-              href={mediaUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mb-8 flex items-center gap-3 rounded-2xl bg-white/[0.04] px-4 py-4"
-            >
-              <span className="text-2xl">📄</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[14px] font-medium text-white">Open document</p>
-                <p className="truncate text-[12px] text-zinc-500">PDF</p>
-              </div>
-              <span className="text-omniv-gold">↓</span>
-            </a>
-          )}
-
-          <PublicationBody
+          <BodyBlocks
             slug={p.slug}
-            type={p.type}
+            body={p.body}
+            content={p.content}
             summary={p.summary}
             excerpt={p.excerpt}
-            body={p.body}
-            content={
-              Array.isArray(p.content)
-                ? p.content.filter((b) => b && typeof b === "object")
-                : undefined
-            }
             whatThisMeans={p.whatThisMeans}
             questionNobodyAsks={p.questionNobodyAsks}
-            sources={Array.isArray(p.sources) ? p.sources : undefined}
           />
 
-          {resolvedCta && (
+          {resolvedCta ? (
             <a
               href={resolvedCta.href}
               className="mt-8 inline-flex h-12 items-center rounded-full bg-omniv-gold px-6 text-[14px] font-semibold text-black transition hover:bg-omniv-gold/90"
             >
               {resolvedCta.label}
             </a>
-          )}
+          ) : null}
 
-          <KeepExploring
-            currentPublication={p}
-            entities={[...connectedEntities, ...relatedEntities]}
-            publications={recommended}
-            tags={p.tags}
-            title="You might want to explore next"
-          />
-
-          {publisher && publisher.type && publisher.slug && (
+          {publisher && publisher.type && publisher.slug ? (
             <div className="mt-12 rounded-2xl bg-white/[0.03] p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
                 Publisher
@@ -514,18 +491,20 @@ export default async function PublicationPage({ params }: Props) {
                         verified: publisher.verified,
                         slug: publisher.slug,
                         name: publisher.name,
-                      }) && (
+                      }) ? (
                         <VerifiedBadge
                           name={publisher.name}
                           verifyType={publisher.type}
                           size={14}
                           className="relative top-px shrink-0"
                         />
-                      )}
+                      ) : null}
                     </p>
-                    <p className="truncate text-[12px] text-zinc-500">
-                      {publisher.tagline}
-                    </p>
+                    {publisher.tagline ? (
+                      <p className="truncate text-[12px] text-zinc-500">
+                        {publisher.tagline}
+                      </p>
+                    ) : null}
                   </div>
                 </Link>
                 <FollowButton
@@ -536,61 +515,15 @@ export default async function PublicationPage({ params }: Props) {
                 />
               </div>
             </div>
-          )}
-
-          {relatedPubs.length > 0 && (
-            <section className="mt-12">
-              <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                Keep reading
-              </h2>
-              <ul className="mt-4 space-y-2">
-                {relatedPubs.map((r) => {
-                  const thumb = r.coverUrl || coverFor(r.slug);
-                  return (
-                    <li key={r.id || r.slug}>
-                      <Link
-                        href={publicationPath(r)}
-                        className="flex items-center gap-3 rounded-xl bg-white/[0.03] px-2.5 py-2.5 transition hover:bg-white/[0.06]"
-                      >
-                        <div
-                          className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-white/[0.06]"
-                          style={
-                            thumb
-                              ? {
-                                  backgroundImage: `url(${thumb})`,
-                                  backgroundSize: "cover",
-                                  backgroundPosition: "center",
-                                }
-                              : undefined
-                          }
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[14px] font-medium text-white">
-                            {r.title}
-                          </p>
-                          <p className="text-[11px] text-zinc-500">
-                            {PUBLICATION_LABELS[
-                              r.type as keyof typeof PUBLICATION_LABELS
-                            ] || r.type}
-                            {r.meta ? ` · ${r.meta}` : ""}
-                          </p>
-                        </div>
-                        <span className="text-zinc-600">›</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          )}
+          ) : null}
 
           <div className="mt-10 flex flex-wrap gap-2">
             <SaveButton
               kind="publication"
-              type={p.type}
+              type={p.type || "article"}
               slug={p.slug}
               name={p.title}
-              pubType={p.type}
+              pubType={p.type || "article"}
             />
           </div>
 
