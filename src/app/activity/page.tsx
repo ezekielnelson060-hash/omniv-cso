@@ -20,10 +20,21 @@ import {
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
 
+type LiveItem = {
+  id: string;
+  kind: string;
+  title: string;
+  body?: string;
+  href?: string;
+  createdAt: string;
+};
+
 export default function ActivityPage() {
   const [items, setItems] = useState<MyActivityItem[]>([]);
+  const [live, setLive] = useState<LiveItem[]>([]);
   const [ready, setReady] = useState(false);
   const [active, setActive] = useState<ActiveAccount | null>(null);
+  const [source, setSource] = useState<"live" | "local">("local");
 
   useEffect(() => {
     setActive(readActiveAccount());
@@ -31,14 +42,57 @@ export default function ActivityPage() {
   }, []);
 
   useEffect(() => {
-    setItems(ensureDemoActivity());
-    setReady(true);
-    const onUp = () => setItems(ensureDemoActivity());
-    window.addEventListener("omniv-my-activity", onUp);
-    return () => window.removeEventListener("omniv-my-activity", onUp);
-  }, []);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/discovery/activity?limit=40");
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.auth && Array.isArray(data.items) && data.items.length > 0) {
+          setLive(data.items);
+          setSource("live");
+        } else {
+          setItems(ensureDemoActivity());
+          setSource("local");
+        }
+      } catch {
+        if (!cancelled) {
+          setItems(ensureDemoActivity());
+          setSource("local");
+        }
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
 
-  const groups = useMemo(() => groupActivityByDay(items), [items]);
+    const onUp = () => {
+      if (source === "local") setItems(ensureDemoActivity());
+    };
+    window.addEventListener("omniv-my-activity", onUp);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("omniv-my-activity", onUp);
+    };
+  }, [source]);
+
+  const displayItems: MyActivityItem[] = useMemo(() => {
+    if (source === "live") {
+      return live.map((l) => ({
+        id: l.id,
+        kind: (l.kind as MyActivityItem["kind"]) || "view",
+        title: l.title,
+        subtitle: l.body,
+        href: l.href,
+        createdAt: l.createdAt,
+      }));
+    }
+    return items;
+  }, [source, live, items]);
+
+  const groups = useMemo(
+    () => groupActivityByDay(displayItems),
+    [displayItems]
+  );
 
   return (
     <DiscoveryShell>
@@ -66,9 +120,14 @@ export default function ActivityPage() {
 
         <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl md:px-6">
           <p className="text-[13px] text-zinc-500">
-            What you've been doing
+            {source === "live"
+              ? "Live activity on your publications and profiles"
+              : "What you've been doing"}
             {active ? ` as ${active.name}` : ""}.{" "}
-            <Link href="/notifications" className="text-omniv-gold hover:underline">
+            <Link
+              href="/notifications"
+              className="text-omniv-gold hover:underline"
+            >
               Notifications
             </Link>{" "}
             are what happened to you.
@@ -78,11 +137,11 @@ export default function ActivityPage() {
             <p className="mt-16 text-center text-[14px] text-zinc-600">
               Loading…
             </p>
-          ) : items.length === 0 ? (
+          ) : displayItems.length === 0 ? (
             <div className="mt-16 text-center">
               <p className="text-[15px] text-zinc-400">No activity yet</p>
               <p className="mt-2 text-[13px] text-zinc-600">
-                Publish, save, and follow — it shows up here.
+                When people follow, save, or like your work, it shows up here.
               </p>
               <Link
                 href="/publish"
