@@ -31,7 +31,6 @@ import { coverFor, ctaFor } from "@/lib/discovery/seed-covers";
 import { publicationMetadata } from "@/lib/discovery/seo";
 import { resolveEntityAvatar } from "@/lib/discovery/resolve-avatar";
 import { resolvePublisherPath } from "@/lib/discovery/resolve-publisher";
-import { bodyFor } from "@/lib/discovery/seed-bodies";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -78,9 +77,7 @@ async function resolvePublisher(
   return null;
 }
 
-/** Safe body paragraphs — never throws on bad content JSON */
 function BodyBlocks({
-  slug,
   body,
   content,
   summary,
@@ -88,7 +85,6 @@ function BodyBlocks({
   whatThisMeans,
   questionNobodyAsks,
 }: {
-  slug: string;
   body?: string;
   content?: unknown;
   summary?: string;
@@ -96,31 +92,12 @@ function BodyBlocks({
   whatThisMeans?: string;
   questionNobodyAsks?: string;
 }) {
-  let seed: ReturnType<typeof bodyFor> = undefined;
-  try {
-    seed = bodyFor(slug);
-  } catch {
-    seed = undefined;
-  }
-
-  const displayBody =
-    (typeof body === "string" && body) ||
-    (typeof seed?.body === "string" && seed.body) ||
-    "";
-  const displayWhat = whatThisMeans || seed?.whatThisMeans;
-  const displayQuestion = questionNobodyAsks || seed?.questionNobodyAsks;
-
-  // Prefer structured content blocks when valid; else split plain body
+  const displayBody = typeof body === "string" && body ? body : "";
   const blocks: { type: string; text: string; level?: number }[] = [];
+
   try {
-    const raw =
-      Array.isArray(content) && content.length
-        ? content
-        : Array.isArray(seed?.content) && seed!.content!.length
-          ? seed!.content!
-          : null;
-    if (raw) {
-      for (const b of raw) {
+    if (Array.isArray(content) && content.length) {
+      for (const b of content) {
         if (!b || typeof b !== "object") continue;
         const type = String((b as { type?: unknown }).type || "");
         const text = (b as { text?: unknown }).text;
@@ -138,7 +115,7 @@ function BodyBlocks({
       }
     }
   } catch {
-    /* fall through to plain body */
+    /* ignore */
   }
 
   if (!blocks.length && displayBody) {
@@ -155,18 +132,23 @@ function BodyBlocks({
     }
   }
 
-  const lead = excerpt || summary;
+  // Avoid duplicating the same text as lead + first paragraph
+  const lead = excerpt || summary || "";
+  const leadNorm = lead.replace(/\s+/g, " ").trim().slice(0, 120);
+  const firstBlockNorm =
+    blocks[0]?.text?.replace(/\s+/g, " ").trim().slice(0, 120) || "";
+  const showLead = Boolean(lead) && leadNorm !== firstBlockNorm;
 
   return (
     <>
-      {lead ? (
+      {showLead ? (
         <p className="text-[19px] font-medium leading-[1.75] text-zinc-200">
           {lead}
         </p>
       ) : null}
 
       {blocks.length > 0 ? (
-        <div className="mt-8 space-y-7">
+        <div className={`space-y-7 ${showLead ? "mt-8" : ""}`}>
           {blocks.map((block, index) => {
             if (block.type === "divider") {
               return (
@@ -209,24 +191,24 @@ function BodyBlocks({
         </div>
       ) : null}
 
-      {displayWhat ? (
+      {whatThisMeans ? (
         <section className="mt-16 border-t border-white/10 pt-8">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
             What this means
           </p>
           <p className="mt-3 text-[18px] leading-relaxed text-zinc-200">
-            {displayWhat}
+            {whatThisMeans}
           </p>
         </section>
       ) : null}
 
-      {displayQuestion ? (
+      {questionNobodyAsks ? (
         <section className="mt-8 rounded-2xl border border-omniv-gold/30 bg-omniv-gold/[0.06] p-6">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
             The question nobody asks
           </p>
           <p className="mt-3 text-[20px] font-medium leading-snug text-white">
-            {displayQuestion}
+            {questionNobodyAsks}
           </p>
         </section>
       ) : null}
@@ -303,7 +285,12 @@ export default async function PublicationPage({ params }: Props) {
   const mins = readMinutes(bodyText);
   const hero = HERO[p.type] || "from-zinc-800 to-[#050505]";
   const coverUrl = p.coverUrl || coverFor(p.slug) || null;
-  const resolvedCta = ctaFor(p.slug) || p.cta;
+  let resolvedCta: { label: string; href: string } | null = null;
+  try {
+    resolvedCta = ctaFor(p.slug) || p.cta || null;
+  } catch {
+    resolvedCta = p.cta || null;
+  }
   const typeLabel =
     PUBLICATION_LABELS[p.type as keyof typeof PUBLICATION_LABELS] ||
     p.type ||
@@ -369,11 +356,11 @@ export default async function PublicationPage({ params }: Props) {
               <h1 className="mt-3 text-[28px] font-semibold leading-[1.15] tracking-tight text-white sm:text-[40px]">
                 {p.title}
               </h1>
-              {(p.subtitle || p.excerpt) && (
+              {p.subtitle ? (
                 <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-zinc-200 sm:text-[17px]">
-                  {p.subtitle || p.excerpt}
+                  {p.subtitle}
                 </p>
-              )}
+              ) : null}
 
               <div className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-zinc-300">
                 {publisherHref ? (
@@ -445,9 +432,8 @@ export default async function PublicationPage({ params }: Props) {
           </div>
         </div>
 
-        <main className="mx-auto max-w-2xl px-4 pb-28 pt-2">
+        <main className="mx-auto max-w-2xl px-4 pb-28 pt-6">
           <BodyBlocks
-            slug={p.slug}
             body={p.body}
             content={p.content}
             summary={p.summary}
