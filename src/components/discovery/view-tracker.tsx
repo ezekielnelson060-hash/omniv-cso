@@ -6,8 +6,7 @@ import { track } from "@/lib/analytics";
 
 /**
  * Discovery analytics + interest signals.
- * Fires app_events: discovery_view / discovery_complete (columns: name, path, meta)
- * Mount once per publication or entity detail page.
+ * Fires app_events + discovery_signals for publications and entities.
  */
 export function ViewTracker({
   tags = [],
@@ -35,7 +34,13 @@ export function ViewTracker({
     const path =
       typeof window !== "undefined" ? window.location.pathname : undefined;
 
-    recordSignal("open", tagList, category, { publicationSlug });
+    const ctx = {
+      publicationSlug,
+      entityType,
+      entitySlug,
+    };
+
+    recordSignal("open", tagList, category, ctx);
 
     track(
       "discovery_view",
@@ -51,7 +56,7 @@ export function ViewTracker({
     );
 
     const t = window.setTimeout(() => {
-      recordSignal("complete", tagList, category, { publicationSlug });
+      recordSignal("complete", tagList, category, ctx);
       track(
         "discovery_complete",
         {
