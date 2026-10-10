@@ -19,12 +19,31 @@ type EntityListRow = {
   about: string;
   intents: unknown;
   tags: unknown;
+  links: unknown;
   heat: number | null;
   published_at: string | null;
   verified: boolean | null;
   avatar_url?: string | null;
   cover_url?: string | null;
 };
+
+function normalizeLinks(
+  raw: unknown
+): { label: string; href: string }[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(
+      (l): l is { label?: string; href: string } =>
+        Boolean(l) &&
+        typeof l === "object" &&
+        typeof (l as { href?: unknown }).href === "string" &&
+        Boolean(String((l as { href: string }).href).trim())
+    )
+    .map((l) => ({
+      label: String(l.label || "Website").trim() || "Website",
+      href: String(l.href).trim(),
+    }));
+}
 
 export async function GET() {
   try {
@@ -38,9 +57,9 @@ export async function GET() {
     }
 
     const full =
-      "id, type, slug, name, tagline, location, about, intents, tags, heat, published_at, verified, avatar_url, cover_url";
+      "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified, avatar_url, cover_url";
     const safe =
-      "id, type, slug, name, tagline, location, about, intents, tags, heat, published_at, verified";
+      "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified";
 
     const fullResult = await supabase
       .from("discovery_entities")
@@ -69,23 +88,27 @@ export async function GET() {
       });
     }
 
-    const entities = (data || []).map((r) => ({
-      id: r.id,
-      type: r.type,
-      slug: r.slug,
-      name: r.name,
-      tagline: r.tagline,
-      location: r.location,
-      about: r.about,
-      intents: r.intents || [],
-      tags: r.tags || [],
-      heat: r.heat,
-      publishedAt: r.published_at?.slice?.(0, 10),
-      verified: Boolean(r.verified),
-      avatar_url: (r as { avatar_url?: string }).avatar_url ?? null,
-      cover_url: (r as { cover_url?: string }).cover_url ?? null,
-      path: `/e/${r.type}/${r.slug}`,
-    }));
+    const entities = (data || []).map((r) => {
+      const links = normalizeLinks(r.links);
+      return {
+        id: r.id,
+        type: r.type,
+        slug: r.slug,
+        name: r.name,
+        tagline: r.tagline,
+        location: r.location,
+        about: r.about,
+        intents: r.intents || [],
+        tags: r.tags || [],
+        links,
+        heat: r.heat,
+        publishedAt: r.published_at?.slice?.(0, 10),
+        verified: Boolean(r.verified),
+        avatar_url: (r as { avatar_url?: string }).avatar_url ?? null,
+        cover_url: (r as { cover_url?: string }).cover_url ?? null,
+        path: `/e/${r.type}/${r.slug}`,
+      };
+    });
 
     return NextResponse.json({ auth: true, entities });
   } catch (e) {

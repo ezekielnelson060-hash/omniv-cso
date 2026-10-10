@@ -20,6 +20,15 @@ type Entity = {
   links?: { label: string; href: string }[];
 };
 
+function pickWebsite(links?: { label: string; href: string }[]): string {
+  if (!Array.isArray(links) || !links.length) return "";
+  const web =
+    links.find((l) => (l.label || "").toLowerCase() === "website") ||
+    links.find((l) => /https?:\/\//i.test(l.href || "")) ||
+    links[0];
+  return (web?.href || "").trim();
+}
+
 async function uploadFile(file: File): Promise<string | null> {
   const fd = new FormData();
   fd.append("file", file);
@@ -71,9 +80,7 @@ export default function EditEntityPage() {
         setAbout(found.about || "");
         setCoverUrl(found.cover_url || null);
         setAvatarUrl(found.avatar_url || null);
-        const links = found.links || [];
-        const web = links.find((l) => l.label === "Website") || links[0];
-        setWebsite(web?.href || "");
+        setWebsite(pickWebsite(found.links));
       } catch {
         setError("Could not load entity");
       }
@@ -104,13 +111,11 @@ export default function EditEntityPage() {
     setLoading(true);
     setError(null);
 
+    const raw = website.trim();
     const links: { label: string; href: string }[] = [];
-    if (website.trim()) {
-      const h = website.trim();
-      links.push({
-        label: "Website",
-        href: h.startsWith("http") ? h : `https://${h}`,
-      });
+    if (raw && raw !== "https://" && raw !== "http://") {
+      const href = raw.startsWith("http") ? raw : `https://${raw}`;
+      links.push({ label: "Website", href });
     }
 
     try {
@@ -122,7 +127,7 @@ export default function EditEntityPage() {
           tagline,
           location,
           about,
-          website: website.trim(),
+          website: links[0]?.href || "",
           links,
           cover_url: coverUrl,
           avatar_url: avatarUrl,
@@ -148,7 +153,6 @@ export default function EditEntityPage() {
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-black text-zinc-100">
-        {/* X-style top bar */}
         <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-black/90 backdrop-blur-md">
           <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3 md:max-w-2xl">
             <div className="flex items-center gap-4">
@@ -180,7 +184,6 @@ export default function EditEntityPage() {
 
         {entity && (
           <form onSubmit={onSave} className="mx-auto max-w-lg pb-28 md:max-w-2xl">
-            {/* Cover + avatar stacked like X */}
             <div className="relative">
               <button
                 type="button"
@@ -241,7 +244,6 @@ export default function EditEntityPage() {
               />
             </div>
 
-            {/* Flat fields like X */}
             <div className="mt-14 space-y-0 px-4">
               {uploading && (
                 <p className="mb-3 text-[13px] text-zinc-500">Uploading…</p>
@@ -277,9 +279,12 @@ export default function EditEntityPage() {
 
               <FlatField label="Website">
                 <input
+                  type="url"
+                  inputMode="url"
+                  autoComplete="url"
                   value={website}
                   onChange={(e) => setWebsite(e.target.value)}
-                  placeholder="https://"
+                  placeholder="https://omniv.media"
                   className={flatInput}
                 />
               </FlatField>
