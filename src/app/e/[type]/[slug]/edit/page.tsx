@@ -32,7 +32,6 @@ function pickWebsite(links?: { label: string; href: string }[]): string {
 function isRealUrl(raw: string): boolean {
   const t = raw.trim();
   if (!t || t === "https://" || t === "http://") return false;
-  // require at least a host-looking segment
   const withoutScheme = t.replace(/^https?:\/\//i, "");
   return withoutScheme.includes(".") || withoutScheme.includes("/");
 }
@@ -132,17 +131,14 @@ export default function EditEntityPage() {
       avatar_url: avatarUrl,
     };
 
-    // Only touch links when the user entered a real URL, or explicitly cleared a previous one
     if (isRealUrl(raw)) {
       const href = raw.startsWith("http") ? raw : `https://${raw}`;
       body.website = href;
       body.links = [{ label: "Website", href }];
     } else if (initialWebsite && !raw) {
-      // User cleared a previously saved website
       body.website = "";
       body.links = [];
     }
-    // else: leave links untouched in DB
 
     try {
       const res = await fetch(`/api/discovery/entities/${entity.id}`, {
@@ -237,7 +233,7 @@ export default function EditEntityPage() {
                 className="absolute -bottom-10 left-4 flex h-[84px] w-[84px] items-center justify-center overflow-hidden rounded-full bg-zinc-800 ring-4 ring-black"
               >
                 {avatarUrl ? (
-                  // eslint-disable-next-once @next/next/no-img-element
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={avatarUrl}
                     alt=""
