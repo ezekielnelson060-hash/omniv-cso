@@ -153,3 +153,19 @@ export function VerifiedBadge({
     </>
   );
 }
+
+export function GetVerifiedCard({ compact = false }: { compact?: boolean }) {
+  return (
+    <Link
+      href="/verify"
+      className={`block rounded-2xl border border-omniv-gold/25 bg-omniv-gold/[0.06] ${
+        compact ? "p-3" : "p-4"
+      }`}
+    >
+      <p className="text-[13px] font-semibold text-omniv-gold">Get verified</p>
+      <p className="mt-1 text-[12px] leading-relaxed text-zinc-400">
+        Verified accounts get a badge and higher trust in discovery.
+      </p>
+    </Link>
+  );
+}
