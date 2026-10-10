@@ -3,6 +3,94 @@ import { createClient } from "@/lib/supabase/server";
 
 type Ctx = { params: Promise<{ id: string }> };
 
+function normalizeLinks(
+  raw: unknown
+): { label: string; href: string }[] {
+  let value: unknown = raw;
+  if (typeof value === "string") {
+    const t = value.trim();
+    if (!t || t === "[]") return [];
+    try {
+      value = JSON.parse(t);
+    } catch {
+      if (/^https?:\/\//i.test(t) || t.includes(".")) {
+        return [{ label: "Website", href: t.startsWith("http") ? t : `https://${t}` }];
+      }
+      return [];
+    }
+  }
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (l): l is { label?: string; href?: string; url?: string } =>
+        Boolean(l) && typeof l === "object"
+    )
+    .map((l) => {
+      const href = String(l.href || l.url || "").trim();
+      if (!href) return null;
+      return {
+        label: String(l.label || "Website").trim() || "Website",
+        href,
+      };
+    })
+    .filter((l): l is { label: string; href: string } => Boolean(l));
+}
+
+function websiteFromLinks(links: { label: string; href: string }[]): string {
+  if (!links.length) return "";
+  const web =
+    links.find((l) => l.label.toLowerCase() === "website") ||
+    links.find((l) => /^https?:\/\//i.test(l.href)) ||
+    links[0];
+  return (web?.href || "").trim();
+}
+
+export async function GET(_req: Request, ctx: Ctx) {
+  try {
+    const { id } = await ctx.params;
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Sign in required" }, { status: 401 });
+    }
+
+    const { data, error } = await supabase
+      .from("discovery_entities")
+      .select(
+        "id, type, slug, name, tagline, location, about, avatar_url, cover_url, links, verified"
+      )
+      .eq("id", id)
+      .eq("owner_id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    if (!data) {
+      return NextResponse.json(
+        { error: "Not found or not owner" },
+        { status: 404 }
+      );
+    }
+
+    const links = normalizeLinks(data.links);
+    return NextResponse.json({
+      entity: {
+        ...data,
+        links,
+        website: websiteFromLinks(links),
+        path: `/e/${data.type}/${data.slug}`,
+      },
+    });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  }
+}
+
 export async function PATCH(req: Request, ctx: Ctx) {
   try {
     const { id } = await ctx.params;
@@ -45,18 +133,20 @@ export async function PATCH(req: Request, ctx: Ctx) {
         )
         .map((l: { label?: string; href: string }) => ({
           label: (l.label || "Link").trim(),
-          href: l.href.startsWith("http") ? l.href.trim() : `https://${l.href.trim()}`,
+          href: l.href.startsWith("http")
+            ? l.href.trim()
+            : `https://${l.href.trim()}`,
         }));
     } else if (typeof body.website === "string") {
       const w = body.website.trim();
-      if (w) {
+      if (w && w !== "https://" && w !== "http://") {
         patch.links = [
           {
             label: "Website",
             href: w.startsWith("http") ? w : `https://${w}`,
           },
         ];
-      } else {
+      } else if (w === "") {
         patch.links = [];
       }
     }
@@ -96,7 +186,6 @@ export async function PATCH(req: Request, ctx: Ctx) {
             { status: 500 }
           );
         }
-        // Still try to sync publisher_name if name changed
         if (typeof patch.name === "string" && retry.data) {
           await supabase
             .from("discovery_publications")
@@ -119,7 +208,6 @@ export async function PATCH(req: Request, ctx: Ctx) {
       );
     }
 
-    // Keep denormalized publisher_name in sync on every publication from this entity
     if (typeof patch.name === "string") {
       try {
         await supabase
@@ -131,9 +219,10 @@ export async function PATCH(req: Request, ctx: Ctx) {
       }
     }
 
+    const links = normalizeLinks(data.links);
     return NextResponse.json({
       ok: true,
-      entity: data,
+      entity: { ...data, links, website: websiteFromLinks(links) },
       path: `/e/${data.type}/${data.slug}`,
     });
   } catch (e) {

@@ -17,11 +17,14 @@ type Entity = {
   path: string;
   avatar_url?: string | null;
   cover_url?: string | null;
+  website?: string;
   links?: { label: string; href: string }[];
 };
 
-function pickWebsite(links?: { label: string; href: string }[]): string {
-  if (!Array.isArray(links) || !links.length) return "";
+function pickWebsite(entity: Entity): string {
+  if (entity.website && entity.website.trim()) return entity.website.trim();
+  const links = entity.links || [];
+  if (!links.length) return "";
   const web =
     links.find((l) => (l.label || "").toLowerCase() === "website") ||
     links.find((l) => /https?:\/\//i.test(l.href || "")) ||
@@ -73,7 +76,9 @@ export default function EditEntityPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/discovery/entities");
+        const res = await fetch("/api/discovery/entities", {
+          cache: "no-store",
+        });
         const data = await res.json();
         const list: Entity[] = data.entities || [];
         const found = list.find((e) => e.type === type && e.slug === slug);
@@ -81,14 +86,29 @@ export default function EditEntityPage() {
           setError("Entity not found or you don't own it");
           return;
         }
-        setEntity(found);
-        setName(found.name);
-        setTagline(found.tagline || "");
-        setLocation(found.location || "");
-        setAbout(found.about || "");
-        setCoverUrl(found.cover_url || null);
-        setAvatarUrl(found.avatar_url || null);
-        const w = pickWebsite(found.links);
+
+        // Second fetch by id — always includes links/website from DB
+        let full: Entity = found;
+        try {
+          const detail = await fetch(`/api/discovery/entities/${found.id}`, {
+            cache: "no-store",
+          });
+          if (detail.ok) {
+            const j = await detail.json();
+            if (j.entity) full = j.entity;
+          }
+        } catch {
+          /* use list row */
+        }
+
+        setEntity(full);
+        setName(full.name);
+        setTagline(full.tagline || "");
+        setLocation(full.location || "");
+        setAbout(full.about || "");
+        setCoverUrl(full.cover_url || null);
+        setAvatarUrl(full.avatar_url || null);
+        const w = pickWebsite(full);
         setWebsite(w);
         setInitialWebsite(w);
       } catch {
@@ -156,6 +176,7 @@ export default function EditEntityPage() {
         return;
       }
       router.push(data.path || entity.path);
+      router.refresh();
     } catch {
       setError("Network error");
     } finally {

@@ -27,22 +27,50 @@ type EntityListRow = {
   cover_url?: string | null;
 };
 
-function normalizeLinks(
+/** Accept array, JSON string, or null from Postgres/PostgREST. */
+export function normalizeLinks(
   raw: unknown
 ): { label: string; href: string }[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
+  let value: unknown = raw;
+  if (typeof value === "string") {
+    const t = value.trim();
+    if (!t || t === "[]") return [];
+    try {
+      value = JSON.parse(t);
+    } catch {
+      // bare URL string stored by mistake
+      if (/^https?:\/\//i.test(t) || t.includes(".")) {
+        return [{ label: "Website", href: t.startsWith("http") ? t : `https://${t}` }];
+      }
+      return [];
+    }
+  }
+  if (!Array.isArray(value)) return [];
+  return value
     .filter(
-      (l): l is { label?: string; href: string } =>
-        Boolean(l) &&
-        typeof l === "object" &&
-        typeof (l as { href?: unknown }).href === "string" &&
-        Boolean(String((l as { href: string }).href).trim())
+      (l): l is { label?: string; href?: string; url?: string } =>
+        Boolean(l) && typeof l === "object"
     )
-    .map((l) => ({
-      label: String(l.label || "Website").trim() || "Website",
-      href: String(l.href).trim(),
-    }));
+    .map((l) => {
+      const href = String(l.href || l.url || "").trim();
+      if (!href) return null;
+      return {
+        label: String(l.label || "Website").trim() || "Website",
+        href,
+      };
+    })
+    .filter((l): l is { label: string; href: string } => Boolean(l));
+}
+
+export function websiteFromLinks(
+  links: { label: string; href: string }[]
+): string {
+  if (!links.length) return "";
+  const web =
+    links.find((l) => l.label.toLowerCase() === "website") ||
+    links.find((l) => /^https?:\/\//i.test(l.href)) ||
+    links[0];
+  return (web?.href || "").trim();
 }
 
 export async function GET() {
@@ -101,6 +129,7 @@ export async function GET() {
         intents: r.intents || [],
         tags: r.tags || [],
         links,
+        website: websiteFromLinks(links),
         heat: r.heat,
         publishedAt: r.published_at?.slice?.(0, 10),
         verified: Boolean(r.verified),
