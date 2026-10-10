@@ -29,6 +29,14 @@ function pickWebsite(links?: { label: string; href: string }[]): string {
   return (web?.href || "").trim();
 }
 
+function isRealUrl(raw: string): boolean {
+  const t = raw.trim();
+  if (!t || t === "https://" || t === "http://") return false;
+  // require at least a host-looking segment
+  const withoutScheme = t.replace(/^https?:\/\//i, "");
+  return withoutScheme.includes(".") || withoutScheme.includes("/");
+}
+
 async function uploadFile(file: File): Promise<string | null> {
   const fd = new FormData();
   fd.append("file", file);
@@ -56,6 +64,7 @@ export default function EditEntityPage() {
   const [location, setLocation] = useState("");
   const [about, setAbout] = useState("");
   const [website, setWebsite] = useState("");
+  const [initialWebsite, setInitialWebsite] = useState("");
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -80,7 +89,9 @@ export default function EditEntityPage() {
         setAbout(found.about || "");
         setCoverUrl(found.cover_url || null);
         setAvatarUrl(found.avatar_url || null);
-        setWebsite(pickWebsite(found.links));
+        const w = pickWebsite(found.links);
+        setWebsite(w);
+        setInitialWebsite(w);
       } catch {
         setError("Could not load entity");
       }
@@ -112,26 +123,32 @@ export default function EditEntityPage() {
     setError(null);
 
     const raw = website.trim();
-    const links: { label: string; href: string }[] = [];
-    if (raw && raw !== "https://" && raw !== "http://") {
+    const body: Record<string, unknown> = {
+      name,
+      tagline,
+      location,
+      about,
+      cover_url: coverUrl,
+      avatar_url: avatarUrl,
+    };
+
+    // Only touch links when the user entered a real URL, or explicitly cleared a previous one
+    if (isRealUrl(raw)) {
       const href = raw.startsWith("http") ? raw : `https://${raw}`;
-      links.push({ label: "Website", href });
+      body.website = href;
+      body.links = [{ label: "Website", href }];
+    } else if (initialWebsite && !raw) {
+      // User cleared a previously saved website
+      body.website = "";
+      body.links = [];
     }
+    // else: leave links untouched in DB
 
     try {
       const res = await fetch(`/api/discovery/entities/${entity.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          tagline,
-          location,
-          about,
-          website: links[0]?.href || "",
-          links,
-          cover_url: coverUrl,
-          avatar_url: avatarUrl,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (res.status === 401) {
@@ -220,7 +237,7 @@ export default function EditEntityPage() {
                 className="absolute -bottom-10 left-4 flex h-[84px] w-[84px] items-center justify-center overflow-hidden rounded-full bg-zinc-800 ring-4 ring-black"
               >
                 {avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+                  // eslint-disable-next-once @next/next/no-img-element
                   <img
                     src={avatarUrl}
                     alt=""
@@ -279,7 +296,7 @@ export default function EditEntityPage() {
 
               <FlatField label="Website">
                 <input
-                  type="url"
+                  type="text"
                   inputMode="url"
                   autoComplete="url"
                   value={website}
