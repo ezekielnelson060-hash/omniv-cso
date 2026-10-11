@@ -264,8 +264,14 @@ export default async function PublicationPage({ params }: Props) {
   try {
     if (typeof p.body === "string") bodyText = p.body;
     else if (Array.isArray(p.content)) {
-      bodyText = p.content
-        .map((b: { text?: string }) => (typeof b?.text === "string" ? b.text : ""))
+      bodyText = (p.content as unknown[])
+        .map((b) => {
+          if (b && typeof b === "object" && "text" in b) {
+            const t = (b as { text?: unknown }).text;
+            return typeof t === "string" ? t : "";
+          }
+          return "";
+        })
         .join(" ");
     }
   } catch {
