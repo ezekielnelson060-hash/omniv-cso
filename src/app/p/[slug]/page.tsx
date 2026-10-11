@@ -232,11 +232,14 @@ export default async function PublicationPage({ params }: Props) {
   const publisher = await resolvePublisher(supabase, p);
   const publisherName = publisher?.name || p.publisherName || "Publisher";
   const publisherHref =
+    (publisher ? entityPath(publisher) : null) ||
     resolvePublisherPath({
+      name: p.publisherName,
       publisherId: p.publisherId,
-      publisherName: p.publisherName,
-      entity: publisher,
-    }) || (publisher ? entityPath(publisher) : null);
+      type: publisher?.type,
+      slug: publisher?.slug,
+    }) ||
+    null;
 
   const path = publicationPath(p);
   const typeLabel =
@@ -245,7 +248,11 @@ export default async function PublicationPage({ params }: Props) {
   const coverUrl =
     (p as { coverUrl?: string | null }).coverUrl || coverFor(p.slug) || null;
   const avatarSrc = publisher
-    ? resolveEntityAvatar(publisher)
+    ? resolveEntityAvatar({
+        avatarUrl: publisher.avatarUrl,
+        slug: publisher.slug,
+        name: publisher.name,
+      })
     : null;
   const verified =
     Boolean(publisher?.verified) ||
