@@ -6,6 +6,16 @@ import { Button } from "@/components/ui/button";
 
 const KEY = "omniv_cookie_consent_v1";
 
+function emitConsent(value: "accepted" | "essential") {
+  try {
+    window.dispatchEvent(
+      new CustomEvent("omniv-consent", { detail: value })
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
 export function CookieConsent() {
   const [visible, setVisible] = useState(false);
 
@@ -23,6 +33,7 @@ export function CookieConsent() {
     } catch {
       /* ignore */
     }
+    emitConsent("accepted");
     setVisible(false);
   }
 
@@ -32,6 +43,7 @@ export function CookieConsent() {
     } catch {
       /* ignore */
     }
+    emitConsent("essential");
     setVisible(false);
   }
 
