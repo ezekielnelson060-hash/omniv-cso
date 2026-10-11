@@ -14,7 +14,7 @@ import {
 /**
  * Engagement + publisher control bar.
  * Everyone: Like · Save · Share
- * Owner only: Promote + ⋯ dropdown below the button (not full-screen sheet)
+ * Owner only: Promote + ⋯ menu (server isOwner preferred)
  */
 export function PublicationPageActions({
   id,
@@ -45,6 +45,7 @@ export function PublicationPageActions({
   publisherName?: string | null;
   visibility?: "public" | "private";
   status?: "draft" | "published" | "archived" | "scheduled";
+  /** Server-resolved owner check — preferred over client identity matching */
   isOwner?: boolean;
 }) {
   const [identity, setIdentity] = useState<ActiveAccount | null>(null);
@@ -80,17 +81,20 @@ export function PublicationPageActions({
     };
   }, [menuOpen]);
 
+  // Prefer explicit server prop. Only fall back to identity when prop is undefined.
   const isOwner =
-    isOwnerProp === true ||
-    (identity != null &&
-      ((publisherId && identity.id === publisherId) ||
-        (publisherName &&
-          identity.name &&
-          identity.name.toLowerCase() === publisherName.toLowerCase()) ||
-        (identity.slug &&
-          publisherName &&
-          identity.slug.toLowerCase() ===
-            publisherName.toLowerCase().replace(/\s+/g, "-"))));
+    isOwnerProp === true
+      ? true
+      : isOwnerProp === false
+        ? false
+        : Boolean(
+            identity != null &&
+              ((publisherId && identity.id === publisherId) ||
+                (publisherName &&
+                  identity.name &&
+                  identity.name.toLowerCase() ===
+                    publisherName.toLowerCase()))
+          );
 
   async function patchPublication(
     patch: Record<string, string>,
@@ -140,7 +144,10 @@ export function PublicationPageActions({
       )
     )
       return;
-    await patchPublication({ status: "draft" }, "Unpublished — saved to drafts");
+    await patchPublication(
+      { status: "draft" },
+      "Unpublished — saved to drafts"
+    );
   }
 
   const itemCls =
@@ -153,165 +160,161 @@ export function PublicationPageActions({
         category={category || type}
         publicationSlug={slug}
       />
-      <div className="flex flex-wrap items-center gap-1.5">
-        <PublicationActions
-          slug={slug}
-          type={type}
-          title={title}
-          publishedAt={publishedAt}
-          initialLikes={heat ?? 0}
-          compact
-          tags={tags}
-          category={category || type}
-        />
-        <ShareButton title={title} path={path} />
+      <div className="flex items-center gap-1.5">
+        {/* Public engagement — can scroll if tight */}
+        <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-none">
+          <PublicationActions
+            slug={slug}
+            type={type}
+            title={title}
+            publishedAt={publishedAt}
+            initialLikes={heat ?? 0}
+            compact
+            tags={tags}
+            category={category || type}
+          />
+          <ShareButton title={title} path={path} />
+        </div>
 
-        {isOwner && (
-          <Link
-            href={`/promote?slug=${encodeURIComponent(slug)}`}
-            className="inline-flex h-9 items-center rounded-full bg-omniv-gold px-3.5 text-[12px] font-semibold text-black"
-          >
-            Promote
-          </Link>
-        )}
-
-        {isOwner && (
-          <div className="relative" ref={menuRef}>
-            <button
-              type="button"
-              aria-label="More actions"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((o) => !o)}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/[0.06] hover:text-white"
+        {/* Publisher-only controls — never wrap under public actions */}
+        {isOwner ? (
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Link
+              href={`/promote?slug=${encodeURIComponent(slug)}`}
+              className="inline-flex h-9 items-center rounded-full bg-omniv-gold px-3.5 text-[12px] font-semibold text-black"
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                aria-hidden
+              Promote
+            </Link>
+
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                aria-label="More actions"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((o) => !o)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-400 transition hover:bg-white/[0.06] hover:text-white"
               >
-                <circle cx="12" cy="5" r="1.75" />
-                <circle cx="12" cy="12" r="1.75" />
-                <circle cx="12" cy="19" r="1.75" />
-              </svg>
-            </button>
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden
+                >
+                  <circle cx="12" cy="5" r="1.75" />
+                  <circle cx="12" cy="12" r="1.75" />
+                  <circle cx="12" cy="19" r="1.75" />
+                </svg>
+              </button>
 
-            {menuOpen && (
-              <div
-                className="absolute right-0 top-full z-50 mt-1.5 max-h-[min(70vh,420px)] w-56 origin-top-right overflow-y-auto rounded-xl bg-[#141414] py-1 shadow-xl ring-1 ring-white/10"
-                role="menu"
-              >
-                <p className="px-3.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                  Manage
-                </p>
-                <Link
-                  href={`/publish?edit=${encodeURIComponent(id)}`}
-                  className={itemCls}
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
+              {menuOpen && (
+                <div
+                  className="absolute right-0 top-full z-50 mt-1.5 max-h-[min(70vh,420px)] w-56 origin-top-right overflow-y-auto rounded-xl bg-[#141414] py-1 shadow-xl ring-1 ring-white/10"
+                  role="menu"
                 >
-                  Edit
-                </Link>
-                <Link
-                  href={`/analytics?publication=${encodeURIComponent(id)}`}
-                  className={itemCls}
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  View analytics
-                </Link>
-                <Link
-                  href={`/promote?slug=${encodeURIComponent(slug)}`}
-                  className={itemCls}
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Promote this {type || "piece"}
-                </Link>
-                <Link
-                  href={`/invites?publication=${encodeURIComponent(slug)}`}
-                  className={itemCls}
-                  role="menuitem"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Invite audience
-                </Link>
-                <button
-                  type="button"
-                  disabled={busy}
-                  className={itemCls}
-                  role="menuitem"
-                  onClick={() => {
-                    void copyShareLink();
-                  }}
-                >
-                  Copy share link
-                </button>
-
-                <div className="my-1 border-t border-white/[0.08]" />
-
-                {currentVisibility === "public" ? (
+                  <p className="px-3.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                    Manage
+                  </p>
+                  <Link
+                    href={`/publish?edit=${encodeURIComponent(id)}`}
+                    className={itemCls}
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Edit
+                  </Link>
+                  <Link
+                    href={`/analytics?publication=${encodeURIComponent(id)}`}
+                    className={itemCls}
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    View analytics
+                  </Link>
+                  <Link
+                    href={`/invites?publication=${encodeURIComponent(slug)}`}
+                    className={itemCls}
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Invite audience
+                  </Link>
                   <button
                     type="button"
                     disabled={busy}
                     className={itemCls}
                     role="menuitem"
-                    onClick={() =>
-                      void patchPublication(
-                        { visibility: "private" },
-                        "Article is now private"
-                      )
-                    }
+                    onClick={() => {
+                      void copyShareLink();
+                    }}
                   >
-                    Make private
+                    Copy share link
                   </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    className={itemCls}
-                    role="menuitem"
-                    onClick={() =>
-                      void patchPublication(
-                        { visibility: "public" },
-                        "Article is now public"
-                      )
-                    }
-                  >
-                    Make public
-                  </button>
-                )}
 
-                {currentStatus === "published" && (
-                  <>
-                    <div className="my-1 border-t border-white/[0.08]" />
+                  <div className="my-1 border-t border-white/[0.08]" />
+
+                  {currentVisibility === "public" ? (
                     <button
                       type="button"
                       disabled={busy}
-                      className={`${itemCls} text-rose-400`}
+                      className={itemCls}
                       role="menuitem"
-                      onClick={() => void unpublish()}
+                      onClick={() =>
+                        void patchPublication(
+                          { visibility: "private" },
+                          "Article is now private"
+                        )
+                      }
                     >
-                      Unpublish
+                      Make private
                     </button>
-                  </>
-                )}
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      className={itemCls}
+                      role="menuitem"
+                      onClick={() =>
+                        void patchPublication(
+                          { visibility: "public" },
+                          "Article is now public"
+                        )
+                      }
+                    >
+                      Make public
+                    </button>
+                  )}
 
-                {(message ||
-                  currentVisibility === "private" ||
-                  currentStatus === "draft") && (
-                  <p className="px-3.5 pb-2 pt-1 text-[11px] text-omniv-gold">
-                    {message ||
-                      (currentStatus === "draft"
-                        ? "Saved to drafts"
-                        : "Private publication")}
-                  </p>
-                )}
-              </div>
-            )}
+                  {currentStatus === "published" && (
+                    <>
+                      <div className="my-1 border-t border-white/[0.08]" />
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className={`${itemCls} text-rose-400`}
+                        role="menuitem"
+                        onClick={() => void unpublish()}
+                      >
+                        Unpublish
+                      </button>
+                    </>
+                  )}
+
+                  {(message ||
+                    currentVisibility === "private" ||
+                    currentStatus === "draft") && (
+                    <p className="px-3.5 pb-2 pt-1 text-[11px] text-omniv-gold">
+                      {message ||
+                        (currentStatus === "draft"
+                          ? "Saved to drafts"
+                          : "Private publication")}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        ) : null}
       </div>
     </>
   );
