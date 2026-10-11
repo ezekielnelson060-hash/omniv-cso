@@ -294,7 +294,7 @@ export default async function PublicationPage({ params }: Props) {
 
   const [liveAll, entities] = await Promise.all([
     listLivePublications(supabase, 40),
-    listDiscoveryEntities(supabase, 24),
+    listDiscoveryEntities(supabase),
   ]);
   const explorePublications = seededShuffle(
     liveAll.filter((x) => x.slug !== p.slug),
