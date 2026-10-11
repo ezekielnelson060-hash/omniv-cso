@@ -6,6 +6,7 @@ import { PlanProvider } from "@/components/billing/plan-provider";
 import { RosterProvider } from "@/lib/roster-context";
 import { CookieConsent } from "@/components/cookie-consent";
 import { ThemeProvider } from "@/components/theme-provider";
+import { GoogleAnalytics } from "@/components/google-analytics";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -17,6 +18,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <RosterProvider>
           {children}
           <CookieConsent />
+          <GoogleAnalytics />
         </RosterProvider>
       </PlanProvider>
     </ThemeProvider>
