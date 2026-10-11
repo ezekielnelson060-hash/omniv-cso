@@ -443,7 +443,11 @@ export default async function PublicationPage({ params }: Props) {
                   ) : null}
                 </div>
                 {publisherHref && !canManage ? (
-                  <FollowButton type={publisher.type} slug={publisher.slug} />
+                  <FollowButton
+                    type={publisher.type}
+                    slug={publisher.slug}
+                    name={publisher.name}
+                  />
                 ) : null}
               </div>
             </div>
