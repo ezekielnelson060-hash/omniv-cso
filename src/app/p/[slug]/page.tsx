@@ -254,10 +254,11 @@ export default async function PublicationPage({ params }: Props) {
         name: publisher.name,
       })
     : null;
-  const verified =
-    Boolean(publisher?.verified) ||
-    isAlwaysVerified(publisherName) ||
-    isAlwaysVerified(publisher?.slug || "");
+  const verified = isAlwaysVerified({
+    verified: publisher?.verified,
+    slug: publisher?.slug,
+    name: publisherName,
+  });
 
   let bodyText = "";
   try {
