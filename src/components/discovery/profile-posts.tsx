@@ -27,6 +27,7 @@ type LivePub = {
   publishedAt?: string;
   publisherName?: string;
   coverUrl?: string;
+  mediaUrl?: string;
   heat?: number;
   meta?: string;
 };
@@ -117,12 +118,15 @@ function PubCard({
     "meta" in p ? p.meta : undefined
   );
   const meta = cleaned || label;
+  const href = publicationPath({ slug: p.slug, type: p.type });
+  const isMusic = type === "music";
+  const hasMedia = Boolean("mediaUrl" in p && p.mediaUrl);
 
   return (
     <div className="group overflow-hidden rounded-2xl bg-[#0b0b0b] ring-1 ring-white/[0.08] transition hover:ring-omniv-gold/35">
       <div className="flex gap-3.5 p-3">
         <Link
-          href={`/p/${p.slug}`}
+          href={href}
           className="relative h-24 w-28 shrink-0 overflow-hidden rounded-xl sm:w-32"
         >
           {cover ? (
@@ -134,10 +138,17 @@ function PubCard({
           <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white">
             {label}
           </span>
+          {isMusic && (
+            <span className="absolute inset-0 flex items-center justify-center bg-black/25 text-omniv-gold opacity-0 transition group-hover:opacity-100">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-omniv-gold text-black">
+                ▶
+              </span>
+            </span>
+          )}
         </Link>
         <div className="min-w-0 flex-1 py-0.5">
           <div className="flex items-start gap-1">
-            <Link href={`/p/${p.slug}`} className="min-w-0 flex-1">
+            <Link href={href} className="min-w-0 flex-1">
               <p className="line-clamp-2 text-[15px] font-semibold leading-snug text-white group-hover:text-omniv-gold">
                 {p.title}
               </p>
@@ -146,7 +157,10 @@ function PubCard({
                   {p.summary}
                 </p>
               )}
-              <p className="mt-1.5 text-[11px] text-zinc-600">{meta}</p>
+              <p className="mt-1.5 text-[11px] text-zinc-600">
+                {meta}
+                {isMusic && hasMedia ? " · Playable" : isMusic ? " · No audio yet" : ""}
+              </p>
             </Link>
             {showManage && "id" in p && p.id && (
               <ProfilePubMenu
@@ -315,7 +329,7 @@ function ProfileDiscover() {
   );
 }
 
-export function ProfilePosts() {
+export default function ProfilePosts() {
   const [pubs, setPubs] = useState<LivePub[] | null>(null);
   const [name, setName] = useState("You");
 
@@ -378,3 +392,5 @@ export function ProfilePosts() {
     </div>
   );
 }
+
+export { ProfilePosts };

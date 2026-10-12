@@ -11,6 +11,7 @@ import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { OmnivAvatar } from "@/components/discovery/omniv-avatar";
 import { VerifiedBadge } from "@/components/discovery/verified-badge";
+import { PublicationMedia } from "@/components/discovery/publication-media";
 import { isAlwaysVerified } from "@/lib/discovery/verified";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -65,6 +66,64 @@ function seededShuffle<T>(arr: T[], seed: string): T[] {
   return a;
 }
 
+function parseMeta(meta: string | undefined | null): Record<string, string> {
+  if (!meta) return {};
+  try {
+    const o = JSON.parse(meta);
+    if (o && typeof o === "object") {
+      const out: Record<string, string> = {};
+      for (const [k, v] of Object.entries(o)) {
+        if (v != null && String(v).trim()) out[k] = String(v).trim();
+      }
+      return out;
+    }
+  } catch {
+    /* plain meta string */
+  }
+  return {};
+}
+
+function isAudioUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  const u = url.toLowerCase();
+  return (
+    u.includes(".mp3") ||
+    u.includes(".wav") ||
+    u.includes(".m4a") ||
+    u.includes(".aac") ||
+    u.includes(".ogg") ||
+    u.includes(".opus") ||
+    u.includes("discovery-media")
+  );
+}
+
+function isVideoUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  const u = url.toLowerCase();
+  return (
+    u.includes(".mp4") ||
+    u.includes(".webm") ||
+    u.includes(".mov") ||
+    u.includes("youtube.com") ||
+    u.includes("youtu.be") ||
+    u.includes("vimeo.com")
+  );
+}
+
+function youtubeEmbed(url: string): string | null {
+  try {
+    if (url.includes("youtu.be/")) {
+      const id = url.split("youtu.be/")[1]?.split(/[?&]/)[0];
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+    const u = new URL(url);
+    const id = u.searchParams.get("v");
+    return id ? `https://www.youtube.com/embed/${id}` : null;
+  } catch {
+    return null;
+  }
+}
+
 async function resolvePublisher(
   supabase: Awaited<ReturnType<typeof createClient>> | null,
   p: LivePublication
@@ -106,7 +165,6 @@ function BodyBlocks({
     typeof body === "string" &&
     /<(p|div|h[1-4]|blockquote|ul|ol|li|br|strong|em|b|i|span|a)\b/i.test(body);
 
-  // Prefer structured content blocks when present
   if (Array.isArray(content) && content.length) {
     return (
       <>
@@ -295,6 +353,24 @@ export default async function PublicationPage({ params }: Props) {
     "Article";
   const coverUrl =
     (p as { coverUrl?: string | null }).coverUrl || coverFor(p.slug) || null;
+  const mediaUrl = (p as { mediaUrl?: string | null }).mediaUrl || null;
+  const metaFields = parseMeta(p.meta);
+  const genre =
+    p.category ||
+    metaFields.genre ||
+    (Array.isArray(p.tags) && p.tags[0]) ||
+    null;
+
+  const isMusic = p.type === "music";
+  const isVideo = p.type === "video";
+  const isAudio = isMusic || isAudioUrl(mediaUrl);
+  const isDirectVideo = isVideo || isVideoUrl(mediaUrl);
+  const embedSrc =
+    mediaUrl && (mediaUrl.includes("youtube.com") || mediaUrl.includes("youtu.be"))
+      ? youtubeEmbed(mediaUrl)
+      : null;
+  const isEmbed = Boolean(embedSrc);
+
   const avatarSrc = publisher
     ? resolveEntityAvatar({
         avatarUrl: publisher.avatarUrl,
@@ -351,6 +427,17 @@ export default async function PublicationPage({ params }: Props) {
   const exploreEntities = seededShuffle(entities, slug + "-e").slice(0, 8);
 
   const hero = HERO[p.type || "article"] || HERO.article;
+  const showMediaPlayer = isMusic || isVideo || isAudio || isDirectVideo || isEmbed;
+  const showArticleBody =
+    !isMusic &&
+    !isVideo &&
+    (Boolean(p.body) ||
+      Boolean(p.content?.length) ||
+      Boolean(p.summary) ||
+      Boolean(p.excerpt));
+  const showMusicLyrics =
+    isMusic &&
+    (Boolean(p.body) || Boolean(p.content?.length));
 
   return (
     <DiscoveryShell>
@@ -358,9 +445,9 @@ export default async function PublicationPage({ params }: Props) {
         <StickyArticleHeader title={p.title} backHref="/home" />
 
         <div
-          className={`relative min-h-[280px] bg-gradient-to-b ${hero} sm:min-h-[360px]`}
+          className={`relative min-h-[${showMediaPlayer && isMusic ? "180" : "280"}px] bg-gradient-to-b ${hero} sm:min-h-[${showMediaPlayer && isMusic ? "220" : "360"}px]`}
           style={
-            coverUrl
+            coverUrl && !isMusic
               ? {
                   backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.15) 0%, rgba(5,5,5,0.5) 40%, #050505 100%), url(${coverUrl})`,
                   backgroundSize: "cover",
@@ -369,7 +456,7 @@ export default async function PublicationPage({ params }: Props) {
               : undefined
           }
         >
-          <div className="relative mx-auto flex min-h-[280px] max-w-2xl flex-col px-4 pb-10 pt-3 sm:min-h-[360px]">
+          <div className="relative mx-auto flex min-h-[180px] max-w-2xl flex-col px-4 pb-10 pt-3 sm:min-h-[220px]">
             <div className="flex items-center justify-between">
               <Link
                 href="/home"
@@ -387,44 +474,90 @@ export default async function PublicationPage({ params }: Props) {
               <span className="inline-flex items-center rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90 backdrop-blur-sm">
                 {typeLabel}
               </span>
-              <h1 className="mt-3 text-[28px] font-semibold leading-[1.15] tracking-tight text-white sm:text-[40px]">
-                {p.title}
-              </h1>
+              {!isMusic && (
+                <>
+                  <h1 className="mt-3 text-[28px] font-semibold leading-[1.15] tracking-tight text-white sm:text-[40px]">
+                    {p.title}
+                  </h1>
 
-              <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-zinc-300">
-                {publisherHref ? (
-                  <Link
-                    href={publisherHref}
-                    className="inline-flex items-center gap-1.5 font-medium leading-none hover:text-white"
-                  >
-                    <OmnivAvatar src={avatarSrc} name={publisherName} size={22} />
-                    <span className="leading-none">{publisherName}</span>
-                    {verified ? (
-                      <VerifiedBadge
-                        name={publisherName}
-                        verifyType={publisher?.type || "company"}
-                        size={16}
-                      />
+                  <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-zinc-300">
+                    {publisherHref ? (
+                      <Link
+                        href={publisherHref}
+                        className="inline-flex items-center gap-1.5 font-medium leading-none hover:text-white"
+                      >
+                        <OmnivAvatar src={avatarSrc} name={publisherName} size={22} />
+                        <span className="leading-none">{publisherName}</span>
+                        {verified ? (
+                          <VerifiedBadge
+                            name={publisherName}
+                            verifyType={publisher?.type || "company"}
+                            size={16}
+                          />
+                        ) : null}
+                      </Link>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 font-medium leading-none">
+                        <OmnivAvatar src={avatarSrc} name={publisherName} size={22} />
+                        <span className="leading-none">{publisherName}</span>
+                        {verified ? (
+                          <VerifiedBadge name={publisherName} verifyType="company" size={16} />
+                        ) : null}
+                      </span>
+                    )}
+                    {!isVideo && (
+                      <>
+                        <span className="leading-none text-zinc-600">·</span>
+                        <span className="leading-none">{mins} min read</span>
+                      </>
+                    )}
+                    {publishedLabel ? (
+                      <>
+                        <span className="leading-none text-zinc-600">·</span>
+                        <span className="leading-none">{publishedLabel}</span>
+                      </>
                     ) : null}
-                  </Link>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 font-medium leading-none">
-                    <OmnivAvatar src={avatarSrc} name={publisherName} size={22} />
-                    <span className="leading-none">{publisherName}</span>
-                    {verified ? (
-                      <VerifiedBadge name={publisherName} verifyType="company" size={16} />
-                    ) : null}
-                  </span>
-                )}
-                <span className="leading-none text-zinc-600">·</span>
-                <span className="leading-none">{mins} min read</span>
-                {publishedLabel ? (
-                  <>
-                    <span className="leading-none text-zinc-600">·</span>
-                    <span className="leading-none">{publishedLabel}</span>
-                  </>
-                ) : null}
-              </div>
+                  </div>
+                </>
+              )}
+
+              {isMusic && (
+                <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-zinc-300">
+                  {publisherHref ? (
+                    <Link
+                      href={publisherHref}
+                      className="inline-flex items-center gap-1.5 font-medium leading-none hover:text-white"
+                    >
+                      <OmnivAvatar src={avatarSrc} name={publisherName} size={22} />
+                      <span className="leading-none">{publisherName}</span>
+                      {verified ? (
+                        <VerifiedBadge
+                          name={publisherName}
+                          verifyType={publisher?.type || "artist"}
+                          size={16}
+                        />
+                      ) : null}
+                    </Link>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 font-medium leading-none">
+                      <OmnivAvatar src={avatarSrc} name={publisherName} size={22} />
+                      <span className="leading-none">{publisherName}</span>
+                    </span>
+                  )}
+                  {genre ? (
+                    <>
+                      <span className="leading-none text-zinc-600">·</span>
+                      <span className="leading-none">{genre}</span>
+                    </>
+                  ) : null}
+                  {publishedLabel ? (
+                    <>
+                      <span className="leading-none text-zinc-600">·</span>
+                      <span className="leading-none">{publishedLabel}</span>
+                    </>
+                  ) : null}
+                </div>
+              )}
 
               <div className="mt-4 -mx-1 rounded-xl bg-black/25 px-1 py-0.5 backdrop-blur-sm">
                 <PublicationPageActions
@@ -436,7 +569,7 @@ export default async function PublicationPage({ params }: Props) {
                   publishedAt={p.publishedAt}
                   heat={p.heat}
                   tags={Array.isArray(p.tags) ? p.tags : []}
-                  category={p.category}
+                  category={p.category || genre || undefined}
                   publisherId={p.publisherId}
                   publisherName={publisherName}
                   visibility={p.visibility || "public"}
@@ -449,14 +582,43 @@ export default async function PublicationPage({ params }: Props) {
         </div>
 
         <main className="mx-auto max-w-2xl px-4 pb-28 pt-6">
-          <BodyBlocks
-            body={typeof p.body === "string" ? p.body : undefined}
-            content={p.content}
-            summary={p.summary}
-            excerpt={p.excerpt}
-            whatThisMeans={p.whatThisMeans}
-            questionNobodyAsks={p.questionNobodyAsks}
-          />
+          {showMediaPlayer ? (
+            <PublicationMedia
+              p={p}
+              publisher={publisher}
+              publisherName={publisherName}
+              path={path}
+              coverUrl={coverUrl}
+              mediaUrl={mediaUrl}
+              isAudio={isAudio}
+              isDirectVideo={isDirectVideo && !isEmbed}
+              isEmbed={isEmbed}
+              embedSrc={embedSrc}
+            />
+          ) : null}
+
+          {showArticleBody ? (
+            <BodyBlocks
+              body={typeof p.body === "string" ? p.body : undefined}
+              content={p.content}
+              summary={p.summary}
+              excerpt={p.excerpt}
+              whatThisMeans={p.whatThisMeans}
+              questionNobodyAsks={p.questionNobodyAsks}
+            />
+          ) : null}
+
+          {showMusicLyrics ? (
+            <div className="mt-2">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+                Lyrics / notes
+              </p>
+              <BodyBlocks
+                body={typeof p.body === "string" ? p.body : undefined}
+                content={p.content}
+              />
+            </div>
+          ) : null}
 
           {publisher ? (
             <div className="mt-12 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">

@@ -32,6 +32,21 @@ function formatTime(sec: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function isLikelyAudioUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  const u = url.toLowerCase();
+  return (
+    u.includes(".mp3") ||
+    u.includes(".wav") ||
+    u.includes(".m4a") ||
+    u.includes(".aac") ||
+    u.includes(".ogg") ||
+    u.includes(".opus") ||
+    u.includes("audio") ||
+    u.includes("discovery-media")
+  );
+}
+
 export function MusicRelease({
   title,
   artist,
@@ -49,38 +64,110 @@ export function MusicRelease({
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  const hasAudio = Boolean(mediaUrl && isLikelyAudioUrl(mediaUrl));
+
+  useEffect(() => {
+    setPlaying(false);
+    setProgress(0);
+    setDuration(0);
+    setError(null);
+    setReady(false);
+    setLoading(false);
+  }, [mediaUrl]);
 
   useEffect(() => {
     const el = audioRef.current;
-    if (!el) return;
+    if (!el || !mediaUrl) return;
+
     const onTime = () => setProgress(el.currentTime);
-    const onMeta = () => setDuration(el.duration || 0);
-    const onEnd = () => setPlaying(false);
+    const onMeta = () => {
+      setDuration(el.duration || 0);
+      setReady(true);
+      setLoading(false);
+      setError(null);
+    };
+    const onCanPlay = () => {
+      setReady(true);
+      setLoading(false);
+    };
+    const onWaiting = () => setLoading(true);
+    const onPlaying = () => {
+      setPlaying(true);
+      setLoading(false);
+      setError(null);
+    };
+    const onPause = () => setPlaying(false);
+    const onEnd = () => {
+      setPlaying(false);
+      setProgress(0);
+    };
+    const onErr = () => {
+      setPlaying(false);
+      setLoading(false);
+      setReady(false);
+      const code = el.error?.code;
+      if (code === 4) {
+        setError("This audio format is not supported in your browser.");
+      } else if (code === 2 || code === 3) {
+        setError("Could not load the audio file. It may be missing or private.");
+      } else {
+        setError("Playback failed. Try again or open the file in a new tab.");
+      }
+    };
+
     el.addEventListener("timeupdate", onTime);
     el.addEventListener("loadedmetadata", onMeta);
+    el.addEventListener("canplay", onCanPlay);
+    el.addEventListener("waiting", onWaiting);
+    el.addEventListener("playing", onPlaying);
+    el.addEventListener("pause", onPause);
     el.addEventListener("ended", onEnd);
+    el.addEventListener("error", onErr);
+
     return () => {
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("loadedmetadata", onMeta);
+      el.removeEventListener("canplay", onCanPlay);
+      el.removeEventListener("waiting", onWaiting);
+      el.removeEventListener("playing", onPlaying);
+      el.removeEventListener("pause", onPause);
       el.removeEventListener("ended", onEnd);
+      el.removeEventListener("error", onErr);
     };
   }, [mediaUrl]);
 
-  function toggle() {
+  async function toggle() {
     const el = audioRef.current;
-    if (!el || !mediaUrl) return;
+    if (!el || !mediaUrl || error) return;
     if (playing) {
       el.pause();
       setPlaying(false);
-    } else {
-      void el.play();
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      await el.play();
       setPlaying(true);
+    } catch (e) {
+      setPlaying(false);
+      setLoading(false);
+      const name = e instanceof Error ? e.name : "";
+      if (name === "NotAllowedError") {
+        setError("Tap play again — the browser blocked autoplay.");
+      } else {
+        setError("Could not start playback.");
+      }
     }
   }
 
   function seek(e: React.ChangeEvent<HTMLInputElement>) {
     const el = audioRef.current;
-    if (!el) return;
+    if (!el || !ready) return;
     const v = Number(e.target.value);
     el.currentTime = v;
     setProgress(v);
@@ -124,18 +211,26 @@ export function MusicRelease({
                 : ""}
             </p>
 
-            {mediaUrl && (
+            {hasAudio && (
               <>
                 {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                <audio ref={audioRef} src={mediaUrl} preload="metadata" />
+                <audio
+                  ref={audioRef}
+                  src={mediaUrl!}
+                  preload="metadata"
+                  crossOrigin="anonymous"
+                />
                 <div className="mt-5 flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={toggle}
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold text-black transition hover:brightness-110"
+                    onClick={() => void toggle()}
+                    disabled={Boolean(error)}
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label={playing ? "Pause" : "Play"}
                   >
-                    {playing ? (
+                    {loading && !playing ? (
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/30 border-t-black" />
+                    ) : playing ? (
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M6 5h4v14H6zm8 0h4v14h-4z" />
                       </svg>
@@ -153,7 +248,8 @@ export function MusicRelease({
                       step={0.1}
                       value={progress}
                       onChange={seek}
-                      className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/15 accent-omniv-gold"
+                      disabled={!ready || Boolean(error)}
+                      className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/15 accent-omniv-gold disabled:opacity-40"
                     />
                     <div className="mt-1 flex justify-between text-[11px] tabular-nums text-zinc-500">
                       <span>{formatTime(progress)}</span>
@@ -161,13 +257,29 @@ export function MusicRelease({
                     </div>
                   </div>
                 </div>
+                {error && (
+                  <div className="mt-3 rounded-xl bg-rose-500/10 px-3 py-2 ring-1 ring-rose-500/20">
+                    <p className="text-[12px] text-rose-300">{error}</p>
+                    {mediaUrl && (
+                      <a
+                        href={mediaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 inline-block text-[12px] font-medium text-omniv-gold hover:underline"
+                      >
+                        Open audio file
+                      </a>
+                    )}
+                  </div>
+                )}
               </>
             )}
 
-            {!mediaUrl && (
+            {!hasAudio && (
               <p className="mt-4 text-[13px] text-zinc-500">
                 Audio not attached yet — the release still works as a discovery
-                page.
+                page. Re-edit the publication and upload an MP3, WAV, M4A, or OGG
+                file.
               </p>
             )}
 
