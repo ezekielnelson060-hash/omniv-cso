@@ -83,38 +83,44 @@ export function PublicationPageActions({
 
   // Prefer explicit server prop. Only fall back to identity when prop is undefined.
   const isOwner =
-    isOwnerProp === true
-      ? true
-      : isOwnerProp === false
-        ? false
-        : Boolean(
-            identity != null &&
-              ((publisherId && identity.id === publisherId) ||
-                (publisherName &&
-                  identity.name &&
-                  identity.name.toLowerCase() ===
-                    publisherName.toLowerCase()))
-          );
+    typeof isOwnerProp === "boolean"
+      ? isOwnerProp
+      : Boolean(
+          identity &&
+            publisherId &&
+            (identity.entityId === publisherId ||
+              identity.slug === publisherId ||
+              identity.name === publisherName)
+        );
 
   async function patchPublication(
-    patch: Record<string, string>,
-    success: string
+    body: Record<string, unknown>,
+    okMessage: string
   ) {
     setBusy(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/discovery/publications", {
+      const res = await fetch(`/api/discovery/publications/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, ...patch }),
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Could not update publication");
-      if (patch.visibility)
-        setCurrentVisibility(patch.visibility as "public" | "private");
-      if (patch.status)
-        setCurrentStatus(patch.status as typeof currentStatus);
-      setMessage(success);
+      if (!res.ok) {
+        throw new Error(
+          (data as { error?: string }).error || "Update failed"
+        );
+      }
+      if (typeof body.visibility === "string") {
+        setCurrentVisibility(body.visibility as "public" | "private");
+      }
+      if (typeof body.status === "string") {
+        setCurrentStatus(
+          body.status as "draft" | "published" | "archived" | "scheduled"
+        );
+      }
+      setMessage(okMessage);
+      setMenuOpen(false);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Could not update publication"
@@ -168,7 +174,7 @@ export function PublicationPageActions({
             type={type}
             title={title}
             publishedAt={publishedAt}
-            initialLikes={heat ?? 0}
+            initialLikes={0}
             compact
             tags={tags}
             category={category || type}
@@ -199,123 +205,70 @@ export function PublicationPageActions({
                   height="18"
                   viewBox="0 0 24 24"
                   fill="currentColor"
-                  aria-hidden
                 >
-                  <circle cx="12" cy="5" r="1.75" />
+                  <circle cx="5" cy="12" r="1.75" />
                   <circle cx="12" cy="12" r="1.75" />
-                  <circle cx="12" cy="19" r="1.75" />
+                  <circle cx="19" cy="12" r="1.75" />
                 </svg>
               </button>
 
-              {menuOpen && (
-                <div
-                  className="absolute right-0 top-full z-50 mt-1.5 max-h-[min(70vh,420px)] w-56 origin-top-right overflow-y-auto rounded-xl bg-[#141414] py-1 shadow-xl ring-1 ring-white/10"
-                  role="menu"
-                >
-                  <p className="px-3.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    Manage
-                  </p>
-                  <Link
-                    href={`/publish?edit=${encodeURIComponent(id)}`}
+              {menuOpen ? (
+                <div className="absolute right-0 z-50 mt-1.5 w-52 overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10 shadow-xl">
+                  <button
+                    type="button"
                     className={itemCls}
-                    role="menuitem"
+                    disabled={busy}
+                    onClick={() => void copyShareLink()}
+                  >
+                    Copy link
+                  </button>
+                  <Link
+                    href={`/publish?edit=${encodeURIComponent(slug)}`}
+                    className={itemCls}
                     onClick={() => setMenuOpen(false)}
                   >
                     Edit
                   </Link>
-                  <Link
-                    href={`/analytics?publication=${encodeURIComponent(id)}`}
-                    className={itemCls}
-                    role="menuitem"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    View analytics
-                  </Link>
-                  <Link
-                    href={`/invites?publication=${encodeURIComponent(slug)}`}
-                    className={itemCls}
-                    role="menuitem"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Invite audience
-                  </Link>
                   <button
                     type="button"
-                    disabled={busy}
                     className={itemCls}
-                    role="menuitem"
-                    onClick={() => {
-                      void copyShareLink();
-                    }}
+                    disabled={busy}
+                    onClick={() =>
+                      void patchPublication(
+                        {
+                          visibility:
+                            currentVisibility === "public"
+                              ? "private"
+                              : "public",
+                        },
+                        currentVisibility === "public"
+                          ? "Now private"
+                          : "Now public"
+                      )
+                    }
                   >
-                    Copy share link
+                    {currentVisibility === "public"
+                      ? "Make private"
+                      : "Make public"}
                   </button>
-
-                  <div className="my-1 border-t border-white/[0.08]" />
-
-                  {currentVisibility === "public" ? (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      className={itemCls}
-                      role="menuitem"
-                      onClick={() =>
-                        void patchPublication(
-                          { visibility: "private" },
-                          "Article is now private"
-                        )
-                      }
-                    >
-                      Make private
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      className={itemCls}
-                      role="menuitem"
-                      onClick={() =>
-                        void patchPublication(
-                          { visibility: "public" },
-                          "Article is now public"
-                        )
-                      }
-                    >
-                      Make public
-                    </button>
-                  )}
-
-                  {currentStatus === "published" && (
-                    <>
-                      <div className="my-1 border-t border-white/[0.08]" />
-                      <button
-                        type="button"
-                        disabled={busy}
-                        className={`${itemCls} text-rose-400`}
-                        role="menuitem"
-                        onClick={() => void unpublish()}
-                      >
-                        Unpublish
-                      </button>
-                    </>
-                  )}
-
-                  {(message ||
-                    currentVisibility === "private" ||
-                    currentStatus === "draft") && (
-                    <p className="px-3.5 pb-2 pt-1 text-[11px] text-omniv-gold">
-                      {message ||
-                        (currentStatus === "draft"
-                          ? "Saved to drafts"
-                          : "Private publication")}
-                    </p>
-                  )}
+                  <button
+                    type="button"
+                    className={itemCls}
+                    disabled={busy || currentStatus === "draft"}
+                    onClick={() => void unpublish()}
+                  >
+                    Unpublish
+                  </button>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         ) : null}
       </div>
+
+      {message ? (
+        <p className="mt-2 text-[12px] text-zinc-400">{message}</p>
+      ) : null}
     </>
   );
 }
