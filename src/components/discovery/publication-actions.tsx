@@ -14,6 +14,10 @@ import { recordSignal } from "@/lib/discovery/signals";
  * Engagement bar — matches mockup:
  * left: ♥ like + count · comments
  * right: bookmark save · relative time
+ *
+ * Like count is honest: server discovery_likes count wins.
+ * Local storage is only used for guests / offline and is NOT
+ * seeded from heat or any other non-like signal.
  */
 export function PublicationActions({
   slug,
@@ -31,6 +35,7 @@ export function PublicationActions({
   type: string;
   title: string;
   publishedAt?: string | null;
+  /** Real like count only — do not pass heat here */
   initialLikes?: number;
   initialComments?: number;
   compact?: boolean;
@@ -39,7 +44,8 @@ export function PublicationActions({
   category?: string;
 }) {
   const [liked, setLiked] = useState(false);
-  const [count, setCount] = useState(initialLikes);
+  // Start at 0 (or a true like count). Never display heat as likes.
+  const [count, setCount] = useState(0);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [ago, setAgo] = useState("");
@@ -60,9 +66,12 @@ export function PublicationActions({
         const data = await res.json();
         if (cancelled) return;
         if (typeof data.count === "number") {
-          setCount(Math.max(data.count, getLocalLikeCount(slug, initialLikes)));
+          // Server is source of truth. Local guest likes may be higher
+          // only when the user liked while logged out — never seed from heat.
+          const local = getLocalLikeCount(slug, 0);
+          setCount(Math.max(data.count, local));
         } else {
-          setCount(getLocalLikeCount(slug, initialLikes));
+          setCount(getLocalLikeCount(slug, 0));
         }
         if (typeof data.liked === "boolean") {
           setLiked(Boolean(data.liked));
@@ -72,7 +81,7 @@ export function PublicationActions({
       } catch {
         if (!cancelled) {
           setLiked(isLiked(slug));
-          setCount(getLocalLikeCount(slug, initialLikes));
+          setCount(getLocalLikeCount(slug, 0));
         }
       } finally {
         if (!cancelled) setReady(true);
@@ -81,7 +90,7 @@ export function PublicationActions({
     return () => {
       cancelled = true;
     };
-  }, [slug, initialLikes]);
+  }, [slug]);
 
   async function onLike(e: React.MouseEvent) {
     e.preventDefault();
@@ -98,7 +107,8 @@ export function PublicationActions({
         const local = toggleLocalLike(slug, type, count);
         setLiked(local.liked);
         setCount(local.count);
-        if (local.liked) recordSignal("like", tags, category, { publicationSlug: slug });
+        if (local.liked)
+          recordSignal("like", tags, category, { publicationSlug: slug });
         return;
       }
       const data = await res.json();
@@ -108,18 +118,21 @@ export function PublicationActions({
         if (data.liked !== isLiked(slug)) {
           toggleLocalLike(slug, type, count);
         }
-        if (data.liked) recordSignal("like", tags, category, { publicationSlug: slug });
+        if (data.liked)
+          recordSignal("like", tags, category, { publicationSlug: slug });
       } else {
         const local = toggleLocalLike(slug, type, count);
         setLiked(local.liked);
         setCount(local.count);
-        if (local.liked) recordSignal("like", tags, category, { publicationSlug: slug });
+        if (local.liked)
+          recordSignal("like", tags, category, { publicationSlug: slug });
       }
     } catch {
       const local = toggleLocalLike(slug, type, count);
       setLiked(local.liked);
       setCount(local.count);
-      if (local.liked) recordSignal("like", tags, category, { publicationSlug: slug });
+      if (local.liked)
+        recordSignal("like", tags, category, { publicationSlug: slug });
     } finally {
       setBusy(false);
     }

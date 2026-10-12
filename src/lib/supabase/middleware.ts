@@ -44,6 +44,9 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/signup") ||
     path.startsWith("/forgot-password");
 
+  // Type-specific permanent URLs rewrite to /p/:slug in next.config,
+  // but middleware runs BEFORE rewrites — these must be public or
+  // crawlers and guests get redirected to login (broken OG previews).
   const isPublic =
     path === "/" ||
     isAuthRoute ||
@@ -64,6 +67,12 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/profile") ||
     path.startsWith("/e/") ||
     path.startsWith("/p/") ||
+    path.startsWith("/music/") ||
+    path.startsWith("/video/") ||
+    path.startsWith("/research/") ||
+    path.startsWith("/product/") ||
+    path.startsWith("/event/") ||
+    path.startsWith("/opportunity/") ||
     path.startsWith("/publish") ||
     path.startsWith("/saved") ||
     path.startsWith("/privacy") ||
