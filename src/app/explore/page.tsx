@@ -1,12 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import Image from "next/image";
+import { PublicationCard } from "@/components/discovery/publication-card";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { ProfileAvatarLink } from "@/components/discovery/profile-avatar-link";
 import { NotificationBell } from "@/components/discovery/notification-bell";
+import { RotatingSearch } from "@/components/discovery/rotating-search";
 import { SearchSignal } from "@/components/discovery/search-signal";
-import { ExploreSearchBar } from "@/components/discovery/explore-search-bar";
 import { FollowButton } from "@/components/discovery/follow-button";
 import { listLivePublications, listDiscoveryEntities } from "@/lib/discovery/db";
 import { SEED_ENTITIES } from "@/lib/discovery/seed";
@@ -21,6 +22,27 @@ import {
   type DiscoveryEntity,
   type Publication,
 } from "@/lib/discovery/types";
+
+const TOPICS = [
+  "World",
+  "Technology",
+  "Africa",
+  "AI",
+  "Music",
+  "Research",
+  "Business",
+  "Culture",
+];
+
+const TYPE_CHIPS: { id: string; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "article", label: "Articles" },
+  { id: "research", label: "Research" },
+  { id: "music", label: "Music" },
+  { id: "product", label: "Products" },
+  { id: "event", label: "Events" },
+  { id: "opportunity", label: "Opportunities" },
+];
 
 export const metadata = {
   title: "Explore | Omniv",
@@ -43,23 +65,6 @@ async function tryClient() {
     return await createClient();
   } catch {
     return null;
-  }
-}
-
-function timeAgo(iso?: string | null): string {
-  if (!iso) return "";
-  try {
-    const t = new Date(iso).getTime();
-    if (!Number.isFinite(t)) return "";
-    const diff = Date.now() - t;
-    const m = Math.floor(diff / 60000);
-    if (m < 60) return `${Math.max(1, m)} min ago`;
-    const h = Math.floor(m / 60);
-    if (h < 48) return `${h} hour${h === 1 ? "" : "s"} ago`;
-    const d = Math.floor(h / 24);
-    return `${d} day${d === 1 ? "" : "s"} ago`;
-  } catch {
-    return "";
   }
 }
 
@@ -121,7 +126,7 @@ export default async function ExplorePage({ searchParams }: Props) {
       {q ? (
         <SearchResults results={results} query={q} />
       ) : (
-        <DiscoverySections publications={filtered} entities={entities} />
+        <DiscoverySections publications={filtered} entities={entities} typeFilter={type} />
       )}
     </ExploreShell>
   );
@@ -136,10 +141,10 @@ function SearchResults({
 }) {
   return (
     <section>
-      <h2 className="text-[17px] font-semibold text-white">
-        {results.length} result{results.length === 1 ? "" : "s"} for &ldquo;{query}&rdquo;
+      <h2 className="text-xl font-semibold text-white">
+        {results.length} for &ldquo;{query}&rdquo;
       </h2>
-      <div className="mt-4 space-y-1">
+      <div className="mt-5 space-y-2">
         {results.map((result) =>
           result.kind === "publication" ? (
             <SearchPublication
@@ -147,10 +152,7 @@ function SearchResults({
               publication={result.item}
             />
           ) : (
-            <SearchEntity
-              key={`entity-${result.item.id}`}
-              entity={result.item}
-            />
+            <SearchEntity key={`entity-${result.item.id}`} entity={result.item} />
           )
         )}
       </div>
@@ -165,22 +167,7 @@ function SearchResults({
 
 function SearchPublication({ publication }: { publication: Publication }) {
   return (
-    <Link
-      href={publicationPath(publication)}
-      className="group block rounded-xl px-1 py-3 transition hover:bg-white/[0.04]"
-    >
-      <p className="text-[11px] font-medium text-zinc-500">
-        {PUBLICATION_LABELS[publication.type] || publication.type}
-      </p>
-      <h3 className="mt-0.5 text-[15px] font-semibold leading-snug text-white group-hover:text-omniv-gold">
-        {publication.title}
-      </h3>
-      {publication.summary ? (
-        <p className="mt-0.5 line-clamp-2 text-[13px] text-zinc-500">
-          {publication.summary}
-        </p>
-      ) : null}
-    </Link>
+    <PublicationCard pub={publication} />
   );
 }
 
@@ -189,9 +176,9 @@ function SearchEntity({ entity }: { entity: DiscoveryEntity }) {
   return (
     <Link
       href={entityPath(entity)}
-      className="group flex items-center gap-3 rounded-xl px-1 py-3 transition hover:bg-white/[0.04]"
+      className="group flex items-center gap-3 rounded-2xl bg-gradient-to-br from-white/[0.05] to-white/[0.02] p-3 ring-1 ring-white/[0.07] transition hover:ring-white/15"
     >
-      <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-white/10">
+      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full bg-zinc-800 ring-1 ring-white/10">
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -205,11 +192,16 @@ function SearchEntity({ entity }: { entity: DiscoveryEntity }) {
         <p className="truncate text-[15px] font-semibold text-white group-hover:text-omniv-gold">
           {entity.name}
         </p>
-        <p className="text-[12px] text-zinc-500">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
           {ENTITY_LABELS[entity.type] || entity.type}
-          {entity.tagline ? ` · ${entity.tagline}` : ""}
+        </p>
+        <p className="mt-0.5 line-clamp-1 text-[12px] text-zinc-400">
+          {entity.tagline || entity.about?.slice(0, 90) || "On Omniv"}
         </p>
       </div>
+      <span className="shrink-0 rounded-full bg-white/[0.06] px-3.5 py-1.5 text-[12px] font-medium text-zinc-300 ring-1 ring-white/10">
+        View
+      </span>
     </Link>
   );
 }
@@ -242,9 +234,11 @@ function EntityAvatar({
 function DiscoverySections({
   publications,
   entities,
+  typeFilter,
 }: {
   publications: Publication[];
   entities: DiscoveryEntity[];
+  typeFilter?: string;
 }) {
   const people = entities
     .filter((e) => e.type === "person" || e.type === "artist")
@@ -266,10 +260,45 @@ function DiscoverySections({
           8
         );
 
-  const trending = publications.slice(0, 12);
+  const byType = (t: string) =>
+    publications.filter((p) => p.type === t).slice(0, 8);
+
+  const sections: { type: string; title: string }[] = [
+    { type: "article", title: "Articles" },
+    { type: "research", title: "Research" },
+    { type: "music", title: "Music" },
+    { type: "product", title: "Products" },
+    { type: "opportunity", title: "Opportunities" },
+    { type: "event", title: "Events" },
+  ];
+
+  // When a type chip is active, only show that type's cards (no empty other sections)
+  const activeSections =
+    typeFilter && typeFilter !== "all"
+      ? sections.filter((s) => s.type === typeFilter)
+      : sections;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
+      {/* Topics — kept from original Explore top */}
+      <section>
+        <h2 className="text-[13px] font-semibold uppercase tracking-wide text-zinc-500">
+          Topics
+        </h2>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {TOPICS.map((t) => (
+            <Link
+              key={t}
+              href={`/explore?interest=${encodeURIComponent(t)}`}
+              className="inline-flex h-8 items-center rounded-full bg-white/[0.06] px-3.5 text-[12px] font-medium text-zinc-300 hover:bg-white/[0.1] hover:text-white"
+            >
+              {t}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Replaces old Entities list */}
       {whoToFollow.length > 0 ? (
         <section>
           <div className="flex items-center justify-between">
@@ -310,18 +339,15 @@ function DiscoverySections({
         <section>
           <div className="flex items-center justify-between">
             <h2 className="text-[16px] font-semibold text-white">Top Publishers</h2>
-            <Link
-              href="/explore?type=all"
-              className="text-[13px] font-medium text-zinc-400 hover:text-omniv-gold"
-            >
-              View All
-            </Link>
+            <span className="text-[12px] text-zinc-600">
+              {entities.length} on Omniv
+            </span>
           </div>
           <div className="mt-3 space-y-3">
             {topPublishers.map((e) => (
               <div
                 key={e.id}
-                className="flex items-center gap-3 rounded-2xl bg-white/[0.03] p-3 ring-1 ring-white/[0.06]"
+                className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-white/[0.05] to-white/[0.02] p-3 ring-1 ring-white/[0.07]"
               >
                 <Link href={entityPath(e)} className="shrink-0">
                   <EntityAvatar entity={e} size={48} />
@@ -330,9 +356,11 @@ function DiscoverySections({
                   <p className="truncate text-[15px] font-semibold text-white">
                     {e.name}
                   </p>
-                  <p className="truncate text-[12px] text-zinc-500">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
                     {ENTITY_LABELS[e.type] || e.type}
-                    {e.tagline ? ` · ${e.tagline}` : ""}
+                  </p>
+                  <p className="mt-0.5 line-clamp-1 text-[12px] text-zinc-400">
+                    {e.tagline || e.about?.slice(0, 90) || "On Omniv"}
                   </p>
                 </Link>
                 <FollowButton
@@ -348,48 +376,31 @@ function DiscoverySections({
         </section>
       ) : null}
 
-      {trending.length > 0 ? (
-        <section>
-          <div className="flex items-center justify-between">
-            <h2 className="text-[16px] font-semibold text-white">Trending Now</h2>
-            <Link
-              href="/home"
-              className="text-[13px] font-medium text-zinc-400 hover:text-omniv-gold"
-            >
-              View All
-            </Link>
-          </div>
-          <div className="mt-3 divide-y divide-white/[0.06]">
-            {trending.map((p) => {
-              const ago = timeAgo(p.publishedAt);
-              return (
-                <Link
-                  key={p.id}
-                  href={publicationPath(p)}
-                  className="group flex gap-3 py-3.5 first:pt-1"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[12px] text-zinc-500">
-                      {(p as { publisherName?: string }).publisherName ||
-                        PUBLICATION_LABELS[p.type] ||
-                        p.type}
-                      {ago ? ` · ${ago}` : ""}
-                    </p>
-                    <h3 className="mt-0.5 text-[15px] font-semibold leading-snug text-white group-hover:text-omniv-gold">
-                      {p.title}
-                    </h3>
-                    {p.summary ? (
-                      <p className="mt-1 line-clamp-2 text-[13px] leading-relaxed text-zinc-500">
-                        {p.summary}
-                      </p>
-                    ) : null}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
+      {/* Type-aware publication cards (music ≠ article, etc.) */}
+      {activeSections.map(({ type, title }) => {
+        const items = byType(type);
+        if (!items.length) return null;
+        return (
+          <section key={type}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-[13px] font-semibold uppercase tracking-wide text-zinc-500">
+                {title}
+              </h2>
+              <Link
+                href={`/explore?type=${type}`}
+                className="text-[12px] font-medium text-omniv-gold"
+              >
+                See all
+              </Link>
+            </div>
+            <div className="mt-3 space-y-3">
+              {items.map((p) => (
+                <PublicationCard key={p.id} pub={p} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -416,10 +427,10 @@ function ExploreShell({
                 alt="Omniv"
                 width={28}
                 height={28}
-                className="rounded-md md:hidden"
+                className="rounded-md"
               />
               <span className="text-[15px] font-semibold tracking-tight text-white">
-                Explore
+                OMNIV
               </span>
             </div>
             <div className="flex items-center gap-1">
@@ -432,7 +443,55 @@ function ExploreShell({
         <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl md:px-6">
           {q ? <SearchSignal query={q} /> : null}
 
-          <ExploreSearchBar value={q} type={type} interest={interest} />
+          <h1 className="text-[26px] font-semibold tracking-tight text-white">
+            Explore
+          </h1>
+          <p className="mt-1 text-[14px] text-zinc-500">
+            Find what you are interested in.
+          </p>
+
+          <form action="/explore" method="get" className="mt-4 flex gap-2">
+            <div className="min-w-0 flex-1">
+              <RotatingSearch value={q} />
+            </div>
+            {type && <input type="hidden" name="type" value={type} />}
+            {interest && (
+              <input type="hidden" name="interest" value={interest} />
+            )}
+            <button
+              type="submit"
+              className="h-11 shrink-0 rounded-full bg-omniv-gold px-5 text-[13px] font-semibold text-black"
+            >
+              Search
+            </button>
+          </form>
+
+          <div className="mt-4 -mx-1 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {TYPE_CHIPS.map((c) => {
+              const active = (type || "all") === c.id;
+              const href =
+                c.id === "all"
+                  ? interest
+                    ? `/explore?interest=${encodeURIComponent(interest)}`
+                    : "/explore"
+                  : `/explore?type=${c.id}${
+                      interest ? `&interest=${encodeURIComponent(interest)}` : ""
+                    }`;
+              return (
+                <Link
+                  key={c.id}
+                  href={href}
+                  className={`inline-flex h-8 shrink-0 items-center rounded-full px-3.5 text-[12px] font-medium ${
+                    active
+                      ? "bg-white text-black"
+                      : "bg-white/[0.06] text-zinc-400"
+                  }`}
+                >
+                  {c.label}
+                </Link>
+              );
+            })}
+          </div>
 
           <div className="mt-6">{children}</div>
         </main>
