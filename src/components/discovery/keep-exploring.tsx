@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { FollowButton } from "@/components/discovery/follow-button";
-import { SaveButton } from "@/components/discovery/save-button";
 import { PublicationActions } from "@/components/discovery/publication-actions";
 import type { DiscoveryEntity, Publication } from "@/lib/discovery/types";
 import { coverFor } from "@/lib/discovery/seed-covers";
@@ -10,6 +9,7 @@ import {
   entityPath,
   publicationPath,
 } from "@/lib/discovery/types";
+import { relatedPublications } from "@/lib/discovery/evergreen";
 
 type EntityWithMedia = DiscoveryEntity & {
   imageUrl?: string;
@@ -68,9 +68,9 @@ export function KeepExploring({
   title?: string;
 }) {
   const exploreEntities = uniqueById(entities).slice(0, 6);
-  const explorePublications = uniqueById(
-    publications.filter((p) => p.id !== currentPublication?.id)
-  ).slice(0, 6);
+  const explorePublications = currentPublication
+    ? relatedPublications(currentPublication, publications, 6)
+    : uniqueById(publications).slice(0, 6);
   const topicTags = (tags || []).slice(0, 8);
 
   if (
@@ -88,11 +88,8 @@ export function KeepExploring({
           {title}
         </p>
         <p className="mt-1 text-[13px] text-zinc-500">
-          Move from this piece into the people, systems, research, products, and
-          opportunities around it.
-        </p>
-        <p className="mt-3 text-[11px] uppercase tracking-[0.14em] text-zinc-700">
-          Article → entity → another publication → something unexpected
+          Related work stays discoverable — including older publications that
+          still match this topic.
         </p>
       </div>
 
@@ -105,9 +102,6 @@ export function KeepExploring({
                 People, entities, and systems connected to this work.
               </p>
             </div>
-            <span className="text-[11px] text-zinc-700">
-              {exploreEntities.length} connections
-            </span>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {exploreEntities.map((entity) => {
@@ -172,10 +166,10 @@ export function KeepExploring({
           <div className="mb-3 flex items-end justify-between gap-3">
             <div>
               <h3 className="text-[15px] font-semibold text-white">
-                Publications
+                Related publications
               </h3>
               <p className="mt-1 text-[13px] text-zinc-600">
-                More to read, listen to, or act on.
+                Ranked by relevance — not only by publish date.
               </p>
             </div>
           </div>
