@@ -436,8 +436,7 @@ export default async function PublicationPage({ params }: Props) {
       Boolean(p.summary) ||
       Boolean(p.excerpt));
   const showMusicLyrics =
-    isMusic &&
-    (Boolean(p.body) || Boolean(p.content?.length));
+    isMusic && (Boolean(p.body) || Boolean(p.content?.length));
 
   return (
     <DiscoveryShell>
@@ -445,7 +444,7 @@ export default async function PublicationPage({ params }: Props) {
         <StickyArticleHeader title={p.title} backHref="/home" />
 
         <div
-          className={`relative min-h-[${showMediaPlayer && isMusic ? "180" : "280"}px] bg-gradient-to-b ${hero} sm:min-h-[${showMediaPlayer && isMusic ? "220" : "360"}px]`}
+          className={`relative bg-gradient-to-b ${hero} ${isMusic ? "min-h-[180px] sm:min-h-[220px]" : "min-h-[280px] sm:min-h-[360px]"}`}
           style={
             coverUrl && !isMusic
               ? {
