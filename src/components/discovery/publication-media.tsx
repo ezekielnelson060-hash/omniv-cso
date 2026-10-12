@@ -22,6 +22,37 @@ type Props = {
   embedSrc?: string | null;
 };
 
+function parseMeta(meta: string | undefined | null): Record<string, string> {
+  if (!meta) return {};
+  try {
+    const o = JSON.parse(meta);
+    if (o && typeof o === "object") {
+      const out: Record<string, string> = {};
+      for (const [k, v] of Object.entries(o)) {
+        if (v != null && String(v).trim()) out[k] = String(v).trim();
+      }
+      return out;
+    }
+  } catch {
+    /* ignore */
+  }
+  return {};
+}
+
+function parseChapters(raw: string | undefined): { time: string; label: string }[] {
+  if (!raw) return [];
+  return raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const m = line.match(/^(\d{1,2}:\d{2}(?::\d{2})?)\s+(.+)$/);
+      if (m) return { time: m[1], label: m[2] };
+      return null;
+    })
+    .filter(Boolean) as { time: string; label: string }[];
+}
+
 export function PublicationMedia({
   p,
   publisher,
@@ -34,6 +65,26 @@ export function PublicationMedia({
   isEmbed,
   embedSrc,
 }: Props) {
+  const meta = parseMeta(p.meta);
+
+  // Explicit type wins so discovery-media URLs are not misclassified
+  if (p.type === "video" || isDirectVideo || isEmbed) {
+    const chapters = parseChapters(meta.chapters);
+    return (
+      <VideoWatch
+        title={p.title}
+        publisher={publisherName}
+        publisherHref={publisher ? entityPath(publisher) : undefined}
+        mediaUrl={mediaUrl || meta.videoUrl || null}
+        coverUrl={coverUrl}
+        durationLabel={meta.duration || null}
+        about={p.summary || p.excerpt || null}
+        chapters={chapters}
+        tags={p.tags || []}
+      />
+    );
+  }
+
   if (isEmbed && embedSrc) {
     return (
       <div className="mb-8 overflow-hidden rounded-2xl">
@@ -58,7 +109,7 @@ export function PublicationMedia({
         artistHref={publisher ? entityPath(publisher) : undefined}
         coverUrl={coverUrl}
         mediaUrl={mediaUrl}
-        genre={p.category || (p.tags || [])[0] || null}
+        genre={p.category || meta.genre || (p.tags || [])[0] || null}
         releaseDate={p.publishedAt}
         slug={p.slug}
         path={path}
@@ -82,20 +133,6 @@ export function PublicationMedia({
               kind: PUBLICATION_LABELS[x.type] || x.type,
             })),
         ]}
-      />
-    );
-  }
-
-  if (p.type === "video" || isDirectVideo) {
-    return (
-      <VideoWatch
-        title={p.title}
-        publisher={publisherName}
-        publisherHref={publisher ? entityPath(publisher) : undefined}
-        mediaUrl={mediaUrl}
-        coverUrl={coverUrl}
-        about={p.summary || p.excerpt || null}
-        tags={p.tags || []}
       />
     );
   }

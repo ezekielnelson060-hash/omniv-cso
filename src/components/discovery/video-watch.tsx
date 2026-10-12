@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import Link from "next/link";
 
 type Chapter = { time: string; label: string };
@@ -27,29 +28,82 @@ export function VideoWatch({
   chapters = [],
   tags = [],
 }: Props) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
   const isYoutube =
     mediaUrl &&
     (mediaUrl.includes("youtube.com") || mediaUrl.includes("youtu.be"));
+  const isVimeo = mediaUrl && mediaUrl.includes("vimeo.com");
+  const isEmbed = Boolean(isYoutube || isVimeo);
+  const hasFile = Boolean(mediaUrl && !isEmbed);
 
   return (
     <div className="mb-10 space-y-6">
       <div className="overflow-hidden rounded-2xl bg-black ring-1 ring-white/[0.08]">
-        {mediaUrl && !isYoutube ? (
-          // eslint-disable-next-line jsx-a11y/media-has-caption
-          <video
-            controls
-            poster={coverUrl || undefined}
-            className="aspect-video w-full bg-black"
-            src={mediaUrl}
-            preload="metadata"
-          />
-        ) : mediaUrl && isYoutube ? (
+        {hasFile ? (
+          <div className="relative">
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            <video
+              ref={videoRef}
+              controls
+              playsInline
+              poster={coverUrl || undefined}
+              className="aspect-video w-full bg-black"
+              src={mediaUrl!}
+              preload="metadata"
+              crossOrigin="anonymous"
+              onLoadedMetadata={() => {
+                setReady(true);
+                setError(null);
+              }}
+              onCanPlay={() => setReady(true)}
+              onError={() => {
+                setReady(false);
+                setError(
+                  "Could not load this video. The file may be missing, private, or in an unsupported format (use MP4/H.264 or WebM)."
+                );
+              }}
+            />
+            {error && (
+              <div className="absolute inset-x-0 bottom-0 bg-black/80 px-4 py-3">
+                <p className="text-[12px] text-rose-300">{error}</p>
+                {mediaUrl && (
+                  <a
+                    href={mediaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-block text-[12px] font-medium text-omniv-gold hover:underline"
+                  >
+                    Open file in new tab
+                  </a>
+                )}
+              </div>
+            )}
+            {!ready && !error && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40">
+                <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-omniv-gold" />
+              </div>
+            )}
+          </div>
+        ) : isYoutube && mediaUrl ? (
           <div className="aspect-video w-full">
             <iframe
               title={title}
               src={youtubeEmbed(mediaUrl)}
               className="h-full w-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+              allowFullScreen
+            />
+          </div>
+        ) : isVimeo && mediaUrl ? (
+          <div className="aspect-video w-full">
+            <iframe
+              title={title}
+              src={vimeoEmbed(mediaUrl)}
+              className="h-full w-full"
+              allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
             />
           </div>
@@ -63,8 +117,9 @@ export function VideoWatch({
                 className="absolute inset-0 h-full w-full object-cover opacity-50"
               />
             )}
-            <p className="relative text-[14px] text-zinc-300">
-              Add a video file or YouTube link on publish
+            <p className="relative px-6 text-center text-[14px] text-zinc-300">
+              No playable video attached yet. Edit this publication to upload an
+              MP4/WebM file or add a YouTube link.
             </p>
           </div>
         )}
@@ -117,14 +172,25 @@ export function VideoWatch({
           </p>
           <ul className="mt-3 space-y-1.5">
             {chapters.map((c) => (
-              <li
-                key={c.time + c.label}
-                className="flex gap-3 text-[13px] text-zinc-400"
-              >
-                <span className="w-12 shrink-0 tabular-nums text-omniv-gold">
-                  {c.time}
-                </span>
-                <span>{c.label}</span>
+              <li key={c.time + c.label}>
+                <button
+                  type="button"
+                  className="flex w-full gap-3 rounded-lg px-2 py-1.5 text-left text-[13px] text-zinc-400 transition hover:bg-white/[0.04] hover:text-white"
+                  onClick={() => {
+                    const el = videoRef.current;
+                    if (!el || !hasFile) return;
+                    const secs = parseChapterTime(c.time);
+                    if (secs != null) {
+                      el.currentTime = secs;
+                      void el.play();
+                    }
+                  }}
+                >
+                  <span className="w-12 shrink-0 tabular-nums text-omniv-gold">
+                    {c.time}
+                  </span>
+                  <span>{c.label}</span>
+                </button>
               </li>
             ))}
           </ul>
@@ -132,6 +198,15 @@ export function VideoWatch({
       )}
     </div>
   );
+}
+
+function parseChapterTime(t: string): number | null {
+  const parts = t.trim().split(":").map(Number);
+  if (parts.some((n) => !Number.isFinite(n))) return null;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 1) return parts[0];
+  return null;
 }
 
 function youtubeEmbed(url: string): string {
@@ -143,6 +218,15 @@ function youtubeEmbed(url: string): string {
     const u = new URL(url);
     const id = u.searchParams.get("v");
     return id ? `https://www.youtube.com/embed/${id}` : url;
+  } catch {
+    return url;
+  }
+}
+
+function vimeoEmbed(url: string): string {
+  try {
+    const m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+    return m ? `https://player.vimeo.com/video/${m[1]}` : url;
   } catch {
     return url;
   }

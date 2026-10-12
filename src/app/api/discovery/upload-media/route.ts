@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-const MAX_BYTES = 25 * 1024 * 1024; // 25MB
+/** API path limit — large videos should use client-side direct upload (MediaUpload). */
+const MAX_BYTES = 50 * 1024 * 1024; // 50MB
+
 const ALLOWED = new Set([
   "audio/mpeg",
   "audio/mp3",
@@ -11,6 +13,10 @@ const ALLOWED = new Set([
   "audio/m4a",
   "audio/aac",
   "audio/ogg",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-msvideo",
   "application/pdf",
 ]);
 
@@ -30,7 +36,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "file required" }, { status: 400 });
     }
     if (file.size > MAX_BYTES) {
-      return NextResponse.json({ error: "Max 25MB" }, { status: 400 });
+      return NextResponse.json(
+        {
+          error:
+            "File over 50MB — the editor uploads large videos directly to storage. Retry, or use a YouTube/Vimeo link.",
+        },
+        { status: 400 }
+      );
     }
 
     const type = file.type || "application/octet-stream";
@@ -41,11 +53,14 @@ export async function POST(req: Request) {
       name.endsWith(".m4a") ||
       name.endsWith(".aac") ||
       name.endsWith(".ogg") ||
+      name.endsWith(".mp4") ||
+      name.endsWith(".webm") ||
+      name.endsWith(".mov") ||
       name.endsWith(".pdf");
 
     if (!ALLOWED.has(type) && !okExt) {
       return NextResponse.json(
-        { error: "Use MP3, WAV, M4A, OGG, or PDF" },
+        { error: "Use MP4, WebM, MOV, MP3, WAV, M4A, OGG, or PDF" },
         { status: 400 }
       );
     }
@@ -54,7 +69,9 @@ export async function POST(req: Request) {
       ? name.split(".").pop()!.slice(0, 5)
       : type.includes("pdf")
         ? "pdf"
-        : "mp3";
+        : type.startsWith("video/")
+          ? "mp4"
+          : "mp3";
     const path = `${user.id}/${Date.now()}.${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
 
