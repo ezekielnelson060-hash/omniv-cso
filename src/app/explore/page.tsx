@@ -13,6 +13,7 @@ import { listLivePublications, listDiscoveryEntities } from "@/lib/discovery/db"
 import { SEED_ENTITIES } from "@/lib/discovery/seed";
 import { searchDiscovery } from "@/lib/discovery/search";
 import { entityMedia } from "@/lib/discovery/entity-media";
+import { evergreenPublications, rediscoveryReason } from "@/lib/discovery/evergreen";
 import {
   ENTITY_LABELS,
   PUBLICATION_LABELS,
@@ -147,10 +148,7 @@ function SearchResults({
       <div className="mt-5 space-y-2">
         {results.map((result) =>
           result.kind === "publication" ? (
-            <SearchPublication
-              key={`publication-${result.item.id}`}
-              publication={result.item}
-            />
+            <PublicationCard key={`publication-${result.item.id}`} pub={result.item} />
           ) : (
             <SearchEntity key={`entity-${result.item.id}`} entity={result.item} />
           )
@@ -162,12 +160,6 @@ function SearchResults({
         </p>
       )}
     </section>
-  );
-}
-
-function SearchPublication({ publication }: { publication: Publication }) {
-  return (
-    <PublicationCard pub={publication} />
   );
 }
 
@@ -272,15 +264,15 @@ function DiscoverySections({
     { type: "event", title: "Events" },
   ];
 
-  // When a type chip is active, only show that type's cards (no empty other sections)
   const activeSections =
     typeFilter && typeFilter !== "all"
       ? sections.filter((s) => s.type === typeFilter)
       : sections;
 
+  const evergreen = evergreenPublications(publications, {}, 6);
+
   return (
     <div className="space-y-10">
-      {/* Topics — kept from original Explore top */}
       <section>
         <h2 className="text-[13px] font-semibold uppercase tracking-wide text-zinc-500">
           Topics
@@ -298,7 +290,6 @@ function DiscoverySections({
         </div>
       </section>
 
-      {/* Replaces old Entities list */}
       {whoToFollow.length > 0 ? (
         <section>
           <div className="flex items-center justify-between">
@@ -376,7 +367,31 @@ function DiscoverySections({
         </section>
       ) : null}
 
-      {/* Type-aware publication cards (music ≠ article, etc.) */}
+      {evergreen.length > 0 ? (
+        <section>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-[16px] font-semibold text-white">
+                Worth rediscovering
+              </h2>
+              <p className="mt-0.5 text-[12px] text-zinc-500">
+                Strong work that stays eligible beyond its first week
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 space-y-3">
+            {evergreen.map((p) => (
+              <div key={p.id}>
+                <PublicationCard pub={p} />
+                <p className="mt-1.5 px-1 text-[11px] text-zinc-600">
+                  {rediscoveryReason(p)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {activeSections.map(({ type, title }) => {
         const items = byType(type);
         if (!items.length) return null;
