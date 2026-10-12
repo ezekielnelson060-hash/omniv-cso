@@ -89,33 +89,33 @@ function ageDays(p: Publication, now: number): number {
 
 /** Relevance 0–1 */
 export function relevanceScore(p: Publication, ctx: DiscoveryContext = {}): number {
-  const pub = pubTokens(p);
+  const tokens = pubTokens(p);
   let score = 0;
-  let weight = 0;
+  let parts = 0;
 
   if (ctx.interests?.length) {
-    const interestToks = tokensFrom(ctx.interests);
-    score += topicalOverlap(pub, interestToks) * 1.2;
-    weight += 1.2;
+    const interestTokens = tokensFrom(ctx.interests);
+    score += topicalOverlap(tokens, interestTokens);
+    parts += 1;
   }
 
   if (ctx.anchor) {
-    const anchorToks = tokensFrom(
+    const anchorTokens = tokensFrom(
       ctx.anchor.title,
-      ctx.anchor.summary,
-      ctx.anchor.category,
       ctx.anchor.tags,
+      ctx.anchor.category,
+      ctx.anchor.summary,
       ctx.anchor.type
     );
-    score += topicalOverlap(pub, anchorToks) * 1.5;
-    weight += 1.5;
+    score += topicalOverlap(tokens, anchorTokens);
+    parts += 1;
   }
 
-  if (!weight) {
-    // Cold start: mild baseline so nothing is zeroed out
-    return 0.35;
+  if (parts === 0) {
+    // No context — mild bias to tagged, categorized work
+    return Math.min(0.35, (p.tags?.length || 0) * 0.08 + (p.category ? 0.12 : 0));
   }
-  return Math.min(1, score / weight);
+  return Math.min(1, score / parts);
 }
 
 /** Quality proxy 0–1 — depth + sustained heat, not pure virality */
@@ -285,4 +285,66 @@ export function rediscoveryReason(
     return "Readers keep coming back to this.";
   }
   return "Eligible for discovery beyond its first week.";
+}
+
+/** Entity topical tokens for overlap with a publication */
+function entityTokens(e: {
+  name?: string;
+  tagline?: string;
+  about?: string;
+  type?: string;
+  tags?: string[];
+  location?: string;
+}): string[] {
+  return tokensFrom(
+    e.name,
+    e.tagline,
+    e.about,
+    e.type,
+    e.tags,
+    e.location
+  );
+}
+
+/**
+ * Related entities for publication footers — rank by topical alignment
+ * with the current publication (title, tags, category, summary, type).
+ * Prefer entities that share topic language over random network samples.
+ */
+export function relatedEntities<
+  T extends {
+    id: string;
+    name?: string;
+    tagline?: string;
+    about?: string;
+    type?: string;
+    tags?: string[];
+    location?: string;
+    heat?: number;
+  }
+>(current: Publication, pool: T[], limit = 6): T[] {
+  const anchor = tokensFrom(
+    current.title,
+    current.summary,
+    current.category,
+    current.tags,
+    current.type,
+    (current as { publisherName?: string }).publisherName
+  );
+  const publisherId = (current as { publisherId?: string }).publisherId;
+
+  return pool
+    .map((e) => {
+      const overlap = topicalOverlap(anchor, entityTokens(e));
+      // Soft boost for same publisher entity; never invent relevance
+      const samePublisher =
+        publisherId && (e as { id?: string }).id === publisherId ? 0.15 : 0;
+      const heatNudge = Math.min(0.08, ((e.heat ?? 0) / 100) * 0.08);
+      const score = overlap + samePublisher + heatNudge;
+      return { entity: e, score, overlap };
+    })
+    .filter((x) => x.overlap > 0.02 || x.score > 0.12)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((x) => x.entity);
 }
