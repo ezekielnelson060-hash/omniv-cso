@@ -31,6 +31,7 @@ import { coverFor } from "@/lib/discovery/seed-covers";
 import { publicationMetadata } from "@/lib/discovery/seo";
 import { resolveEntityAvatar } from "@/lib/discovery/resolve-avatar";
 import { resolvePublisherPath } from "@/lib/discovery/resolve-publisher";
+import { ArticleContent } from "@/components/discovery/article-content";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -47,7 +48,8 @@ const HERO: Record<string, string> = {
 };
 
 function readMinutes(text: string) {
-  const words = (text || "").trim().split(/\s+/).filter(Boolean).length;
+  const plain = text.replace(/<[^>]+>/g, " ");
+  const words = plain.trim().split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.round(words / 200));
 }
 
@@ -100,30 +102,79 @@ function BodyBlocks({
   whatThisMeans?: string;
   questionNobodyAsks?: string;
 }) {
-  const blocks: { type: string; text: string; level?: number }[] = [];
-  try {
-    if (Array.isArray(content) && content.length) {
-      for (const b of content) {
-        if (!b || typeof b !== "object") continue;
-        const type = String((b as { type?: unknown }).type || "");
-        const text = (b as { text?: unknown }).text;
-        if (type === "divider") {
-          blocks.push({ type: "divider", text: "" });
-          continue;
-        }
-        if (typeof text === "string" && text.trim()) {
-          blocks.push({
-            type: type || "paragraph",
-            text,
-            level: Number((b as { level?: unknown }).level) || undefined,
-          });
-        }
-      }
-    }
-  } catch {
-    /* ignore */
+  const bodyIsHtml =
+    typeof body === "string" &&
+    /<(p|div|h[1-4]|blockquote|ul|ol|li|br|strong|em|b|i|span|a)\b/i.test(body);
+
+  // Prefer structured content blocks when present
+  if (Array.isArray(content) && content.length) {
+    return (
+      <>
+        {(excerpt || summary) && (
+          <p className="text-[19px] font-medium leading-[1.75] text-zinc-200">
+            {excerpt || summary}
+          </p>
+        )}
+        <div className="mt-6">
+          <ArticleContent content={content as never} body={body} />
+        </div>
+        {whatThisMeans ? (
+          <div className="mt-10 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-omniv-gold">
+              What this means
+            </p>
+            <p className="mt-3 text-[18px] leading-relaxed text-zinc-200">{whatThisMeans}</p>
+          </div>
+        ) : null}
+        {questionNobodyAsks ? (
+          <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+              The question nobody asks
+            </p>
+            <p className="mt-3 text-[18px] leading-relaxed text-zinc-200">
+              {questionNobodyAsks}
+            </p>
+          </div>
+        ) : null}
+      </>
+    );
   }
-  if (!blocks.length && typeof body === "string" && body) {
+
+  if (bodyIsHtml) {
+    return (
+      <>
+        {(excerpt || summary) && (
+          <p className="text-[19px] font-medium leading-[1.75] text-zinc-200">
+            {excerpt || summary}
+          </p>
+        )}
+        <div className="mt-6">
+          <ArticleContent body={body} />
+        </div>
+        {whatThisMeans ? (
+          <div className="mt-10 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-omniv-gold">
+              What this means
+            </p>
+            <p className="mt-3 text-[18px] leading-relaxed text-zinc-200">{whatThisMeans}</p>
+          </div>
+        ) : null}
+        {questionNobodyAsks ? (
+          <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+              The question nobody asks
+            </p>
+            <p className="mt-3 text-[18px] leading-relaxed text-zinc-200">
+              {questionNobodyAsks}
+            </p>
+          </div>
+        ) : null}
+      </>
+    );
+  }
+
+  const blocks: { type: string; text: string; level?: number }[] = [];
+  if (typeof body === "string" && body) {
     for (const para of body.split(/\n\n+/)) {
       const t = para.trim();
       if (!t) continue;
@@ -143,9 +194,6 @@ function BodyBlocks({
         <p className="text-[19px] font-medium leading-[1.75] text-zinc-200">{lead}</p>
       ) : null}
       {blocks.map((b, i) => {
-        if (b.type === "divider") {
-          return <hr key={i} className="my-8 border-white/[0.08]" />;
-        }
         if (b.type === "heading") {
           return (
             <h2 key={i} className="mt-10 text-[22px] font-semibold tracking-tight text-white">
