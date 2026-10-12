@@ -32,6 +32,7 @@ const TOPICS = [
   "Africa",
   "AI",
   "Music",
+  "Video",
   "Research",
   "Business",
   "Culture",
@@ -40,6 +41,7 @@ const TOPICS = [
 const TYPE_CHIPS: { id: string; label: string }[] = [
   { id: "all", label: "All" },
   { id: "article", label: "Articles" },
+  { id: "video", label: "Videos" },
   { id: "research", label: "Research" },
   { id: "music", label: "Music" },
   { id: "product", label: "Products" },
@@ -50,7 +52,7 @@ const TYPE_CHIPS: { id: string; label: string }[] = [
 export const metadata = {
   title: "Explore | Omniv",
   description:
-    "Discover publications, people, companies, research, music, products, and opportunities on Omniv.",
+    "Discover publications, videos, people, companies, research, music, products, and opportunities on Omniv.",
 };
 
 type Props = {
@@ -279,6 +281,7 @@ function DiscoverySections({
 
   const sections: { type: string; title: string }[] = [
     { type: "article", title: "Articles" },
+    { type: "video", title: "Videos" },
     { type: "research", title: "Research" },
     { type: "music", title: "Music" },
     { type: "product", title: "Products" },
@@ -387,7 +390,6 @@ function DiscoverySections({
         </section>
       ) : null}
 
-      {/* Worth rediscovering — evergreen second-chance shelf */}
       {rediscover.length > 0 ? (
         <section>
           <div className="flex items-center justify-between">
@@ -409,7 +411,6 @@ function DiscoverySections({
         </section>
       ) : null}
 
-      {/* Editorial topic collections */}
       {collections.map(({ collection, items }) => (
         <section key={collection.id}>
           <div className="flex items-center justify-between">
@@ -430,7 +431,6 @@ function DiscoverySections({
         </section>
       ))}
 
-      {/* Type-aware publication cards */}
       {activeSections.map(({ type, title }) => {
         const items = byType(type);
         if (!items.length) return null;
