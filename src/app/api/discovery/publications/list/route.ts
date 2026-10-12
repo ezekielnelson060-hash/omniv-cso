@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     let query = supabase
       .from("discovery_publications")
       .select(
-        "id, type, slug, title, summary, body, tags, meta, cover_url, heat, published_at, publisher_id, publisher_name, owner_id, visibility"
+        "id, type, slug, title, summary, body, tags, meta, cover_url, media_url, heat, published_at, publisher_id, publisher_name, owner_id, visibility"
       )
       .order("published_at", { ascending: false })
       .limit(limit);
@@ -52,6 +52,7 @@ export async function GET(req: Request) {
       tags: r.tags || [],
       meta: r.meta,
       coverUrl: r.cover_url,
+      mediaUrl: r.media_url,
       heat: r.heat,
       publishedAt: r.published_at?.slice?.(0, 10) ?? r.published_at,
       publisherId: r.publisher_id,
