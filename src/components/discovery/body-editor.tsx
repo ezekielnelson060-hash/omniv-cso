@@ -52,10 +52,10 @@ const ALLOWED_ATTRS: Record<string, Set<string>> = {
   CODE: new Set(["style"]),
 };
 
+// Keep meaningful formatting; drop pure black/white that breaks dark UI
 const STYLE_ALLOW =
-  /^(color|background-color|font-weight|font-style|font-family|text-decoration|text-align)$/i;
+  /^(font-weight|font-style|font-family|text-decoration|text-align|background-color)$/i;
 
-/** Escape text for safe insertion into HTML. Uses string concat to avoid entity mangling in tooling. */
 function escapeText(s: string) {
   return s
     .split("&")
@@ -81,13 +81,44 @@ function plainTextToHtml(text: string): string {
           .split("\n")
           .map((l) => l.replace(/^>\s?/, ""))
           .join("<br>");
-        return "<blockquote><p>" + escapeText(inner).split("<br>").join("<br>") + "</p></blockquote>";
+        return (
+          "<blockquote><p>" +
+          escapeText(inner).split("<br>").join("<br>") +
+          "</p></blockquote>"
+        );
       }
       const withBreaks = escapeText(trimmed).split("\n").join("<br>");
       return "<p>" + withBreaks + "</p>";
     })
     .filter(Boolean)
     .join("");
+}
+
+function isNearBlackOrWhite(color: string): boolean {
+  const c = color.trim().toLowerCase();
+  if (
+    c === "#000" ||
+    c === "#000000" ||
+    c === "black" ||
+    c === "rgb(0, 0, 0)" ||
+    c === "rgb(0,0,0)" ||
+    c === "#fff" ||
+    c === "#ffffff" ||
+    c === "white" ||
+    c === "rgb(255, 255, 255)" ||
+    c === "rgb(255,255,255)"
+  ) {
+    return true;
+  }
+  const m = c.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (m) {
+    const r = +m[1],
+      g = +m[2],
+      b = +m[3];
+    // near black or near white
+    if (r + g + b < 40 || r + g + b > 720) return true;
+  }
+  return false;
 }
 
 function sanitizeStyle(style: string): string {
@@ -97,7 +128,22 @@ function sanitizeStyle(style: string): string {
     .filter(Boolean)
     .filter((decl) => {
       const prop = decl.split(":")[0]?.trim() || "";
-      return STYLE_ALLOW.test(prop);
+      if (!STYLE_ALLOW.test(prop)) return false;
+      // Drop Google Docs black/white colors that vanish on dark theme
+      if (/^color$/i.test(prop)) {
+        const val = decl.split(":").slice(1).join(":").trim();
+        if (isNearBlackOrWhite(val)) return false;
+      }
+      if (/^background-color$/i.test(prop)) {
+        const val = decl.split(":").slice(1).join(":").trim();
+        if (
+          isNearBlackOrWhite(val) ||
+          /transparent/i.test(val) ||
+          val === "rgba(0, 0, 0, 0)"
+        )
+          return false;
+      }
+      return true;
     })
     .join("; ");
 }
@@ -113,6 +159,19 @@ function sanitizeNode(node: Node, out: Document): Node | null {
 
   if (tag === "SCRIPT" || tag === "STYLE" || tag === "IFRAME" || tag === "OBJECT") {
     return null;
+  }
+
+  // Unwrap Google Docs outer wrapper <b id="docs-internal-guid-...">
+  if (
+    tag === "B" &&
+    (el.id || "").indexOf("docs-internal-guid") === 0
+  ) {
+    const frag = out.createDocumentFragment();
+    Array.from(el.childNodes).forEach((child) => {
+      const clean = sanitizeNode(child, out);
+      if (clean) frag.appendChild(clean);
+    });
+    return frag;
   }
 
   if (!ALLOWED_TAGS.has(tag)) {
@@ -157,9 +216,28 @@ function sanitizeNode(node: Node, out: Document): Node | null {
   return cleanEl;
 }
 
+function hasVisibleText(html: string): boolean {
+  try {
+    const d = new DOMParser().parseFromString(html, "text/html");
+    return (d.body.textContent || "").trim().length > 0;
+  } catch {
+    return html.replace(/<[^>]+>/g, "").trim().length > 0;
+  }
+}
+
 function clipboardToSafeHtml(e: React.ClipboardEvent): string {
   const html = e.clipboardData?.getData("text/html") || "";
   const text = e.clipboardData?.getData("text/plain") || "";
+
+  // Google Docs / Office: prefer plain when present — more reliable on mobile
+  const isDocs =
+    /docs-internal-guid|google-docs|schemas-microsoft-com|urn:schemas-microsoft/i.test(
+      html
+    );
+
+  if (isDocs && text && text.trim()) {
+    return plainTextToHtml(text);
+  }
 
   if (html && html.trim()) {
     try {
@@ -174,7 +252,7 @@ function clipboardToSafeHtml(e: React.ClipboardEvent): string {
       const wrap = out.createElement("div");
       wrap.appendChild(frag);
       const result = wrap.innerHTML.trim();
-      if (result) return result;
+      if (result && hasVisibleText(result)) return result;
     } catch {
       /* fall through */
     }
@@ -187,10 +265,9 @@ function clipboardToSafeHtml(e: React.ClipboardEvent): string {
 /**
  * Insert HTML at the caret. Multiple fallbacks for mobile / empty editor.
  */
-function insertHtmlAtCursor(html: string, editor: HTMLElement | null) {
+function insertHtmlAtCursor(html: string, editor: HTMLElement | null): boolean {
   if (!editor || !html) return false;
 
-  // Always focus first so selection APIs work
   try {
     editor.focus();
   } catch {
@@ -199,7 +276,6 @@ function insertHtmlAtCursor(html: string, editor: HTMLElement | null) {
 
   const sel = window.getSelection();
 
-  // Ensure we have a range inside the editor
   let range: Range | null = null;
   if (sel && sel.rangeCount > 0) {
     range = sel.getRangeAt(0);
@@ -212,7 +288,7 @@ function insertHtmlAtCursor(html: string, editor: HTMLElement | null) {
   if (!range && sel) {
     range = document.createRange();
     range.selectNodeContents(editor);
-    range.collapse(false); // end
+    range.collapse(false);
     sel.removeAllRanges();
     sel.addRange(range);
   }
@@ -241,22 +317,28 @@ function insertHtmlAtCursor(html: string, editor: HTMLElement | null) {
     }
   }
 
-  // Path 2: execCommand (still works in many mobile browsers)
+  // Path 2: execCommand insertHTML
   try {
-    const ok = document.execCommand("insertHTML", false, html);
-    if (ok) return true;
+    if (document.execCommand("insertHTML", false, html)) return true;
   } catch {
     /* fall through */
   }
 
-  // Path 3: append at end — never silent fail
+  // Path 3: insertText for plain-looking content
+  try {
+    const plain = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    if (plain && document.execCommand("insertText", false, plain)) return true;
+  } catch {
+    /* fall through */
+  }
+
+  // Path 4: append at end — never silent fail
   try {
     const temp = document.createElement("div");
     temp.innerHTML = html;
     while (temp.firstChild) {
       editor.appendChild(temp.firstChild);
     }
-    // move caret to end
     if (sel) {
       const r = document.createRange();
       r.selectNodeContents(editor);
@@ -291,14 +373,11 @@ export function BodyEditor({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const minH = Math.max(180, rows * 22);
-  // Track last emitted value so useEffect does not clobber a just-pasted edit
   const lastEmitted = useRef<string>(value || "");
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // Only sync from props when not focused and content actually differs
-    // from what we last emitted (avoids wiping paste mid-cycle).
     if (
       document.activeElement !== el &&
       el.innerHTML !== value &&
@@ -377,15 +456,12 @@ export function BodyEditor({
       const plain = e.clipboardData?.getData("text/plain") || "";
       if (plain) safe = plainTextToHtml(plain);
     }
-    // Last resort: if clipboard APIs returned nothing, try items
     if (!safe && e.clipboardData?.items) {
       for (const item of Array.from(e.clipboardData.items)) {
         if (item.kind === "string" && item.type === "text/plain") {
-          // async path — rare
           item.getAsString((s) => {
             if (!s) return;
-            const html = plainTextToHtml(s);
-            insertHtmlAtCursor(html, el);
+            insertHtmlAtCursor(plainTextToHtml(s), el);
             emit();
           });
           return;
