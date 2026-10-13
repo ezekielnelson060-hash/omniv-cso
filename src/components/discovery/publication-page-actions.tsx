@@ -88,7 +88,7 @@ export function PublicationPageActions({
       : Boolean(
           identity &&
             publisherId &&
-            (identity.entityId === publisherId ||
+            (identity.id === publisherId ||
               identity.slug === publisherId ||
               identity.name === publisherName)
         );
