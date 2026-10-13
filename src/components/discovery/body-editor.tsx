@@ -55,11 +55,15 @@ const ALLOWED_ATTRS: Record<string, Set<string>> = {
 const STYLE_ALLOW =
   /^(color|background-color|font-weight|font-style|font-family|text-decoration|text-align)$/i;
 
+/** Escape text for safe insertion into HTML. Uses string concat to avoid entity mangling in tooling. */
 function escapeText(s: string) {
   return s
-    .replace(/&/g, "&")
-    .replace(/</g, "<")
-    .replace(/>/g, ">");
+    .split("&")
+    .join("&" + "amp;")
+    .split("<")
+    .join("&" + "lt;")
+    .split(">")
+    .join("&" + "gt;");
 }
 
 function plainTextToHtml(text: string): string {
@@ -77,10 +81,10 @@ function plainTextToHtml(text: string): string {
           .split("\n")
           .map((l) => l.replace(/^>\s?/, ""))
           .join("<br>");
-        return `<blockquote><p>${escapeText(inner).replace(/<br>/g, "<br>")}</p></blockquote>`;
+        return "<blockquote><p>" + escapeText(inner).split("<br>").join("<br>") + "</p></blockquote>";
       }
-      const withBreaks = escapeText(trimmed).replace(/\n/g, "<br>");
-      return `<p>${withBreaks}</p>`;
+      const withBreaks = escapeText(trimmed).split("\n").join("<br>");
+      return "<p>" + withBreaks + "</p>";
     })
     .filter(Boolean)
     .join("");
@@ -154,8 +158,8 @@ function sanitizeNode(node: Node, out: Document): Node | null {
 }
 
 function clipboardToSafeHtml(e: React.ClipboardEvent): string {
-  const html = e.clipboardData.getData("text/html");
-  const text = e.clipboardData.getData("text/plain");
+  const html = e.clipboardData?.getData("text/html") || "";
+  const text = e.clipboardData?.getData("text/plain") || "";
 
   if (html && html.trim()) {
     try {
@@ -180,55 +184,89 @@ function clipboardToSafeHtml(e: React.ClipboardEvent): string {
   return "";
 }
 
-function insertHtmlAtCursor(html: string, editor?: HTMLElement | null) {
+/**
+ * Insert HTML at the caret. Multiple fallbacks for mobile / empty editor.
+ */
+function insertHtmlAtCursor(html: string, editor: HTMLElement | null) {
+  if (!editor || !html) return false;
+
+  // Always focus first so selection APIs work
   try {
-    const sel = window.getSelection();
-    if (sel) {
-      let range: Range | null = null;
-      if (sel.rangeCount) {
-        range = sel.getRangeAt(0);
-      }
-      // If selection is outside the editor (common on mobile), place caret at end
-      if (editor) {
-        const inside =
-          range &&
-          (editor === range.commonAncestorContainer ||
-            editor.contains(range.commonAncestorContainer));
-        if (!inside) {
-          range = document.createRange();
-          range.selectNodeContents(editor);
-          range.collapse(false);
-          sel.removeAllRanges();
-          sel.addRange(range);
-        }
-      }
-      if (range) {
-        range.deleteContents();
-        const temp = document.createElement("div");
-        temp.innerHTML = html;
-        const frag = document.createDocumentFragment();
-        let node: ChildNode | null;
-        let last: ChildNode | null = null;
-        while ((node = temp.firstChild)) {
-          last = frag.appendChild(node);
-        }
-        range.insertNode(frag);
-        if (last) {
-          range.setStartAfter(last);
-          range.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(range);
-        }
-        return;
-      }
-    }
+    editor.focus();
   } catch {
     /* ignore */
   }
+
+  const sel = window.getSelection();
+
+  // Ensure we have a range inside the editor
+  let range: Range | null = null;
+  if (sel && sel.rangeCount > 0) {
+    range = sel.getRangeAt(0);
+    const inside =
+      editor === range.commonAncestorContainer ||
+      editor.contains(range.commonAncestorContainer);
+    if (!inside) range = null;
+  }
+
+  if (!range && sel) {
+    range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false); // end
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  // Path 1: Range API
+  if (range && sel) {
+    try {
+      range.deleteContents();
+      const temp = document.createElement("div");
+      temp.innerHTML = html;
+      const frag = document.createDocumentFragment();
+      let last: ChildNode | null = null;
+      while (temp.firstChild) {
+        last = frag.appendChild(temp.firstChild);
+      }
+      range.insertNode(frag);
+      if (last) {
+        range.setStartAfter(last);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      return true;
+    } catch {
+      /* fall through */
+    }
+  }
+
+  // Path 2: execCommand (still works in many mobile browsers)
   try {
-    document.execCommand("insertHTML", false, html);
+    const ok = document.execCommand("insertHTML", false, html);
+    if (ok) return true;
   } catch {
-    /* ignore */
+    /* fall through */
+  }
+
+  // Path 3: append at end — never silent fail
+  try {
+    const temp = document.createElement("div");
+    temp.innerHTML = html;
+    while (temp.firstChild) {
+      editor.appendChild(temp.firstChild);
+    }
+    // move caret to end
+    if (sel) {
+      const r = document.createRange();
+      r.selectNodeContents(editor);
+      r.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -253,19 +291,30 @@ export function BodyEditor({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const minH = Math.max(180, rows * 22);
+  // Track last emitted value so useEffect does not clobber a just-pasted edit
+  const lastEmitted = useRef<string>(value || "");
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (el.innerHTML !== value && document.activeElement !== el) {
+    // Only sync from props when not focused and content actually differs
+    // from what we last emitted (avoids wiping paste mid-cycle).
+    if (
+      document.activeElement !== el &&
+      el.innerHTML !== value &&
+      value !== lastEmitted.current
+    ) {
       el.innerHTML = value || "";
+      lastEmitted.current = value || "";
     }
   }, [value]);
 
   function emit() {
     const el = ref.current;
     if (!el) return;
-    onChange(el.innerHTML);
+    const html = el.innerHTML;
+    lastEmitted.current = html;
+    onChange(html);
   }
 
   function cmd(command: string, arg?: string) {
@@ -317,16 +366,34 @@ export function BodyEditor({
 
   function onPaste(e: React.ClipboardEvent<HTMLDivElement>) {
     e.preventDefault();
+    e.stopPropagation();
     const el = ref.current;
-    el?.focus();
+    if (!el) return;
+
+    el.focus();
+
     let safe = clipboardToSafeHtml(e);
-    // Some mobile browsers only expose text/plain, or sanitize to empty —
-    // never leave the user with a silent no-op.
     if (!safe) {
       const plain = e.clipboardData?.getData("text/plain") || "";
       if (plain) safe = plainTextToHtml(plain);
     }
+    // Last resort: if clipboard APIs returned nothing, try items
+    if (!safe && e.clipboardData?.items) {
+      for (const item of Array.from(e.clipboardData.items)) {
+        if (item.kind === "string" && item.type === "text/plain") {
+          // async path — rare
+          item.getAsString((s) => {
+            if (!s) return;
+            const html = plainTextToHtml(s);
+            insertHtmlAtCursor(html, el);
+            emit();
+          });
+          return;
+        }
+      }
+    }
     if (!safe) return;
+
     insertHtmlAtCursor(safe, el);
     emit();
   }
