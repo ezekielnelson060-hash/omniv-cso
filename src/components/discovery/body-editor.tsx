@@ -180,28 +180,47 @@ function clipboardToSafeHtml(e: React.ClipboardEvent): string {
   return "";
 }
 
-function insertHtmlAtCursor(html: string) {
+function insertHtmlAtCursor(html: string, editor?: HTMLElement | null) {
   try {
     const sel = window.getSelection();
-    if (sel && sel.rangeCount) {
-      const range = sel.getRangeAt(0);
-      range.deleteContents();
-      const temp = document.createElement("div");
-      temp.innerHTML = html;
-      const frag = document.createDocumentFragment();
-      let node: ChildNode | null;
-      let last: ChildNode | null = null;
-      while ((node = temp.firstChild)) {
-        last = frag.appendChild(node);
+    if (sel) {
+      let range: Range | null = null;
+      if (sel.rangeCount) {
+        range = sel.getRangeAt(0);
       }
-      range.insertNode(frag);
-      if (last) {
-        range.setStartAfter(last);
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
+      // If selection is outside the editor (common on mobile), place caret at end
+      if (editor) {
+        const inside =
+          range &&
+          (editor === range.commonAncestorContainer ||
+            editor.contains(range.commonAncestorContainer));
+        if (!inside) {
+          range = document.createRange();
+          range.selectNodeContents(editor);
+          range.collapse(false);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
       }
-      return;
+      if (range) {
+        range.deleteContents();
+        const temp = document.createElement("div");
+        temp.innerHTML = html;
+        const frag = document.createDocumentFragment();
+        let node: ChildNode | null;
+        let last: ChildNode | null = null;
+        while ((node = temp.firstChild)) {
+          last = frag.appendChild(node);
+        }
+        range.insertNode(frag);
+        if (last) {
+          range.setStartAfter(last);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        return;
+      }
     }
   } catch {
     /* ignore */
@@ -298,9 +317,17 @@ export function BodyEditor({
 
   function onPaste(e: React.ClipboardEvent<HTMLDivElement>) {
     e.preventDefault();
-    const safe = clipboardToSafeHtml(e);
+    const el = ref.current;
+    el?.focus();
+    let safe = clipboardToSafeHtml(e);
+    // Some mobile browsers only expose text/plain, or sanitize to empty —
+    // never leave the user with a silent no-op.
+    if (!safe) {
+      const plain = e.clipboardData?.getData("text/plain") || "";
+      if (plain) safe = plainTextToHtml(plain);
+    }
     if (!safe) return;
-    insertHtmlAtCursor(safe);
+    insertHtmlAtCursor(safe, el);
     emit();
   }
 
