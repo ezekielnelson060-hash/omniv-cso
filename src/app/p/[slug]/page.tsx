@@ -324,10 +324,15 @@ export default async function PublicationPage({ params }: Props) {
           {showMediaPlayer ? (
             <div className="mt-6">
               <PublicationMedia
-                type={isMusic || isAudio ? "music" : "video"}
-                mediaUrl={mediaUrl}
+                p={p}
+                publisher={publisher}
+                publisherName={publisherName}
+                path={path}
                 coverUrl={coverUrl}
-                title={p.title}
+                mediaUrl={mediaUrl}
+                isAudio={isAudio}
+                isDirectVideo={isDirectVideo && !isEmbed}
+                isEmbed={isEmbed}
                 embedSrc={embedSrc}
               />
             </div>
