@@ -35,6 +35,18 @@ const TONE: Record<string, string> = {
   file: "from-cyan-900/50 to-slate-950",
 };
 
+function durationFromMeta(meta: string | undefined | null): string | null {
+  if (!meta) return null;
+  try {
+    const o = JSON.parse(meta);
+    const d = o?.duration;
+    if (d != null && String(d).trim()) return String(d).trim();
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 export function PublicationCard({
   pub,
   showManage = false,
@@ -46,8 +58,10 @@ export function PublicationCard({
   const name = publisher?.name || pub.publisherName || "Publisher";
   const cover = TONE[pub.type] ?? "from-zinc-800 to-zinc-950";
   const isMusic = pub.type === "music";
+  const isVideo = pub.type === "video";
   const isEvent = pub.type === "event";
   const isOpp = pub.type === "opportunity";
+  const durationLabel = isVideo || isMusic ? durationFromMeta(pub.meta) : null;
   const coverSrc = pub.coverUrl || coverFor(pub.slug);
   const publisherHref =
     (publisher ? entityPath(publisher) : undefined) ||
@@ -89,6 +103,18 @@ export function PublicationCard({
                 Listen
               </span>
             )}
+            {isVideo && (
+              <>
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm ring-1 ring-white/20 transition group-hover:bg-omniv-gold group-hover:text-black">
+                    <span className="ml-0.5 text-lg leading-none">▶</span>
+                  </span>
+                </span>
+                <span className="absolute bottom-3 right-3 rounded-md bg-black/65 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-sm">
+                  {durationLabel || "Watch"}
+                </span>
+              </>
+            )}
             {isEvent && (
               <span className="absolute bottom-3 right-3 text-[11px] font-semibold uppercase tracking-wide text-omniv-gold">
                 Event
@@ -114,7 +140,6 @@ export function PublicationCard({
             )}
           </Link>
 
-          {/* Name · tick · meta as siblings — same baseline on mobile */}
           <div className="mt-2 flex min-w-0 flex-nowrap items-center gap-1 text-[12px]">
             {publisherHref ? (
               <Link
