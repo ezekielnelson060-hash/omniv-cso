@@ -63,6 +63,18 @@ function TypeLabel({ type }: { type: string }) {
   );
 }
 
+function durationFromMeta(meta: string | undefined | null): string | null {
+  if (!meta) return null;
+  try {
+    const o = JSON.parse(meta);
+    const d = o?.duration;
+    if (d != null && String(d).trim()) return String(d).trim();
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 function PublisherLine({
   name,
   publisher,
@@ -161,6 +173,18 @@ export function FeedFeaturedCard({
           <div className="absolute left-3 top-3 rounded-md bg-black/50 px-2 py-0.5 backdrop-blur-sm">
             <TypeLabel type={pub.type} />
           </div>
+          {pub.type === "video" && (
+            <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm ring-1 ring-white/25">
+                <span className="ml-0.5 text-xl leading-none">▶</span>
+              </span>
+            </span>
+          )}
+          {pub.type === "video" && durationFromMeta(pub.meta) && (
+            <span className="absolute bottom-20 right-4 rounded-md bg-black/65 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-sm sm:bottom-24">
+              {durationFromMeta(pub.meta)}
+            </span>
+          )}
           <div className="absolute inset-x-0 bottom-0 p-4">
             <h2 className="text-[20px] font-semibold leading-snug tracking-tight text-white">
               {pub.title}
@@ -250,6 +274,20 @@ export function FeedCard({ pub }: { pub: PubWithCover }) {
           <span className="absolute left-3 top-3">
             <TypeLabel type={pub.type} />
           </span>
+          {pub.type === "video" && (
+            <>
+              <span className="absolute inset-0 flex items-center justify-center">
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm ring-1 ring-white/20">
+                  <span className="ml-0.5 text-base leading-none">▶</span>
+                </span>
+              </span>
+              {durationFromMeta(pub.meta) && (
+                <span className="absolute bottom-2 right-2 rounded-md bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white">
+                  {durationFromMeta(pub.meta)}
+                </span>
+              )}
+            </>
+          )}
         </div>
         <div className="flex flex-1 flex-col px-4 pt-3.5">
           <p className="text-[16px] font-semibold leading-snug tracking-tight text-white group-hover:text-omniv-gold">
