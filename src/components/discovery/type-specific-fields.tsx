@@ -75,7 +75,7 @@ export function TypeSpecificFields(p: Props) {
         <div>
           <p className={labelCls}>Audio file</p>
           <div className="mt-1.5">
-            <MediaUpload value={p.mediaUrl} onChange={p.setMediaUrl} accept="audio/*" label="Upload track" />
+            <MediaUpload value={p.mediaUrl} onChange={p.setMediaUrl} accept="audio/*" label="Upload track" onDuration={p.setDuration} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -118,7 +118,7 @@ export function TypeSpecificFields(p: Props) {
         <div>
           <p className={labelCls}>Video file</p>
           <div className="mt-1.5">
-            <MediaUpload value={p.mediaUrl} onChange={p.setMediaUrl} accept="video/*" label="Upload video" />
+            <MediaUpload value={p.mediaUrl} onChange={p.setMediaUrl} accept="video/*" label="Upload video" onDuration={p.setDuration} />
           </div>
         </div>
         <label className="block">
