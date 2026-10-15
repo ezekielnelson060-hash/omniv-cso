@@ -7,6 +7,8 @@ import { PublicationPageActions } from "@/components/discovery/publication-page-
 import { FollowButton } from "@/components/discovery/follow-button";
 import { StickyArticleHeader } from "@/components/discovery/sticky-article-header";
 import { KeepExploring } from "@/components/discovery/keep-exploring";
+import { ViewTracker } from "@/components/discovery/view-tracker";
+import { publicationJsonLd } from "@/lib/discovery/seo";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { OmnivAvatar } from "@/components/discovery/omniv-avatar";
@@ -180,9 +182,20 @@ export default async function PublicationPage({ params }: Props) {
   const showMusicLyrics =
     isMusic && (Boolean(p.body) || Boolean(p.content?.length));
 
+  const jsonLd = publicationJsonLd(p);
+
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <ViewTracker
+          publicationSlug={p.slug}
+          tags={p.tags || []}
+          category={p.category}
+        />
         <StickyArticleHeader title={p.title} backHref="/home" />
 
         <div
