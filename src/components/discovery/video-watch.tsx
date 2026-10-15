@@ -1,7 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import { track } from "@/lib/analytics";
+import { recordSignal } from "@/lib/discovery/signals";
 
 type Chapter = { time: string; label: string };
 
@@ -15,6 +17,8 @@ type Props = {
   about?: string | null;
   chapters?: Chapter[];
   tags?: string[];
+  /** For analytics — publication slug when available */
+  publicationSlug?: string;
 };
 
 export function VideoWatch({
@@ -27,10 +31,13 @@ export function VideoWatch({
   about,
   chapters = [],
   tags = [],
+  publicationSlug,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const playedOnce = useRef(false);
+  const progressMarks = useRef<Set<number>>(new Set());
 
   const isYoutube =
     mediaUrl &&
@@ -38,6 +45,52 @@ export function VideoWatch({
   const isVimeo = mediaUrl && mediaUrl.includes("vimeo.com");
   const isEmbed = Boolean(isYoutube || isVimeo);
   const hasFile = Boolean(mediaUrl && !isEmbed);
+
+  const firePlay = useCallback(() => {
+    if (playedOnce.current) return;
+    playedOnce.current = true;
+    const path =
+      typeof window !== "undefined" ? window.location.pathname : undefined;
+    track(
+      "video_play",
+      {
+        publication_slug: publicationSlug || null,
+        title: title.slice(0, 80),
+        source: isEmbed ? (isYoutube ? "youtube" : "vimeo") : "file",
+      },
+      path
+    );
+    if (publicationSlug) {
+      recordSignal("open", tags, undefined, { publicationSlug });
+    }
+  }, [publicationSlug, title, isEmbed, isYoutube, tags]);
+
+  const onTimeUpdate = useCallback(() => {
+    const el = videoRef.current;
+    if (!el || !el.duration || !Number.isFinite(el.duration)) return;
+    const pct = Math.floor((el.currentTime / el.duration) * 100);
+    for (const mark of [25, 50, 75, 90]) {
+      if (pct >= mark && !progressMarks.current.has(mark)) {
+        progressMarks.current.add(mark);
+        track(
+          "video_progress",
+          {
+            publication_slug: publicationSlug || null,
+            percent: mark,
+          },
+          typeof window !== "undefined" ? window.location.pathname : undefined
+        );
+        if (mark >= 90 && publicationSlug) {
+          recordSignal("complete", tags, undefined, { publicationSlug });
+          track(
+            "video_complete",
+            { publication_slug: publicationSlug },
+            typeof window !== "undefined" ? window.location.pathname : undefined
+          );
+        }
+      }
+    }
+  }, [publicationSlug, tags]);
 
   return (
     <div className="mb-10 space-y-6">
@@ -54,6 +107,8 @@ export function VideoWatch({
               src={mediaUrl!}
               preload="metadata"
               crossOrigin="anonymous"
+              onPlay={firePlay}
+              onTimeUpdate={onTimeUpdate}
               onLoadedMetadata={() => {
                 setReady(true);
                 setError(null);
@@ -63,6 +118,16 @@ export function VideoWatch({
                 setReady(false);
                 setError(
                   "Could not load this video. The file may be missing, private, or in an unsupported format (use MP4/H.264 or WebM)."
+                );
+                track(
+                  "video_error",
+                  {
+                    publication_slug: publicationSlug || null,
+                    media: (mediaUrl || "").slice(0, 120),
+                  },
+                  typeof window !== "undefined"
+                    ? window.location.pathname
+                    : undefined
                 );
               }}
             />
@@ -88,23 +153,25 @@ export function VideoWatch({
             )}
           </div>
         ) : isYoutube && mediaUrl ? (
-          <div className="aspect-video w-full">
+          <div className="aspect-video w-full" onClick={firePlay}>
             <iframe
               title={title}
               src={youtubeEmbed(mediaUrl)}
               className="h-full w-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
               allowFullScreen
+              onLoad={firePlay}
             />
           </div>
         ) : isVimeo && mediaUrl ? (
-          <div className="aspect-video w-full">
+          <div className="aspect-video w-full" onClick={firePlay}>
             <iframe
               title={title}
               src={vimeoEmbed(mediaUrl)}
               className="h-full w-full"
               allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
+              onLoad={firePlay}
             />
           </div>
         ) : (
