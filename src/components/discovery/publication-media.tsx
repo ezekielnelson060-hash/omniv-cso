@@ -81,6 +81,7 @@ export function PublicationMedia({
         about={p.summary || p.excerpt || null}
         chapters={chapters}
         tags={p.tags || []}
+        publicationSlug={p.slug}
       />
     );
   }
