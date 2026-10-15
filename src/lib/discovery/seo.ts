@@ -138,7 +138,7 @@ export function publicationMetadata(p: Publication): Metadata {
       title: seo.seoTitle,
       description: seo.seoDescription,
       url,
-      type: "article",
+      type: p.type === "video" ? "video.other" : p.type === "music" ? "music.song" : "article",
       siteName: "Omniv",
       images: [{ url: seo.ogImage, width: 1200, height: 630, alt: p.title }],
       publishedTime: p.publishedAt || undefined,
@@ -242,6 +242,51 @@ export function publicationJsonLd(p: Publication, origin = ORIGIN()) {
     base["@type"] = "Event";
     base.name = p.title;
     base.startDate = p.publishedAt;
+  }
+  if (p.type === "video") {
+    base["@type"] = "VideoObject";
+    base.name = p.title;
+    base.thumbnailUrl = image;
+    base.uploadDate = p.publishedAt || undefined;
+    const media = (p as { mediaUrl?: string | null }).mediaUrl;
+    if (media) {
+      const isYt =
+        media.includes("youtube.com") || media.includes("youtu.be");
+      const isVim = media.includes("vimeo.com");
+      if (isYt || isVim) {
+        base.embedUrl = media;
+      } else {
+        base.contentUrl = media;
+      }
+    }
+    // ISO 8601 duration from meta.duration like "12:40" or "1:02:03"
+    try {
+      const metaRaw = p.meta;
+      if (metaRaw) {
+        const o = typeof metaRaw === "string" ? JSON.parse(metaRaw) : metaRaw;
+        const d = o?.duration ? String(o.duration).trim() : "";
+        if (d) {
+          const parts = d.split(":").map(Number);
+          let secs = 0;
+          if (parts.length === 3)
+            secs = parts[0] * 3600 + parts[1] * 60 + parts[2];
+          else if (parts.length === 2) secs = parts[0] * 60 + parts[1];
+          else if (parts.length === 1) secs = parts[0];
+          if (secs > 0) {
+            const h = Math.floor(secs / 3600);
+            const m = Math.floor((secs % 3600) / 60);
+            const s = secs % 60;
+            base.duration =
+              "PT" +
+              (h ? h + "H" : "") +
+              (m ? m + "M" : "") +
+              (s ? s + "S" : h || m ? "" : "0S");
+          }
+        }
+      }
+    } catch {
+      /* ignore */
+    }
   }
 
   return base;
