@@ -1,44 +1,23 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
- * Document-style body editor.
- * Stores HTML so fonts, quotes, and pasted structure survive publish.
+ * Body editor with two modes:
+ * - Rich (contentEditable): formatting toolbar
+ * - Plain (textarea): always works for Google Docs / mobile paste
  *
- * Paste strategy (Google Docs / Office / mobile):
- * 1. Prefer text/plain — Docs HTML is full of black #000 that vanishes on dark UI
- * 2. insertText execCommand first (most reliable on iOS/Android)
- * 3. Fall back to Range + append so paste never silently fails
+ * Paste strategy for rich mode:
+ * Prefer NOT blocking the browser. After native paste, strip black
+ * colors and Docs chrome so text stays visible on the dark UI.
+ * If clipboard exposes plain text from Docs, we replace with clean HTML.
  */
 
 const ALLOWED_TAGS = new Set([
-  "P",
-  "BR",
-  "DIV",
-  "SPAN",
-  "H1",
-  "H2",
-  "H3",
-  "H4",
-  "STRONG",
-  "B",
-  "EM",
-  "I",
-  "U",
-  "S",
-  "STRIKE",
-  "UL",
-  "OL",
-  "LI",
-  "BLOCKQUOTE",
-  "A",
-  "IMG",
-  "PRE",
-  "CODE",
-  "SUB",
-  "SUP",
-  "HR",
+  "P", "BR", "DIV", "SPAN", "H1", "H2", "H3", "H4",
+  "STRONG", "B", "EM", "I", "U", "S", "STRIKE",
+  "UL", "OL", "LI", "BLOCKQUOTE", "A", "IMG",
+  "PRE", "CODE", "SUB", "SUP", "HR",
 ]);
 
 const ALLOWED_ATTRS: Record<string, Set<string>> = {
@@ -57,32 +36,44 @@ const ALLOWED_ATTRS: Record<string, Set<string>> = {
   CODE: new Set(["style"]),
 };
 
-// Never keep color — Google Docs pastes #000 which is invisible on dark editor
 const STYLE_ALLOW =
   /^(font-weight|font-style|font-family|text-decoration|text-align)$/i;
 
 function escapeText(s: string) {
   return s
-    .split("&")
-    .join("&" + "amp;")
-    .split("<")
-    .join("&" + "lt;")
-    .split(">")
-    .join("&" + "gt;");
+    .split("&").join("&" + "amp;")
+    .split("<").join("&" + "lt;")
+    .split(">").join("&" + "gt;");
 }
 
 function plainTextToHtml(text: string): string {
   const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  const parts = normalized.split(/\n{2,}/);
-  return parts
+  return normalized
+    .split(/\n{2,}/)
     .map((part) => {
       const trimmed = part.replace(/^\n+|\n+$/g, "");
       if (!trimmed) return "";
-      const withBreaks = escapeText(trimmed).split("\n").join("<br>");
-      return "<p>" + withBreaks + "</p>";
+      return "<p>" + escapeText(trimmed).split("\n").join("<br>") + "</p>";
     })
     .filter(Boolean)
     .join("");
+}
+
+function htmlToPlainText(html: string): string {
+  try {
+    const d = new DOMParser().parseFromString(html || "", "text/html");
+    const t = d.body.innerText || d.body.textContent || "";
+    return t.replace(/\u00a0/g, " ").trimEnd();
+  } catch {
+    return (html || "")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>/gi, "\n\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&/g, "&")
+      .replace(/</g, "<")
+      .replace(/>/g, ">");
+  }
 }
 
 function sanitizeStyle(style: string): string {
@@ -92,11 +83,8 @@ function sanitizeStyle(style: string): string {
     .filter(Boolean)
     .filter((decl) => {
       const prop = decl.split(":")[0]?.trim() || "";
-      if (
-        /color|background|webkit-text-fill|webkit-text-stroke/i.test(prop)
-      ) {
+      if (/color|background|webkit-text-fill|webkit-text-stroke/i.test(prop))
         return false;
-      }
       return STYLE_ALLOW.test(prop);
     })
     .join("; ");
@@ -122,16 +110,10 @@ function sanitizeNode(node: Node, out: Document): Node | null {
     return null;
   }
 
-  if (tag === "B" && (el.id || "").indexOf("docs-internal-guid") === 0) {
-    const frag = out.createDocumentFragment();
-    Array.from(el.childNodes).forEach((child) => {
-      const clean = sanitizeNode(child, out);
-      if (clean) frag.appendChild(clean);
-    });
-    return frag;
-  }
-
-  if (tag === "FONT") {
+  if (
+    (tag === "B" && (el.id || "").indexOf("docs-internal-guid") === 0) ||
+    tag === "FONT"
+  ) {
     const frag = out.createDocumentFragment();
     Array.from(el.childNodes).forEach((child) => {
       const clean = sanitizeNode(child, out);
@@ -182,28 +164,40 @@ function sanitizeNode(node: Node, out: Document): Node | null {
   return cleanEl;
 }
 
-function hasVisibleText(html: string): boolean {
-  try {
-    const d = new DOMParser().parseFromString(html, "text/html");
-    return (d.body.textContent || "").trim().length > 0;
-  } catch {
-    return html.replace(/<[^>]+>/g, "").trim().length > 0;
-  }
-}
-
 function isExternalRichHtml(html: string): boolean {
-  return /docs-internal-guid|google-docs|docs\.google|schemas-microsoft|urn:schemas-microsoft|MsoNormal|mso-|Apple-converted-space|Apple-interchange|content=\"Word\.Document\"|xmlns:w=/i.test(
+  return /docs-internal-guid|google-docs|docs\.google|schemas-microsoft|urn:schemas-microsoft|MsoNormal|mso-|Apple-converted-space|Apple-interchange|Word\.Document|xmlns:w=/i.test(
     html
   );
 }
 
-function htmlToSafeHtml(html: string): string {
+/** Strip Docs/Word colors and junk already in the live editor DOM. */
+function cleanupEditorDom(editor: HTMLElement) {
+  editor.querySelectorAll("[style]").forEach((node) => {
+    const el = node as HTMLElement;
+    const cleaned = sanitizeStyle(el.getAttribute("style") || "");
+    if (cleaned) el.setAttribute("style", cleaned);
+    else el.removeAttribute("style");
+  });
+  editor.querySelectorAll("[color], font").forEach((node) => {
+    node.removeAttribute("color");
+    node.removeAttribute("face");
+    node.removeAttribute("size");
+  });
+  editor.querySelectorAll('b[id^="docs-internal-guid"]').forEach((wrap) => {
+    const parent = wrap.parentNode;
+    if (!parent) return;
+    while (wrap.firstChild) parent.insertBefore(wrap.firstChild, wrap);
+    parent.removeChild(wrap);
+  });
+  editor.style.color = "#f4f4f5";
+}
+
+function sanitizeHtmlString(html: string): string {
   try {
     const parsed = new DOMParser().parseFromString(html, "text/html");
-    const body = parsed.body;
     const out = document.implementation.createHTMLDocument("");
     const frag = out.createDocumentFragment();
-    Array.from(body.childNodes).forEach((child) => {
+    Array.from(parsed.body.childNodes).forEach((child) => {
       const clean = sanitizeNode(child, out);
       if (clean) frag.appendChild(clean);
     });
@@ -212,135 +206,6 @@ function htmlToSafeHtml(html: string): string {
     return wrap.innerHTML.trim();
   } catch {
     return "";
-  }
-}
-
-function clipboardToSafeHtml(e: React.ClipboardEvent): string {
-  const html = e.clipboardData?.getData("text/html") || "";
-  const text = e.clipboardData?.getData("text/plain") || "";
-
-  if (text.trim() && (isExternalRichHtml(html) || !html.trim())) {
-    return plainTextToHtml(text);
-  }
-
-  if (html.trim()) {
-    const result = htmlToSafeHtml(html);
-    if (result && hasVisibleText(result)) return result;
-  }
-
-  if (text.trim()) return plainTextToHtml(text);
-  return "";
-}
-
-function forceVisibleText(editor: HTMLElement) {
-  editor.querySelectorAll("[style]").forEach((node) => {
-    const el = node as HTMLElement;
-    const style = el.getAttribute("style") || "";
-    const cleaned = sanitizeStyle(style);
-    if (cleaned) el.setAttribute("style", cleaned);
-    else el.removeAttribute("style");
-  });
-  editor.querySelectorAll("font[color]").forEach((node) => {
-    node.removeAttribute("color");
-  });
-}
-
-function insertHtmlAtCursor(html: string, editor: HTMLElement | null): boolean {
-  if (!editor || !html) return false;
-
-  try {
-    editor.focus();
-  } catch {
-    /* ignore */
-  }
-
-  const sel = window.getSelection();
-  let range: Range | null = null;
-  if (sel && sel.rangeCount > 0) {
-    range = sel.getRangeAt(0);
-    const inside =
-      editor === range.commonAncestorContainer ||
-      editor.contains(range.commonAncestorContainer);
-    if (!inside) range = null;
-  }
-
-  if (!range && sel) {
-    range = document.createRange();
-    range.selectNodeContents(editor);
-    range.collapse(false);
-    sel.removeAllRanges();
-    sel.addRange(range);
-  }
-
-  if (range && sel) {
-    try {
-      range.deleteContents();
-      const temp = document.createElement("div");
-      temp.innerHTML = html;
-      const frag = document.createDocumentFragment();
-      let last: ChildNode | null = null;
-      while (temp.firstChild) {
-        last = frag.appendChild(temp.firstChild);
-      }
-      range.insertNode(frag);
-      if (last) {
-        range.setStartAfter(last);
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-      }
-      forceVisibleText(editor);
-      return true;
-    } catch {
-      /* fall through */
-    }
-  }
-
-  try {
-    if (document.execCommand("insertHTML", false, html)) {
-      forceVisibleText(editor);
-      return true;
-    }
-  } catch {
-    /* fall through */
-  }
-
-  try {
-    const plain = html
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<\/p>/gi, "\n\n")
-      .replace(/<[^>]+>/g, "")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&/g, "&")
-      .replace(/</g, "<")
-      .replace(/>/g, ">")
-      .replace(/\n{3,}/g, "\n\n")
-      .trim();
-    if (plain && document.execCommand("insertText", false, plain)) {
-      forceVisibleText(editor);
-      return true;
-    }
-  } catch {
-    /* fall through */
-  }
-
-  try {
-    const temp = document.createElement("div");
-    temp.innerHTML = html;
-    while (temp.firstChild) {
-      editor.appendChild(temp.firstChild);
-    }
-    forceVisibleText(editor);
-    if (sel) {
-      const r = document.createRange();
-      r.selectNodeContents(editor);
-      r.collapse(false);
-      sel.removeAllRanges();
-      sel.addRange(r);
-    }
-    return true;
-  } catch {
-    return false;
   }
 }
 
@@ -364,11 +229,17 @@ export function BodyEditor({
   rows?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
   const minH = Math.max(180, rows * 22);
   const lastEmitted = useRef<string>(value || "");
   const focused = useRef(false);
+  // Default to plain — native textarea paste always works with Google Docs
+  const [mode, setMode] = useState<"rich" | "plain">("plain");
+  const [plainDraft, setPlainDraft] = useState(() => htmlToPlainText(value || ""));
 
+  // Sync rich editor from parent when not focused
   useEffect(() => {
+    if (mode !== "rich") return;
     const el = ref.current;
     if (!el) return;
     if (focused.current) return;
@@ -376,14 +247,55 @@ export function BodyEditor({
       el.innerHTML = value || "";
       lastEmitted.current = value || "";
     }
-  }, [value]);
+  }, [value, mode]);
 
-  function emit() {
-    const el = ref.current;
-    if (!el) return;
-    const html = el.innerHTML;
+  // Keep plain draft in sync when parent value changes externally (e.g. edit load)
+  useEffect(() => {
+    if (mode !== "plain") return;
+    if (focused.current) return;
+    const fromParent = htmlToPlainText(value || "");
+    if (fromParent !== plainDraft && value !== lastEmitted.current) {
+      setPlainDraft(fromParent);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, mode]);
+
+  function emitHtml(html: string) {
     lastEmitted.current = html;
     onChange(html);
+  }
+
+  function emitFromRich() {
+    const el = ref.current;
+    if (!el) return;
+    cleanupEditorDom(el);
+    emitHtml(el.innerHTML);
+  }
+
+  function switchToPlain() {
+    const el = ref.current;
+    const html = el ? el.innerHTML : value;
+    const plain = htmlToPlainText(html || value || "");
+    setPlainDraft(plain);
+    setMode("plain");
+    const asHtml = plainTextToHtml(plain);
+    lastEmitted.current = asHtml;
+    onChange(asHtml);
+  }
+
+  function switchToRich() {
+    const plain = plainDraft || htmlToPlainText(value || "");
+    const html = plainTextToHtml(plain);
+    setMode("rich");
+    lastEmitted.current = html;
+    onChange(html);
+    requestAnimationFrame(() => {
+      const el = ref.current;
+      if (el) {
+        el.innerHTML = html;
+        cleanupEditorDom(el);
+      }
+    });
   }
 
   function cmd(command: string, arg?: string) {
@@ -393,7 +305,7 @@ export function BodyEditor({
     } catch {
       /* ignore */
     }
-    emit();
+    emitFromRich();
   }
 
   function block(tag: string) {
@@ -403,7 +315,7 @@ export function BodyEditor({
     } catch {
       /* ignore */
     }
-    emit();
+    emitFromRich();
   }
 
   function applyFont(font: string) {
@@ -413,7 +325,7 @@ export function BodyEditor({
     } catch {
       /* ignore */
     }
-    emit();
+    emitFromRich();
   }
 
   function insertImageFile() {
@@ -433,238 +345,262 @@ export function BodyEditor({
     input.click();
   }
 
-  function pastePlainFromClipboard() {
-    const el = ref.current;
-    if (!el) return;
-    el.focus();
-    void (async () => {
-      try {
-        const text = await navigator.clipboard.readText();
-        if (!text) return;
-        if (!document.execCommand("insertText", false, text)) {
-          insertHtmlAtCursor(plainTextToHtml(text), el);
-        }
-        forceVisibleText(el);
-        emit();
-      } catch {
-        window.alert(
-          "Clipboard access blocked. Tap the body field, then use your keyboard Paste (or Ctrl/Cmd+V)."
-        );
-      }
-    })();
-  }
-
+  /**
+   * Paste handler:
+   * 1. If Google Docs / Office and plain text exists → insert clean plain (preventDefault)
+   * 2. Otherwise let the browser paste natively, then cleanup colors
+   */
   function onPaste(e: React.ClipboardEvent<HTMLDivElement>) {
-    e.preventDefault();
-    e.stopPropagation();
     const el = ref.current;
     if (!el) return;
-
-    try {
-      el.focus();
-    } catch {
-      /* ignore */
-    }
 
     const plain = e.clipboardData?.getData("text/plain") || "";
     const html = e.clipboardData?.getData("text/html") || "";
     const external = isExternalRichHtml(html);
 
-    if (plain.trim() && (external || !html.trim())) {
+    if (plain && external) {
+      e.preventDefault();
+      e.stopPropagation();
       try {
-        if (document.execCommand("insertText", false, plain)) {
-          forceVisibleText(el);
-          emit();
-          return;
-        }
+        el.focus();
       } catch {
-        /* fall through */
+        /* ignore */
       }
-      insertHtmlAtCursor(plainTextToHtml(plain), el);
-      emit();
+      const ok = document.execCommand("insertText", false, plain);
+      if (!ok) {
+        const clean = plainTextToHtml(plain);
+        const temp = document.createElement("div");
+        temp.innerHTML = clean;
+        while (temp.firstChild) el.appendChild(temp.firstChild);
+      }
+      cleanupEditorDom(el);
+      emitFromRich();
       return;
     }
 
-    let safe = clipboardToSafeHtml(e);
-    if (!safe && plain.trim()) {
-      safe = plainTextToHtml(plain);
-    }
-
-    if (!safe && e.clipboardData?.items) {
-      for (const item of Array.from(e.clipboardData.items)) {
-        if (item.kind === "string" && item.type === "text/plain") {
-          item.getAsString((s) => {
-            if (!s) return;
-            try {
-              if (!document.execCommand("insertText", false, s)) {
-                insertHtmlAtCursor(plainTextToHtml(s), el);
-              }
-            } catch {
-              insertHtmlAtCursor(plainTextToHtml(s), el);
-            }
-            forceVisibleText(el);
-            emit();
-          });
-          return;
-        }
+    if (plain && !html.trim()) {
+      e.preventDefault();
+      try {
+        el.focus();
+      } catch {
+        /* ignore */
       }
+      if (!document.execCommand("insertText", false, plain)) {
+        const clean = plainTextToHtml(plain);
+        const temp = document.createElement("div");
+        temp.innerHTML = clean;
+        while (temp.firstChild) el.appendChild(temp.firstChild);
+      }
+      cleanupEditorDom(el);
+      emitFromRich();
+      return;
     }
 
-    if (!safe) return;
+    window.setTimeout(() => {
+      cleanupEditorDom(el);
+      const sanitized = sanitizeHtmlString(el.innerHTML);
+      if (sanitized && sanitized !== el.innerHTML) {
+        el.innerHTML = sanitized;
+      }
+      cleanupEditorDom(el);
+      emitFromRich();
+    }, 0);
+  }
 
-    insertHtmlAtCursor(safe, el);
-    emit();
+  function onPlainPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const plain = e.clipboardData?.getData("text/plain") || "";
+    const html = e.clipboardData?.getData("text/html") || "";
+    const text = plain || (html ? htmlToPlainText(html) : "");
+    if (!text) return;
+
+    e.preventDefault();
+    const ta = taRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart ?? ta.value.length;
+    const end = ta.selectionEnd ?? ta.value.length;
+    const next = ta.value.slice(0, start) + text + ta.value.slice(end);
+    setPlainDraft(next);
+    emitHtml(plainTextToHtml(next));
+    requestAnimationFrame(() => {
+      try {
+        const caret = start + text.length;
+        ta.setSelectionRange(caret, caret);
+      } catch {
+        /* ignore */
+      }
+    });
   }
 
   return (
     <div className="overflow-hidden rounded-2xl ring-1 ring-white/[0.1] bg-[#0a0a0a]">
       <div className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 border-b border-white/[0.08] bg-[#121212] px-2 py-1.5">
-        <Tool onClick={() => block("h1")} title="Heading 1" className="text-[13px] font-bold">
-          H1
-        </Tool>
-        <Tool onClick={() => block("h2")} title="Heading 2" className="text-[12px] font-bold">
-          H2
-        </Tool>
-        <Tool onClick={() => block("p")} title="Body" className="text-[12px]">
-          ¶
-        </Tool>
-        <Tool onClick={() => block("blockquote")} title="Quote" className="text-[14px]">
-          ”
-        </Tool>
-        <Sep />
-        <label className="sr-only" htmlFor="omniv-font-pick">
-          Font
-        </label>
-        <select
-          id="omniv-font-pick"
-          title="Font"
-          defaultValue=""
-          onChange={(e) => {
-            const v = e.target.value;
-            if (v) applyFont(v);
-            e.target.value = "";
-          }}
-          className="h-8 max-w-[7.5rem] rounded-lg border-0 bg-white/5 px-1.5 text-[11px] text-zinc-300 outline-none hover:bg-white/10"
+        <button
+          type="button"
+          title="Plain text — best for pasting from Google Docs"
+          onClick={() => (mode === "plain" ? undefined : switchToPlain())}
+          className={`h-8 rounded-lg px-2 text-[11px] font-medium ${
+            mode === "plain"
+              ? "bg-omniv-gold/20 text-omniv-gold"
+              : "text-zinc-400 hover:bg-white/10 hover:text-white"
+          }`}
         >
-          <option value="" disabled>
-            Font
-          </option>
-          {FONTS.map((f) => (
-            <option key={f.label} value={f.value} className="bg-[#121212] text-white">
-              {f.label}
-            </option>
-          ))}
-        </select>
-        <Sep />
-        <Tool onClick={() => cmd("bold")} title="Bold" className="font-bold">
-          B
-        </Tool>
-        <Tool onClick={() => cmd("italic")} title="Italic" className="italic">
-          I
-        </Tool>
-        <Tool onClick={() => cmd("underline")} title="Underline" className="underline">
-          U
-        </Tool>
-        <Tool onClick={() => cmd("strikeThrough")} title="Strikethrough" className="line-through">
-          S
-        </Tool>
-        <Sep />
-        <Tool onClick={() => cmd("insertUnorderedList")} title="Bullet list">
-          •
-        </Tool>
-        <Tool onClick={() => cmd("insertOrderedList")} title="Numbered list">
-          1.
-        </Tool>
-        <Tool onClick={() => cmd("indent")} title="Indent">
-          »
-        </Tool>
-        <Tool onClick={() => cmd("outdent")} title="Outdent">
-          «
-        </Tool>
-        <Sep />
-        <Tool
-          onClick={() => {
-            const url = window.prompt("Link URL");
-            if (url) cmd("createLink", url);
-          }}
-          title="Link"
+          Plain
+        </button>
+        <button
+          type="button"
+          title="Rich text — headings, bold, lists"
+          onClick={() => (mode === "rich" ? undefined : switchToRich())}
+          className={`h-8 rounded-lg px-2 text-[11px] font-medium ${
+            mode === "rich"
+              ? "bg-omniv-gold/20 text-omniv-gold"
+              : "text-zinc-400 hover:bg-white/10 hover:text-white"
+          }`}
         >
-          🔗
-        </Tool>
-        <Tool onClick={() => cmd("unlink")} title="Remove link">
-          ⊘
-        </Tool>
-        <Tool onClick={insertImageFile} title="Insert image from device">
-          ▣
-        </Tool>
-        <Tool
-          onClick={() => {
-            const url = window.prompt("Image URL");
-            if (url) cmd("insertImage", url);
-          }}
-          title="Image from URL"
-          className="text-[10px]"
-        >
-          URL
-        </Tool>
+          Rich
+        </button>
         <Sep />
-        <Tool onClick={() => cmd("justifyLeft")} title="Align left">
-          ≡
-        </Tool>
-        <Tool onClick={() => cmd("justifyCenter")} title="Align center">
-          ☰
-        </Tool>
-        <Tool onClick={() => cmd("removeFormat")} title="Clear formatting" className="text-[11px]">
-          Tx
-        </Tool>
-        <Tool
-          onClick={pastePlainFromClipboard}
-          title="Paste as plain text (use if Google Docs paste fails)"
-          className="text-[10px] font-medium text-omniv-gold"
-        >
-          Paste
-        </Tool>
+
+        {mode === "rich" && (
+          <>
+            <Tool onClick={() => block("h1")} title="Heading 1" className="text-[13px] font-bold">
+              H1
+            </Tool>
+            <Tool onClick={() => block("h2")} title="Heading 2" className="text-[12px] font-bold">
+              H2
+            </Tool>
+            <Tool onClick={() => block("p")} title="Body" className="text-[12px]">
+              ¶
+            </Tool>
+            <Tool onClick={() => block("blockquote")} title="Quote" className="text-[14px]">
+              ”
+            </Tool>
+            <Sep />
+            <select
+              title="Font"
+              defaultValue=""
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v) applyFont(v);
+                e.target.value = "";
+              }}
+              className="h-8 max-w-[7.5rem] rounded-lg border-0 bg-white/5 px-1.5 text-[11px] text-zinc-300 outline-none hover:bg-white/10"
+            >
+              <option value="" disabled>
+                Font
+              </option>
+              {FONTS.map((f) => (
+                <option key={f.label} value={f.value} className="bg-[#121212] text-white">
+                  {f.label}
+                </option>
+              ))}
+            </select>
+            <Sep />
+            <Tool onClick={() => cmd("bold")} title="Bold" className="font-bold">
+              B
+            </Tool>
+            <Tool onClick={() => cmd("italic")} title="Italic" className="italic">
+              I
+            </Tool>
+            <Tool onClick={() => cmd("underline")} title="Underline" className="underline">
+              U
+            </Tool>
+            <Tool onClick={() => cmd("strikeThrough")} title="Strikethrough" className="line-through">
+              S
+            </Tool>
+            <Sep />
+            <Tool onClick={() => cmd("insertUnorderedList")} title="Bullet list">
+              •
+            </Tool>
+            <Tool onClick={() => cmd("insertOrderedList")} title="Numbered list">
+              1.
+            </Tool>
+            <Sep />
+            <Tool
+              onClick={() => {
+                const url = window.prompt("Link URL");
+                if (url) cmd("createLink", url);
+              }}
+              title="Link"
+            >
+              🔗
+            </Tool>
+            <Tool onClick={insertImageFile} title="Insert image">
+              ▣
+            </Tool>
+            <Tool onClick={() => cmd("removeFormat")} title="Clear formatting" className="text-[11px]">
+              Tx
+            </Tool>
+          </>
+        )}
+
+        {mode === "plain" && (
+          <span className="px-1 text-[11px] text-zinc-500">
+            Paste from Google Docs works here
+          </span>
+        )}
       </div>
 
-      <div
-        ref={ref}
-        contentEditable
-        role="textbox"
-        aria-multiline
-        data-placeholder={placeholder || "Start writing…"}
-        suppressContentEditableWarning
-        onInput={emit}
-        onFocus={() => {
-          focused.current = true;
-        }}
-        onBlur={() => {
-          focused.current = false;
-          emit();
-        }}
-        onPaste={onPaste}
-        className="omniv-doc-editor w-full px-4 py-3 text-[15px] leading-[1.7] text-zinc-100 outline-none"
-        style={{ minHeight: minH, color: "#f4f4f5" }}
-      />
-
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
+      {mode === "plain" ? (
+        <textarea
+          ref={taRef}
+          value={plainDraft}
+          onFocus={() => {
+            focused.current = true;
+          }}
+          onBlur={() => {
+            focused.current = false;
+          }}
+          onChange={(e) => {
+            const plain = e.target.value;
+            setPlainDraft(plain);
+            emitHtml(plainTextToHtml(plain));
+          }}
+          onPaste={onPlainPaste}
+          placeholder={placeholder || "Paste or write here…"}
+          rows={rows}
+          className="w-full resize-y bg-transparent px-4 py-3 text-[15px] leading-[1.7] text-zinc-100 outline-none placeholder:text-zinc-600"
+          style={{ minHeight: minH, color: "#f4f4f5" }}
+        />
+      ) : (
+        <>
+          <div
+            ref={ref}
+            contentEditable
+            role="textbox"
+            aria-multiline
+            data-placeholder={placeholder || "Start writing…"}
+            suppressContentEditableWarning
+            onInput={emitFromRich}
+            onFocus={() => {
+              focused.current = true;
+            }}
+            onBlur={() => {
+              focused.current = false;
+              emitFromRich();
+            }}
+            onPaste={onPaste}
+            className="omniv-doc-editor w-full px-4 py-3 text-[15px] leading-[1.7] text-zinc-100 outline-none"
+            style={{ minHeight: minH, color: "#f4f4f5" }}
+          />
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
         .omniv-doc-editor { color: #f4f4f5 !important; caret-color: #d4af37; }
-        .omniv-doc-editor * { color: inherit; }
-        .omniv-doc-editor h1{font-size:1.5rem;font-weight:700;margin:.75rem 0 .35rem;color:#fff}
-        .omniv-doc-editor h2{font-size:1.2rem;font-weight:600;margin:.65rem 0 .3rem;color:#fff}
-        .omniv-doc-editor h3{font-size:1.05rem;font-weight:600;margin:.55rem 0 .25rem;color:#f4f4f5}
+        .omniv-doc-editor * { color: inherit !important; }
+        .omniv-doc-editor h1{font-size:1.5rem;font-weight:700;margin:.75rem 0 .35rem;color:#fff !important}
+        .omniv-doc-editor h2{font-size:1.2rem;font-weight:600;margin:.65rem 0 .3rem;color:#fff !important}
+        .omniv-doc-editor h3{font-size:1.05rem;font-weight:600;margin:.55rem 0 .25rem;color:#f4f4f5 !important}
         .omniv-doc-editor p{margin:.35rem 0}
         .omniv-doc-editor ul{list-style:disc;padding-left:1.25rem;margin:.4rem 0}
         .omniv-doc-editor ol{list-style:decimal;padding-left:1.25rem;margin:.4rem 0}
         .omniv-doc-editor blockquote{
           margin:.75rem 0;padding:.35rem 0 .35rem 1rem;
           border-left:3px solid rgba(201,162,39,.7);
-          color:#d4d4d8;font-style:italic;
+          color:#d4d4d8 !important;font-style:italic;
         }
-        .omniv-doc-editor a{color:#c9a227;text-decoration:underline}
+        .omniv-doc-editor a{color:#c9a227 !important;text-decoration:underline}
         .omniv-doc-editor img{max-width:100%;border-radius:.75rem;margin:.5rem 0}
-        .omniv-doc-editor b,.omniv-doc-editor strong{font-weight:700;color:#fff}
+        .omniv-doc-editor b,.omniv-doc-editor strong{font-weight:700;color:#fff !important}
         .omniv-doc-editor pre,.omniv-doc-editor code{
           font-family:ui-monospace,monospace;font-size:.9em;
           background:rgba(255,255,255,.06);border-radius:.35rem;padding:.1em .35em;
@@ -672,8 +608,10 @@ export function BodyEditor({
         .omniv-doc-editor pre{display:block;padding:.75rem 1rem;overflow-x:auto;margin:.5rem 0}
         .omniv-doc-editor:empty:before{content:attr(data-placeholder);color:#52525b;pointer-events:none}
       `,
-        }}
-      />
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }
