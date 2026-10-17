@@ -45,11 +45,11 @@ export default function AdminReportsPage() {
     void load();
   }, [load]);
 
-  async function setReportStatus(id: string, next: string) {
+  async function setReportStatus(id: string, next: string, action?: string) {
     const res = await fetch("/api/discovery/reports", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status: next }),
+      body: JSON.stringify({ id, status: next, action }),
     });
     if (res.ok) void load();
   }
@@ -156,6 +156,13 @@ export default function AdminReportsPage() {
                     Resolve
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => void setReportStatus(r.id, "resolved", "hide")}
+                  className="text-[12px] text-red-400"
+                >
+                  Hide content
+                </button>
                 {r.status !== "dismissed" && (
                   <button
                     type="button"
