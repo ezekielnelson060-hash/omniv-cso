@@ -8,7 +8,7 @@ import {
 
 /** Prefer direct storage for large files (avoids Vercel body size limits). */
 const DIRECT_UPLOAD_THRESHOLD = 4 * 1024 * 1024; // 4MB
-const MAX_DIRECT_BYTES = 100 * 1024 * 1024; // 100MB — raise in Supabase dashboard if needed
+const MAX_DIRECT_BYTES = 200 * 1024 * 1024; // 200MB soft cap — raise bucket limit in Supabase if uploads fail
 
 function isVideoFile(file: File) {
   const n = file.name.toLowerCase();
@@ -112,7 +112,6 @@ export function MediaUpload({
     const path = `${user.id}/${Date.now()}.${ext}`;
     const contentType = file.type || "application/octet-stream";
 
-    // XHR for upload progress (supabase-js does not expose progress on all paths)
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -264,8 +263,8 @@ export function MediaUpload({
       )}
       {accept.includes("video") && (
         <p className="mt-2 text-[11px] leading-relaxed text-zinc-600">
-          MP4 or WebM recommended (max ~100MB). For longer films, paste a YouTube
-          or Vimeo link below instead.
+          MP4 or WebM recommended (up to ~200MB direct upload). For longer films
+          or 4K, paste a YouTube or Vimeo link below — no size limit on embeds.
         </p>
       )}
     </div>
