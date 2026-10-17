@@ -7,10 +7,12 @@ import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { timeAgo } from "@/lib/discovery/time-ago";
 import {
   ensureDemoNotifications,
+  fetchServerNotifications,
   filterNotifications,
   groupByDay,
   markAllRead,
   markRead,
+  markServerRead,
   type OmnivNotification,
 } from "@/lib/discovery/notifications";
 
@@ -25,10 +27,26 @@ export default function NotificationsPage() {
   const [items, setItems] = useState<OmnivNotification[]>([]);
   const [tab, setTab] = useState<string>("all");
   const [ready, setReady] = useState(false);
+  const [fromServer, setFromServer] = useState(false);
 
   useEffect(() => {
-    setItems(ensureDemoNotifications());
-    setReady(true);
+    let cancelled = false;
+    (async () => {
+      const server = await fetchServerNotifications();
+      if (cancelled) return;
+      if (server?.auth) {
+        setFromServer(true);
+        setItems(server.notifications);
+        setReady(true);
+        return;
+      }
+      setFromServer(false);
+      setItems(ensureDemoNotifications());
+      setReady(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const filtered = useMemo(
@@ -37,15 +55,25 @@ export default function NotificationsPage() {
   );
   const groups = useMemo(() => groupByDay(filtered), [filtered]);
 
-  function onMarkAll() {
-    const next = markAllRead(items);
-    setItems(next);
+  async function onMarkAll() {
+    if (fromServer) {
+      await markServerRead(undefined, true);
+      setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    } else {
+      setItems(markAllRead(items));
+    }
     window.dispatchEvent(new Event("omniv-notifications"));
   }
 
-  function onOpen(n: OmnivNotification) {
-    const next = markRead(items, n.id);
-    setItems(next);
+  async function onOpen(n: OmnivNotification) {
+    if (fromServer) {
+      await markServerRead(n.id);
+      setItems((prev) =>
+        prev.map((x) => (x.id === n.id ? { ...x, read: true } : x))
+      );
+    } else {
+      setItems(markRead(items, n.id));
+    }
     window.dispatchEvent(new Event("omniv-notifications"));
   }
 
@@ -59,7 +87,7 @@ export default function NotificationsPage() {
             </h1>
             <button
               type="button"
-              onClick={onMarkAll}
+              onClick={() => void onMarkAll()}
               className="text-[13px] font-medium text-omniv-gold"
             >
               Mark all read
@@ -110,7 +138,7 @@ export default function NotificationsPage() {
                   <li key={n.id}>
                     <Link
                       href={n.href || "/home"}
-                      onClick={() => onOpen(n)}
+                      onClick={() => void onOpen(n)}
                       className={`flex gap-3 rounded-2xl px-3 py-3 transition hover:bg-white/[0.04] ${
                         n.read ? "opacity-70" : "bg-white/[0.03]"
                       }`}
