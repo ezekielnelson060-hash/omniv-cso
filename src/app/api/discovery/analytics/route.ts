@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Real owner analytics from discovery_signals + follows + saves + publications.
+ * Real owner analytics from discovery_signals + follows + saves + publications + video events.
  * GET ?range=7d|30d|90d|1y&entityId=
  */
 export async function GET(req: Request) {
@@ -23,7 +23,6 @@ export async function GET(req: Request) {
       range === "7d" ? 7 : range === "90d" ? 90 : range === "1y" ? 365 : 30;
     const since = new Date(Date.now() - days * 86_400_000).toISOString();
 
-    // Owned publications (optionally scoped to entity)
     let pubQ = supabase
       .from("discovery_publications")
       .select("id, slug, title, type, heat, publisher_id, publisher_name")
@@ -33,12 +32,13 @@ export async function GET(req: Request) {
     const { data: pubs } = await pubQ;
     const slugs = (pubs || []).map((p) => p.slug).filter(Boolean);
 
-    // Signals on those publications (owner can read via policy)
     let views = 0;
     let opens = 0;
     let completes = 0;
     let likes = 0;
     let shares = 0;
+    let videoPlays = 0;
+    let videoCompletes = 0;
     const sourceCounts: Record<string, number> = {};
 
     if (slugs.length > 0) {
@@ -59,9 +59,28 @@ export async function GET(req: Request) {
         const src = String(s.source || "direct");
         sourceCounts[src] = (sourceCounts[src] || 0) + 1;
       }
+
+      // Video engagement from app_events (video_play / video_complete)
+      try {
+        const { data: events } = await supabase
+          .from("app_events")
+          .select("name, meta, created_at")
+          .in("name", ["video_play", "video_complete", "video_progress"])
+          .gte("created_at", since)
+          .limit(3000);
+
+        for (const ev of events || []) {
+          const meta = (ev.meta || {}) as Record<string, unknown>;
+          const slug = String(meta.publication_slug || "");
+          if (!slug || !slugs.includes(slug)) continue;
+          if (ev.name === "video_play") videoPlays += 1;
+          if (ev.name === "video_complete") videoCompletes += 1;
+        }
+      } catch {
+        /* table/policy may not expose app_events to owners yet */
+      }
     }
 
-    // Follows targeting owned entities
     const { data: entities } = await supabase
       .from("discovery_entities")
       .select("id, type, slug, name")
@@ -79,7 +98,6 @@ export async function GET(req: Request) {
       follows += count || 0;
     }
 
-    // Saves of owned pubs
     let saves = 0;
     if (slugs.length > 0) {
       const { count } = await supabase
@@ -103,14 +121,16 @@ export async function GET(req: Request) {
       publications: (pubs || []).length,
       heat: totalHeat,
       metrics: {
-        views: views || opens, // open is primary discovery_view equivalent
+        views: views || opens,
         opens,
         completes,
         likes,
         shares,
         saves,
         follows,
-        qualified: saves + follows + completes + likes,
+        videoPlays,
+        videoCompletes,
+        qualified: saves + follows + completes + likes + videoCompletes,
       },
       sources: sourceCounts,
       topPublications: [...(pubs || [])]
