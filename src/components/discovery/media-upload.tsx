@@ -97,7 +97,7 @@ export function MediaUpload({
 
     if (file.size > MAX_DIRECT_BYTES) {
       throw new Error(
-        `Max ${Math.round(MAX_DIRECT_BYTES / (1024 * 1024))}MB. Compress the file or paste a YouTube / Vimeo link instead.`
+        `File is too large (max ~${Math.round(MAX_DIRECT_BYTES / (1024 * 1024))}MB for direct upload). Compress to MP4/H.264 or paste a YouTube / Vimeo URL for longer videos.`
       );
     }
 
