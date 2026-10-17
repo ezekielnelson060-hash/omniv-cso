@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ensureDemoNotifications,
+  fetchServerNotifications,
   unreadCount,
 } from "@/lib/discovery/notifications";
 
@@ -11,14 +12,26 @@ export function NotificationBell() {
   const [unread, setUnread] = useState(0);
 
   useEffect(() => {
-    const items = ensureDemoNotifications();
-    setUnread(unreadCount(items));
-    const onStorage = () => {
+    let cancelled = false;
+
+    async function refresh() {
+      const server = await fetchServerNotifications();
+      if (cancelled) return;
+      if (server?.auth) {
+        setUnread(server.unread);
+        return;
+      }
       setUnread(unreadCount(ensureDemoNotifications()));
+    }
+
+    void refresh();
+    const onStorage = () => {
+      void refresh();
     };
     window.addEventListener("storage", onStorage);
     window.addEventListener("omniv-notifications", onStorage);
     return () => {
+      cancelled = true;
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("omniv-notifications", onStorage);
     };
