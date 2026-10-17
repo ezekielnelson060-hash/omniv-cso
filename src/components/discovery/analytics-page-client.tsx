@@ -27,6 +27,20 @@ type Metrics = {
   saves: number;
   follows: number;
   qualified: number;
+  videoPlays?: number;
+  videoCompletes?: number;
+};
+
+type Funnel = {
+  views: number;
+  opens: number;
+  saves: number;
+  follows: number;
+  videoPlays: number;
+  videoProgress50: number;
+  videoProgress90: number;
+  videoCompletes: number;
+  completes: number;
 };
 
 type TopPub = {
@@ -35,6 +49,10 @@ type TopPub = {
   title: string;
   type: string;
   heat: number;
+  opens?: number;
+  videoPlays?: number;
+  videoCompletes?: number;
+  completionRate?: number;
 };
 
 export default function AnalyticsPage() {
@@ -47,6 +65,7 @@ export default function AnalyticsPage() {
   const [pubCount, setPubCount] = useState(0);
   const [topPubs, setTopPubs] = useState<TopPub[]>([]);
   const [sources, setSources] = useState<Record<string, number>>({});
+  const [funnel, setFunnel] = useState<Funnel | null>(null);
   const [real, setReal] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -82,6 +101,9 @@ export default function AnalyticsPage() {
               ? data.sources
               : {}
           );
+          setFunnel(
+            data.funnel && typeof data.funnel === "object" ? data.funnel : null
+          );
           setReal(Boolean(data.real));
         }
       } catch {
@@ -105,6 +127,8 @@ export default function AnalyticsPage() {
     saves: 0,
     follows: 0,
     qualified: 0,
+    videoPlays: 0,
+    videoCompletes: 0,
   };
 
   const sourceRows = Object.entries(sources)
@@ -139,6 +163,7 @@ export default function AnalyticsPage() {
                   { metric: "saves", value: m.saves, range },
                   { metric: "follows", value: m.follows, range },
                   { metric: "qualified", value: m.qualified, range },
+                  { metric: "videoPlays", value: m.videoPlays || 0, range },
                   { metric: "heat", value: heat, range },
                 ]}
               />
@@ -203,7 +228,7 @@ export default function AnalyticsPage() {
             <>
               <p className="mt-3 text-[11px] text-zinc-600">
                 {real
-                  ? "Live counts from signals, saves, and follows"
+                  ? "Live counts from signals, saves, follows, and video events"
                   : "Waiting for event data"}
               </p>
 
@@ -234,7 +259,58 @@ export default function AnalyticsPage() {
                   value={formatNum(pubCount)}
                   note="This identity"
                 />
+                {(m.videoPlays || 0) > 0 && (
+                  <>
+                    <Stat
+                      label="Video plays"
+                      value={formatNum(m.videoPlays || 0)}
+                      note="Starts"
+                    />
+                    <Stat
+                      label="Video completes"
+                      value={formatNum(m.videoCompletes || 0)}
+                      note={
+                        m.videoPlays
+                          ? `${Math.round(((m.videoCompletes || 0) / m.videoPlays) * 100)}% completion`
+                          : "Ends"
+                      }
+                    />
+                  </>
+                )}
               </div>
+
+              {funnel && (funnel.videoPlays > 0 || funnel.opens > 0) && (
+                <section className="mt-8">
+                  <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                    Funnel
+                  </h2>
+                  <ul className="mt-3 space-y-2">
+                    {(
+                      [
+                        ["Views / opens", funnel.views || funnel.opens],
+                        ["Saves", funnel.saves],
+                        ["Follows", funnel.follows],
+                        ["Video plays", funnel.videoPlays],
+                        ["Reached 50%", funnel.videoProgress50],
+                        ["Reached 90%", funnel.videoProgress90],
+                        ["Completes", funnel.videoCompletes || funnel.completes],
+                      ] as [string, number][]
+                    )
+                      .filter(([, v]) => Number(v) > 0)
+                      .map(([label, value]) => (
+                        <li
+                          key={label}
+                          className="flex items-center justify-between rounded-xl bg-white/[0.04] px-3.5 py-2.5 text-[13px]"
+                        >
+                          <span className="text-zinc-400">{label}</span>
+                          <span className="font-semibold text-white">
+                            {formatNum(Number(value))}
+                          </span>
+                        </li>
+                      ))}
+                  </ul>
+                </section>
+              )}
 
               <AnalyticsGrowthCta
                 show={
@@ -267,24 +343,28 @@ export default function AnalyticsPage() {
               {topPubs.length > 0 && (
                 <section className="mt-8">
                   <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    Publications
+                    By publication
                   </h2>
                   <ul className="mt-3 space-y-2">
                     {topPubs.map((p) => (
                       <li key={p.id}>
                         <Link
                           href={`/p/${p.slug}`}
-                          className="flex items-center justify-between rounded-xl bg-white/[0.04] px-3.5 py-3"
+                          className="block rounded-xl bg-white/[0.04] px-3.5 py-3"
                         >
-                          <div className="min-w-0">
-                            <p className="truncate text-[14px] font-medium text-white">
-                              {p.title}
-                            </p>
-                            <p className="text-[11px] text-zinc-500">{p.type}</p>
-                          </div>
-                          <span className="text-[12px] text-zinc-500">
-                            heat {p.heat || 0}
-                          </span>
+                          <p className="truncate text-[14px] font-medium text-white">
+                            {p.title}
+                          </p>
+                          <p className="mt-1 text-[11px] text-zinc-500">
+                            {p.type}
+                            {" · "}
+                            {formatNum(p.opens || 0)} opens
+                            {p.videoPlays
+                              ? ` · ${formatNum(p.videoPlays)} plays · ${p.completionRate || 0}% complete`
+                              : ""}
+                            {" · heat "}
+                            {formatNum(p.heat || 0)}
+                          </p>
                         </Link>
                       </li>
                     ))}
@@ -297,7 +377,7 @@ export default function AnalyticsPage() {
                   {DISCOVERY_PLANS.pro.name} unlocks deeper stats
                 </p>
                 <p className="mt-2 text-[13px] text-zinc-500">
-                  Funnels, cohort retention, and export-ready demand graphs.
+                  Cohort retention and export-ready demand graphs.
                 </p>
                 <Link
                   href="/pricing"
