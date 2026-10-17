@@ -1,4 +1,4 @@
-/** Omniv network notifications — meaningful events only */
+/** Omniv network notifications — server-backed with local fallback */
 
 export type NotificationKind =
   | "followed_you"
@@ -17,14 +17,14 @@ export type NotificationKind =
 
 export type OmnivNotification = {
   id: string;
-  kind: NotificationKind;
+  kind: NotificationKind | string;
   title: string;
   body?: string;
   href?: string;
   actorName?: string;
   actorType?: string;
   read: boolean;
-  createdAt: string; // ISO
+  createdAt: string;
 };
 
 const KEY = "omniv_notifications";
@@ -41,6 +41,7 @@ export function readNotifications(): OmnivNotification[] {
 }
 
 export function writeNotifications(items: OmnivNotification[]) {
+  if (typeof window === "undefined") return;
   localStorage.setItem(KEY, JSON.stringify(items.slice(0, 100)));
 }
 
@@ -51,7 +52,9 @@ export function unreadCount(items: OmnivNotification[]): number {
 export function markAllRead(items: OmnivNotification[]): OmnivNotification[] {
   const next = items.map((n) => ({ ...n, read: true }));
   writeNotifications(next);
-  localStorage.setItem(READ_KEY, new Date().toISOString());
+  if (typeof window !== "undefined") {
+    localStorage.setItem(READ_KEY, new Date().toISOString());
+  }
   return next;
 }
 
@@ -64,7 +67,42 @@ export function markRead(
   return next;
 }
 
-/** Seed demo network events so the inbox never feels empty on first open */
+export async function fetchServerNotifications(): Promise<{
+  auth: boolean;
+  notifications: OmnivNotification[];
+  unread: number;
+} | null> {
+  try {
+    const res = await fetch("/api/discovery/notifications?limit=50");
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.auth) return { auth: false, notifications: [], unread: 0 };
+    const notifications = Array.isArray(data.notifications)
+      ? (data.notifications as OmnivNotification[])
+      : [];
+    return {
+      auth: true,
+      notifications,
+      unread: Number(data.unread || unreadCount(notifications)),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function markServerRead(id?: string, all = false): Promise<boolean> {
+  try {
+    const res = await fetch("/api/discovery/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(all ? { all: true } : { id }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export function ensureDemoNotifications(): OmnivNotification[] {
   const existing = readNotifications();
   if (existing.length > 0) return existing;
@@ -100,23 +138,6 @@ export function ensureDemoNotifications(): OmnivNotification[] {
       href: "/analytics",
       read: false,
       createdAt: new Date(now - 60 * 60_000).toISOString(),
-    },
-    {
-      id: "n4",
-      kind: "followed_entity",
-      title: "Teni started following Omniv",
-      actorName: "Teni",
-      href: "/followers",
-      read: true,
-      createdAt: new Date(now - 26 * 60 * 60_000).toISOString(),
-    },
-    {
-      id: "n5",
-      kind: "discovered",
-      title: "Your publication reached 142 explorers",
-      href: "/analytics",
-      read: true,
-      createdAt: new Date(now - 30 * 60 * 60_000).toISOString(),
     },
   ];
   writeNotifications(demo);
