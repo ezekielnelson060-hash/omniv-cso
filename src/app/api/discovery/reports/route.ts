@@ -1,24 +1,34 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-/**
- * Admin-oriented reports queue.
- * GET — list open reports (service path: any authenticated owner for now;
- *       tighten with ADMIN_USER_IDS env when ready).
- * PATCH — update status { id, status }
- */
 function isAdmin(userId: string): boolean {
   const raw = process.env.ADMIN_USER_IDS || process.env.OMNIV_ADMIN_IDS || "";
-  if (!raw.trim()) {
-    // No allowlist set: only service can use via service role elsewhere.
-    // For bootstrap, allow if user owns at least one verified entity named Omniv.
-    return false;
-  }
+  if (!raw.trim()) return false;
   return raw
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean)
     .includes(userId);
+}
+
+async function allowAdmin(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+) {
+  if (isAdmin(userId)) return true;
+  const { data: ents } = await supabase
+    .from("discovery_entities")
+    .select("id, name, slug, verified")
+    .eq("owner_id", userId)
+    .limit(20);
+  return Boolean(
+    (ents || []).some(
+      (e) =>
+        e.verified ||
+        /omniv/i.test(e.name || "") ||
+        /omniv/i.test(e.slug || "")
+    )
+  );
 }
 
 export async function GET(req: Request) {
@@ -32,25 +42,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Sign in required" }, { status: 401 });
     }
 
-    // Bootstrap: allow if admin env set OR user owns verified omniv entity
-    let allowed = isAdmin(user.id);
-    if (!allowed) {
-      const { data: ents } = await supabase
-        .from("discovery_entities")
-        .select("id, name, slug, verified")
-        .eq("owner_id", user.id)
-        .limit(20);
-      allowed = Boolean(
-        (ents || []).some(
-          (e) =>
-            e.verified ||
-            /omniv/i.test(e.name || "") ||
-            /omniv/i.test(e.slug || "")
-        )
-      );
-    }
-
-    if (!allowed) {
+    if (!(await allowAdmin(supabase, user.id))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -99,23 +91,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Sign in required" }, { status: 401 });
     }
 
-    let allowed = isAdmin(user.id);
-    if (!allowed) {
-      const { data: ents } = await supabase
-        .from("discovery_entities")
-        .select("id, name, slug, verified")
-        .eq("owner_id", user.id)
-        .limit(20);
-      allowed = Boolean(
-        (ents || []).some(
-          (e) =>
-            e.verified ||
-            /omniv/i.test(e.name || "") ||
-            /omniv/i.test(e.slug || "")
-        )
-      );
-    }
-    if (!allowed) {
+    if (!(await allowAdmin(supabase, user.id))) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -139,7 +115,7 @@ export async function PATCH(req: Request) {
       .from("discovery_reports")
       .update(patch)
       .eq("id", id)
-      .select("id, status, resolved_at")
+      .select("id, status, resolved_at, target_kind, target_slug, target_id")
       .maybeSingle();
 
     if (error) {
@@ -152,7 +128,29 @@ export async function PATCH(req: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true, report: data });
+    let hidden = false;
+    const action = String(body.action || "").trim();
+    if (action === "hide" && data) {
+      const slug = data.target_slug || data.target_id;
+      if (slug) {
+        const { error: hideErr } = await supabase
+          .from("discovery_publications")
+          .update({ moderated_hidden: true })
+          .eq("slug", String(slug));
+        if (!hideErr) hidden = true;
+      }
+    }
+    if (action === "unhide" && data) {
+      const slug = data.target_slug || data.target_id;
+      if (slug) {
+        await supabase
+          .from("discovery_publications")
+          .update({ moderated_hidden: false })
+          .eq("slug", String(slug));
+      }
+    }
+
+    return NextResponse.json({ ok: true, report: data, hidden });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
