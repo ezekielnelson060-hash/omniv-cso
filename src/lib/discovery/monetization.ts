@@ -86,11 +86,12 @@ export function paymentPlanIdFor(
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+/** Must stay in sync with PROMOTE_DURATIONS / PROMOTE_DAILY_RATES in promote-config.ts */
 export const PROMOTION_CONFIG = {
-  minBudgetUsd: 10,
+  minBudgetUsd: 5,
   maxBudgetUsd: 500,
   defaultBudgetUsd: 50,
-  durations: [3, 7, 14] as const,
+  durations: [1, 3, 7, 14, 30] as const,
   targetTypes: [
     "publication",
     "entity",
