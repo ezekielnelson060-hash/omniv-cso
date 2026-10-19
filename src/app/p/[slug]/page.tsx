@@ -29,7 +29,7 @@ import { publicationMetadata } from "@/lib/discovery/seo";
 import { resolveEntityAvatar } from "@/lib/discovery/resolve-avatar";
 import { resolvePublisherPath } from "@/lib/discovery/resolve-publisher";
 import { BodyBlocks } from "@/components/discovery/publication-body-blocks";
-import { PublicationPageFooter } from "@/components/discovery/publication-page-footer";
+import { PublicationEngagement } from "@/components/discovery/publication-engagement";
 import {
   HERO,
   readMinutes,
@@ -224,6 +224,20 @@ export default async function PublicationPage({ params }: Props) {
     publishedAt: x.publishedAt,
   }));
 
+  const engagementProps = {
+    publicationType: p.type || "article",
+    publicationSlug: p.slug,
+    publicationTitle: p.title,
+    mediaUrl,
+    publisherName,
+    publisherType: followType,
+    publisherSlug: followSlug,
+    publisherId: publisher?.id,
+    publisherHref,
+    showFollow,
+    moreItems,
+  };
+
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
@@ -384,7 +398,7 @@ export default async function PublicationPage({ params }: Props) {
                 isEmbed={isEmbed}
                 embedSrc={embedSrc}
                 isOwner={canManage}
-                relatedFromPublisher={relatedFromPublisher}
+                relatedFromPublisher={[]}
               />
             </div>
           ) : null}
@@ -451,6 +465,9 @@ export default async function PublicationPage({ params }: Props) {
             </div>
           ) : null}
 
+          {/* 1) End of publication content */}
+          <PublicationEngagement {...engagementProps} />
+
           <div className="mt-10">
             <KeepExploring
               currentPublication={p}
@@ -459,21 +476,8 @@ export default async function PublicationPage({ params }: Props) {
             />
           </div>
 
-          <PublicationPageFooter
-            title={p.title}
-            type={p.type || "article"}
-            slug={p.slug}
-            coverUrl={coverUrl}
-            mediaUrl={mediaUrl}
-            path={path}
-            publisherName={publisherName}
-            publisherType={followType}
-            publisherSlug={followSlug}
-            publisherId={publisher?.id}
-            publisherHref={publisherHref}
-            showFollow={showFollow}
-            moreItems={moreItems}
-          />
+          {/* 2) Bottom of the page — same setup again */}
+          <PublicationEngagement {...engagementProps} />
         </main>
 
         <BottomNav />
