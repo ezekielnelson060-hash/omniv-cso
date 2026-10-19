@@ -22,7 +22,6 @@ type Props = {
   isEmbed?: boolean;
   embedSrc?: string | null;
   isOwner?: boolean;
-  /** Other live publications from the same publisher (for Explore) */
   relatedFromPublisher?: Array<
     Pick<Publication, "slug" | "type" | "title" | "publisherName" | "publisherSlug">
   >;
@@ -93,7 +92,6 @@ export function PublicationMedia({
     p.type === "music" ? "artist" : publisher?.type || "person"
   );
 
-  // Explicit type wins so discovery-media URLs are not misclassified
   if (p.type === "video" || isDirectVideo || isEmbed) {
     const chapters = parseChapters(meta.chapters);
     return (
@@ -129,6 +127,7 @@ export function PublicationMedia({
   }
 
   if (p.type === "music" || isAudio) {
+    // 1) Other publications from this publisher (any type)
     const liveRelated = relatedFromPublisher
       .filter((x) => x.slug !== p.slug)
       .slice(0, 6)
@@ -152,22 +151,21 @@ export function PublicationMedia({
         kind: PUBLICATION_LABELS[x.type] || x.type,
       }));
 
-    // Prefer live; fill with seed if needed; always include profile link first
     const seen = new Set<string>();
     const explore: { label: string; href: string; kind?: string }[] = [];
-    if (artistHref) {
-      explore.push({
-        label: `More from ${publisherName}`,
-        href: artistHref,
-        kind: "Artist",
-      });
-      seen.add(artistHref);
-    }
     for (const item of [...liveRelated, ...seedRelated]) {
       if (seen.has(item.href)) continue;
       seen.add(item.href);
       explore.push(item);
-      if (explore.length >= 7) break;
+      if (explore.length >= 6) break;
+    }
+    // 2) Last: More from [name] → profile
+    if (artistHref) {
+      explore.push({
+        label: `More from ${publisherName}`,
+        href: artistHref,
+        kind: "Profile",
+      });
     }
 
     return (
