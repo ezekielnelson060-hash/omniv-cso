@@ -23,7 +23,6 @@ type Props = {
   path: string;
   about?: string | null;
   explore?: ExploreLink[];
-  /** Only the publisher should see “re-edit / upload audio” guidance */
   isOwner?: boolean;
 };
 
@@ -305,6 +304,17 @@ export function MusicRelease({
                 pubType="music"
               />
               <ShareButton title={title} path={path} />
+              {hasAudio && mediaUrl ? (
+                <a
+                  href={mediaUrl}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-full bg-white/[0.06] px-4 text-[13px] font-semibold text-white ring-1 ring-white/10 hover:bg-white/[0.1]"
+                >
+                  Download
+                </a>
+              ) : null}
             </div>
           </div>
         </div>
