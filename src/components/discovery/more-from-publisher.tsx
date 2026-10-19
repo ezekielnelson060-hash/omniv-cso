@@ -2,14 +2,16 @@ import Link from "next/link";
 import {
   PUBLICATION_LABELS,
   publicationPath,
-  type Publication,
 } from "@/lib/discovery/types";
 import { coverFor } from "@/lib/discovery/seed-covers";
 
-type Item = Pick<
-  Publication,
-  "slug" | "type" | "title" | "summary" | "publisherName" | "publisherSlug"
-> & {
+type Item = {
+  slug: string;
+  type: string;
+  title: string;
+  summary?: string | null;
+  publisherName?: string | null;
+  publisherSlug?: string | null;
   coverUrl?: string | null;
   mediaUrl?: string | null;
   publishedAt?: string | null;
@@ -138,7 +140,6 @@ export function MoreFromPublisher({
             );
           }
 
-          // Article / default — horizontal card with wider cover
           return (
             <Link
               key={item.slug}
