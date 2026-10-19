@@ -157,6 +157,153 @@ function PublisherLine({
   );
 }
 
+/** Music — compact horizontal card with square art + play */
+function MusicFeedCard({ pub }: { pub: PubWithCover }) {
+  const publisher = getEntityById(pub.publisherId);
+  const name = publisher?.name || pub.publisherName;
+  const resolvedCover = pub.coverUrl || coverFor(pub.slug);
+  const href = pathFor(pub, publisher);
+  const dur = durationFromMeta(pub.meta);
+
+  return (
+    <div className="overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06]">
+      <Link href={href} className="group flex items-center gap-3 p-3">
+        <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-xl">
+          <CoverBg
+            pub={{ ...pub, coverUrl: resolvedCover }}
+            className="absolute inset-0"
+          />
+          <span className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-90 transition group-hover:bg-black/45">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-omniv-gold text-black shadow-lg">
+              <span className="ml-0.5 text-sm leading-none">▶</span>
+            </span>
+          </span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
+            Music
+          </span>
+          <p className="mt-0.5 truncate text-[15px] font-semibold text-white group-hover:text-omniv-gold">
+            {pub.title}
+          </p>
+          <div className="mt-1">
+            <PublisherLine name={name} publisher={publisher} meta={pub.meta} />
+          </div>
+          <p className="mt-1 text-[11px] text-zinc-500">
+            {dur ? `${dur} · Listen` : "Listen"}
+          </p>
+        </div>
+      </Link>
+      <div className="border-t border-white/[0.05] px-3 py-1.5">
+        <PublicationActions
+          slug={pub.slug}
+          type={pub.type}
+          title={pub.title}
+          publishedAt={pub.publishedAt}
+          initialLikes={0}
+          compact
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Video — large cover with centered play */
+function VideoFeedCard({ pub }: { pub: PubWithCover }) {
+  const publisher = getEntityById(pub.publisherId);
+  const name = publisher?.name || pub.publisherName;
+  const resolvedCover = pub.coverUrl || coverFor(pub.slug);
+  const href = pathFor(pub, publisher);
+  const dur = durationFromMeta(pub.meta);
+
+  return (
+    <div className="overflow-hidden rounded-2xl bg-[#0c0c0c]">
+      <Link href={href} className="group block">
+        <div className="relative aspect-video">
+          <CoverBg
+            pub={{ ...pub, coverUrl: resolvedCover }}
+            className="absolute inset-0"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          <span className="absolute left-3 top-3 rounded-md bg-black/55 px-2 py-0.5 backdrop-blur-sm">
+            <TypeLabel type="video" />
+          </span>
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/60 text-white shadow-xl ring-1 ring-white/30 backdrop-blur-sm transition group-hover:scale-105">
+              <span className="ml-1 text-xl leading-none">▶</span>
+            </span>
+          </span>
+          {dur ? (
+            <span className="absolute bottom-3 right-3 rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white">
+              {dur}
+            </span>
+          ) : null}
+        </div>
+        <div className="px-4 pt-3">
+          <p className="text-[16px] font-semibold leading-snug text-white group-hover:text-omniv-gold">
+            {pub.title}
+          </p>
+          <div className="mt-2">
+            <PublisherLine name={name} publisher={publisher} meta={pub.meta} />
+          </div>
+        </div>
+      </Link>
+      <div className="px-3 pb-2 pt-1">
+        <PublicationActions
+          slug={pub.slug}
+          type={pub.type}
+          title={pub.title}
+          publishedAt={pub.publishedAt}
+          initialLikes={0}
+          compact
+        />
+      </div>
+    </div>
+  );
+}
+
+/** PDF / research — document-style card */
+function FileFeedCard({ pub }: { pub: PubWithCover }) {
+  const publisher = getEntityById(pub.publisherId);
+  const name = publisher?.name || pub.publisherName;
+  const href = pathFor(pub, publisher);
+  const label =
+    PUBLICATION_LABELS[pub.type as keyof typeof PUBLICATION_LABELS] || "File";
+
+  return (
+    <div className="overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.06]">
+      <Link href={href} className="group flex gap-3 p-3.5">
+        <div className="flex h-20 w-14 shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-br from-amber-700/80 to-orange-950 text-white">
+          <span className="text-[10px] font-bold uppercase tracking-wide">PDF</span>
+          <span className="mt-1 text-2xl leading-none">📄</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-400/90">
+            {label}
+          </span>
+          <p className="mt-0.5 line-clamp-2 text-[15px] font-semibold leading-snug text-white group-hover:text-omniv-gold">
+            {pub.title}
+          </p>
+          <div className="mt-1.5">
+            <PublisherLine name={name} publisher={publisher} meta={pub.meta} />
+          </div>
+          <p className="mt-1 text-[11px] font-medium text-zinc-500">View · Download</p>
+        </div>
+      </Link>
+      <div className="border-t border-white/[0.05] px-3 py-1.5">
+        <PublicationActions
+          slug={pub.slug}
+          type={pub.type}
+          title={pub.title}
+          publishedAt={pub.publishedAt}
+          initialLikes={0}
+          compact
+        />
+      </div>
+    </div>
+  );
+}
+
 export function FeedFeaturedCard({
   pub,
   showExplore,
@@ -164,6 +311,11 @@ export function FeedFeaturedCard({
   pub: PubWithCover;
   showExplore?: boolean;
 }) {
+  if (pub.type === "music") return <MusicFeedCard pub={pub} />;
+  if (pub.type === "video") return <VideoFeedCard pub={pub} />;
+  if (pub.type === "file" || pub.type === "research")
+    return <FileFeedCard pub={pub} />;
+
   const publisher = getEntityById(pub.publisherId);
   const name = publisher?.name || pub.publisherName;
   const resolvedCover = pub.coverUrl || coverFor(pub.slug);
@@ -184,18 +336,6 @@ export function FeedFeaturedCard({
           <div className="absolute left-3 top-3 rounded-md bg-black/50 px-2 py-0.5 backdrop-blur-sm">
             <TypeLabel type={pub.type} />
           </div>
-          {pub.type === "video" && (
-            <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm ring-1 ring-white/25">
-                <span className="ml-0.5 text-xl leading-none">▶</span>
-              </span>
-            </span>
-          )}
-          {pub.type === "video" && durationFromMeta(pub.meta) && (
-            <span className="absolute bottom-20 right-4 rounded-md bg-black/65 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white backdrop-blur-sm sm:bottom-24">
-              {durationFromMeta(pub.meta)}
-            </span>
-          )}
           <div className="absolute inset-x-0 bottom-0 p-4">
             <h2 className="text-[20px] font-semibold leading-snug tracking-tight text-white">
               {pub.title}
@@ -239,6 +379,11 @@ export function FeedFeaturedCard({
 }
 
 export function FeedCompactRow({ pub }: { pub: PubWithCover }) {
+  if (pub.type === "music") return <MusicFeedCard pub={pub} />;
+  if (pub.type === "video") return <VideoFeedCard pub={pub} />;
+  if (pub.type === "file" || pub.type === "research")
+    return <FileFeedCard pub={pub} />;
+
   const publisher = getEntityById(pub.publisherId);
   const name = publisher?.name || pub.publisherName;
   const resolvedCover = pub.coverUrl || coverFor(pub.slug);
@@ -267,6 +412,11 @@ export function FeedCompactRow({ pub }: { pub: PubWithCover }) {
 }
 
 export function FeedCard({ pub }: { pub: PubWithCover }) {
+  if (pub.type === "music") return <MusicFeedCard pub={pub} />;
+  if (pub.type === "video") return <VideoFeedCard pub={pub} />;
+  if (pub.type === "file" || pub.type === "research")
+    return <FileFeedCard pub={pub} />;
+
   const publisher = getEntityById(pub.publisherId);
   const name = publisher?.name || pub.publisherName;
   const resolvedCover = pub.coverUrl || coverFor(pub.slug);
@@ -284,20 +434,6 @@ export function FeedCard({ pub }: { pub: PubWithCover }) {
           <span className="absolute left-3 top-3">
             <TypeLabel type={pub.type} />
           </span>
-          {pub.type === "video" && (
-            <>
-              <span className="absolute inset-0 flex items-center justify-center">
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm ring-1 ring-white/20">
-                  <span className="ml-0.5 text-base leading-none">▶</span>
-                </span>
-              </span>
-              {durationFromMeta(pub.meta) && (
-                <span className="absolute bottom-2 right-2 rounded-md bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white">
-                  {durationFromMeta(pub.meta)}
-                </span>
-              )}
-            </>
-          )}
         </div>
         <div className="flex flex-1 flex-col px-4 pt-3.5">
           <p className="text-[16px] font-semibold leading-snug tracking-tight text-white group-hover:text-omniv-gold">
