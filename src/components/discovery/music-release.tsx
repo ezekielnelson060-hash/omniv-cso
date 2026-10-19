@@ -5,12 +5,6 @@ import Link from "next/link";
 import { SaveButton } from "@/components/discovery/save-button";
 import { ShareButton } from "@/components/discovery/share-button";
 
-type ExploreLink = {
-  label: string;
-  href: string;
-  kind?: string;
-};
-
 type Props = {
   title: string;
   artist: string;
@@ -22,7 +16,6 @@ type Props = {
   slug: string;
   path: string;
   about?: string | null;
-  explore?: ExploreLink[];
   isOwner?: boolean;
 };
 
@@ -59,7 +52,6 @@ export function MusicRelease({
   slug,
   path,
   about,
-  explore = [],
   isOwner = false,
 }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -326,29 +318,6 @@ export function MusicRelease({
             About this release
           </p>
           <p className="mt-2 text-[15px] leading-relaxed text-zinc-300">{about}</p>
-        </div>
-      )}
-
-      {explore.length > 0 && (
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-            Explore this release
-          </p>
-          <ul className="mt-3 space-y-2">
-            {explore.map((item) => (
-              <li key={item.href + item.label}>
-                <Link
-                  href={item.href}
-                  className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06] transition hover:ring-white/15"
-                >
-                  <span className="text-[14px] text-white">{item.label}</span>
-                  <span className="text-[11px] uppercase tracking-wide text-zinc-500">
-                    {item.kind || "Open"}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
         </div>
       )}
     </div>
