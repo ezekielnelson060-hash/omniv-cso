@@ -19,7 +19,6 @@ import {
   getEntityBySlugOrName,
   listLivePublications,
   type LivePublication,
-  type LiveEntity,
 } from "@/lib/discovery/db";
 import {
   publicationsByPublisher,
@@ -104,39 +103,11 @@ export default async function EntityPage({ params, searchParams }: Props) {
   if (!(ENTITY_TYPES as readonly string[]).includes(type)) notFound();
 
   const supabase = await tryClient();
-  // Prefer exact type+slug; fall back to any type / name so links never 404
-  // when the publisher exists under a different type.
-  let e =
+  // Only real identity pages — never invent a profile for a name that only
+  // appears on publications. Users create their own page.
+  const e =
     (await getEntityBySlugOrName(supabase, type, slug)) ||
     (await getDiscoveryEntity(supabase, type, slug));
-  if (!e && supabase) {
-    // Soft profile: publisher has publications but no entity row yet
-    const liveAll = await listLivePublications(supabase, 100);
-    const nameGuess = slug.replace(/-/g, " ");
-    const theirs = liveAll.filter(
-      (p) =>
-        (p.publisherName || "").toLowerCase() === nameGuess.toLowerCase() ||
-        (p.publisherName || "")
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "") === slug
-    );
-    if (theirs.length > 0) {
-      const displayName = theirs[0].publisherName || nameGuess;
-      e = {
-        id: theirs[0].publisherId || `soft-${slug}`,
-        type: (type as LiveEntity["type"]) || "artist",
-        slug,
-        name: displayName,
-        tagline: "",
-        about: "",
-        intents: [],
-        tags: [],
-        publishedAt: theirs[0].publishedAt || new Date().toISOString().slice(0, 10),
-        heat: 0,
-      } as LiveEntity;
-    }
-  }
   if (!e) notFound();
 
   let isOwner = false;
@@ -327,40 +298,15 @@ export default async function EntityPage({ params, searchParams }: Props) {
 
             <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px] text-zinc-500">
               <span className="inline-flex items-center gap-1.5 capitalize">
-                <svg viewBox="0 0 24 24" className="h-[15px] w-[15px] shrink-0 text-zinc-500" fill="currentColor" aria-hidden>
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
-                </svg>
                 {e.type}
               </span>
               {e.location ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <svg viewBox="0 0 24 24" className="h-[15px] w-[15px] shrink-0 text-zinc-500" fill="currentColor" aria-hidden>
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                  </svg>
                   {e.location}
                 </span>
               ) : null}
-              {links.map((l) => (
-                <a
-                  key={l.href}
-                  href={l.href.startsWith("http") ? l.href : `https://${l.href}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-omniv-gold hover:underline"
-                >
-                  <svg viewBox="0 0 24 24" className="h-[15px] w-[15px] shrink-0" fill="currentColor" aria-hidden>
-                    <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" />
-                  </svg>
-                  {l.label && l.label !== "Website"
-                    ? l.label
-                    : hostLabel(l.href)}
-                </a>
-              ))}
               {e.publishedAt ? (
                 <span className="inline-flex items-center gap-1.5">
-                  <svg viewBox="0 0 24 24" className="h-[15px] w-[15px] shrink-0 text-zinc-500" fill="currentColor" aria-hidden>
-                    <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z" />
-                  </svg>
                   Joined{" "}
                   {new Date(e.publishedAt).toLocaleDateString("en-US", {
                     month: "short",
