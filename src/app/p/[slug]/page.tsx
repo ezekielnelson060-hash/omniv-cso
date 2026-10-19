@@ -454,6 +454,14 @@ export default async function PublicationPage({ params }: Props) {
             }))}
           />
 
+          <div className="mt-10">
+            <KeepExploring
+              currentPublication={p}
+              entities={exploreEntities}
+              publications={explorePublications}
+            />
+          </div>
+
           <PublicationBottomActions
             publicationType={p.type || "article"}
             publicationSlug={p.slug}
@@ -465,14 +473,6 @@ export default async function PublicationPage({ params }: Props) {
             publisherId={publisher?.id}
             showFollow={Boolean(showFollow)}
           />
-
-          <div className="mt-10">
-            <KeepExploring
-              currentPublication={p}
-              entities={exploreEntities}
-              publications={explorePublications}
-            />
-          </div>
         </main>
 
         <BottomNav />
