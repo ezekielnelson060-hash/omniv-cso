@@ -16,8 +16,10 @@ import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import {
   getDiscoveryEntity,
+  getEntityBySlugOrName,
   listLivePublications,
   type LivePublication,
+  type LiveEntity,
 } from "@/lib/discovery/db";
 import {
   publicationsByPublisher,
@@ -65,10 +67,12 @@ function hostLabel(href: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { type, slug } = await params;
   const supabase = await tryClient();
-  const e = await getDiscoveryEntity(supabase, type, slug);
+  const e =
+    (await getEntityBySlugOrName(supabase, type, slug)) ||
+    (await getDiscoveryEntity(supabase, type, slug));
   if (!e) return { title: "Not found" };
   const origin = process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media";
-  const url = `${origin}/e/${type}/${slug}`;
+  const url = `${origin}/e/${e.type}/${e.slug}`;
   const image =
     (e as { avatarUrl?: string | null }).avatarUrl ||
     `${origin}/opengraph-image`;
@@ -100,7 +104,39 @@ export default async function EntityPage({ params, searchParams }: Props) {
   if (!(ENTITY_TYPES as readonly string[]).includes(type)) notFound();
 
   const supabase = await tryClient();
-  const e = await getDiscoveryEntity(supabase, type, slug);
+  // Prefer exact type+slug; fall back to any type / name so links never 404
+  // when the publisher exists under a different type.
+  let e =
+    (await getEntityBySlugOrName(supabase, type, slug)) ||
+    (await getDiscoveryEntity(supabase, type, slug));
+  if (!e && supabase) {
+    // Soft profile: publisher has publications but no entity row yet
+    const liveAll = await listLivePublications(supabase, 100);
+    const nameGuess = slug.replace(/-/g, " ");
+    const theirs = liveAll.filter(
+      (p) =>
+        (p.publisherName || "").toLowerCase() === nameGuess.toLowerCase() ||
+        (p.publisherName || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "") === slug
+    );
+    if (theirs.length > 0) {
+      const displayName = theirs[0].publisherName || nameGuess;
+      e = {
+        id: theirs[0].publisherId || `soft-${slug}`,
+        type: (type as LiveEntity["type"]) || "artist",
+        slug,
+        name: displayName,
+        tagline: "",
+        about: "",
+        intents: [],
+        tags: [],
+        publishedAt: theirs[0].publishedAt || new Date().toISOString().slice(0, 10),
+        heat: 0,
+      } as LiveEntity;
+    }
+  }
   if (!e) notFound();
 
   let isOwner = false;
