@@ -258,6 +258,73 @@ export async function getDiscoveryEntity(
   return SEED_ENTITIES.find((e) => e.type === type && e.slug === slug) ?? null;
 }
 
+/**
+ * Resolve an entity when the URL type may be wrong (e.g. /e/artist/x but
+ * the row is type person). Tries exact type+slug, then any type by slug,
+ * then case-insensitive name match.
+ */
+export async function getEntityBySlugOrName(
+  supabase: SupabaseClient | null,
+  type: string | null | undefined,
+  slug: string,
+  nameHint?: string | null
+): Promise<LiveEntity | null> {
+  const s = (slug || "").toLowerCase().trim();
+  if (!s && !nameHint) return null;
+
+  if (type && s) {
+    const exact = await getDiscoveryEntity(supabase, type, s);
+    if (exact) return exact;
+  }
+
+  if (supabase && s) {
+    try {
+      const { data } = await supabase
+        .from("discovery_entities")
+        .select(ENT_SELECT)
+        .eq("slug", s)
+        .limit(1)
+        .maybeSingle();
+      if (data) return rowToEntity(data as Row);
+    } catch {
+      try {
+        const { data } = await supabase
+          .from("discovery_entities")
+          .select(ENT_SELECT_SAFE)
+          .eq("slug", s)
+          .limit(1)
+          .maybeSingle();
+        if (data) return rowToEntity(data as Row);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  const bySeedSlug = SEED_ENTITIES.find((e) => e.slug === s);
+  if (bySeedSlug) return bySeedSlug as LiveEntity;
+
+  const name = (nameHint || s.replace(/-/g, " ")).trim();
+  if (supabase && name) {
+    try {
+      const { data } = await supabase
+        .from("discovery_entities")
+        .select(ENT_SELECT)
+        .ilike("name", name)
+        .limit(1)
+        .maybeSingle();
+      if (data) return rowToEntity(data as Row);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const bySeedName = SEED_ENTITIES.find(
+    (e) => e.name.toLowerCase() === name.toLowerCase()
+  );
+  return (bySeedName as LiveEntity) ?? null;
+}
+
 /** Prefer live DB entity by id; fall back to seed. */
 export async function getEntityByIdLive(
   supabase: SupabaseClient | null,
