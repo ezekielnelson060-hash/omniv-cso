@@ -21,6 +21,11 @@ type Props = {
   isDirectVideo?: boolean;
   isEmbed?: boolean;
   embedSrc?: string | null;
+  isOwner?: boolean;
+  /** Other live publications from the same publisher (for Explore) */
+  relatedFromPublisher?: Array<
+    Pick<Publication, "slug" | "type" | "title" | "publisherName" | "publisherSlug">
+  >;
 };
 
 function parseMeta(meta: string | undefined | null): Record<string, string> {
@@ -78,6 +83,8 @@ export function PublicationMedia({
   isDirectVideo,
   isEmbed,
   embedSrc,
+  isOwner = false,
+  relatedFromPublisher = [],
 }: Props) {
   const meta = parseMeta(p.meta);
   const artistHref = publisherHrefFor(
@@ -122,6 +129,47 @@ export function PublicationMedia({
   }
 
   if (p.type === "music" || isAudio) {
+    const liveRelated = relatedFromPublisher
+      .filter((x) => x.slug !== p.slug)
+      .slice(0, 6)
+      .map((x) => ({
+        label: x.title,
+        href: publicationPath({
+          slug: x.slug,
+          type: x.type,
+          publisherName: x.publisherName || publisherName,
+          publisherSlug: x.publisherSlug || publisher?.slug,
+        }),
+        kind: PUBLICATION_LABELS[x.type as keyof typeof PUBLICATION_LABELS] || x.type,
+      }));
+
+    const seedRelated = publicationsByPublisher(p.publisherId || "")
+      .filter((x) => x.slug !== p.slug)
+      .slice(0, 4)
+      .map((x) => ({
+        label: x.title,
+        href: publicationPath(x),
+        kind: PUBLICATION_LABELS[x.type] || x.type,
+      }));
+
+    // Prefer live; fill with seed if needed; always include profile link first
+    const seen = new Set<string>();
+    const explore: { label: string; href: string; kind?: string }[] = [];
+    if (artistHref) {
+      explore.push({
+        label: `More from ${publisherName}`,
+        href: artistHref,
+        kind: "Artist",
+      });
+      seen.add(artistHref);
+    }
+    for (const item of [...liveRelated, ...seedRelated]) {
+      if (seen.has(item.href)) continue;
+      seen.add(item.href);
+      explore.push(item);
+      if (explore.length >= 7) break;
+    }
+
     return (
       <MusicRelease
         title={p.title}
@@ -134,25 +182,8 @@ export function PublicationMedia({
         slug={p.slug}
         path={path}
         about={p.summary || p.excerpt || null}
-        explore={[
-          ...(artistHref
-            ? [
-                {
-                  label: `More from ${publisherName}`,
-                  href: artistHref,
-                  kind: "Artist",
-                },
-              ]
-            : []),
-          ...publicationsByPublisher(p.publisherId || "")
-            .filter((x) => x.slug !== p.slug)
-            .slice(0, 4)
-            .map((x) => ({
-              label: x.title,
-              href: publicationPath(x),
-              kind: PUBLICATION_LABELS[x.type] || x.type,
-            })),
-        ]}
+        explore={explore}
+        isOwner={isOwner}
       />
     );
   }
