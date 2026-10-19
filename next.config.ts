@@ -14,6 +14,14 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return [
+      // Type + publisher + slug (pretty share URLs with creator name)
+      { source: "/research/:publisher/:slug", destination: "/p/:slug" },
+      { source: "/music/:publisher/:slug", destination: "/p/:slug" },
+      { source: "/video/:publisher/:slug", destination: "/p/:slug" },
+      { source: "/product/:publisher/:slug", destination: "/p/:slug" },
+      { source: "/event/:publisher/:slug", destination: "/p/:slug" },
+      { source: "/opportunity/:publisher/:slug", destination: "/p/:slug" },
+      { source: "/p/:publisher/:slug", destination: "/p/:slug" },
       // Type-specific permanent public URLs → shared publication page
       { source: "/research/:slug", destination: "/p/:slug" },
       { source: "/music/:slug", destination: "/p/:slug" },
