@@ -93,7 +93,12 @@ export default async function PublicationPage({ params }: Props) {
     }) ||
     null;
 
-  const path = publicationPath(p);
+  const path = publicationPath({
+    slug: p.slug,
+    type: p.type,
+    publisherName,
+    publisherSlug: publisher?.slug,
+  });
   const typeLabel =
     PUBLICATION_LABELS[(p.type as keyof typeof PUBLICATION_LABELS) || "article"] ||
     "Article";
@@ -166,9 +171,22 @@ export default async function PublicationPage({ params }: Props) {
     listLivePublications(supabase, 80),
     listDiscoveryEntities(supabase),
   ]);
-  // Full pools — KeepExploring ranks by topical overlap with currentPublication
   const explorePublications = liveAll.filter((x) => x.slug !== p.slug);
   const exploreEntities = entities;
+
+  // Same publisher (by id, name, or entity) for Explore this release
+  const relatedFromPublisher = liveAll.filter((x) => {
+    if (x.slug === p.slug) return false;
+    if (p.publisherId && x.publisherId && x.publisherId === p.publisherId)
+      return true;
+    if (
+      publisherName &&
+      x.publisherName &&
+      x.publisherName.toLowerCase() === publisherName.toLowerCase()
+    )
+      return true;
+    return false;
+  });
 
   const hero = HERO[p.type || "article"] || HERO.article;
   const showMediaPlayer = isMusic || isVideo || isAudio || isDirectVideo || isEmbed;
@@ -347,6 +365,8 @@ export default async function PublicationPage({ params }: Props) {
                 isDirectVideo={isDirectVideo && !isEmbed}
                 isEmbed={isEmbed}
                 embedSrc={embedSrc}
+                isOwner={canManage}
+                relatedFromPublisher={relatedFromPublisher}
               />
             </div>
           ) : null}
