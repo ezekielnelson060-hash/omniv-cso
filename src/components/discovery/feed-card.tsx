@@ -18,6 +18,7 @@ import { resolvePublisherPath } from "@/lib/discovery/resolve-publisher";
 type PubWithCover = Publication & {
   coverUrl?: string;
   publisherName?: string;
+  publisherSlug?: string;
 };
 
 const TONE: Record<string, string> = {
@@ -73,6 +74,15 @@ function durationFromMeta(meta: string | undefined | null): string | null {
     /* ignore */
   }
   return null;
+}
+
+function pathFor(pub: PubWithCover, publisher?: ReturnType<typeof getEntityById>) {
+  return publicationPath({
+    slug: pub.slug,
+    type: pub.type,
+    publisherSlug: pub.publisherSlug || publisher?.slug,
+    publisherName: pub.publisherName || publisher?.name,
+  });
 }
 
 function PublisherLine({
@@ -157,11 +167,12 @@ export function FeedFeaturedCard({
   const publisher = getEntityById(pub.publisherId);
   const name = publisher?.name || pub.publisherName;
   const resolvedCover = pub.coverUrl || coverFor(pub.slug);
+  const href = pathFor(pub, publisher);
 
   return (
     <article className="overflow-hidden rounded-2xl bg-[#0c0c0c]">
       <Link
-        href={publicationPath(pub)}
+        href={href}
         className="group block transition-opacity duration-200 hover:opacity-[0.97]"
       >
         <div className="relative aspect-[5/4] sm:aspect-[16/10]">
@@ -231,13 +242,11 @@ export function FeedCompactRow({ pub }: { pub: PubWithCover }) {
   const publisher = getEntityById(pub.publisherId);
   const name = publisher?.name || pub.publisherName;
   const resolvedCover = pub.coverUrl || coverFor(pub.slug);
+  const href = pathFor(pub, publisher);
 
   return (
     <article className="rounded-2xl bg-[#0c0c0c]">
-      <Link
-        href={publicationPath(pub)}
-        className="group flex items-center gap-3 px-1 py-1"
-      >
+      <Link href={href} className="group flex items-center gap-3 px-1 py-1">
         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl">
           <CoverBg
             pub={{ ...pub, coverUrl: resolvedCover }}
@@ -261,10 +270,11 @@ export function FeedCard({ pub }: { pub: PubWithCover }) {
   const publisher = getEntityById(pub.publisherId);
   const name = publisher?.name || pub.publisherName;
   const resolvedCover = pub.coverUrl || coverFor(pub.slug);
+  const href = pathFor(pub, publisher);
 
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl bg-[#0c0c0c] transition-colors duration-200 hover:bg-[#101010]">
-      <Link href={publicationPath(pub)} className="group flex flex-1 flex-col">
+      <Link href={href} className="group flex flex-1 flex-col">
         <div className="relative aspect-[16/10]">
           <CoverBg
             pub={{ ...pub, coverUrl: resolvedCover }}
