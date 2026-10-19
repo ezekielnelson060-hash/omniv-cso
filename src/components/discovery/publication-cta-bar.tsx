@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { isSaved, toggleSave } from "@/lib/discovery/local-graph";
 import { isFollowing, toggleFollow } from "@/lib/discovery/local-graph";
 import { recordSignal } from "@/lib/discovery/signals";
+import { TrackedDownload } from "@/components/discovery/tracked-download";
 
 function typeNoun(type: string): string {
   const t = (type || "article").toLowerCase();
@@ -84,11 +85,10 @@ export function PublicationBottomActions({
       </div>
       {showDl && mediaUrl ? (
         <div className="flex justify-center pt-1">
-          <a
+          <TrackedDownload
             href={mediaUrl}
-            download
-            target="_blank"
-            rel="noopener noreferrer"
+            publicationSlug={publicationSlug}
+            publicationType={publicationType}
             className="inline-flex h-10 items-center gap-2 rounded-full bg-white/[0.06] px-5 text-[13px] font-semibold text-white ring-1 ring-white/12 transition hover:bg-white/[0.1]"
           >
             <svg
@@ -106,7 +106,7 @@ export function PublicationBottomActions({
               />
             </svg>
             {downloadLabel(publicationType, mediaUrl)}
-          </a>
+          </TrackedDownload>
         </div>
       ) : null}
     </div>
