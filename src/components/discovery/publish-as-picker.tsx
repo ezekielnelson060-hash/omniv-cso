@@ -74,17 +74,32 @@ export function PublishAsPicker({
           Switch
         </Link>
       </div>
-      <p className="text-[12px] leading-relaxed text-zinc-500">
-        This publication belongs to{" "}
-        <span className="font-medium text-zinc-300">{label}</span>
-        {active
-          ? " — independent of your personal profile."
-          : " — your personal identity."}
-      </p>
-      {/* keep controlled value in sync for parent form */}
-      {value !== label && (
-        <span className="sr-only">{value}</span>
+
+      {!active ? (
+        <div className="rounded-xl border border-omniv-gold/25 bg-omniv-gold/10 px-3.5 py-3">
+          <p className="text-[13px] font-medium text-omniv-gold">
+            Create a public page for this work
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-zinc-400">
+            Without an identity (artist, company, brand…), profile links stay
+            broken. Create one once — then publish under it.
+          </p>
+          <Link
+            href="/accounts"
+            className="mt-2.5 inline-flex h-9 items-center rounded-full bg-omniv-gold px-4 text-[12px] font-semibold text-black"
+          >
+            Create identity
+          </Link>
+        </div>
+      ) : (
+        <p className="text-[12px] leading-relaxed text-zinc-500">
+          This publication belongs to{" "}
+          <span className="font-medium text-zinc-300">{label}</span> — independent
+          of your personal profile.
+        </p>
       )}
+
+      {value !== label && <span className="sr-only">{value}</span>}
     </div>
   );
 }

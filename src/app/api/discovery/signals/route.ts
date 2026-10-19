@@ -11,6 +11,7 @@ const WEIGHTS: Record<string, number> = {
   search: 0.7,
   complete: 0.85,
   contact: 1.1,
+  download: 1.15,
   skip: -0.25,
 };
 
