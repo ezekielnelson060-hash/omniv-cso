@@ -23,6 +23,8 @@ type Props = {
   path: string;
   about?: string | null;
   explore?: ExploreLink[];
+  /** Only the publisher should see “re-edit / upload audio” guidance */
+  isOwner?: boolean;
 };
 
 function formatTime(sec: number) {
@@ -59,6 +61,7 @@ export function MusicRelease({
   path,
   about,
   explore = [],
+  isOwner = false,
 }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -280,11 +283,16 @@ export function MusicRelease({
               </>
             )}
 
-            {!hasAudio && (
+            {!hasAudio && isOwner && (
               <p className="mt-4 text-[13px] text-zinc-500">
-                Audio not attached yet — the release still works as a discovery
-                page. Re-edit the publication and upload an MP3, WAV, M4A, or OGG
-                file.
+                Audio not attached yet.{" "}
+                <Link
+                  href={`/publish?edit=${encodeURIComponent(slug)}`}
+                  className="font-medium text-omniv-gold hover:underline"
+                >
+                  Re-edit this release
+                </Link>{" "}
+                and upload an MP3, WAV, M4A, or OGG file.
               </p>
             )}
 
