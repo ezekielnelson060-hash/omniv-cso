@@ -42,15 +42,36 @@ function uniqueById<T extends { id: string }>(items: T[]) {
   return Array.from(new Map(items.map((item) => [item.id, item])).values());
 }
 
+/** Human-readable subtitle — never dump raw JSON meta. */
 function publicationMeta(publication: PublicationWithMedia) {
   const type = PUBLICATION_LABELS[publication.type] || publication.type;
   const category = publication.category ? ` · ${publication.category}` : "";
-  const reading = publication.readingTime
-    ? ` · ${publication.readingTime} min read`
-    : publication.meta
-      ? ` · ${publication.meta}`
-      : "";
-  return `${type}${category}${reading}`;
+  if (publication.readingTime) {
+    return `${type}${category} · ${publication.readingTime} min read`;
+  }
+  const meta = publication.meta;
+  if (meta && typeof meta === "string" && !meta.trim().startsWith("{")) {
+    return `${type}${category} · ${meta.slice(0, 60)}`;
+  }
+  // Try genre from JSON meta without showing the JSON
+  if (meta && typeof meta === "string" && meta.trim().startsWith("{")) {
+    try {
+      const o = JSON.parse(meta) as Record<string, unknown>;
+      if (o.genre && String(o.genre).trim()) {
+        return `${type} · ${String(o.genre).trim()}`;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return `${type}${category}`;
+}
+
+function cleanSummary(publication: PublicationWithMedia): string {
+  const s = (publication.summary || publication.excerpt || "").trim();
+  if (!s) return "";
+  if (s.startsWith("{") && s.includes(":")) return "";
+  return s;
 }
 
 export function KeepExploring({
@@ -182,6 +203,7 @@ export function KeepExploring({
                 PUBLICATION_TONE[publication.type] || PUBLICATION_TONE.article;
               const cover =
                 publication.coverUrl || coverFor(publication.slug);
+              const summary = cleanSummary(publication);
               return (
                 <div
                   key={publication.id}
@@ -213,9 +235,11 @@ export function KeepExploring({
                         <p className="line-clamp-2 text-[15px] font-semibold leading-snug text-white group-hover:text-omniv-gold">
                           {publication.title}
                         </p>
-                        <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-zinc-500">
-                          {publication.summary}
-                        </p>
+                        {summary ? (
+                          <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-zinc-500">
+                            {summary}
+                          </p>
+                        ) : null}
                         <p className="mt-2 text-[11px] text-zinc-600">
                           {publicationMeta(publication)}
                         </p>
