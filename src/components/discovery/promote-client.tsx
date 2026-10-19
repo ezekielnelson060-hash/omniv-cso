@@ -22,8 +22,21 @@ import {
   estimatePromoteReach,
 } from "@/lib/discovery/promote-config";
 
-type Pub = { id: string; title: string; type: string; slug: string };
-type Entity = { id: string; name: string; slug: string; type: string };
+type Pub = {
+  id: string;
+  title: string;
+  type: string;
+  slug: string;
+  coverUrl?: string | null;
+  avatarUrl?: string | null;
+};
+type Entity = {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+  avatarUrl?: string | null;
+};
 
 const TARGETS: { id: PromotionTargetType; label: string }[] = [
   { id: "publication", label: "Publication" },
@@ -62,6 +75,27 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div>
       <p className="mb-2.5 text-[12px] font-medium text-zinc-400">{label}</p>
       {children}
+    </div>
+  );
+}
+
+function SquareThumb({
+  src,
+  label,
+}: {
+  src?: string | null;
+  label: string;
+}) {
+  return (
+    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/10">
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-omniv-gold/15 text-[16px] font-semibold text-omniv-gold">
+          {(label || "?").slice(0, 1).toUpperCase()}
+        </div>
+      )}
     </div>
   );
 }
@@ -111,9 +145,21 @@ function PromoteInner() {
         const data = await pubRes.json();
         const entityData = await entityRes.json();
         setAuth(data.auth !== false);
-        const list = data.publications || [];
+        const list = (data.publications || []).map(
+          (p: Pub & { cover_url?: string }) => ({
+            ...p,
+            coverUrl: p.coverUrl || p.cover_url || null,
+          })
+        );
         setPubs(list);
-        setEntities(entityData.entities || []);
+        setEntities(
+          (entityData.entities || []).map(
+            (e: Entity & { avatar_url?: string }) => ({
+              ...e,
+              avatarUrl: e.avatarUrl || e.avatar_url || null,
+            })
+          )
+        );
         if (!preSlug && list[0]) setSlug(list[0].slug);
         if (preSlug) setSlug(preSlug);
       } catch {
@@ -129,6 +175,7 @@ function PromoteInner() {
         title: e.name,
         slug: e.slug,
         type: e.type,
+        coverUrl: e.avatarUrl || null,
       }));
     }
     if (targetType === "publication") return pubs;
@@ -277,31 +324,47 @@ function PromoteInner() {
                 </div>
               </Field>
               {selected && (
-                <div className="flex items-center gap-3 rounded-2xl bg-white/[0.03] p-3.5">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-omniv-gold/15 text-omniv-gold">
-                    ▣
-                  </div>
+                <div className="flex items-center gap-3 rounded-2xl bg-white/[0.03] p-3.5 ring-1 ring-white/[0.06]">
+                  <SquareThumb src={selected.coverUrl} label={selected.title} />
                   <div className="min-w-0">
-                    <p className="truncate text-[14px] font-semibold text-white">{selected.title}</p>
+                    <p className="truncate text-[14px] font-semibold text-white">
+                      {selected.title}
+                    </p>
                     <p className="text-[12px] capitalize text-zinc-500">{targetType}</p>
                   </div>
                 </div>
               )}
               {candidates.length > 1 && (
-                <label className="block">
-                  <span className="text-[12px] text-zinc-500">Select</span>
-                  <select
-                    value={slug}
-                    onChange={(e) => setSlug(e.target.value)}
-                    className="mt-1.5 h-12 w-full rounded-xl bg-white/[0.04] px-3 text-[14px] text-white outline-none ring-1 ring-white/[0.08]"
-                  >
-                    {candidates.map((p) => (
-                      <option key={p.id} value={p.slug} className="bg-zinc-900">
-                        {p.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div>
+                  <p className="mb-2 text-[12px] text-zinc-500">Select</p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {candidates.map((item) => {
+                      const active = item.slug === slug;
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSlug(item.slug)}
+                          className={`flex items-center gap-3 rounded-xl p-2.5 text-left transition ${
+                            active
+                              ? "bg-omniv-gold/15 ring-1 ring-omniv-gold/40"
+                              : "bg-white/[0.03] ring-1 ring-white/[0.06] hover:ring-white/15"
+                          }`}
+                        >
+                          <SquareThumb src={item.coverUrl} label={item.title} />
+                          <span className="min-w-0 flex-1">
+                            <span className="line-clamp-2 text-[13px] font-medium text-white">
+                              {item.title}
+                            </span>
+                            <span className="mt-0.5 block text-[11px] capitalize text-zinc-500">
+                              {item.type || targetType}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
               {candidates.length === 0 && (
                 <p className="text-[14px] text-zinc-500">
@@ -410,9 +473,12 @@ function PromoteInner() {
                     Review
                   </p>
                   <ul className="mt-3 space-y-1.5 text-[13px] text-zinc-300">
-                    <li>
-                      <span className="text-zinc-500">Target · </span>
-                      {selected?.title}
+                    <li className="flex items-center gap-2">
+                      <SquareThumb src={selected?.coverUrl} label={selected?.title || ""} />
+                      <span>
+                        <span className="text-zinc-500">Target · </span>
+                        {selected?.title}
+                      </span>
                     </li>
                     <li>
                       <span className="text-zinc-500">Audience · </span>
