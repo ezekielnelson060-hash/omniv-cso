@@ -38,6 +38,7 @@ export async function GET(req: Request) {
     let completes = 0;
     let likes = 0;
     let shares = 0;
+    let downloads = 0;
     let videoPlays = 0;
     let videoCompletes = 0;
     let videoProgress25 = 0;
@@ -53,6 +54,7 @@ export async function GET(req: Request) {
         completes: number;
         likes: number;
         shares: number;
+        downloads: number;
         videoPlays: number;
         videoCompletes: number;
       }
@@ -70,6 +72,7 @@ export async function GET(req: Request) {
           completes: 0,
           likes: 0,
           shares: 0,
+          downloads: 0,
           videoPlays: 0,
           videoCompletes: 0,
         };
@@ -123,6 +126,9 @@ export async function GET(req: Request) {
         } else if (k === "share") {
           shares += 1;
           if (row) row.shares += 1;
+        } else if (k === "download") {
+          downloads += 1;
+          if (row) row.downloads += 1;
         } else if (k === "save") {
           day.saves += 1;
         }
@@ -172,26 +178,26 @@ export async function GET(req: Request) {
       .eq("owner_id", user.id);
 
     let follows = 0;
-    for (const e of entities || []) {
-      if (entityId && e.id !== entityId) continue;
-      const { count } = await supabase
-        .from("discovery_follows")
-        .select("id", { count: "exact", head: true })
-        .eq("target_type", e.type)
-        .eq("target_slug", e.slug)
-        .gte("created_at", since);
-      follows += count || 0;
-    }
-
     let saves = 0;
-    if (slugs.length > 0) {
-      const { count } = await supabase
-        .from("discovery_saves")
-        .select("id", { count: "exact", head: true })
-        .eq("kind", "publication")
-        .in("target_slug", slugs)
-        .gte("created_at", since);
-      saves = count || 0;
+    try {
+      if (entities && entities.length > 0) {
+        const ids = entities.map((e) => e.id);
+        const { count: followCount } = await supabase
+          .from("discovery_follows")
+          .select("id", { count: "exact", head: true })
+          .in("entity_id", ids);
+        follows = followCount || 0;
+      }
+      if (slugs.length > 0) {
+        const { count: saveCount } = await supabase
+          .from("discovery_saves")
+          .select("id", { count: "exact", head: true })
+          .in("slug", slugs)
+          .eq("kind", "publication");
+        saves = saveCount || 0;
+      }
+    } catch {
+      /* tables may vary */
     }
 
     const totalHeat = (pubs || []).reduce(
@@ -207,6 +213,7 @@ export async function GET(req: Request) {
           completes: 0,
           likes: 0,
           shares: 0,
+          downloads: 0,
           videoPlays: 0,
           videoCompletes: 0,
         };
@@ -215,6 +222,7 @@ export async function GET(req: Request) {
           stats.completes +
           stats.likes +
           stats.shares +
+          stats.downloads +
           stats.videoPlays +
           stats.videoCompletes;
         return {
@@ -253,6 +261,7 @@ export async function GET(req: Request) {
       videoProgress90,
       videoCompletes,
       completes,
+      downloads,
     };
 
     return NextResponse.json({
@@ -267,11 +276,13 @@ export async function GET(req: Request) {
         completes,
         likes,
         shares,
+        downloads,
         saves,
         follows,
         videoPlays,
         videoCompletes,
-        qualified: saves + follows + completes + likes + videoCompletes,
+        qualified:
+          saves + follows + completes + likes + videoCompletes + downloads,
       },
       funnel,
       series,
@@ -284,13 +295,48 @@ export async function GET(req: Request) {
         type: p.type,
         heat: p.heat,
         opens: p.opens,
+        downloads: p.downloads,
         videoPlays: p.videoPlays,
         videoCompletes: p.videoCompletes,
         completionRate: p.completionRate,
       })),
     });
   } catch (e) {
-    console.error("analytics", e);
+    console.error(e);
     return NextResponse.json({ auth: false, error: "Server error" });
+  }
+}
+
+/** Record a download event (authenticated when possible). */
+export async function POST(req: Request) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const event = String(body.event || "").trim();
+    const publicationSlug = body.publicationSlug
+      ? String(body.publicationSlug)
+      : null;
+    if (event !== "download" || !publicationSlug) {
+      return NextResponse.json({ ok: false }, { status: 400 });
+    }
+
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("discovery_signals").insert({
+        user_id: user.id,
+        kind: "download",
+        publication_slug: publicationSlug,
+        tags: body.publicationType ? [String(body.publicationType)] : [],
+        category: body.publicationType ? String(body.publicationType) : null,
+        source: "download",
+        weight: 1.15,
+      });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ ok: false }, { status: 500 });
   }
 }
