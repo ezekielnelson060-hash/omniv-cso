@@ -24,6 +24,7 @@ type Metrics = {
   completes: number;
   likes: number;
   shares: number;
+  downloads?: number;
   saves: number;
   follows: number;
   qualified: number;
@@ -41,6 +42,7 @@ type Funnel = {
   videoProgress90: number;
   videoCompletes: number;
   completes: number;
+  downloads?: number;
 };
 
 type TopPub = {
@@ -50,10 +52,41 @@ type TopPub = {
   type: string;
   heat: number;
   opens?: number;
+  downloads?: number;
   videoPlays?: number;
   videoCompletes?: number;
   completionRate?: number;
 };
+
+function formatNum(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(Math.round(n));
+}
+
+function Stat({
+  label,
+  value,
+  note,
+}: {
+  label: string;
+  value: string;
+  note?: string;
+}) {
+  return (
+    <div className="rounded-2xl bg-white/[0.04] px-3.5 py-3 ring-1 ring-white/[0.06]">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+        {label}
+      </p>
+      <p className="mt-1 text-[22px] font-semibold tabular-nums text-white">
+        {value}
+      </p>
+      {note ? (
+        <p className="mt-0.5 text-[11px] text-zinc-600">{note}</p>
+      ) : null}
+    </div>
+  );
+}
 
 export default function AnalyticsPage() {
   const [auth, setAuth] = useState<boolean | null>(null);
@@ -89,21 +122,13 @@ export default function AnalyticsPage() {
         const data = await res.json();
         if (cancelled) return;
         setAuth(Boolean(data.auth));
-        if (data.auth && data.metrics) {
-          setMetrics(data.metrics as Metrics);
+        if (data.auth) {
+          setMetrics(data.metrics || null);
           setHeat(Number(data.heat || 0));
           setPubCount(Number(data.publications || 0));
-          setTopPubs(
-            Array.isArray(data.topPublications) ? data.topPublications : []
-          );
-          setSources(
-            data.sources && typeof data.sources === "object"
-              ? data.sources
-              : {}
-          );
-          setFunnel(
-            data.funnel && typeof data.funnel === "object" ? data.funnel : null
-          );
+          setTopPubs(data.topPublications || []);
+          setSources(data.sources || {});
+          setFunnel(data.funnel || null);
           setReal(Boolean(data.real));
         }
       } catch {
@@ -117,85 +142,50 @@ export default function AnalyticsPage() {
     };
   }, [range, active?.id]);
 
-  const entityName = active?.name || personalName;
   const m = metrics || {
     views: 0,
     opens: 0,
     completes: 0,
     likes: 0,
     shares: 0,
+    downloads: 0,
     saves: 0,
     follows: 0,
     qualified: 0,
-    videoPlays: 0,
-    videoCompletes: 0,
   };
 
-  const sourceRows = Object.entries(sources)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
+  const ranges: { id: Range; label: string }[] = [
+    { id: "7d", label: "7d" },
+    { id: "30d", label: "30d" },
+    { id: "90d", label: "90d" },
+    { id: "1y", label: "1y" },
+  ];
 
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-md">
-          <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3 md:max-w-2xl md:px-6">
-            <div className="flex items-center gap-2">
-              <Image
-                src="/logo.svg"
-                alt=""
-                width={28}
-                height={28}
-                className="rounded-md md:hidden"
-              />
-              <div>
-                <p className="text-[12px] text-zinc-500">{entityName}</p>
-                <h1 className="text-[17px] font-semibold text-white">
-                  Analytics
-                </h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <AnalyticsExport
-                rows={[
-                  { metric: "views", value: m.views, range },
-                  { metric: "opens", value: m.opens, range },
-                  { metric: "saves", value: m.saves, range },
-                  { metric: "follows", value: m.follows, range },
-                  { metric: "qualified", value: m.qualified, range },
-                  { metric: "videoPlays", value: m.videoPlays || 0, range },
-                  { metric: "heat", value: heat, range },
-                ]}
-              />
-              <Link
-                href="/pricing"
-                className="text-[13px] font-medium text-omniv-gold"
-              >
-                Pro
-              </Link>
-            </div>
+        <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#050505]/95 px-4 py-3 backdrop-blur">
+          <div className="mx-auto flex max-w-lg items-center justify-between md:max-w-2xl">
+            <h1 className="text-[17px] font-semibold text-white">Analytics</h1>
+            <AnalyticsExport
+              metrics={m}
+              heat={heat}
+              pubCount={pubCount}
+              range={range}
+            />
           </div>
         </header>
 
-        <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl md:px-6">
-          <div className="mb-4">
-            <CurrentIdentityBanner action="Analytics for" />
-          </div>
+        <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl">
+          <CurrentIdentityBanner />
 
-          <div className="flex items-center gap-2">
-            {(
-              [
-                { id: "7d" as const, label: "7D" },
-                { id: "30d" as const, label: "30D" },
-                { id: "90d" as const, label: "90D" },
-                { id: "1y" as const, label: "1Y" },
-              ] as const
-            ).map((r) => (
+          <div className="mt-4 flex gap-2">
+            {ranges.map((r) => (
               <button
                 key={r.id}
                 type="button"
                 onClick={() => setRange(r.id)}
-                className={`inline-flex h-8 items-center justify-center rounded-full px-3.5 text-[12px] font-semibold leading-none ${
+                className={`rounded-full px-3.5 py-1.5 text-[12px] font-semibold ${
                   range === r.id
                     ? "bg-omniv-gold text-black"
                     : "bg-white/[0.06] text-zinc-500"
@@ -228,7 +218,7 @@ export default function AnalyticsPage() {
             <>
               <p className="mt-3 text-[11px] text-zinc-600">
                 {real
-                  ? "Live counts from signals, saves, follows, and video events"
+                  ? "Live counts from signals, saves, follows, downloads, and video events"
                   : "Waiting for event data"}
               </p>
 
@@ -250,9 +240,14 @@ export default function AnalyticsPage() {
                   note="Real"
                 />
                 <Stat
+                  label="Downloads"
+                  value={formatNum(m.downloads || 0)}
+                  note="Audio · video · PDF"
+                />
+                <Stat
                   label="Qualified"
                   value={formatNum(m.qualified)}
-                  note="Saves · follows · completes · likes"
+                  note="Saves · follows · downloads · likes"
                 />
                 <Stat
                   label="Publications"
@@ -290,6 +285,7 @@ export default function AnalyticsPage() {
                         ["Views / opens", funnel.views || funnel.opens],
                         ["Saves", funnel.saves],
                         ["Follows", funnel.follows],
+                        ["Downloads", funnel.downloads || 0],
                         ["Video plays", funnel.videoPlays],
                         ["Reached 50%", funnel.videoProgress50],
                         ["Reached 90%", funnel.videoProgress90],
@@ -319,73 +315,31 @@ export default function AnalyticsPage() {
                 }
               />
 
-              {sourceRows.length > 0 && (
-                <section className="mt-8">
-                  <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    Sources
-                  </h2>
-                  <ul className="mt-3 space-y-2">
-                    {sourceRows.map(([src, n]) => (
-                      <li
-                        key={src}
-                        className="flex items-center justify-between rounded-xl bg-white/[0.04] px-3.5 py-2.5"
-                      >
-                        <span className="truncate text-[14px] text-white">
-                          {src}
-                        </span>
-                        <span className="text-[12px] text-zinc-500">{n}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-
               {topPubs.length > 0 && (
                 <section className="mt-8">
                   <h2 className="text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                    By publication
+                    Top publications
                   </h2>
                   <ul className="mt-3 space-y-2">
                     {topPubs.map((p) => (
-                      <li key={p.id}>
-                        <Link
-                          href={`/p/${p.slug}`}
-                          className="block rounded-xl bg-white/[0.04] px-3.5 py-3"
-                        >
-                          <p className="truncate text-[14px] font-medium text-white">
-                            {p.title}
-                          </p>
-                          <p className="mt-1 text-[11px] text-zinc-500">
-                            {p.type}
-                            {" · "}
-                            {formatNum(p.opens || 0)} opens
-                            {p.videoPlays
-                              ? ` · ${formatNum(p.videoPlays)} plays · ${p.completionRate || 0}% complete`
-                              : ""}
-                            {" · heat "}
-                            {formatNum(p.heat || 0)}
-                          </p>
-                        </Link>
+                      <li
+                        key={p.id}
+                        className="rounded-xl bg-white/[0.04] px-3.5 py-3 ring-1 ring-white/[0.06]"
+                      >
+                        <p className="text-[14px] font-medium text-white">
+                          {p.title}
+                        </p>
+                        <p className="mt-1 text-[12px] text-zinc-500">
+                          {p.type}
+                          {p.opens ? ` · ${p.opens} opens` : ""}
+                          {p.downloads ? ` · ${p.downloads} downloads` : ""}
+                          {p.videoPlays ? ` · ${p.videoPlays} plays` : ""}
+                        </p>
                       </li>
                     ))}
                   </ul>
                 </section>
               )}
-
-              <div className="mt-10 rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.08]">
-                <p className="text-[14px] font-semibold text-white">
-                  {DISCOVERY_PLANS.pro.name} unlocks deeper stats
-                </p>
-                <p className="mt-2 text-[13px] text-zinc-500">
-                  Cohort retention and export-ready demand graphs.
-                </p>
-                <Link
-                  href="/pricing"
-                  className="mt-4 inline-flex h-10 items-center rounded-full bg-omniv-gold px-5 text-[13px] font-semibold text-black"
-                >
-                  View plans
-                </Link>
-              </div>
             </>
           )}
         </main>
@@ -394,29 +348,4 @@ export default function AnalyticsPage() {
       </div>
     </DiscoveryShell>
   );
-}
-
-function Stat({
-  label,
-  value,
-  note,
-}: {
-  label: string;
-  value: string;
-  note: string;
-}) {
-  return (
-    <div className="rounded-2xl bg-white/[0.04] p-4">
-      <p className="text-[12px] text-zinc-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight text-white">
-        {value}
-      </p>
-      <p className="mt-1 text-[11px] text-zinc-600">{note}</p>
-    </div>
-  );
-}
-
-function formatNum(n: number) {
-  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
-  return String(n);
 }
