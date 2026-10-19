@@ -16,6 +16,7 @@ export type SignalKind =
   | "search"
   | "complete"
   | "contact"
+  | "download"
   | "skip";
 
 const WEIGHTS: Record<SignalKind, number> = {
@@ -28,6 +29,7 @@ const WEIGHTS: Record<SignalKind, number> = {
   search: 0.7,
   complete: 0.85,
   contact: 1.1,
+  download: 1.15,
   skip: -0.25,
 };
 
@@ -55,7 +57,12 @@ export function recordSignal(
   kind: SignalKind,
   tags: string[] = [],
   category?: string,
-  context?: { publicationSlug?: string; entityType?: string; entitySlug?: string; source?: string }
+  context?: {
+    publicationSlug?: string;
+    entityType?: string;
+    entitySlug?: string;
+    source?: string;
+  }
 ) {
   if (typeof window === "undefined") return;
   const delta = WEIGHTS[kind] ?? 0.1;
@@ -177,7 +184,7 @@ export function getRecentSignals(limit = 100): SignalEvent[] {
   }
 }
 
-/** Qualified interactions — saves, follows, completes, contacts, shares */
+/** Qualified interactions — saves, follows, completes, contacts, shares, downloads */
 export function countQualifiedInteractions(): number {
   const strong = new Set([
     "save",
@@ -186,11 +193,14 @@ export function countQualifiedInteractions(): number {
     "contact",
     "share",
     "like",
+    "download",
   ]);
   return getRecentSignals(200).filter((e) => strong.has(e.kind)).length;
 }
 
-export function readTopSignalTopics(limit = 5): { topic: string; weight: number }[] {
+export function readTopSignalTopics(
+  limit = 5
+): { topic: string; weight: number }[] {
   return Object.entries(readWeights())
     .filter(([, weight]) => weight > 0)
     .map(([topic, weight]) => ({ topic, weight }))
