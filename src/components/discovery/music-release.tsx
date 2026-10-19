@@ -173,6 +173,17 @@ export function MusicRelease({
     setProgress(v);
   }
 
+  const artistNode = artistHref ? (
+    <Link
+      href={artistHref}
+      className="font-medium text-zinc-200 underline-offset-2 hover:text-omniv-gold hover:underline"
+    >
+      {artist}
+    </Link>
+  ) : (
+    <span className="font-medium text-zinc-200">{artist}</span>
+  );
+
   return (
     <div className="mb-10 space-y-6">
       <div className="overflow-hidden rounded-2xl bg-white/[0.04] ring-1 ring-white/[0.08]">
@@ -195,13 +206,7 @@ export function MusicRelease({
               {title}
             </h2>
             <p className="mt-1 text-[14px] text-zinc-400">
-              {artistHref ? (
-                <Link href={artistHref} className="hover:text-omniv-gold">
-                  {artist}
-                </Link>
-              ) : (
-                artist
-              )}
+              {artistNode}
               {genre ? ` · ${genre}` : ""}
               {releaseDate
                 ? ` · ${new Date(releaseDate).toLocaleDateString("en-US", {
