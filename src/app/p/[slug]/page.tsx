@@ -174,7 +174,6 @@ export default async function PublicationPage({ params }: Props) {
   const explorePublications = liveAll.filter((x) => x.slug !== p.slug);
   const exploreEntities = entities;
 
-  // Same publisher (by id, name, or entity) for Explore this release
   const relatedFromPublisher = liveAll.filter((x) => {
     if (x.slug === p.slug) return false;
     if (p.publisherId && x.publisherId && x.publisherId === p.publisherId)
@@ -400,7 +399,9 @@ export default async function PublicationPage({ params }: Props) {
           {publisher ? (
             <div className="mt-12 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
               <div className="flex items-start gap-3">
-                <OmnivAvatar src={avatarSrc} name={publisherName} size={48} />
+                <Link href={publisherHref || "#"} className="shrink-0">
+                  <OmnivAvatar src={avatarSrc} name={publisherName} size={48} />
+                </Link>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     {publisherHref ? (
@@ -446,13 +447,20 @@ export default async function PublicationPage({ params }: Props) {
             />
           </div>
 
-          <div className="mt-8 flex justify-center">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <SaveButton
               type="publication"
               slug={p.slug}
               name={p.title}
               variant="button"
             />
+            {publisher && !canManage ? (
+              <FollowButton
+                type={publisher.type}
+                slug={publisher.slug}
+                name={publisher.name}
+              />
+            ) : null}
           </div>
         </main>
 
