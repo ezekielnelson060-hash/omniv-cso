@@ -179,6 +179,8 @@ export type Publication = {
   publisherId: string;
   ownerId?: string;
   publisherName?: string;
+  /** publisher entity slug (for pretty public URLs) */
+  publisherSlug?: string;
   visibility?: "public" | "private";
   category?: string;
   location?: string;
@@ -209,18 +211,40 @@ export const PUBLICATION_PATH_PREFIX: Record<PublicationType, string> = {
   image: "/p",
 };
 
-/** Permanent, crawlable public URL for a publication. */
+/** Slugify a display name for use in public paths. */
+export function slugifyPublisherName(name: string | undefined | null): string {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+}
+
+/**
+ * Permanent, crawlable public URL for a publication.
+ * When publisher slug/name is known: /music/{publisher}/{slug}
+ * Otherwise: /music/{slug} (still valid via rewrite).
+ */
 export function publicationPath(
-  p: Pick<Publication, "slug" | "type"> | { slug: string; type?: string }
+  p: Pick<Publication, "slug" | "type"> &
+    Partial<Pick<Publication, "publisherSlug" | "publisherName">>
 ) {
   const prefix =
     (p.type && PUBLICATION_PATH_PREFIX[p.type as PublicationType]) || "/p";
+  const publisher =
+    (p.publisherSlug && String(p.publisherSlug).trim()) ||
+    slugifyPublisherName(p.publisherName);
+  if (publisher) return `${prefix}/${publisher}/${p.slug}`;
   return `${prefix}/${p.slug}`;
 }
 
 /** Absolute canonical URL for a publication. */
 export function publicationCanonicalUrl(
-  p: Pick<Publication, "slug" | "type"> & { canonicalUrl?: string | null },
+  p: Pick<Publication, "slug" | "type"> &
+    Partial<Pick<Publication, "publisherSlug" | "publisherName" | "canonicalUrl">>,
   origin = process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
 ) {
   if (p.canonicalUrl) return p.canonicalUrl;
