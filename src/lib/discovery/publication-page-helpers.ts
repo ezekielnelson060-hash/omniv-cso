@@ -73,6 +73,16 @@ export function youtubeEmbed(url: string): string | null {
   }
 }
 
+function slugifyName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+}
+
 export async function resolvePublisher(
   supabase: Awaited<ReturnType<typeof createClient>> | null,
   p: LivePublication
@@ -82,11 +92,58 @@ export async function resolvePublisher(
       const byId = await getEntityByIdLive(supabase, p.publisherId);
       if (byId) return byId;
     }
-    const name = (p.publisherName || "").toLowerCase().trim();
-    if (name.includes("omniv") || !p.publisherId) {
+
+    const name = (p.publisherName || "").trim();
+    const nameLower = name.toLowerCase();
+
+    if (nameLower.includes("omniv") || !p.publisherId) {
       for (const slug of ["omniv-editorial", "omniv", "omniv-media"]) {
         const e = await getDiscoveryEntity(supabase, "company", slug);
         if (e) return e;
+      }
+    }
+
+    // Lookup by slugified name across common entity types
+    if (name && supabase) {
+      const slug = slugifyName(name);
+      if (slug) {
+        for (const type of ["artist", "person", "company", "brand", "project"]) {
+          const e = await getDiscoveryEntity(supabase, type, slug);
+          if (e) return e;
+        }
+        // Case-insensitive name match
+        try {
+          const { data } = await supabase
+            .from("discovery_entities")
+            .select(
+              "id, type, slug, name, tagline, location, about, intents, tags, links, heat, published_at, verified, avatar_url, cover_url, owner_id"
+            )
+            .ilike("name", name)
+            .limit(1)
+            .maybeSingle();
+          if (data) {
+            return {
+              id: data.id,
+              type: data.type,
+              slug: data.slug,
+              name: data.name || name,
+              tagline: data.tagline || "",
+              location: data.location ?? undefined,
+              about: data.about || "",
+              intents: Array.isArray(data.intents) ? data.intents : [],
+              tags: Array.isArray(data.tags) ? data.tags : [],
+              links: Array.isArray(data.links) ? data.links : undefined,
+              publishedAt: (data.published_at || "").slice(0, 10) || new Date().toISOString().slice(0, 10),
+              heat: data.heat ?? 0,
+              verified: Boolean(data.verified),
+              avatarUrl: data.avatar_url ?? undefined,
+              coverUrl: data.cover_url ?? undefined,
+              ownerId: data.owner_id ?? undefined,
+            };
+          }
+        } catch {
+          /* ignore */
+        }
       }
     }
   } catch {
