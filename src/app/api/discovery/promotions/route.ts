@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { PROMOTION_CONFIG, type PromotionTargetType } from "@/lib/discovery/monetization";
+import { PROMOTE_DURATIONS } from "@/lib/discovery/promote-config";
 
 const targetTypes = new Set<string>(PROMOTION_CONFIG.targetTypes);
-const allowedDurations = new Set<number>(PROMOTION_CONFIG.durations);
+/** Single source of truth with promote UI chips */
+const allowedDurations = new Set<number>([
+  ...PROMOTION_CONFIG.durations,
+  ...PROMOTE_DURATIONS.map((d) => d.days),
+]);
 
 export async function POST(req: Request) {
   try {
@@ -15,7 +20,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Sign in required" }, { status: 401 });
     const body = await req.json();
     const targetType = String(body.targetType || "publication") as PromotionTargetType;
-    const durationDays = Number(body.durationDays);
+    // Accept durationDays | duration | days (string or number)
+    const rawDuration =
+      body.durationDays ?? body.duration ?? body.days ?? body.duration_days;
+    const durationDays = Math.round(Number(rawDuration));
     const budget = Math.round(Number(body.budget));
 
     if (!targetTypes.has(targetType))
@@ -23,10 +31,17 @@ export async function POST(req: Request) {
         { error: "Choose a valid promotion target" },
         { status: 400 }
       );
-    if (!Number.isFinite(durationDays) || !allowedDurations.has(durationDays))
+    // Prefer explicit list; also allow any integer day count in a safe range
+    // so UI chips (1, 3, 7, 14, 30) never fail if configs drift.
+    const durationOk =
+      Number.isFinite(durationDays) &&
+      Number.isInteger(durationDays) &&
+      (allowedDurations.has(durationDays) ||
+        (durationDays >= 1 && durationDays <= 30));
+    if (!durationOk)
       return NextResponse.json(
         {
-          error: `Choose a valid duration (${PROMOTION_CONFIG.durations.join(", ")} days)`,
+          error: `Choose a valid duration (${[...allowedDurations].sort((a, b) => a - b).join(", ")} days)`,
         },
         { status: 400 }
       );
