@@ -8,6 +8,7 @@ import {
 import { publicationsByPublisher } from "@/lib/discovery/seed";
 import { MusicRelease } from "@/components/discovery/music-release";
 import { VideoWatch } from "@/components/discovery/video-watch";
+import { resolvePublisherPath } from "@/lib/discovery/resolve-publisher";
 
 type Props = {
   p: Publication & { mediaUrl?: string | null; coverUrl?: string | null };
@@ -53,6 +54,19 @@ function parseChapters(raw: string | undefined): { time: string; label: string }
     .filter(Boolean) as { time: string; label: string }[];
 }
 
+function publisherHrefFor(
+  publisher: DiscoveryEntity | null | undefined,
+  publisherName: string,
+  preferredType = "artist"
+): string | undefined {
+  if (publisher) return entityPath(publisher);
+  return resolvePublisherPath({
+    name: publisherName,
+    type: preferredType,
+    slug: undefined,
+  });
+}
+
 export function PublicationMedia({
   p,
   publisher,
@@ -66,6 +80,11 @@ export function PublicationMedia({
   embedSrc,
 }: Props) {
   const meta = parseMeta(p.meta);
+  const artistHref = publisherHrefFor(
+    publisher,
+    publisherName,
+    p.type === "music" ? "artist" : publisher?.type || "person"
+  );
 
   // Explicit type wins so discovery-media URLs are not misclassified
   if (p.type === "video" || isDirectVideo || isEmbed) {
@@ -74,7 +93,7 @@ export function PublicationMedia({
       <VideoWatch
         title={p.title}
         publisher={publisherName}
-        publisherHref={publisher ? entityPath(publisher) : undefined}
+        publisherHref={artistHref}
         mediaUrl={mediaUrl || meta.videoUrl || null}
         coverUrl={coverUrl}
         durationLabel={meta.duration || null}
@@ -107,7 +126,7 @@ export function PublicationMedia({
       <MusicRelease
         title={p.title}
         artist={publisherName}
-        artistHref={publisher ? entityPath(publisher) : undefined}
+        artistHref={artistHref}
         coverUrl={coverUrl}
         mediaUrl={mediaUrl}
         genre={p.category || meta.genre || (p.tags || [])[0] || null}
@@ -116,11 +135,11 @@ export function PublicationMedia({
         path={path}
         about={p.summary || p.excerpt || null}
         explore={[
-          ...(publisher
+          ...(artistHref
             ? [
                 {
-                  label: `More from ${publisher.name}`,
-                  href: entityPath(publisher),
+                  label: `More from ${publisherName}`,
+                  href: artistHref,
                   kind: "Artist",
                 },
               ]
