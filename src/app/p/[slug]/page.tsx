@@ -230,6 +230,7 @@ export default async function PublicationPage({ params }: Props) {
     publicationSlug: p.slug,
     publicationTitle: p.title,
     mediaUrl,
+    coverUrl,
     publisherName,
     publisherType: followType,
     publisherSlug: followSlug,
