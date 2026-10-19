@@ -29,8 +29,7 @@ import { publicationMetadata } from "@/lib/discovery/seo";
 import { resolveEntityAvatar } from "@/lib/discovery/resolve-avatar";
 import { resolvePublisherPath } from "@/lib/discovery/resolve-publisher";
 import { BodyBlocks } from "@/components/discovery/publication-body-blocks";
-import { PublicationBottomActions } from "@/components/discovery/publication-cta-bar";
-import { MoreFromPublisher } from "@/components/discovery/more-from-publisher";
+import { PublicationPageFooter } from "@/components/discovery/publication-page-footer";
 import {
   HERO,
   readMinutes,
@@ -210,6 +209,18 @@ export default async function PublicationPage({ params }: Props) {
 
   const jsonLd = publicationJsonLd(p);
   const showFollow = !canManage && publisherName && publisherName !== "Publisher";
+
+  const moreItems = relatedFromPublisher.slice(0, 3).map((x) => ({
+    slug: x.slug,
+    type: x.type,
+    title: x.title,
+    summary: x.summary,
+    publisherName: x.publisherName || publisherName,
+    publisherSlug: x.publisherSlug || publisher?.slug,
+    coverUrl: (x as { coverUrl?: string | null }).coverUrl,
+    mediaUrl: (x as { mediaUrl?: string | null }).mediaUrl,
+    publishedAt: x.publishedAt,
+  }));
 
   return (
     <DiscoveryShell>
@@ -438,22 +449,6 @@ export default async function PublicationPage({ params }: Props) {
             </div>
           ) : null}
 
-          <MoreFromPublisher
-            publisherName={publisherName}
-            profileHref={publisherHref}
-            items={relatedFromPublisher.slice(0, 3).map((x) => ({
-              slug: x.slug,
-              type: x.type,
-              title: x.title,
-              summary: x.summary,
-              publisherName: x.publisherName || publisherName,
-              publisherSlug: x.publisherSlug || publisher?.slug,
-              coverUrl: (x as { coverUrl?: string | null }).coverUrl,
-              mediaUrl: (x as { mediaUrl?: string | null }).mediaUrl,
-              publishedAt: x.publishedAt,
-            }))}
-          />
-
           <div className="mt-10">
             <KeepExploring
               currentPublication={p}
@@ -462,16 +457,21 @@ export default async function PublicationPage({ params }: Props) {
             />
           </div>
 
-          <PublicationBottomActions
-            publicationType={p.type || "article"}
-            publicationSlug={p.slug}
-            publicationTitle={p.title}
+          {/* Bottom of page: this publication again + more from publisher + CTAs */}
+          <PublicationPageFooter
+            title={p.title}
+            type={p.type || "article"}
+            slug={p.slug}
+            coverUrl={coverUrl}
             mediaUrl={mediaUrl}
+            path={path}
             publisherName={publisherName}
             publisherType={followType}
             publisherSlug={followSlug}
             publisherId={publisher?.id}
+            publisherHref={publisherHref}
             showFollow={Boolean(showFollow)}
+            moreItems={moreItems}
           />
         </main>
 
