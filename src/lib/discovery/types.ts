@@ -223,15 +223,20 @@ export function slugifyPublisherName(name: string | undefined | null): string {
     .slice(0, 48);
 }
 
+/** Input shape for publicationPath — accepts live API rows with string type. */
+export type PublicationPathInput = {
+  slug: string;
+  type?: string | PublicationType | null;
+  publisherSlug?: string | null;
+  publisherName?: string | null;
+};
+
 /**
  * Permanent, crawlable public URL for a publication.
  * When publisher slug/name is known: /music/{publisher}/{slug}
  * Otherwise: /music/{slug} (still valid via rewrite).
  */
-export function publicationPath(
-  p: Pick<Publication, "slug" | "type"> &
-    Partial<Pick<Publication, "publisherSlug" | "publisherName">>
-) {
+export function publicationPath(p: PublicationPathInput) {
   const prefix =
     (p.type && PUBLICATION_PATH_PREFIX[p.type as PublicationType]) || "/p";
   const publisher =
@@ -243,8 +248,7 @@ export function publicationPath(
 
 /** Absolute canonical URL for a publication. */
 export function publicationCanonicalUrl(
-  p: Pick<Publication, "slug" | "type"> &
-    Partial<Pick<Publication, "publisherSlug" | "publisherName" | "canonicalUrl">>,
+  p: PublicationPathInput & { canonicalUrl?: string | null },
   origin = process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"
 ) {
   if (p.canonicalUrl) return p.canonicalUrl;
