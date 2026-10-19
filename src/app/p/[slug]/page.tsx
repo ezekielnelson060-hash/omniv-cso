@@ -208,11 +208,13 @@ export default async function PublicationPage({ params }: Props) {
     isMusic && (Boolean(p.body) || Boolean(p.content?.length));
 
   const jsonLd = publicationJsonLd(p);
-  const showFollow = !canManage && publisherName && publisherName !== "Publisher";
+  const showFollow = Boolean(
+    !canManage && publisherName && publisherName !== "Publisher"
+  );
 
   const moreItems = relatedFromPublisher.slice(0, 3).map((x) => ({
     slug: x.slug,
-    type: x.type,
+    type: x.type as string,
     title: x.title,
     summary: x.summary,
     publisherName: x.publisherName || publisherName,
@@ -457,7 +459,6 @@ export default async function PublicationPage({ params }: Props) {
             />
           </div>
 
-          {/* Bottom of page: this publication again + more from publisher + CTAs */}
           <PublicationPageFooter
             title={p.title}
             type={p.type || "article"}
@@ -470,7 +471,7 @@ export default async function PublicationPage({ params }: Props) {
             publisherSlug={followSlug}
             publisherId={publisher?.id}
             publisherHref={publisherHref}
-            showFollow={Boolean(showFollow)}
+            showFollow={showFollow}
             moreItems={moreItems}
           />
         </main>
