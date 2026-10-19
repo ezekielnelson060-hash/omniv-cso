@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { SaveButton } from "@/components/discovery/save-button";
 import { ShareButton } from "@/components/discovery/share-button";
 import { PublicationPageActions } from "@/components/discovery/publication-page-actions";
-import { FollowButton } from "@/components/discovery/follow-button";
 import { StickyArticleHeader } from "@/components/discovery/sticky-article-header";
 import { KeepExploring } from "@/components/discovery/keep-exploring";
 import { ViewTracker } from "@/components/discovery/view-tracker";
@@ -31,6 +29,8 @@ import { publicationMetadata } from "@/lib/discovery/seo";
 import { resolveEntityAvatar } from "@/lib/discovery/resolve-avatar";
 import { resolvePublisherPath } from "@/lib/discovery/resolve-publisher";
 import { BodyBlocks } from "@/components/discovery/publication-body-blocks";
+import { PublicationBottomActions } from "@/components/discovery/publication-cta-bar";
+import { MoreFromPublisher } from "@/components/discovery/more-from-publisher";
 import {
   HERO,
   readMinutes,
@@ -434,17 +434,37 @@ export default async function PublicationPage({ params }: Props) {
                     </p>
                   ) : null}
                 </div>
-                {showFollow ? (
-                  <FollowButton
-                    type={followType}
-                    slug={followSlug}
-                    name={publisherName}
-                    id={publisher?.id}
-                  />
-                ) : null}
               </div>
             </div>
           ) : null}
+
+          <MoreFromPublisher
+            publisherName={publisherName}
+            profileHref={publisherHref}
+            items={relatedFromPublisher.slice(0, 3).map((x) => ({
+              slug: x.slug,
+              type: x.type,
+              title: x.title,
+              summary: x.summary,
+              publisherName: x.publisherName || publisherName,
+              publisherSlug: x.publisherSlug || publisher?.slug,
+              coverUrl: (x as { coverUrl?: string | null }).coverUrl,
+              mediaUrl: (x as { mediaUrl?: string | null }).mediaUrl,
+              publishedAt: x.publishedAt,
+            }))}
+          />
+
+          <PublicationBottomActions
+            publicationType={p.type || "article"}
+            publicationSlug={p.slug}
+            publicationTitle={p.title}
+            mediaUrl={mediaUrl}
+            publisherName={publisherName}
+            publisherType={followType}
+            publisherSlug={followSlug}
+            publisherId={publisher?.id}
+            showFollow={Boolean(showFollow)}
+          />
 
           <div className="mt-10">
             <KeepExploring
@@ -452,23 +472,6 @@ export default async function PublicationPage({ params }: Props) {
               entities={exploreEntities}
               publications={explorePublications}
             />
-          </div>
-
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <SaveButton
-              type="publication"
-              slug={p.slug}
-              name={p.title}
-              variant="button"
-            />
-            {showFollow ? (
-              <FollowButton
-                type={followType}
-                slug={followSlug}
-                name={publisherName}
-                id={publisher?.id}
-              />
-            ) : null}
           </div>
         </main>
 
