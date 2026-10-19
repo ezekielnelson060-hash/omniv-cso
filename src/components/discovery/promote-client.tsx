@@ -77,8 +77,8 @@ function PromoteInner() {
   const [targetType, setTargetType] = useState<PromotionTargetType>("publication");
   const [audiences, setAudiences] = useState<string[]>(["AI & Research"]);
   const [region, setRegion] = useState("global");
-  const [days, setDays] = useState(7);
-  const [dailyRate, setDailyRate] = useState(10);
+  const [days, setDays] = useState(1);
+  const [dailyRate, setDailyRate] = useState(5);
   const [objective, setObjective] = useState("readers");
   const [auth, setAuth] = useState<boolean | null>(null);
   const [done, setDone] = useState(billingOk);
@@ -87,8 +87,9 @@ function PromoteInner() {
   const [review, setReview] = useState(false);
   const [identity, setIdentity] = useState<ActiveAccount | null>(null);
 
-  const totalBudget = dailyRate * days;
-  const reachEstimate = estimatePromoteReach(dailyRate, days);
+  const durationDays = Math.round(Number(days)) || 1;
+  const totalBudget = dailyRate * durationDays;
+  const reachEstimate = estimatePromoteReach(dailyRate, durationDays);
   const regionLabel = REGIONS.find((r) => r.id === region)?.label ?? "Worldwide";
   const objectiveLabel =
     OBJECTIVES.find((o) => o.id === objective)?.label ?? "More readers";
@@ -160,7 +161,7 @@ function PromoteInner() {
           title: selected?.title,
           audiences,
           region,
-          duration: days,
+          duration: durationDays,
           budget: amount,
           objective,
           identity: identity?.name || "personal",
@@ -178,7 +179,8 @@ function PromoteInner() {
         targetId: selected?.id,
         targetSlug: slug,
         targetTitle: selected?.title || slug,
-        durationDays: days,
+        durationDays,
+        duration: durationDays,
         budget: amount,
         objective,
         audience: audiences,
@@ -196,7 +198,7 @@ function PromoteInner() {
       target_type: targetType,
       slug,
       region,
-      duration: String(days),
+      duration: String(durationDays),
       objective,
       daily_rate: String(dailyRate),
     };
@@ -347,7 +349,11 @@ function PromoteInner() {
               <Field label="Duration">
                 <div className="flex flex-wrap gap-2">
                   {DURATIONS.map((d) => (
-                    <Chip key={d.days} active={days === d.days} onClick={() => setDays(d.days)}>
+                    <Chip
+                      key={d.days}
+                      active={durationDays === d.days}
+                      onClick={() => setDays(d.days)}
+                    >
                       {d.label}
                     </Chip>
                   ))}
@@ -374,7 +380,8 @@ function PromoteInner() {
                     </p>
                     <p className="mt-1 text-3xl font-semibold text-white">${totalBudget}</p>
                     <p className="mt-1 text-[13px] text-zinc-400">
-                      ${dailyRate}/day × {days} day{days === 1 ? "" : "s"} · {regionLabel}
+                      ${dailyRate}/day × {durationDays} day{durationDays === 1 ? "" : "s"} ·{" "}
+                      {regionLabel}
                     </p>
                   </div>
                   <p className="text-right text-[12px] text-zinc-500">Est. {reachEstimate}</p>
@@ -389,7 +396,10 @@ function PromoteInner() {
               <button
                 type="button"
                 disabled={loading || !slug || !selected}
-                onClick={() => setReview(true)}
+                onClick={() => {
+                  setError(null);
+                  setReview(true);
+                }}
                 className="flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[15px] font-semibold text-black disabled:opacity-50"
               >
                 Review promotion
@@ -417,8 +427,8 @@ function PromoteInner() {
                       {objectiveLabel}
                     </li>
                     <li>
-                      <span className="text-zinc-500">Budget · </span>${dailyRate}/day × {days} = $
-                      {totalBudget}
+                      <span className="text-zinc-500">Budget · </span>${dailyRate}/day ×{" "}
+                      {durationDays} = ${totalBudget}
                     </li>
                     <li>
                       <span className="text-zinc-500">Est. reach · </span>
