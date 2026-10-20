@@ -3,12 +3,10 @@
 import Link from "next/link";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
-import { NotificationBell } from "@/components/discovery/notification-bell";
 
 type Row = { href: string; label: string; hint?: string };
-type Group = { title: string; rows: Row[] };
 
-const GROUPS: Group[] = [
+const SECTIONS: { title: string; rows: Row[] }[] = [
   {
     title: "Account",
     rows: [
@@ -32,8 +30,7 @@ const GROUPS: Group[] = [
     rows: [
       {
         href: "/settings/notifications",
-        label: "Push, email & quiet hours",
-        hint: "Granular controls",
+        label: "Push, email & in-app",
       },
     ],
   },
@@ -59,7 +56,7 @@ const GROUPS: Group[] = [
     rows: [{ href: "/settings/appearance", label: "Theme", hint: "Dark" }],
   },
   {
-    title: "Growth",
+    title: "Creator tools",
     rows: [
       { href: "/leads", label: "Leads", hint: "Pro" },
       { href: "/analytics", label: "Analytics", hint: "Pro" },
@@ -67,7 +64,7 @@ const GROUPS: Group[] = [
     ],
   },
   {
-    title: "Monetization",
+    title: "Billing",
     rows: [
       { href: "/pro", label: "Subscription" },
       { href: "/settings/billing", label: "Billing & invoices" },
@@ -77,8 +74,8 @@ const GROUPS: Group[] = [
   {
     title: "Verification",
     rows: [
+      { href: "/verify", label: "Get verified", hint: "Own your identity" },
       { href: "/verify", label: "Verification status" },
-      { href: "/verify", label: "Identity verification" },
     ],
   },
   {
@@ -95,33 +92,31 @@ export default function SettingsPage() {
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
-        <header className="sticky top-0 z-40 bg-[#050505]/95 backdrop-blur-md">
-          <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-3">
-            <h1 className="text-[17px] font-semibold text-white">Settings</h1>
-            <NotificationBell />
-          </div>
+        <header className="sticky top-0 z-20 border-b border-white/[0.06] bg-[#050505]/95 px-4 py-3 backdrop-blur">
+          <h1 className="mx-auto max-w-lg text-[17px] font-semibold text-white md:max-w-2xl">
+            Settings
+          </h1>
         </header>
 
-        <main className="mx-auto max-w-lg px-4 pb-28 pt-2">
-          {GROUPS.map((g) => (
-            <section key={g.title} className="mt-6">
+        <main className="mx-auto max-w-lg px-4 pb-28 pt-4 md:max-w-2xl">
+          {SECTIONS.map((s) => (
+            <section key={s.title} className="mb-6">
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-600">
-                {g.title}
+                {s.title}
               </p>
-              <ul className="overflow-hidden rounded-2xl bg-white/[0.03] ring-1 ring-white/[0.06]">
-                {g.rows.map((r) => (
+              <ul className="overflow-hidden rounded-2xl bg-white/[0.04] ring-1 ring-white/[0.06]">
+                {s.rows.map((r) => (
                   <li key={r.href + r.label} className="border-b border-white/[0.04] last:border-0">
                     <Link
                       href={r.href}
-                      className="flex items-center justify-between px-4 py-3.5 transition hover:bg-white/[0.04]"
+                      className="flex items-center justify-between gap-3 px-4 py-3.5 transition hover:bg-white/[0.03]"
                     >
-                      <span className="text-[15px] text-white">{r.label}</span>
-                      <span className="flex items-center gap-2">
-                        {r.hint && (
-                          <span className="text-[11px] text-zinc-600">{r.hint}</span>
-                        )}
-                        <span className="text-zinc-600">›</span>
-                      </span>
+                      <span className="text-[14px] text-white">{r.label}</span>
+                      {r.hint ? (
+                        <span className="text-[12px] text-zinc-500">{r.hint}</span>
+                      ) : (
+                        <span className="text-zinc-600">→</span>
+                      )}
                     </Link>
                   </li>
                 ))}
@@ -129,6 +124,7 @@ export default function SettingsPage() {
             </section>
           ))}
         </main>
+
         <BottomNav />
       </div>
     </DiscoveryShell>
