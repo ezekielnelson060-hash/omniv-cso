@@ -31,6 +31,7 @@ import { resolvePublisherPath } from "@/lib/discovery/resolve-publisher";
 import { BodyBlocks } from "@/components/discovery/publication-body-blocks";
 import { PublicationEngagement } from "@/components/discovery/publication-engagement";
 import { LyricsToggle } from "@/components/discovery/lyrics-toggle";
+import { extractEventAt } from "@/lib/discovery/event-reminders";
 import {
   HERO,
   readMinutes,
@@ -225,6 +226,9 @@ export default async function PublicationPage({ params }: Props) {
     publishedAt: x.publishedAt,
   }));
 
+  const eventAt =
+    p.type === "event" ? extractEventAt(metaFields, p.publishedAt) : null;
+
   const engagementProps = {
     publicationType: p.type || "article",
     publicationSlug: p.slug,
@@ -238,6 +242,8 @@ export default async function PublicationPage({ params }: Props) {
     publisherHref,
     showFollow,
     moreItems,
+    eventAt,
+    publicationPath: path,
   };
 
   return (
