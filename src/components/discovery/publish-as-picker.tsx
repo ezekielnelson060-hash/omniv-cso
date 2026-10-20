@@ -8,6 +8,7 @@ import {
   onAccountSwitch,
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
+import { GetVerifiedCard } from "@/components/discovery/get-verified-card";
 
 /**
  * Binds global active identity into Create form.
@@ -92,11 +93,16 @@ export function PublishAsPicker({
           </Link>
         </div>
       ) : (
-        <p className="text-[12px] leading-relaxed text-zinc-500">
-          This publication belongs to{" "}
-          <span className="font-medium text-zinc-300">{label}</span> — independent
-          of your personal profile.
-        </p>
+        <div className="space-y-2">
+          <p className="text-[12px] leading-relaxed text-zinc-500">
+            This publication belongs to{" "}
+            <span className="font-medium text-zinc-300">{label}</span> — independent
+            of your personal profile.
+          </p>
+          {!active.verified ? (
+            <GetVerifiedCard variant="banner" name={label} />
+          ) : null}
+        </div>
       )}
 
       {value !== label && <span className="sr-only">{value}</span>}
