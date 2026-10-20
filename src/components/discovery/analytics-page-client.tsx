@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { BottomNav } from "@/components/discovery/bottom-nav";
 import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { AnalyticsExport } from "@/components/discovery/analytics-export";
@@ -13,7 +12,6 @@ import {
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
 import { readProfile } from "@/lib/discovery/local-profile";
-import { DISCOVERY_PLANS } from "@/lib/discovery/monetization";
 import { AnalyticsGrowthCta } from "@/components/discovery/analytics-growth-cta";
 
 type Range = "7d" | "30d" | "90d" | "1y";
@@ -92,22 +90,18 @@ export default function AnalyticsPage() {
   const [auth, setAuth] = useState<boolean | null>(null);
   const [range, setRange] = useState<Range>("30d");
   const [active, setActive] = useState<ActiveAccount | null>(null);
-  const [personalName, setPersonalName] = useState("You");
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [heat, setHeat] = useState(0);
   const [pubCount, setPubCount] = useState(0);
   const [topPubs, setTopPubs] = useState<TopPub[]>([]);
-  const [sources, setSources] = useState<Record<string, number>>({});
   const [funnel, setFunnel] = useState<Funnel | null>(null);
   const [real, setReal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setActive(readActiveAccount());
-    setPersonalName(readProfile().displayName || "You");
     return onAccountSwitch(() => {
       setActive(readActiveAccount());
-      setPersonalName(readProfile().displayName || "You");
     });
   }, []);
 
@@ -127,7 +121,6 @@ export default function AnalyticsPage() {
           setHeat(Number(data.heat || 0));
           setPubCount(Number(data.publications || 0));
           setTopPubs(data.topPublications || []);
-          setSources(data.sources || {});
           setFunnel(data.funnel || null);
           setReal(Boolean(data.real));
         }
@@ -161,6 +154,31 @@ export default function AnalyticsPage() {
     { id: "1y", label: "1y" },
   ];
 
+  const exportRows = [
+    {
+      range,
+      opens: m.views || m.opens,
+      saves: m.saves,
+      follows: m.follows,
+      downloads: m.downloads || 0,
+      likes: m.likes,
+      shares: m.shares,
+      videoPlays: m.videoPlays || 0,
+      videoCompletes: m.videoCompletes || 0,
+      qualified: m.qualified,
+      heat,
+      publications: pubCount,
+    },
+    ...topPubs.map((p) => ({
+      publication: p.title,
+      type: p.type,
+      opens: p.opens || 0,
+      downloads: p.downloads || 0,
+      videoPlays: p.videoPlays || 0,
+      heat: p.heat,
+    })),
+  ];
+
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
@@ -168,10 +186,8 @@ export default function AnalyticsPage() {
           <div className="mx-auto flex max-w-lg items-center justify-between md:max-w-2xl">
             <h1 className="text-[17px] font-semibold text-white">Analytics</h1>
             <AnalyticsExport
-              metrics={m}
-              heat={heat}
-              pubCount={pubCount}
-              range={range}
+              filename={`omniv-analytics-${range}`}
+              rows={exportRows}
             />
           </div>
         </header>
