@@ -13,7 +13,8 @@ export type NotificationKind =
   | "verification"
   | "featured"
   | "opportunity_response"
-  | "analytics_milestone";
+  | "analytics_milestone"
+  | "event_reminder";
 
 export type OmnivNotification = {
   id: string;
@@ -165,7 +166,8 @@ export function filterNotifications(
         n.kind === "trending" ||
         n.kind === "published_by_following" ||
         n.kind === "featured" ||
-        n.kind === "analytics_milestone"
+        n.kind === "analytics_milestone" ||
+        n.kind === "event_reminder"
     );
   }
   return items;
