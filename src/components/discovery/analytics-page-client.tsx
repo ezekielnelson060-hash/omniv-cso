@@ -11,7 +11,6 @@ import {
   onAccountSwitch,
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
-import { readProfile } from "@/lib/discovery/local-profile";
 import { AnalyticsGrowthCta } from "@/components/discovery/analytics-growth-cta";
 
 type Range = "7d" | "30d" | "90d" | "1y";
