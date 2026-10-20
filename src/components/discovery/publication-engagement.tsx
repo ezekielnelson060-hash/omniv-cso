@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { MoreFromPublisher } from "@/components/discovery/more-from-publisher";
 import { PublicationBottomActions } from "@/components/discovery/publication-cta-bar";
+import { EventReminderButton } from "@/components/discovery/event-reminder-button";
+import { TrackedDownload } from "@/components/discovery/tracked-download";
 import { PUBLICATION_LABELS } from "@/lib/discovery/types";
 
 type MoreItem = {
@@ -20,8 +22,9 @@ type MoreItem = {
 /**
  * Order (fixed):
  * 1) This publication — play / watch / view / download
- * 2) More from publisher (2–3 other works)
- * 3) Save + Follow + Download CTAs
+ * 2) Event countdown + remind (events only)
+ * 3) More from publisher (2–3 other works)
+ * 4) Save + Follow + Download CTAs
  */
 export function PublicationEngagement({
   publicationType,
@@ -36,6 +39,8 @@ export function PublicationEngagement({
   publisherHref,
   showFollow,
   moreItems,
+  eventAt,
+  publicationPath,
 }: {
   publicationType: string;
   publicationSlug: string;
@@ -49,6 +54,8 @@ export function PublicationEngagement({
   publisherHref?: string | null;
   showFollow: boolean;
   moreItems: MoreItem[];
+  eventAt?: string | null;
+  publicationPath?: string;
 }) {
   const t = (publicationType || "article").toLowerCase();
   const label =
@@ -56,14 +63,13 @@ export function PublicationEngagement({
   const isMusic = t === "music";
   const isVideo = t === "video";
   const isDoc = t === "file" || t === "research";
+  const isEvent = t === "event";
   const hasMedia = Boolean(mediaUrl);
 
-  // Never list the current publication under "More from…"
   const others = moreItems.filter((x) => x.slug !== publicationSlug).slice(0, 3);
 
   return (
     <div className="mt-10 space-y-2">
-      {/* 1) This publication — interact without scrolling up */}
       <section className="overflow-hidden rounded-2xl bg-white/[0.04] ring-1 ring-white/[0.1]">
         <div className="flex items-center gap-3 p-3.5">
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-zinc-900">
@@ -72,7 +78,7 @@ export function PublicationEngagement({
               <img src={coverUrl} alt="" className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-omniv-gold/25 to-zinc-900 text-xl text-omniv-gold">
-                {isMusic ? "♪" : isVideo ? "▶" : isDoc ? "📄" : "A"}
+                {isMusic ? "♪" : isVideo ? "▶" : isDoc ? "📄" : isEvent ? "📅" : "A"}
               </div>
             )}
             {isVideo && (
@@ -128,15 +134,14 @@ export function PublicationEngagement({
             >
               View document
             </a>
-            <a
+            <TrackedDownload
               href={mediaUrl!}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
+              publicationSlug={publicationSlug}
+              publicationType={publicationType}
               className="inline-flex h-9 items-center rounded-full bg-white/[0.08] px-4 text-[13px] font-semibold text-white ring-1 ring-white/12"
             >
               Download
-            </a>
+            </TrackedDownload>
           </div>
         ) : null}
 
@@ -152,14 +157,21 @@ export function PublicationEngagement({
         ) : null}
       </section>
 
-      {/* 2) Other works from this publisher */}
+      {isEvent && eventAt ? (
+        <EventReminderButton
+          publicationSlug={publicationSlug}
+          publicationTitle={publicationTitle}
+          publicationPath={publicationPath}
+          eventAt={eventAt}
+        />
+      ) : null}
+
       <MoreFromPublisher
         publisherName={publisherName}
         profileHref={publisherHref}
         items={others}
       />
 
-      {/* 3) Save / Follow / Download */}
       <PublicationBottomActions
         publicationType={publicationType}
         publicationSlug={publicationSlug}
