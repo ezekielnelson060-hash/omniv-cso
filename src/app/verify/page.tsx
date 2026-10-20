@@ -187,19 +187,39 @@ export default function VerifyPage() {
               ←
             </Link>
             <h1 className="text-[17px] font-semibold text-white">
-              Verification
+              Get verified
             </h1>
           </div>
         </header>
 
         <main className="px-4 pb-28 pt-6">
-          <p className="text-[20px] font-semibold text-white">
-            Omniv Verification
-          </p>
-          <p className="mt-2 text-[14px] text-zinc-400">
-            Apply, pay the monthly fee, then wait for review. A badge is only
-            granted after approval — payment alone does not verify you.
-          </p>
+          <div className="flex items-start gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold text-black">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                aria-hidden
+              >
+                <path d="M12 2 9.2 3.1 6.1 3 4.5 5.6 2.2 7.2 2.5 10.3 1 12.8l1.5 2.5-.3 3.1 2.3 1.6L6 22l3.1-.1L12 23l2.9-1.1 3.1.1 1.6-2.6 2.3-1.6-.3-3.1L22.9 12l-1.5-2.5.3-3.1-2.3-1.6L17.9 3l-3.1.1L12 2Zm-1.4 13.3-3.2-3.2 1.4-1.4 1.8 1.8 4.6-4.6 1.4 1.4-6 6Z" />
+              </svg>
+            </span>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-omniv-gold">
+                Get verified
+              </p>
+              <p className="mt-1 text-[22px] font-semibold leading-snug text-white">
+                Own your identity on Omniv
+              </p>
+              <p className="mt-2 text-[14px] leading-relaxed text-zinc-400">
+                Like X and LinkedIn — a verified badge proves this is you (or
+                your company). Explorers trust verified publishers more. Apply,
+                pay the monthly fee, then Omniv reviews. Payment alone does not
+                grant the badge.
+              </p>
+            </div>
+          </div>
 
           {auth === false && (
             <div className="mt-8 text-center">
@@ -227,8 +247,7 @@ export default function VerifyPage() {
                   <ul className="mt-3 space-y-2">
                     {requests.map((r) => {
                       const st = (r.status || "pending").toLowerCase();
-                      const style =
-                        STATUS_STYLE[st] || STATUS_STYLE.pending;
+                      const style = STATUS_STYLE[st] || STATUS_STYLE.pending;
                       return (
                         <li
                           key={r.id}
@@ -363,9 +382,9 @@ export default function VerifyPage() {
                   </p>
                   <ul className="mt-4 space-y-2 text-[13px] text-zinc-300">
                     {[
-                      "Identity / entity review",
-                      "Verification badge if approved",
-                      "Badge on profile and publications",
+                      "Own this identity on Omniv — not a lookalike",
+                      "Verification badge on profile and publications",
+                      "Higher trust in discovery, search, and promote",
                       "Priority review (1–3 business days)",
                     ].map((item) => (
                       <li key={item} className="flex gap-2">
@@ -392,12 +411,12 @@ export default function VerifyPage() {
               >
                 {loading
                   ? "Submitting…"
-                  : `Apply & pay — ${VERIFY_FEE_LABEL}`}
+                  : `Get verified — ${VERIFY_FEE_LABEL}`}
               </button>
 
               <p className="mt-4 text-center text-[12px] text-zinc-600">
-                Admins review at /admin/verification. Payment marks the
-                application paid; approval grants the badge.
+                Omniv reviews applications. Payment marks the request paid;
+                approval grants the badge.
               </p>
             </>
           )}
