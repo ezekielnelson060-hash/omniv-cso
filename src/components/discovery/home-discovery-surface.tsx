@@ -19,6 +19,8 @@ import {
 } from "@/lib/discovery/recommend";
 import { readInterests } from "@/lib/discovery/interests";
 import { rankPublications } from "@/lib/discovery/rank";
+import { RisingNow } from "@/components/discovery/rising-now";
+import { humanizeTopic } from "@/lib/discovery/rising-topics";
 
 type Props = {
   publications: Publication[];
@@ -53,8 +55,8 @@ function readMins(pub: Publication) {
 
 function primaryTopic(pub: Publication): string {
   const t = (pub.tags || []).find((x) => x && x.length > 2);
-  if (t) return t;
-  if (pub.category) return pub.category;
+  if (t) return humanizeTopic(t);
+  if (pub.category) return humanizeTopic(pub.category);
   return PUBLICATION_LABELS[pub.type] || "Discovery";
 }
 
@@ -188,25 +190,6 @@ export function HomeDiscoverySurface({ publications, firstName }: Props) {
     });
     return (matched.length >= 2 ? matched : shuffled).slice(0, 4);
   }, [threadTopic, salt]);
-
-  const risingTopics = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const p of pool) {
-      for (const t of [...(p.tags || []), p.category || ""]) {
-        const k = (t || "").trim();
-        if (k.length < 3) continue;
-        counts.set(k, (counts.get(k) || 0) + 1 + (p.heat || 0) / 50);
-      }
-    }
-    return [...counts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([t]) => t)
-      .filter(
-        (t, i, arr) =>
-          arr.findIndex((x) => x.toLowerCase() === t.toLowerCase()) === i
-      )
-      .slice(0, 6);
-  }, [pool]);
 
   const moreStream = useMemo(() => pool.slice(1, 25), [pool]);
 
@@ -346,27 +329,7 @@ export function HomeDiscoverySurface({ publications, firstName }: Props) {
         </div>
       </section>
 
-      {risingTopics.length > 0 && (
-        <section>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
-            Rising now
-          </p>
-          <div className="mt-1 h-px w-full bg-white/[0.06]" />
-          <ul className="mt-3 space-y-2.5">
-            {risingTopics.map((t) => (
-              <li key={t}>
-                <Link
-                  href={`/explore?interest=${encodeURIComponent(t)}`}
-                  className="flex items-center gap-2 text-[14px] text-zinc-200 hover:text-omniv-gold"
-                >
-                  <span className="text-zinc-600">•</span>
-                  {t}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <RisingNow publications={pool} />
 
       {followedPubs.length > 0 && (
         <section>
