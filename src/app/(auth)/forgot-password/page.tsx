@@ -9,13 +9,31 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    setSent(true);
+    try {
+      const res = await fetch("/api/email/password-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Could not send reset email");
+        setLoading(false);
+        return;
+      }
+      setSent(true);
+    } catch {
+      setError("Network error. Try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -45,7 +63,7 @@ export default function ForgotPasswordPage() {
               Reset password
             </h1>
             <p className="mt-1.5 text-sm text-omniv-text-secondary">
-              Enter your email and we'll send a secure link.
+              Enter your email and we&apos;ll send a secure link.
             </p>
             <form onSubmit={handleSubmit} className="mt-8 space-y-4">
               <Input
@@ -53,8 +71,16 @@ export default function ForgotPasswordPage() {
                 type="email"
                 placeholder="you@email.com"
                 required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
-              <Button type="submit" className="w-full" size="lg" loading={loading}>
+              {error && <p className="text-xs text-rose-400">{error}</p>}
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                loading={loading}
+              >
                 Send reset link
               </Button>
             </form>

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { sendNurtureEmail } from "@/lib/email";
+import { sendWelcomeEmail } from "@/lib/email/account";
 
 /**
- * POST — send day-0 nurture email to the logged-in user.
- * Call after onboarding completes. Safe to call once; Resend may dedupe by content.
+ * POST — day-0 welcome from hello@ (notify stream).
+ * Call after signup when session exists.
  */
 export async function POST() {
   try {
@@ -22,7 +22,7 @@ export async function POST() {
       user.email.split("@")[0] ||
       "there";
 
-    const result = await sendNurtureEmail(user.email, 0, name);
+    const result = await sendWelcomeEmail(user.email, name);
     if (!result.ok) {
       console.error("[email/welcome]", result.error);
       return NextResponse.json(
@@ -31,7 +31,12 @@ export async function POST() {
       );
     }
 
-    return NextResponse.json({ ok: true, id: result.id });
+    return NextResponse.json({
+      ok: true,
+      id: result.id,
+      identity: "hello",
+      stream: "notify",
+    });
   } catch (e) {
     console.error("[email/welcome]", e);
     return NextResponse.json(
