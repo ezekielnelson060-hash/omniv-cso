@@ -1,33 +1,49 @@
-# Resend setup for Omniv nurture emails
+# Resend setup — Omniv nurture emails (12 over 60 days)
 
-## 1. Create account
-1. Go to [https://resend.com](https://resend.com) and sign up
-2. Verify your account
+## Sequence
 
-## 2. Add domain (production)
-1. Resend → Domains → Add domain
-2. Add `omniv.media` (or your sending subdomain e.g. `mail.omniv.media`)
-3. Add the DNS records Resend shows (SPF, DKIM, optionally DMARC)
-4. Wait until status is **Verified**
+| # | Day | Subject |
+|---|-----|---------|
+| 1 | 0 | Welcome to Omniv |
+| 2 | 2 | Your content deserves more than a temporary appearance |
+| 3 | 5 | What should you publish on Omniv? |
+| 4 | 8 | Publishing is only half the equation |
+| 5 | 12 | Your Omniv profile is more than a profile |
+| 6 | 17 | One publication is a start. A library of work is an asset. |
+| 7 | 22 | Make your identity stand out. Get verified on Omniv. |
+| 8 | 28 | Give your best content more visibility |
+| 9 | 35 | Understand how your content performs |
+| 10 | 42 | Turn your Omniv presence into a growth channel |
+| 11 | 50 | Your next opportunity to be discovered starts with publishing |
+| 12 | 60 | Your next chapter on Omniv |
 
-For testing only, you can use Resend’s onboarding sender: `beth.t@example.com` (limited to your own email).
+Copy lives in `src/lib/email.ts`. From address: `Omniv <onboarding@omniv.media>`.
 
-## 3. API key
-1. Resend → API Keys → Create
-2. Copy the key (starts with `re_`)
+## 1. Resend account & domain
+1. [resend.com](https://resend.com) → Domains → `omniv.media`
+2. Add SPF / DKIM (and DMARC if prompted) until **Verified**
+3. API Keys → create key (`re_…`)
 
-## 4. Vercel env vars
-Add to the Omniv project on Vercel:
-
+## 2. Vercel env vars
 ```
 RESEND_API_KEY=re_xxxxxxxx
 RESEND_FROM=Omniv <onboarding@omniv.media>
 CRON_SECRET=some-long-random-string
 ```
-
 Redeploy after saving.
 
-## 5. Test send
+## 3. Automation
+- **Day 0:** `POST /api/email/welcome` after signup (also callable manually)
+- **Days 2–60:** daily cron
+  - `GET /api/cron/nurture` (dedicated)
+  - also runs inside `/api/cron/market-news`
+
+Vercel cron entry:
+```json
+{ "path": "/api/cron/nurture", "schedule": "0 10 * * *" }
+```
+
+## 4. Test a single email
 ```bash
 curl -X POST https://omniv.media/api/email/nurture \
   -H "Authorization: Bearer YOUR_CRON_SECRET" \
@@ -35,11 +51,7 @@ curl -X POST https://omniv.media/api/email/nurture \
   -d '{"to":"you@email.com","day":0,"name":"Ezekiel"}'
 ```
 
-Days available: 0, 2, 4, 7, 10, 14, 21, 30 (see `src/lib/email.ts`).
+Valid days: `0, 2, 5, 8, 12, 17, 22, 28, 35, 42, 50, 60`.
 
-## 6. Automate (next step)
-- On signup: call day 0 from your auth/signup success path
-- Daily cron (Vercel Cron or Supabase): select users by signup age and fire the matching day
-- Store `last_nurture_day` on profiles to avoid duplicates
-
-Sequence copy lives in `src/lib/email.ts` — edit there to change tone or CTAs.
+## 5. Behavioural follow-ups (next layer)
+The base sequence is time-based. Later: suppress verification emails if already verified, tip promotion to publishers with content, analytics to active publishers. Do not re-pitch verification after purchase.

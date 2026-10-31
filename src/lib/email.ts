@@ -1,11 +1,53 @@
 /**
- * Resend email helper for Omniv nurture sequences.
- * Requires RESEND_API_KEY in env.
+ * Resend email helper — Omniv discovery nurture sequence (12 emails / 60 days).
+ * From: onboarding@omniv.media (RESEND_FROM override supported).
+ * Requires RESEND_API_KEY.
  */
 
-export type NurtureDay = 0 | 2 | 4 | 7 | 10 | 14 | 21 | 30;
+export type NurtureDay =
+  | 0
+  | 2
+  | 5
+  | 8
+  | 12
+  | 17
+  | 22
+  | 28
+  | 35
+  | 42
+  | 50
+  | 60;
 
 const FROM = process.env.RESEND_FROM || "Omniv <onboarding@omniv.media>";
+const APP = "https://omniv.media";
+
+function wrap(name: string, body: string): string {
+  const who = name?.trim() || "there";
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /><meta name="viewport" content="width=device-width" /></head>
+<body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:560px;background:#111;border-radius:16px;border:1px solid #222;">
+        <tr><td style="padding:28px 28px 8px;color:#c9a227;font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;">Omniv</td></tr>
+        <tr><td style="padding:8px 28px 28px;color:#e8e8e8;font-size:15px;line-height:1.65;">
+          <p style="margin:0 0 16px;color:#fff;">Hello ${who},</p>
+          ${body}
+          <p style="margin:28px 0 0;color:#888;font-size:13px;">The Omniv Team</p>
+        </td></tr>
+      </table>
+      <p style="margin:16px 0 0;color:#555;font-size:11px;">Omniv — discover what's moving · <a href="${APP}" style="color:#888;">${APP.replace("https://","")}</a></p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function cta(href: string, label: string): string {
+  return `<p style="margin:24px 0 8px;"><a href="${href}" style="display:inline-block;background:#c9a227;color:#000;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:999px;">${label}</a></p>`;
+}
 
 export const NURTURE_SEQUENCE: {
   day: NurtureDay;
@@ -14,102 +56,219 @@ export const NURTURE_SEQUENCE: {
 }[] = [
   {
     day: 0,
-    subject: "Your Fan Gate is live — first move",
-    html: (name) => `
-      <p>Hey ${name || "there"},</p>
-      <p>You just opened your Omniv career OS. The single highest-leverage move right now:</p>
-      <p><strong>Share your Fan Gate.</strong> Put the link in your Instagram / TikTok bio. Fans enter email + city + would attend. That fills your map.</p>
-      <p>Streams are vanity. Intent is the asset.</p>
-      <p><a href="https://omniv.media/crm">Open your Fan Gate →</a></p>
-      <p>— Omniv</p>
-    `,
+    subject: "Welcome to Omniv",
+    html: (name) =>
+      wrap(
+        name,
+        `
+      <p style="margin:0 0 14px;">Welcome to Omniv — a place to publish work that should last longer than a temporary appearance in a feed.</p>
+      <p style="margin:0 0 14px;">Here you can publish articles, music, video, PDFs, announcements and more under a clear public identity, and be discovered by people exploring what is moving.</p>
+      <p style="margin:0 0 14px;"><strong style="color:#fff;">Your first steps:</strong></p>
+      <ol style="margin:0 0 14px;padding-left:20px;color:#ccc;">
+        <li style="margin-bottom:8px;">Complete your profile</li>
+        <li style="margin-bottom:8px;">Create a public identity if you publish as a brand, company, or artist</li>
+        <li style="margin-bottom:8px;">Publish your first piece of work</li>
+      </ol>
+      <p style="margin:0 0 14px;">Omniv is built for credibility, visibility, and understanding performance — not only posting and hoping.</p>
+      ${cta(`${APP}/home`, "Open Omniv")}
+    `
+      ),
   },
   {
     day: 2,
-    subject: "Why your streams don't mean demand",
-    html: (name) => `
-      <p>Hey ${name || "there"},</p>
-      <p>Monthly listeners look big. Rooms stay empty. That's not a mystery — streams ≠ people who would show up.</p>
-      <p>Omniv captures the only signal that matters: city + would attend. Use the gate. Let the map tell the truth.</p>
-      <p><a href="https://omniv.media/crm">Check your map →</a></p>
-    `,
+    subject: "Your content deserves more than a temporary appearance",
+    html: (name) =>
+      wrap(
+        name,
+        `
+      <p style="margin:0 0 14px;">Most of the internet treats content as disposable. It appears, competes for attention for a moment, then disappears.</p>
+      <p style="margin:0 0 14px;">Omniv is designed for work that should remain findable: ideas, releases, research, products, events, and public updates that represent who you are or what your organisation stands for.</p>
+      <p style="margin:0 0 14px;">When you publish on Omniv, you are building a body of work under an identity — not only filling a feed.</p>
+      <p style="margin:0 0 14px;">That is the problem Omniv exists to solve.</p>
+      ${cta(`${APP}/publish`, "Publish on Omniv")}
+    `
+      ),
   },
   {
-    day: 4,
-    subject: "How to fill the map this week",
-    html: (name) => `
-      <p>Hey ${name || "there"},</p>
-      <p>Three moves that work:</p>
-      <ol>
-        <li>Gate link in every bio (IG, TikTok, Linktree, pinned comment)</li>
-        <li>Story: "Drop your city if you'd come to a room" + link</li>
-        <li>After every post/drop, one CTA back to the gate</li>
-      </ol>
-      <p>Don't ask for streams. Ask for intent.</p>
-      <p><a href="https://omniv.media/crm">Share your gate →</a></p>
-    `,
-  },
-  {
-    day: 7,
-    subject: "Your first cash path (rooms + tips)",
-    html: (name) => `
-      <p>Hey ${name || "there"},</p>
-      <p>Once the list has real yeses in a city, open a room sized to the intent — or drop a tip link. That's money that doesn't wait for the algorithm.</p>
-      <p>Starter unlocks full city map, invite list, rooms & tips.</p>
-      <p><a href="https://omniv.media/crm">See ranked cities →</a></p>
-    `,
-  },
-  {
-    day: 10,
-    subject: "Pre-release playbook: use the list before you drop",
-    html: (name) => `
-      <p>Hey ${name || "there"},</p>
-      <p>Before the next release:</p>
-      <ol>
-        <li>Open Fan directory → filter Superfans / would-attend / release tag</li>
-        <li>Tag your invite list</li>
-        <li>Export or invite that segment first</li>
-        <li>Then go public</li>
-      </ol>
-      <p>Owned demand first. Algorithm second.</p>
-      <p><a href="https://omniv.media/crm">Prep your release list →</a></p>
-    `,
-  },
-  {
-    day: 14,
-    subject: "Ready to stop guessing?",
-    html: (name) => `
-      <p>Hey ${name || "there"},</p>
-      <p>Free lets you collect. Starter and Pro turn intent into rooms, ranked moves, and cash paths you control.</p>
-      <p>If the gate is filling and you want the full map + unlimited Ziki — upgrade when it feels obvious.</p>
-      <p><a href="https://omniv.media/crm">Open Omniv →</a></p>
-    `,
-  },
-  {
-    day: 21,
-    subject: "Checklist: owned fans this month",
-    html: (name) => `
-      <p>Hey ${name || "there"},</p>
-      <p>Quick check:</p>
-      <ul>
-        <li>Gate in bio?</li>
-        <li>Any cities with would-attend?</li>
-        <li>Release list tagged?</li>
-        <li>One room or tip path live?</li>
+    day: 5,
+    subject: "What should you publish on Omniv?",
+    html: (name) =>
+      wrap(
+        name,
+        `
+      <p style="margin:0 0 14px;">If you are unsure what belongs on Omniv, start with work that should still matter in a week, a month, or a year.</p>
+      <p style="margin:0 0 14px;"><strong style="color:#fff;">Strong fits include:</strong></p>
+      <ul style="margin:0 0 14px;padding-left:20px;color:#ccc;">
+        <li style="margin-bottom:8px;">Articles and long-form ideas</li>
+        <li style="margin-bottom:8px;">Music and video releases</li>
+        <li style="margin-bottom:8px;">PDFs, research, and reports</li>
+        <li style="margin-bottom:8px;">Product and company announcements</li>
+        <li style="margin-bottom:8px;">Events and public updates</li>
       </ul>
-      <p>Consistency on the ranked moves beats more free content.</p>
-      <p><a href="https://omniv.media/crm">Run your next move →</a></p>
-    `,
+      <p style="margin:0 0 14px;">Publish under the right identity — personal, artist, brand, or organisation — so explorers know who the work belongs to.</p>
+      ${cta(`${APP}/publish`, "Start publishing")}
+    `
+      ),
   },
   {
-    day: 30,
-    subject: "30 days in — what's the list telling you?",
-    html: (name) => `
-      <p>Hey ${name || "there"},</p>
-      <p>A month of Omniv. The map either has real demand lines or it doesn't. Either way you know more than vanity metrics ever told you.</p>
-      <p>Share the gate. Tag the list. Open rooms where the yeses live.</p>
-      <p><a href="https://omniv.media/crm">Back to your OS →</a></p>
-    `,
+    day: 8,
+    subject: "Publishing is only half the equation",
+    html: (name) =>
+      wrap(
+        name,
+        `
+      <p style="margin:0 0 14px;">Publishing puts your work on the record. Discovery is how people find it.</p>
+      <p style="margin:0 0 14px;">On Omniv, explorers move through Home, Explore, topics, and people they follow. Your publications can surface as something worth knowing — not only as a one-time post to your existing circle.</p>
+      <p style="margin:0 0 14px;">Clear titles, strong covers, and consistent publishing under one identity all improve how discoverable your work becomes.</p>
+      <p style="margin:0 0 14px;">Publishing is the start. Being found is the other half.</p>
+      ${cta(`${APP}/explore`, "See how discovery works")}
+    `
+      ),
+  },
+  {
+    day: 12,
+    subject: "Your Omniv profile is more than a profile",
+    html: (name) =>
+      wrap(
+        name,
+        `
+      <p style="margin:0 0 14px;">On Omniv, presence is structured around identity.</p>
+      <p style="margin:0 0 14px;">You can publish as yourself, or create public pages for an artist, brand, company, organisation, or project. Each identity carries its own publications, followers, and credibility.</p>
+      <p style="margin:0 0 14px;">That means your Omniv presence is not a single social bio — it is a home for the work you want the world to associate with that name.</p>
+      <p style="margin:0 0 14px;">Take a moment to make sure the identity you publish under is complete and intentional.</p>
+      ${cta(`${APP}/accounts`, "Review your identities")}
+    `
+      ),
+  },
+  {
+    day: 17,
+    subject: "One publication is a start. A library of work is an asset.",
+    html: (name) =>
+      wrap(
+        name,
+        `
+      <p style="margin:0 0 14px;">A single publication shows what you can do. A library of work shows who you are.</p>
+      <p style="margin:0 0 14px;">Explorers, partners, and future audiences understand you faster when they can see a body of published work — not one isolated piece.</p>
+      <p style="margin:0 0 14px;">Consistency compounds. Each article, release, or announcement strengthens your presence on Omniv and gives discovery more to work with.</p>
+      <p style="margin:0 0 14px;">If you have only published once, your next piece is how the asset begins.</p>
+      ${cta(`${APP}/publish`, "Publish again")}
+    `
+      ),
+  },
+  {
+    day: 22,
+    subject: "Make your identity stand out. Get verified on Omniv.",
+    html: (name) =>
+      wrap(
+        name,
+        `
+      <p style="margin:0 0 14px;">On the internet, establishing a credible identity matters.</p>
+      <p style="margin:0 0 14px;">Whether you're building a personal brand, representing a company, growing an organisation or developing a creative presence, people want confidence in who they're engaging with.</p>
+      <p style="margin:0 0 14px;">That's where Omniv Verification comes in.</p>
+      <p style="margin:0 0 14px;">With Omniv's paid verification feature, eligible publishers can establish a verified identity on the platform.</p>
+      <p style="margin:0 0 14px;">Verification helps distinguish your presence and gives your profile an additional layer of credibility.</p>
+      <p style="margin:0 0 14px;">Omniv offers verification options designed around different publisher categories, including:</p>
+      <ul style="margin:0 0 14px;padding-left:20px;color:#ccc;">
+        <li style="margin-bottom:8px;">Individuals and public figures</li>
+        <li style="margin-bottom:8px;">Artists and creators</li>
+        <li style="margin-bottom:8px;">Brands</li>
+        <li style="margin-bottom:8px;">Companies and organisations</li>
+      </ul>
+      <p style="margin:0 0 14px;">Your identity is part of your digital presence. Give it the recognition it deserves.</p>
+      <p style="margin:0 0 14px;">Ready to get verified?</p>
+      ${cta(`${APP}/verify`, "Explore verification on Omniv")}
+    `
+      ),
+  },
+  {
+    day: 28,
+    subject: "Give your best content more visibility",
+    html: (name) =>
+      wrap(
+        name,
+        `
+      <p style="margin:0 0 14px;">Publishing valuable content is one thing.</p>
+      <p style="margin:0 0 14px;">Getting it in front of more people is another.</p>
+      <p style="margin:0 0 14px;">Sometimes, your most important publication deserves additional exposure.</p>
+      <p style="margin:0 0 14px;">Whether you're announcing a product, sharing an article, promoting an event, showcasing research or introducing a new project, Omniv's promotion feature gives you an opportunity to increase the visibility of selected content.</p>
+      <p style="margin:0 0 14px;">You can promote publications using available campaign options and budgets based on your promotional goals.</p>
+      <p style="margin:0 0 14px;">Instead of relying entirely on organic discovery, you can put additional promotional support behind the content that matters most.</p>
+      <p style="margin:0 0 14px;">Think strategically about what you promote.</p>
+      <p style="margin:0 0 14px;">A product announcement, important article, new release or major company update could be worth giving additional visibility.</p>
+      <p style="margin:0 0 14px;">Ready to put your content forward?</p>
+      ${cta(`${APP}/promote`, "Explore promotion on Omniv")}
+    `
+      ),
+  },
+  {
+    day: 35,
+    subject: "Understand how your content performs",
+    html: (name) =>
+      wrap(
+        name,
+        `
+      <p style="margin:0 0 14px;">Publishing without understanding performance leaves important questions unanswered.</p>
+      <p style="margin:0 0 14px;">Which publications are attracting attention?</p>
+      <p style="margin:0 0 14px;">What content is resonating with your audience?</p>
+      <p style="margin:0 0 14px;">Are people discovering and engaging with your work?</p>
+      <p style="margin:0 0 14px;">Omniv Analytics helps publishers understand how their content and presence are performing through available account and publication insights.</p>
+      <p style="margin:0 0 14px;">Rather than guessing, you can use performance information to make more informed publishing decisions.</p>
+      <p style="margin:0 0 14px;">For businesses, this means gaining a better understanding of how their published work is performing.</p>
+      <p style="margin:0 0 14px;">For creators and independent publishers, it means identifying which content is attracting interest.</p>
+      <p style="margin:0 0 14px;">For organisations, it means having more visibility into their publishing activity.</p>
+      <p style="margin:0 0 14px;">Better publishing decisions start with better information.</p>
+      ${cta(`${APP}/analytics`, "Explore your Omniv analytics")}
+    `
+      ),
+  },
+  {
+    day: 42,
+    subject: "Turn your Omniv presence into a growth channel",
+    html: (name) =>
+      wrap(
+        name,
+        `
+      <p style="margin:0 0 14px;">By now you have seen the full picture: publish under a clear identity, be discovered, strengthen credibility, increase visibility when it matters, and learn from performance.</p>
+      <p style="margin:0 0 14px;">Together, those pieces turn Omniv from a place you post into a channel you can grow.</p>
+      <ul style="margin:0 0 14px;padding-left:20px;color:#ccc;">
+        <li style="margin-bottom:8px;"><strong style="color:#fff;">Verification</strong> — own a credible identity</li>
+        <li style="margin-bottom:8px;"><strong style="color:#fff;">Promotion</strong> — put weight behind key publications</li>
+        <li style="margin-bottom:8px;"><strong style="color:#fff;">Analytics</strong> — see what is working</li>
+      </ul>
+      <p style="margin:0 0 14px;">Use the tools that match your stage. Keep publishing the work that should last.</p>
+      ${cta(`${APP}/home`, "Continue on Omniv")}
+    `
+      ),
+  },
+  {
+    day: 50,
+    subject: "Your next opportunity to be discovered starts with publishing",
+    html: (name) =>
+      wrap(
+        name,
+        `
+      <p style="margin:0 0 14px;">Discovery on Omniv begins with something published.</p>
+      <p style="margin:0 0 14px;">If it has been a while since your last publication, this is a good moment to return — with an article, a release, an update, or a document worth keeping public.</p>
+      <p style="margin:0 0 14px;">You do not need a perfect campaign. You need work on the record under the identity you want people to find.</p>
+      <p style="margin:0 0 14px;">Your next opportunity to be discovered starts there.</p>
+      ${cta(`${APP}/publish`, "Publish something new")}
+    `
+      ),
+  },
+  {
+    day: 60,
+    subject: "Your next chapter on Omniv",
+    html: (name) =>
+      wrap(
+        name,
+        `
+      <p style="margin:0 0 14px;">Two months into Omniv is a natural point to look forward.</p>
+      <p style="margin:0 0 14px;">Whether you are building a personal body of work, representing a company, or growing a creative presence, the path is the same: publish with intention, strengthen identity, use visibility tools when they serve the work, and learn from what resonates.</p>
+      <p style="margin:0 0 14px;">Your next chapter on Omniv is whatever you choose to put on the record next.</p>
+      <p style="margin:0 0 14px;">We are glad you are here.</p>
+      ${cta(`${APP}/home`, "Return to Omniv")}
+    `
+      ),
   },
 ];
 
@@ -158,16 +317,20 @@ export async function sendNurtureEmail(
   });
 }
 
-/** Days after signup for cron (day 0 is onboarding welcome). */
-export const SCHEDULED_NURTURE_DAYS: NurtureDay[] = [2, 4, 7, 10, 14, 21, 30];
+/** Days after signup for cron (day 0 is welcome on signup/onboarding). */
+export const SCHEDULED_NURTURE_DAYS: NurtureDay[] = [
+  2, 5, 8, 12, 17, 22, 28, 35, 42, 50, 60,
+];
 
 function daysSince(iso: string): number {
-  return Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
+  return Math.floor(
+    (Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24)
+  );
 }
 
 /**
- * Send nurture emails for users whose signup age matches 2,4,7,10,14,21,30.
- * Safe to call from any existing daily cron (no extra Vercel cron slot).
+ * Send nurture emails for users whose signup age matches the sequence.
+ * Safe to call from daily cron (market-news or /api/cron/nurture).
  */
 export async function runScheduledNurture(): Promise<{
   sent: number;
@@ -194,7 +357,7 @@ export async function runScheduledNurture(): Promise<{
     .select("id, email, full_name, created_at")
     .not("email", "is", null)
     .order("created_at", { ascending: false })
-    .limit(500);
+    .limit(800);
 
   if (error) {
     return { sent: 0, checked: 0, errors: [error.message] };
