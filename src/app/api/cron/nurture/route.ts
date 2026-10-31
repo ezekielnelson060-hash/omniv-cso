@@ -6,6 +6,7 @@ export const maxDuration = 60;
 
 /**
  * Daily Omniv nurture sequence (days 2, 5, 8, 12, 17, 22, 28, 35, 42, 50, 60).
+ * Behavioural gates + dedupe in runScheduledNurture.
  * Day 0 welcome is sent from /api/email/welcome on signup.
  *
  * Vercel Cron: GET /api/cron/nurture
