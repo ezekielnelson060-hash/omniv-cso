@@ -2,6 +2,13 @@
  * Resend email helper — Omniv discovery nurture sequence (12 emails / 60 days).
  * From: onboarding@omniv.media (RESEND_FROM override supported).
  * Requires RESEND_API_KEY.
+ *
+ * Behavioural gates (cron):
+ * - Day 22 verification: skip if user already has a verified entity
+ * - Day 28 promotion: skip if user has no publications
+ * - Day 35 analytics: skip if user has no publications
+ * - Day 50 re-publish nudge: skip if published in last 14 days
+ * - Dedup via discovery_nurture_log (user_id, day)
  */
 
 export type NurtureDay =
@@ -328,23 +335,114 @@ function daysSince(iso: string): number {
   );
 }
 
+type UserNurtureContext = {
+  hasVerifiedEntity: boolean;
+  publicationCount: number;
+  publishedInLast14Days: boolean;
+};
+
+async function loadUserContext(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: any,
+  userId: string
+): Promise<UserNurtureContext> {
+  const ctx: UserNurtureContext = {
+    hasVerifiedEntity: false,
+    publicationCount: 0,
+    publishedInLast14Days: false,
+  };
+
+  try {
+    const { count: verifiedCount } = await supabase
+      .from("discovery_entities")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", userId)
+      .eq("verified", true);
+    ctx.hasVerifiedEntity = (verifiedCount || 0) > 0;
+  } catch {
+    /* soft */
+  }
+
+  try {
+    const { count: pubCount } = await supabase
+      .from("discovery_publications")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", userId);
+    ctx.publicationCount = pubCount || 0;
+
+    const since = new Date(Date.now() - 14 * 86_400_000).toISOString();
+    const { count: recent } = await supabase
+      .from("discovery_publications")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", userId)
+      .gte("created_at", since);
+    ctx.publishedInLast14Days = (recent || 0) > 0;
+  } catch {
+    // Fallback: publications may use author_id / user_id
+    try {
+      const { count: pubCount } = await supabase
+        .from("discovery_publications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId);
+      ctx.publicationCount = pubCount || 0;
+    } catch {
+      /* soft */
+    }
+  }
+
+  return ctx;
+}
+
+/**
+ * Returns skip reason or null if the email should send.
+ */
+function behaviouralSkip(
+  day: NurtureDay,
+  ctx: UserNurtureContext
+): string | null {
+  if (day === 22 && ctx.hasVerifiedEntity) {
+    return "already_verified";
+  }
+  if (day === 28 && ctx.publicationCount < 1) {
+    return "no_publications_for_promote";
+  }
+  if (day === 35 && ctx.publicationCount < 1) {
+    return "no_publications_for_analytics";
+  }
+  if (day === 50 && ctx.publishedInLast14Days) {
+    return "recently_published";
+  }
+  return null;
+}
+
 /**
  * Send nurture emails for users whose signup age matches the sequence.
- * Safe to call from daily cron (market-news or /api/cron/nurture).
+ * Applies behavioural gates + dedupe log.
  */
 export async function runScheduledNurture(): Promise<{
   sent: number;
+  skipped: number;
   checked: number;
   errors: string[];
 }> {
   if (!process.env.RESEND_API_KEY) {
-    return { sent: 0, checked: 0, errors: ["RESEND_API_KEY missing"] };
+    return {
+      sent: 0,
+      skipped: 0,
+      checked: 0,
+      errors: ["RESEND_API_KEY missing"],
+    };
   }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !service) {
-    return { sent: 0, checked: 0, errors: ["Supabase missing"] };
+    return {
+      sent: 0,
+      skipped: 0,
+      checked: 0,
+      errors: ["Supabase missing"],
+    };
   }
 
   const { createClient } = await import("@supabase/supabase-js");
@@ -360,25 +458,92 @@ export async function runScheduledNurture(): Promise<{
     .limit(800);
 
   if (error) {
-    return { sent: 0, checked: 0, errors: [error.message] };
+    return {
+      sent: 0,
+      skipped: 0,
+      checked: 0,
+      errors: [error.message],
+    };
   }
 
   let sent = 0;
+  let skipped = 0;
   const errors: string[] = [];
 
   for (const p of profiles || []) {
-    if (!p.email || !p.created_at) continue;
+    if (!p.email || !p.created_at || !p.id) continue;
     const age = daysSince(p.created_at);
     if (!SCHEDULED_NURTURE_DAYS.includes(age as NurtureDay)) continue;
 
+    const day = age as NurtureDay;
+
+    // Dedupe: already sent or skipped this day
+    try {
+      const { data: existing } = await supabase
+        .from("discovery_nurture_log")
+        .select("day, skipped")
+        .eq("user_id", p.id)
+        .eq("day", day)
+        .maybeSingle();
+      if (existing) {
+        skipped += 1;
+        continue;
+      }
+    } catch {
+      /* table may not exist yet — continue without dedupe */
+    }
+
+    const ctx = await loadUserContext(supabase, p.id);
+    const reason = behaviouralSkip(day, ctx);
+    if (reason) {
+      skipped += 1;
+      try {
+        await supabase.from("discovery_nurture_log").upsert(
+          {
+            user_id: p.id,
+            day,
+            skipped: true,
+            skip_reason: reason,
+            sent_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,day" }
+        );
+      } catch {
+        /* soft */
+      }
+      continue;
+    }
+
     const result = await sendNurtureEmail(
       p.email,
-      age as NurtureDay,
+      day,
       p.full_name || undefined
     );
-    if (result.ok) sent += 1;
-    else errors.push(`${p.email}: ${result.error}`);
+    if (result.ok) {
+      sent += 1;
+      try {
+        await supabase.from("discovery_nurture_log").upsert(
+          {
+            user_id: p.id,
+            day,
+            skipped: false,
+            skip_reason: null,
+            sent_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,day" }
+        );
+      } catch {
+        /* soft */
+      }
+    } else {
+      errors.push(`${p.email}: ${result.error}`);
+    }
   }
 
-  return { sent, checked: profiles?.length ?? 0, errors: errors.slice(0, 10) };
+  return {
+    sent,
+    skipped,
+    checked: profiles?.length ?? 0,
+    errors: errors.slice(0, 10),
+  };
 }
