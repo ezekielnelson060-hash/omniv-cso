@@ -35,6 +35,15 @@ function SignupForm() {
     router.refresh();
   }
 
+  /** Day-0 Omniv welcome via Resend (non-blocking). */
+  async function fireWelcome() {
+    try {
+      await fetch("/api/email/welcome", { method: "POST" });
+    } catch {
+      /* Resend optional at signup */
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -66,9 +75,12 @@ function SignupForm() {
         return;
       }
       if (data.session) {
+        await fireWelcome();
         goNext();
         return;
       }
+      // Email confirmation required — still try welcome if session exists later;
+      // without session, welcome API needs auth. Skip until first login.
       setInfo("Check your email to confirm, then sign in.");
       setLoading(false);
     } catch (err) {
