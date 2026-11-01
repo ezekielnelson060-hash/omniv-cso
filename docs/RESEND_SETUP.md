@@ -22,18 +22,26 @@ These are **From** identities, not necessarily separate inboxes.
 | **notify.omniv.media** | Transactional (auth, security, activity) — **set up first** |
 | **updates.omniv.media** | Marketing / nurture / announcements |
 
-### DNS in Resend
+### Exact DNS checklist for `notify.omniv.media`
 
-1. Resend → **Domains** → **Add Domain**
-2. Add `notify.omniv.media`
-3. Copy the **exact** DNS records Resend shows (SPF, DKIM, optional DMARC)
-4. Add them at your DNS host (Hostinger, Cloudflare, etc.)
-5. Wait until status is **Verified**
-6. Repeat for `updates.omniv.media` when ready
+1. Open [Resend Dashboard → Domains](https://resend.com/domains)
+2. Click **Add Domain**
+3. Enter: `notify.omniv.media`
+4. Resend shows records (copy **exactly** — do not invent values):
+   - **DKIM** — usually 2–3 `TXT` (or `CNAME`) records with names like `resend._domainkey…`
+   - **SPF** — often a `TXT` on `send` (or root of subdomain) containing `v=spf1 include:amazonses.com …`
+   - **MX** (optional, for inbound) — only if Resend asks for it
+5. At your DNS host (Cloudflare / Hostinger / Namecheap / etc.):
+   - Add each record **exactly** as shown (name, type, value, TTL)
+   - If using Cloudflare proxy: DNS-only (grey cloud) for these records
+6. Back in Resend → click **Verify** (can take a few minutes to 48h)
+7. Status must show **Verified** before production sends from `*@notify.omniv.media`
 
-Do **not** invent SPF/DKIM values. Guide: https://resend.com/docs/dashboard/domains/introduction
+Repeat later for `updates.omniv.media` (marketing stream).
 
-Until subdomains are verified, you can temporarily send from apex:
+Official guide: https://resend.com/docs/dashboard/domains/introduction
+
+Until subdomains are verified, temporary apex fallback:
 
 ```
 RESEND_USE_APEX=1
@@ -72,14 +80,24 @@ CRON_SECRET=long-random-string
 
 Code: `src/lib/email/account.ts`, `src/lib/email/config.ts`, `src/lib/email/send.ts`
 
+### Engagement (notify · `notifications@`)
+
+| Event | When | Template |
+|-------|------|----------|
+| Follow | New follow of user/entity | `sendFollowEmail` |
+| Like | New like on publication | `sendLikeEmail` |
+| Published | Publication status = published | `sendPublishedSuccessEmail` |
+| Weekly summary | Monday cron `/api/cron/weekly-summary` | `sendWeeklySummaryEmail` |
+
+Code: `src/lib/email/engagement.ts`, `src/lib/email/notify-engagement.ts`  
+Wired from: `api/discovery/follow`, `api/discovery/like`, `api/discovery/publications`
+
 ### Growth / nurture (updates)
 
-12-email sequence over 60 days (`src/lib/email.ts`), from **updates** identity, daily cron `/api/cron/nurture`.
+12-email sequence over 60 days (`src/lib/email/nurture-sequence.ts` + `nurture.ts`), from **updates** identity, daily cron `/api/cron/nurture`.
 
-### Still to wire (next)
+### Still optional
 
-- Engagement: follow, interaction, publish success, weekly summary → `notifications@`
-- Growth digests: recommended publishers, feature announcements → `updates@`
 - Supabase Auth SMTP → point at Resend so **verify email** and **reset password** links come from `accounts@` / `security@` on **notify.omniv.media**
 
 ## 5. Supabase Auth + Resend (transactional links)
@@ -88,8 +106,10 @@ For real **verify email** and **password reset** links:
 
 1. Verify `notify.omniv.media` in Resend
 2. Supabase → **Project Settings → Authentication → SMTP**
-3. Use Resend SMTP (host/user/pass from Resend docs)
-4. Sender: `Omniv Accounts <accounts@notify.omniv.media>` or security for resets
+3. Enable custom SMTP
+4. Host / port / user / pass from Resend SMTP docs (https://resend.com/docs/send-with-smtp)
+5. Sender name: `Omniv Accounts` · Sender email: `accounts@notify.omniv.media`  
+   (or `security@notify.omniv.media` if you prefer resets from security)
 
 ## 6. Test
 
@@ -103,10 +123,12 @@ curl -X POST https://omniv.media/api/email/password-reset \
   -d '{"email":"you@email.com"}'
 
 # Nurture day (cron secret)
-curl -X POST https://omniv.media/api/email/nurture \
-  -H "Authorization: Bearer $CRON_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"to":"you@email.com","day":2,"name":"Ezekiel"}'
+curl https://omniv.media/api/cron/nurture \
+  -H "Authorization: Bearer $CRON_SECRET"
+
+# Weekly summary (cron secret)
+curl https://omniv.media/api/cron/weekly-summary \
+  -H "Authorization: Bearer $CRON_SECRET"
 ```
 
 ## Priority order
@@ -114,4 +136,4 @@ curl -X POST https://omniv.media/api/email/nurture \
 1. **notify.omniv.media** DNS + verify in Resend  
 2. Welcome (`hello@`) + Supabase SMTP for verify/reset  
 3. **updates.omniv.media** + nurture sequence  
-4. Engagement notifications  
+4. Engagement notifications (live)  
