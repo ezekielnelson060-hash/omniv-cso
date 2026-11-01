@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { notifyLikeAsync } from "@/lib/email/notify-engagement";
 
 export async function GET(req: Request) {
   try {
@@ -93,7 +94,6 @@ export async function POST(req: Request) {
 
     if (existing?.id) {
       await supabase.from("discovery_likes").delete().eq("id", existing.id);
-      // decrement heat if column exists
       try {
         await supabase.rpc("discovery_bump_heat", {
           p_slug: slug,
@@ -128,6 +128,14 @@ export async function POST(req: Request) {
     } catch {
       /* optional */
     }
+
+    // Fire engagement email (non-blocking)
+    notifyLikeAsync({
+      supabase,
+      actorUserId: user.id,
+      publicationSlug: slug,
+      publicationType: type,
+    });
 
     const { count } = await supabase
       .from("discovery_likes")
