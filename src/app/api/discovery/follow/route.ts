@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { notifyFollowAsync } from "@/lib/email/notify-engagement";
 
 export async function GET() {
   try {
@@ -79,6 +80,16 @@ export async function POST(req: Request) {
       console.error("follow insert", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // Fire engagement email (non-blocking)
+    notifyFollowAsync({
+      supabase,
+      actorUserId: user.id,
+      targetType: type,
+      targetSlug: slug,
+      targetName: name || slug,
+      targetId: id,
+    });
 
     return NextResponse.json({ following: true });
   } catch (e) {
