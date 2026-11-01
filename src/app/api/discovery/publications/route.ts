@@ -6,6 +6,7 @@ import {
   type PublicationType,
 } from "@/lib/discovery/types";
 import { buildPublicationSeo } from "@/lib/discovery/seo";
+import { notifyPublishedAsync } from "@/lib/email/notify-engagement";
 
 export async function POST(req: Request) {
   try {
@@ -206,6 +207,23 @@ export async function POST(req: Request) {
       publisherName: publisherName || undefined,
       coverUrl,
     }).path;
+
+    // Confirm to publisher when content goes live immediately
+    if (status === "published" && user.email) {
+      notifyPublishedAsync({
+        to: user.email,
+        recipientName:
+          (user.user_metadata?.full_name as string) ||
+          (user.user_metadata?.name as string) ||
+          undefined,
+        title,
+        slug: data.slug,
+        path: publicPath.startsWith("http")
+          ? publicPath
+          : `${process.env.NEXT_PUBLIC_APP_URL || "https://omniv.media"}${publicPath.startsWith("/") ? publicPath : `/${publicPath}`}`,
+      });
+    }
+
     return NextResponse.json({ ok: true, path: publicPath, slug: data.slug });
   } catch (e) {
     console.error(e);
