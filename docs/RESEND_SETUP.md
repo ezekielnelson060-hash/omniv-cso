@@ -75,10 +75,11 @@ CRON_SECRET=long-random-string
 | Event | Template | Identity |
 |-------|----------|----------|
 | Signup (session) | Welcome to Omniv | `hello` |
-| Forgot password | Supabase recovery email (+ optional branded) | `security` |
+| Forgot password | Supabase recovery → `/reset-password` | SMTP `accounts@` |
 | Helpers ready | Password changed, new login alert | `security` |
 
-Code: `src/lib/email/account.ts`, `src/lib/email/config.ts`, `src/lib/email/send.ts`
+Code: `src/lib/email/account.ts`, `src/lib/email/config.ts`, `src/lib/email/send.ts`  
+Reset UI: `src/app/(auth)/reset-password/page.tsx`
 
 ### Engagement (notify · `notifications@`)
 
@@ -96,20 +97,22 @@ Wired from: `api/discovery/follow`, `api/discovery/like`, `api/discovery/publica
 
 12-email sequence over 60 days (`src/lib/email/nurture-sequence.ts` + `nurture.ts`), from **updates** identity, daily cron `/api/cron/nurture`.
 
-### Still optional
+## 5. Supabase Auth + Resend SMTP
 
-- Supabase Auth SMTP → point at Resend so **verify email** and **reset password** links come from `accounts@` / `security@` on **notify.omniv.media**
+**Full step-by-step:** [`docs/SUPABASE_SMTP.md`](./SUPABASE_SMTP.md)
 
-## 5. Supabase Auth + Resend (transactional links)
+Quick values after `notify.omniv.media` is verified:
 
-For real **verify email** and **password reset** links:
+| Field | Value |
+|-------|--------|
+| Host | `smtp.resend.com` |
+| Port | `465` |
+| Username | `resend` |
+| Password | your `re_…` API key |
+| Sender email | `accounts@notify.omniv.media` |
+| Sender name | `Omniv Accounts` |
 
-1. Verify `notify.omniv.media` in Resend
-2. Supabase → **Project Settings → Authentication → SMTP**
-3. Enable custom SMTP
-4. Host / port / user / pass from Resend SMTP docs (https://resend.com/docs/send-with-smtp)
-5. Sender name: `Omniv Accounts` · Sender email: `accounts@notify.omniv.media`  
-   (or `security@notify.omniv.media` if you prefer resets from security)
+Also add redirect URL: `https://omniv.media/reset-password`
 
 ## 6. Test
 
@@ -134,6 +137,6 @@ curl https://omniv.media/api/cron/weekly-summary \
 ## Priority order
 
 1. **notify.omniv.media** DNS + verify in Resend  
-2. Welcome (`hello@`) + Supabase SMTP for verify/reset  
+2. Supabase SMTP (this section + `SUPABASE_SMTP.md`)  
 3. **updates.omniv.media** + nurture sequence  
 4. Engagement notifications (live)  
