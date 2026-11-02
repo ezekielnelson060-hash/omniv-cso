@@ -5,6 +5,9 @@ import { sendPasswordResetEmail } from "@/lib/email/account";
 /**
  * POST { email } — trigger Supabase recovery + optional branded Resend notice.
  * Uses security@ on notify stream when RESEND is configured.
+ *
+ * With Supabase custom SMTP (Resend), the real recovery link is emailed from
+ * accounts@ or security@ on notify.omniv.media.
  */
 export async function POST(req: Request) {
   try {
@@ -21,9 +24,11 @@ export async function POST(req: Request) {
       req.headers.get("origin") ||
       "https://omniv.media";
 
+    const redirectTo = `${origin}/reset-password`;
+
     const supabase = await createClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/login?reset=1`,
+      redirectTo,
     });
 
     // Always return ok to avoid email enumeration
@@ -31,11 +36,10 @@ export async function POST(req: Request) {
       console.error("[password-reset] supabase", error.message);
     }
 
-    // Branded notice is optional — Supabase already emails the link when SMTP is set.
-    // Only send our template if explicitly enabled.
+    // Optional second branded notice (does not contain the secure token).
+    // Prefer relying on Supabase SMTP once notify.omniv.media is verified.
     if (process.env.RESEND_PASSWORD_RESET_BRANDED === "1" && process.env.RESEND_API_KEY) {
-      const resetUrl = `${origin}/login?reset=1`;
-      await sendPasswordResetEmail(email, resetUrl);
+      await sendPasswordResetEmail(email, redirectTo);
     }
 
     return NextResponse.json({ ok: true });
