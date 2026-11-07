@@ -13,6 +13,7 @@ import {
   onAccountSwitch,
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 type NavItem = { href: string; label: string; badge?: string; icon: string };
 
@@ -173,6 +174,7 @@ export function MobileMenuButton() {
   const [displayName, setDisplayName] = useState("You");
   const [handle, setHandle] = useState("you");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -189,6 +191,29 @@ export function MobileMenuButton() {
       /* ignore */
     }
     return onAccountSwitch((a) => setActive(a));
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      if (!isSupabaseConfigured()) {
+        if (!cancelled) setSignedIn(false);
+        return;
+      }
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!cancelled) setSignedIn(Boolean(user));
+      } catch {
+        if (!cancelled) setSignedIn(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   useEffect(() => {
@@ -268,32 +293,62 @@ export function MobileMenuButton() {
                   </span>
                 </div>
 
-                <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600">
-                  Publishing as
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setMode(mode === "switch" ? "nav" : "switch")}
-                  className="flex w-full items-center gap-3 rounded-2xl bg-white/[0.04] px-3 py-2.5 text-left"
-                >
-                  <OmnivAvatar src={identityAvatar} name={identityName} size={44} />
-                  <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-1 truncate text-[14px] font-semibold text-white">
-                      {identityName}
-                      {active?.verified && (
-                        <span className="text-sky-400">✓</span>
-                      )}
+                {signedIn === false ? (
+                  <div className="mb-2 space-y-2 rounded-2xl bg-white/[0.04] px-3 py-3 ring-1 ring-white/[0.06]">
+                    <p className="text-[13px] font-medium text-white">
+                      Sign in to your account
                     </p>
-                    <p className="truncate text-[11px] capitalize text-zinc-500">
-                      {identityType} · @{identityHandle}
+                    <p className="text-[12px] leading-snug text-zinc-500">
+                      Pick up where you left off — publications, entities, and
+                      network stay with your account.
                     </p>
+                    <div className="flex gap-2 pt-1">
+                      <Link
+                        href={`/login?next=${encodeURIComponent(pathname || "/home")}`}
+                        onClick={close}
+                        className="flex h-10 flex-1 items-center justify-center rounded-full bg-omniv-gold text-[13px] font-semibold text-black"
+                      >
+                        Sign in
+                      </Link>
+                      <Link
+                        href={`/signup?next=${encodeURIComponent(pathname || "/home")}`}
+                        onClick={close}
+                        className="flex h-10 flex-1 items-center justify-center rounded-full bg-white/[0.08] text-[13px] font-semibold text-white ring-1 ring-white/10"
+                      >
+                        Create account
+                      </Link>
+                    </div>
                   </div>
-                  <span className="text-zinc-500">▾</span>
-                </button>
+                ) : (
+                  <>
+                    <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600">
+                      Publishing as
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setMode(mode === "switch" ? "nav" : "switch")}
+                      className="flex w-full items-center gap-3 rounded-2xl bg-white/[0.04] px-3 py-2.5 text-left"
+                    >
+                      <OmnivAvatar src={identityAvatar} name={identityName} size={44} />
+                      <div className="min-w-0 flex-1">
+                        <p className="flex items-center gap-1 truncate text-[14px] font-semibold text-white">
+                          {identityName}
+                          {active?.verified && (
+                            <span className="text-sky-400">✓</span>
+                          )}
+                        </p>
+                        <p className="truncate text-[11px] capitalize text-zinc-500">
+                          {identityType} · @{identityHandle}
+                        </p>
+                      </div>
+                      <span className="text-zinc-500">▾</span>
+                    </button>
+                  </>
+                )}
               </div>
 
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2">
-                {mode === "switch" ? (
+                {mode === "switch" && signedIn !== false ? (
                   <IdentitySwitcher
                     onClose={() => {
                       setMode("nav");
@@ -321,35 +376,49 @@ export function MobileMenuButton() {
                         <NavLink key={item.label} item={item} />
                       ))}
                     </Section>
-                    <Section label="Account">
-                      {ACCOUNT.map((item) => (
-                        <NavLink key={item.label} item={item} />
-                      ))}
-                    </Section>
+                    {signedIn !== false && (
+                      <Section label="Account">
+                        {ACCOUNT.map((item) => (
+                          <NavLink key={item.label} item={item} />
+                        ))}
+                      </Section>
+                    )}
                   </>
                 )}
               </div>
 
               <div className="shrink-0 space-y-1 border-t border-white/[0.05] px-3 py-3">
-                <Link
-                  href={active?.path || "/profile"}
-                  onClick={close}
-                  className="flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-zinc-300"
-                >
-                  <OmnivAvatar src={identityAvatar} name={identityName} size={28} />
-                  Profile
-                </Link>
-                <Link
-                  href="/settings"
-                  onClick={close}
-                  className="flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-zinc-300"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="opacity-80">
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" strokeLinecap="round" />
-                  </svg>
-                  Settings
-                </Link>
+                {signedIn === false ? (
+                  <Link
+                    href={`/login?next=${encodeURIComponent(pathname || "/home")}`}
+                    onClick={close}
+                    className="flex min-h-[44px] items-center justify-center rounded-xl bg-omniv-gold px-3 text-[15px] font-semibold text-black"
+                  >
+                    Sign in
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      href={active?.path || "/profile"}
+                      onClick={close}
+                      className="flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-zinc-300"
+                    >
+                      <OmnivAvatar src={identityAvatar} name={identityName} size={28} />
+                      Profile
+                    </Link>
+                    <Link
+                      href="/settings"
+                      onClick={close}
+                      className="flex min-h-[44px] items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-zinc-300"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" className="opacity-80">
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" strokeLinecap="round" />
+                      </svg>
+                      Settings
+                    </Link>
+                  </>
+                )}
               </div>
             </aside>
           </div>,
