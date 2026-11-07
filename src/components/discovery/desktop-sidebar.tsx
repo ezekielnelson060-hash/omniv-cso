@@ -13,6 +13,7 @@ import {
   onAccountSwitch,
   type ActiveAccount,
 } from "@/lib/discovery/active-account";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 type NavItem = {
   href: string;
@@ -139,6 +140,7 @@ function DesktopSidebar() {
   const pathname = usePathname() || "/";
   const [active, setActive] = useState<ActiveAccount | null>(null);
   const [name, setName] = useState("You");
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
     setActive(readActiveAccount());
@@ -147,6 +149,28 @@ function DesktopSidebar() {
       setActive(a);
       setName(readProfile().displayName || "You");
     });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!isSupabaseConfigured()) {
+        if (!cancelled) setSignedIn(false);
+        return;
+      }
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!cancelled) setSignedIn(Boolean(user));
+      } catch {
+        if (!cancelled) setSignedIn(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -191,25 +215,47 @@ function DesktopSidebar() {
       </nav>
 
       <div className="mt-auto space-y-2 border-t border-white/[0.06] pt-3">
-        <IdentitySwitcher />
-        <Link
-          href="/profile"
-          className="flex items-center gap-2.5 rounded-xl px-2 py-2 hover:bg-white/[0.04]"
-        >
-          <OmnivAvatar
-            src={null}
-            name={active?.name || name}
-            size={32}
-          />
-          <div className="min-w-0">
-            <p className="truncate text-[13px] font-medium text-white">
-              {active?.name || name}
+        {signedIn === false ? (
+          <div className="space-y-2 px-1">
+            <p className="px-1 text-[12px] leading-snug text-zinc-500">
+              Sign in to access your account and publications.
             </p>
-            <p className="truncate text-[11px] text-zinc-500">
-              {active ? active.type : "Personal"}
-            </p>
+            <Link
+              href={`/login?next=${encodeURIComponent(pathname || "/home")}`}
+              className="flex h-10 items-center justify-center rounded-full bg-omniv-gold text-[13px] font-semibold text-black"
+            >
+              Sign in
+            </Link>
+            <Link
+              href={`/signup?next=${encodeURIComponent(pathname || "/home")}`}
+              className="flex h-10 items-center justify-center rounded-full bg-white/[0.06] text-[13px] font-medium text-white ring-1 ring-white/10"
+            >
+              Create account
+            </Link>
           </div>
-        </Link>
+        ) : (
+          <>
+            <IdentitySwitcher />
+            <Link
+              href="/profile"
+              className="flex items-center gap-2.5 rounded-xl px-2 py-2 hover:bg-white/[0.04]"
+            >
+              <OmnivAvatar
+                src={null}
+                name={active?.name || name}
+                size={32}
+              />
+              <div className="min-w-0">
+                <p className="truncate text-[13px] font-medium text-white">
+                  {active?.name || name}
+                </p>
+                <p className="truncate text-[11px] text-zinc-500">
+                  {active ? active.type : "Personal"}
+                </p>
+              </div>
+            </Link>
+          </>
+        )}
       </div>
     </aside>
   );
