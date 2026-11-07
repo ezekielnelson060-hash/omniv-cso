@@ -7,12 +7,17 @@ const PLAN_AMOUNTS: Record<string, number> = {
   pro: 29,
   business: 99,
   verify: 9,
+  visibility_sprint: 300,
 };
 
 function parseTxRef(txRef: string) {
   const parts = txRef.split("_");
   if (parts[0] !== "omniv" || parts.length < 3) {
     return { plan: "", userId: null as string | null };
+  }
+  // omniv_visibility_sprint_<ts>_<rand>
+  if (parts[1] === "visibility" && parts[2] === "sprint") {
+    return { plan: "visibility_sprint", userId: null as string | null };
   }
   const plan = parts[1] || "";
   const userId = parts[2] === "anon" ? null : parts[2] || null;
@@ -137,6 +142,25 @@ export async function POST(req: Request) {
     .maybeSingle();
   if (paymentError) {
     console.error("payment upsert", paymentError);
+  }
+
+  // Product Visibility Sprint (one-time service)
+  if (
+    rawPlan === "visibility_sprint" ||
+    plan === "visibility_sprint" ||
+    verifiedTxRef.includes("visibility_sprint")
+  ) {
+    await admin
+      .from("visibility_sprint_orders")
+      .update({
+        status: "paid",
+        flw_transaction_id: providerPaymentId,
+        payment_verified_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        raw_payment: verified,
+      })
+      .eq("tx_ref", verifiedTxRef);
+    return NextResponse.json({ ok: true, plan: "visibility_sprint" });
   }
 
   if (rawPlan === "promote" || plan === "promote") {
