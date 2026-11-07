@@ -218,7 +218,7 @@ export function PublishSheet({
             Publish as
           </p>
           <p className="mt-1 text-[12px] text-zinc-500">
-            Choose who you&apos;re publishing for.
+            Choose who you're publishing for.
           </p>
           <div className="mt-2 flex items-center gap-3 rounded-2xl bg-white/[0.03] px-3 py-3 ring-1 ring-white/[0.06]">
             <OmnivAvatar src={avatarSrc} name={publishingAs} size={40} />
@@ -246,7 +246,7 @@ export function PublishSheet({
               }}
               className="text-[12px] font-medium text-omniv-gold"
             >
-              Change
+              Switch
             </button>
           </div>
         </div>
