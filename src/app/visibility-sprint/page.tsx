@@ -99,7 +99,7 @@ function CtaLink({ className }: { className?: string }) {
       href="#get-sprint"
       className={
         className ||
-        "inline-flex h-12 items-center justify-center rounded-full bg-omniv-gold px-7 text-[14px] font-semibold text-black transition hover:brightness-110"
+        "inline-flex h-11 items-center justify-center rounded-full bg-omniv-gold px-6 text-[14px] font-semibold text-black transition hover:brightness-110"
       }
     >
       Get Your Visibility Sprint
@@ -114,11 +114,12 @@ export default function VisibilitySprintPage() {
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3 md:px-6">
           <Link href="/home" className="flex items-center gap-2">
             <Image
-              src="/logo.svg"
+              src="/logo.png"
               alt="Omniv"
               width={28}
               height={28}
-              className="rounded-md"
+              className="h-7 w-7 rounded-md object-contain"
+              priority
             />
             <span className="text-[15px] font-semibold text-white">Omniv</span>
           </Link>
@@ -128,29 +129,29 @@ export default function VisibilitySprintPage() {
 
       <main>
         {/* Hero */}
-        <section className="mx-auto max-w-3xl px-4 pb-16 pt-14 md:px-6 md:pt-20">
+        <section className="mx-auto max-w-3xl px-4 pb-8 pt-8 md:px-6 md:pb-10 md:pt-10">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-omniv-gold">
             Omniv Product Visibility Sprint
           </p>
-          <h1 className="mt-4 max-w-2xl text-3xl font-semibold tracking-tight text-white md:text-5xl md:leading-[1.1]">
+          <h1 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-white md:text-4xl md:leading-[1.12]">
             Give your product more opportunities to be discovered.
           </h1>
-          <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-zinc-400">
+          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-zinc-400">
             Your product deserves more than a listing on your website and
             occasional posts on social media.
           </p>
-          <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-zinc-400">
+          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-zinc-400">
             Omniv helps businesses turn their existing product information,
             visuals, announcements and resources into professionally organised
             publications that can be discovered, explored and shared.
           </p>
-          <p className="mt-4 max-w-xl text-[15px] font-medium text-zinc-300">
+          <p className="mt-3 max-w-xl text-[14px] font-medium text-zinc-300">
             You focus on building your product. We'll handle its publishing
             presence.
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="mt-5 flex flex-wrap items-center gap-3">
             <CtaLink />
-            <span className="text-[13px] text-zinc-500">
+            <span className="text-[12px] text-zinc-500">
               One-time payment · $300 · Limited capacity
             </span>
           </div>
@@ -158,14 +159,14 @@ export default function VisibilitySprintPage() {
 
         {/* Package overview */}
         <section className="border-y border-white/[0.06] bg-white/[0.02]">
-          <div className="mx-auto max-w-3xl px-4 py-14 md:px-6">
+          <div className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-9">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-omniv-gold">
               The $300 Visibility Sprint
             </p>
-            <h2 className="mt-3 text-2xl font-semibold text-white md:text-3xl">
+            <h2 className="mt-2 text-xl font-semibold text-white md:text-2xl">
               A done-for-you publishing and content package.
             </h2>
-            <p className="mt-3 max-w-xl text-[15px] text-zinc-400">
+            <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-zinc-400">
               For a one-time payment of $300, you receive a structured publishing
               presence for your product on Omniv — prepared and published for
               you.
@@ -174,22 +175,22 @@ export default function VisibilitySprintPage() {
         </section>
 
         {/* Deliverables */}
-        <section className="mx-auto max-w-3xl px-4 py-14 md:px-6">
-          <h2 className="text-xl font-semibold text-white md:text-2xl">
+        <section className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-9">
+          <h2 className="text-lg font-semibold text-white md:text-xl">
             What you receive
           </h2>
-          <ol className="mt-8 space-y-5">
+          <ol className="mt-4 space-y-3">
             {DELIVERABLES.map((d) => (
               <li
                 key={d.n}
-                className="flex gap-4 rounded-2xl bg-white/[0.03] p-5 ring-1 ring-white/[0.06]"
+                className="flex gap-3 rounded-xl bg-white/[0.03] p-3.5 ring-1 ring-white/[0.06]"
               >
-                <span className="shrink-0 font-data text-[13px] font-semibold text-omniv-gold">
+                <span className="shrink-0 font-data text-[12px] font-semibold text-omniv-gold">
                   {d.n}
                 </span>
                 <div>
-                  <p className="text-[15px] font-semibold text-white">{d.title}</p>
-                  <p className="mt-1 text-[14px] leading-relaxed text-zinc-400">
+                  <p className="text-[14px] font-semibold text-white">{d.title}</p>
+                  <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-400">
                     {d.body}
                   </p>
                 </div>
@@ -200,17 +201,17 @@ export default function VisibilitySprintPage() {
 
         {/* How it works */}
         <section className="border-y border-white/[0.06] bg-white/[0.02]">
-          <div className="mx-auto max-w-3xl px-4 py-14 md:px-6">
-            <h2 className="text-xl font-semibold text-white md:text-2xl">
+          <div className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-9">
+            <h2 className="text-lg font-semibold text-white md:text-xl">
               How it works
             </h2>
-            <ol className="mt-8 space-y-4">
+            <ol className="mt-4 space-y-3">
               {STEPS.map((step, i) => (
                 <li key={step} className="flex items-start gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-omniv-gold/15 text-[12px] font-semibold text-omniv-gold">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-omniv-gold/15 text-[11px] font-semibold text-omniv-gold">
                     {i + 1}
                   </span>
-                  <p className="pt-0.5 text-[15px] text-zinc-300">{step}</p>
+                  <p className="pt-0.5 text-[14px] text-zinc-300">{step}</p>
                 </li>
               ))}
             </ol>
@@ -218,17 +219,17 @@ export default function VisibilitySprintPage() {
         </section>
 
         {/* Who */}
-        <section className="mx-auto max-w-3xl px-4 py-14 md:px-6">
-          <h2 className="text-xl font-semibold text-white md:text-2xl">
+        <section className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-9">
+          <h2 className="text-lg font-semibold text-white md:text-xl">
             Who is this for?
           </h2>
-          <ul className="mt-6 space-y-2">
+          <ul className="mt-4 space-y-1.5">
             {AUDIENCE.map((item) => (
               <li
                 key={item}
-                className="flex items-start gap-2 text-[15px] text-zinc-400"
+                className="flex items-start gap-2 text-[14px] text-zinc-400"
               >
-                <span className="mt-1 text-omniv-gold">✓</span>
+                <span className="mt-0.5 text-omniv-gold">✓</span>
                 {item}
               </li>
             ))}
@@ -237,24 +238,24 @@ export default function VisibilitySprintPage() {
 
         {/* Pricing + form */}
         <section className="border-t border-white/[0.06] bg-gradient-to-b from-omniv-gold/[0.06] to-transparent">
-          <div className="mx-auto grid max-w-3xl gap-10 px-4 py-14 md:grid-cols-[1fr_1.15fr] md:px-6">
+          <div className="mx-auto grid max-w-3xl gap-6 px-4 py-8 md:grid-cols-[1fr_1.15fr] md:gap-8 md:px-6 md:py-9">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-omniv-gold">
                 Pricing
               </p>
-              <p className="mt-3">
-                <span className="text-4xl font-semibold text-white">$300</span>
-                <span className="ml-2 text-[15px] text-zinc-500">one-time</span>
+              <p className="mt-2">
+                <span className="text-3xl font-semibold text-white">$300</span>
+                <span className="ml-2 text-[14px] text-zinc-500">one-time</span>
               </p>
-              <p className="mt-4 text-[15px] leading-relaxed text-zinc-400">
+              <p className="mt-3 text-[14px] leading-relaxed text-zinc-400">
                 Your product has a story. Give people more ways to discover it.
               </p>
-              <p className="mt-3 text-[14px] leading-relaxed text-zinc-500">
+              <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">
                 Stop leaving valuable product information scattered across
                 different channels. Give it a professionally organised publishing
                 presence on Omniv.
               </p>
-              <p className="mt-6 text-[12px] font-medium text-zinc-500">
+              <p className="mt-4 text-[12px] font-medium text-zinc-500">
                 Limited client capacity.
               </p>
             </div>
@@ -263,13 +264,13 @@ export default function VisibilitySprintPage() {
         </section>
 
         {/* FAQ */}
-        <section className="mx-auto max-w-3xl px-4 py-14 md:px-6">
-          <h2 className="text-xl font-semibold text-white md:text-2xl">FAQ</h2>
-          <div className="mt-8 space-y-6">
+        <section className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-9">
+          <h2 className="text-lg font-semibold text-white md:text-xl">FAQ</h2>
+          <div className="mt-4 space-y-4">
             {FAQS.map((f) => (
               <div key={f.q}>
-                <p className="text-[15px] font-semibold text-white">{f.q}</p>
-                <p className="mt-1.5 text-[14px] leading-relaxed text-zinc-400">
+                <p className="text-[14px] font-semibold text-white">{f.q}</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-zinc-400">
                   {f.a}
                 </p>
               </div>
@@ -279,22 +280,22 @@ export default function VisibilitySprintPage() {
 
         {/* Final CTA */}
         <section className="border-t border-white/[0.06]">
-          <div className="mx-auto max-w-3xl px-4 py-16 text-center md:px-6">
-            <h2 className="text-2xl font-semibold text-white md:text-3xl">
+          <div className="mx-auto max-w-3xl px-4 py-10 text-center md:px-6">
+            <h2 className="text-xl font-semibold text-white md:text-2xl">
               Ready to publish with intention?
             </h2>
-            <p className="mx-auto mt-3 max-w-md text-[15px] text-zinc-400">
+            <p className="mx-auto mt-2 max-w-md text-[14px] text-zinc-400">
               Secure your Visibility Sprint and we'll turn your product
               materials into a clear publishing presence on Omniv.
             </p>
-            <div className="mt-8">
+            <div className="mt-5">
               <CtaLink />
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-white/[0.06] py-8 text-center text-[12px] text-zinc-600">
+      <footer className="border-t border-white/[0.06] py-6 text-center text-[12px] text-zinc-600">
         <Link href="/home" className="text-zinc-500 hover:text-white">
           Omniv
         </Link>
