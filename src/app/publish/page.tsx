@@ -59,6 +59,7 @@ function PublishInner() {
   const [publisherId, setPublisherId] = useState<string | null>(null);
   const [tags, setTags] = useState("");
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [scheduledAt, setScheduledAt] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
@@ -128,6 +129,20 @@ function PublishInner() {
         setMediaUrl(p.mediaUrl || null);
         setIsPrivate(p.visibility === "private");
         setSubtitle(p.subtitle || "");
+        // Restore gallery from meta when present
+        try {
+          const meta =
+            typeof p.meta === "string"
+              ? JSON.parse(p.meta || "{}")
+              : p.meta || {};
+          const g = Array.isArray(meta.galleryUrls)
+            ? meta.galleryUrls.filter((u: unknown) => typeof u === "string")
+            : [];
+          if (g.length) setGalleryUrls(g);
+          else if (p.coverUrl) setGalleryUrls([p.coverUrl]);
+        } catch {
+          if (p.coverUrl) setGalleryUrls([p.coverUrl]);
+        }
         setLoadingEdit(false);
       } catch {
         setError("Could not load this publication. Check your connection.");
@@ -143,6 +158,7 @@ function PublishInner() {
     }
     setLoading(true);
     setError(null);
+    const resolvedCover = coverUrl || galleryUrls[0] || undefined;
     try {
       const res = await fetch("/api/discovery/publications", {
         method: editId ? "PATCH" : "POST",
@@ -158,7 +174,7 @@ function PublishInner() {
             .split(",")
             .map((t) => t.trim())
             .filter(Boolean),
-          coverUrl: coverUrl || undefined,
+          coverUrl: resolvedCover,
           mediaUrl: mediaUrl || videoUrl || undefined,
           meta: JSON.stringify({
             genre,
@@ -186,6 +202,11 @@ function PublishInner() {
             caption,
             altText,
             subtitle,
+            galleryUrls: galleryUrls.length
+              ? galleryUrls
+              : resolvedCover
+                ? [resolvedCover]
+                : [],
           }),
           opportunityType: pubType === "opportunity" ? oppType : undefined,
           subtitle: subtitle || undefined,
@@ -355,6 +376,8 @@ function PublishInner() {
               setBody={setBody}
               coverUrl={coverUrl}
               setCoverUrl={setCoverUrl}
+              galleryUrls={galleryUrls}
+              setGalleryUrls={setGalleryUrls}
               mediaUrl={mediaUrl}
               setMediaUrl={setMediaUrl}
               subtitle={subtitle}
@@ -509,6 +532,8 @@ function PublishInner() {
                   setIsPrivate(false);
                   setPublishedPath("");
                   setEditId(null);
+                  setGalleryUrls([]);
+                  setCoverUrl(null);
                   router.replace("/publish");
                 }}
                 className="flex h-11 items-center justify-center rounded-full bg-white/10 text-[14px] font-medium text-white"
