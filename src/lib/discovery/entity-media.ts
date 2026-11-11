@@ -10,16 +10,16 @@ export function entityMedia(e: {
   slug: string;
   coverUrl?: string | null;
   avatarUrl?: string | null;
-}) {
+}): { coverUrl?: string; avatarUrl?: string } {
   const slug = (e.slug || "").trim();
-  const seedCover = slug ? SEED_COVERS[slug] || null : null;
+  const seedCover = slug ? SEED_COVERS[slug] : undefined;
   const seedAvatar = slug
-    ? SEED_AVATARS[slug] || SEED_COVERS[slug] || null
-    : null;
+    ? SEED_AVATARS[slug] || SEED_COVERS[slug]
+    : undefined;
 
   return {
-    coverUrl: e.coverUrl || seedCover || null,
-    avatarUrl: e.avatarUrl || seedAvatar || null,
+    coverUrl: e.coverUrl || seedCover || undefined,
+    avatarUrl: e.avatarUrl || seedAvatar || undefined,
   };
 }
 
