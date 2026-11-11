@@ -219,20 +219,27 @@ export async function POST(req: Request) {
       }
     }
 
+    const baseRow = {
+      owner_id: user.id,
+      type,
+      slug,
+      name,
+      tagline: finalTagline,
+      location,
+      about: about || finalTagline,
+      intents,
+      tags,
+      links,
+      heat: 10,
+      // New pages start blank — owners add media in Edit profile
+      avatar_url: null as string | null,
+      cover_url: null as string | null,
+    };
+
     const { data, error } = await supabase
       .from("discovery_entities")
       .insert({
-        owner_id: user.id,
-        type,
-        slug,
-        name,
-        tagline: finalTagline,
-        location,
-        about: about || finalTagline,
-        intents,
-        tags,
-        links,
-        heat: 10,
+        ...baseRow,
         verified: false,
       })
       .select("id, type, slug, name")
@@ -243,19 +250,7 @@ export async function POST(req: Request) {
       if (error.message?.includes("verified")) {
         const retry = await supabase
           .from("discovery_entities")
-          .insert({
-            owner_id: user.id,
-            type,
-            slug,
-            name,
-            tagline: finalTagline,
-            location,
-            about: about || finalTagline,
-            intents,
-            tags,
-            links,
-            heat: 10,
-          })
+          .insert(baseRow)
           .select("id, type, slug, name")
           .single();
         if (retry.error) {
