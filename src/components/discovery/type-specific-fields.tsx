@@ -1,6 +1,7 @@
 "use client";
 
 import { CoverUpload } from "@/components/discovery/cover-upload";
+import { GalleryUpload } from "@/components/discovery/gallery-upload";
 import { MediaUpload } from "@/components/discovery/media-upload";
 import { BodyEditor } from "@/components/discovery/body-editor";
 import { inputCls, labelCls } from "@/components/discovery/publish-constants";
@@ -11,6 +12,7 @@ type Props = {
   summary: string; setSummary: (v: string) => void;
   body: string; setBody: (v: string) => void;
   coverUrl: string | null; setCoverUrl: (v: string | null) => void;
+  galleryUrls: string[]; setGalleryUrls: (v: string[]) => void;
   mediaUrl: string | null; setMediaUrl: (v: string | null) => void;
   subtitle: string; setSubtitle: (v: string) => void;
   genre: string; setGenre: (v: string) => void;
@@ -39,6 +41,27 @@ type Props = {
   altText: string; setAltText: (v: string) => void;
 };
 
+function GalleryField({
+  urls,
+  setUrls,
+  setCoverUrl,
+}: {
+  urls: string[];
+  setUrls: (v: string[]) => void;
+  setCoverUrl: (v: string | null) => void;
+}) {
+  return (
+    <GalleryUpload
+      value={urls}
+      onChange={(next) => {
+        setUrls(next);
+        setCoverUrl(next[0] || null);
+      }}
+      label="Add photos (swipeable on the page)"
+    />
+  );
+}
+
 export function TypeSpecificFields(p: Props) {
   const { pubType } = p;
 
@@ -50,8 +73,11 @@ export function TypeSpecificFields(p: Props) {
           <input value={p.subtitle} onChange={(e) => p.setSubtitle(e.target.value)} className={inputCls} placeholder="Optional hook under the title" />
         </label>
         <div>
-          <p className={labelCls}>Cover</p>
-          <div className="mt-1.5"><CoverUpload value={p.coverUrl} onChange={p.setCoverUrl} /></div>
+          <GalleryField
+            urls={p.galleryUrls}
+            setUrls={p.setGalleryUrls}
+            setCoverUrl={p.setCoverUrl}
+          />
         </div>
         <label className="block">
           <span className={labelCls}>Summary</span>
@@ -145,8 +171,11 @@ export function TypeSpecificFields(p: Props) {
     return (
       <>
         <div>
-          <p className={labelCls}>Cover / figure</p>
-          <div className="mt-1.5"><CoverUpload value={p.coverUrl} onChange={p.setCoverUrl} /></div>
+          <GalleryField
+            urls={p.galleryUrls}
+            setUrls={p.setGalleryUrls}
+            setCoverUrl={p.setCoverUrl}
+          />
         </div>
         <label className="block">
           <span className={labelCls}>Abstract</span>
@@ -184,8 +213,11 @@ export function TypeSpecificFields(p: Props) {
     return (
       <>
         <div>
-          <p className={labelCls}>Product image</p>
-          <div className="mt-1.5"><CoverUpload value={p.coverUrl} onChange={p.setCoverUrl} /></div>
+          <GalleryField
+            urls={p.galleryUrls}
+            setUrls={p.setGalleryUrls}
+            setCoverUrl={p.setCoverUrl}
+          />
         </div>
         <label className="block">
           <span className={labelCls}>Short pitch</span>
@@ -222,8 +254,11 @@ export function TypeSpecificFields(p: Props) {
     return (
       <>
         <div>
-          <p className={labelCls}>Event cover</p>
-          <div className="mt-1.5"><CoverUpload value={p.coverUrl} onChange={p.setCoverUrl} /></div>
+          <GalleryField
+            urls={p.galleryUrls}
+            setUrls={p.setGalleryUrls}
+            setCoverUrl={p.setCoverUrl}
+          />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
@@ -288,8 +323,11 @@ export function TypeSpecificFields(p: Props) {
     return (
       <>
         <div>
-          <p className={labelCls}>Image</p>
-          <div className="mt-1.5"><CoverUpload value={p.coverUrl} onChange={p.setCoverUrl} /></div>
+          <GalleryField
+            urls={p.galleryUrls}
+            setUrls={p.setGalleryUrls}
+            setCoverUrl={p.setCoverUrl}
+          />
         </div>
         <label className="block">
           <span className={labelCls}>Caption</span>
@@ -320,8 +358,11 @@ export function TypeSpecificFields(p: Props) {
           <textarea value={p.summary} onChange={(e) => p.setSummary(e.target.value)} rows={4} className={`${inputCls} h-auto py-2.5`} placeholder="Keep it short — this travels with your identity" />
         </label>
         <div>
-          <p className={labelCls}>Optional image</p>
-          <div className="mt-1.5"><CoverUpload value={p.coverUrl} onChange={p.setCoverUrl} /></div>
+          <GalleryField
+            urls={p.galleryUrls}
+            setUrls={p.setGalleryUrls}
+            setCoverUrl={p.setCoverUrl}
+          />
         </div>
         <div>
           <p className={labelCls}>More detail</p>
@@ -383,8 +424,11 @@ export function TypeSpecificFields(p: Props) {
         <div className="mt-1.5"><BodyEditor value={p.body} onChange={p.setBody} /></div>
       </div>
       <div>
-        <p className={labelCls}>Cover</p>
-        <div className="mt-1.5"><CoverUpload value={p.coverUrl} onChange={p.setCoverUrl} /></div>
+        <GalleryField
+          urls={p.galleryUrls}
+          setUrls={p.setGalleryUrls}
+          setCoverUrl={p.setCoverUrl}
+        />
       </div>
     </>
   );
