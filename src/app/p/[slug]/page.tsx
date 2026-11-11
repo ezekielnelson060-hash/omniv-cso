@@ -293,18 +293,22 @@ export default async function PublicationPage({ params }: Props) {
         <StickyArticleHeader title={p.title} backHref="/home" />
 
         <div
-          className={`relative bg-gradient-to-b ${hero} ${isMusic ? "min-h-[180px] sm:min-h-[220px]" : "min-h-[280px] sm:min-h-[360px]"}`}
+          className={`relative bg-gradient-to-b ${hero} ${
+            isMusic
+              ? "min-h-[160px] sm:min-h-[200px]"
+              : "min-h-[220px] sm:min-h-[280px]"
+          }`}
           style={
             heroCover && !isMusic
               ? {
-                  backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.15) 0%, rgba(5,5,5,0.5) 40%, #050505 100%), url(${heroCover})`,
+                  backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.2) 0%, rgba(5,5,5,0.55) 45%, #050505 100%), url(${heroCover})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center top",
                 }
               : undefined
           }
         >
-          <div className="relative mx-auto flex min-h-[180px] max-w-2xl flex-col px-4 pb-10 pt-3 sm:min-h-[220px]">
+          <div className="relative mx-auto flex max-w-2xl flex-col px-4 pb-3 pt-3 sm:pb-4">
             <div className="flex items-center justify-between">
               <Link
                 href="/home"
@@ -318,7 +322,7 @@ export default async function PublicationPage({ params }: Props) {
               </div>
             </div>
 
-            <div className="mt-auto">
+            <div className="mt-8 sm:mt-12">
               <span className="inline-flex items-center rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90 backdrop-blur-sm">
                 {typeLabel}
               </span>
@@ -400,14 +404,14 @@ export default async function PublicationPage({ params }: Props) {
           </div>
         </div>
 
-        <main className="mx-auto max-w-2xl px-4 pb-28 pt-6">
+        <main className="mx-auto max-w-2xl px-4 pb-28 pt-2">
           {isMusic ? (
             <h1 className="text-[28px] font-semibold leading-[1.15] tracking-tight text-white sm:text-[36px]">
               {p.title}
             </h1>
           ) : null}
 
-          <div className="mt-4">
+          <div className={isMusic ? "mt-4" : "mt-1"}>
             <PublicationPageActions
               id={p.id}
               slug={p.slug}
@@ -450,7 +454,7 @@ export default async function PublicationPage({ params }: Props) {
           ) : null}
 
           {showArticleBody ? (
-            <div className="mt-8">
+            <div className="mt-6">
               <BodyBlocks
                 body={p.body}
                 content={p.content}
