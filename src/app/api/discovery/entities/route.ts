@@ -157,7 +157,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Sign in required" }, { status: 401 });
     }
 
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const type = body.type as EntityType;
     const name = String(body.name || "").trim();
     const tagline = String(body.tagline || "").trim();
@@ -165,10 +165,12 @@ export async function POST(req: Request) {
     const location = String(body.location || "").trim() || null;
     const intentKind = body.intent as IntentKind | undefined;
     const intentDetail = String(body.intentDetail || "").trim() || undefined;
-    const tagsRaw = String(body.tags || "");
+    const tagsRaw = Array.isArray(body.tags)
+      ? (body.tags as unknown[]).map(String).join(",")
+      : String(body.tags || "");
     const linkHref = String(body.link || "").trim();
 
-    if (!ENTITY_TYPES.includes(type)) {
+    if (!type || !(ENTITY_TYPES as readonly string[]).includes(type)) {
       return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
     if (!name || name.length < 2) {
@@ -219,7 +221,9 @@ export async function POST(req: Request) {
       }
     }
 
-    const baseRow = {
+    // Do not send avatar_url / cover_url — leave null by default so create
+    // works whether or not those columns exist yet.
+    const baseRow: Record<string, unknown> = {
       owner_id: user.id,
       type,
       slug,
@@ -231,9 +235,7 @@ export async function POST(req: Request) {
       tags,
       links,
       heat: 10,
-      // New pages start blank — owners add media in Edit profile
-      avatar_url: null as string | null,
-      cover_url: null as string | null,
+      published_at: new Date().toISOString(),
     };
 
     const { data, error } = await supabase
@@ -247,13 +249,34 @@ export async function POST(req: Request) {
 
     if (error) {
       console.error("discovery insert", error);
-      if (error.message?.includes("verified")) {
+      // Retry without columns that may be missing on older schemas
+      if (
+        error.message?.includes("verified") ||
+        error.message?.includes("avatar_url") ||
+        error.message?.includes("cover_url") ||
+        error.message?.includes("published_at") ||
+        error.code === "PGRST204"
+      ) {
+        const minimal: Record<string, unknown> = {
+          owner_id: user.id,
+          type,
+          slug,
+          name,
+          tagline: finalTagline,
+          location,
+          about: about || finalTagline,
+          intents,
+          tags,
+          links,
+          heat: 10,
+        };
         const retry = await supabase
           .from("discovery_entities")
-          .insert(baseRow)
+          .insert(minimal)
           .select("id, type, slug, name")
           .single();
         if (retry.error) {
+          console.error("discovery insert retry", retry.error);
           return NextResponse.json(
             { error: retry.error.message },
             { status: 500 }
@@ -282,7 +305,10 @@ export async function POST(req: Request) {
       path: `/e/${data.type}/${data.slug}`,
     });
   } catch (e) {
-    console.error(e);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    console.error("entities POST", e);
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Server error" },
+      { status: 500 }
+    );
   }
 }
