@@ -1,9 +1,11 @@
-/** Cover & avatar map — every publication gets an image that matches its title/context */
+/** Cover & avatar map — curated images for seed/demo content only.
+ * User-created profiles and publications must not receive invented stock photos.
+ */
 
 const U = (id: string, w = 1200, h = 675) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&h=${h}&q=80`;
 
-/** Explicit slug → thematic Unsplash cover */
+/** Explicit slug → thematic Unsplash cover (seed publications + entities only) */
 export const SEED_COVERS: Record<string, string> = {
   // Network seed publications
   "why-african-language-models-need-local-infrastructure":
@@ -125,7 +127,7 @@ export const SEED_COVERS: Record<string, string> = {
   "the-new-race-for-space":
     U("photo-1446776811953-b23d57bd21aa"),
 
-  // Entity landscape covers
+  // Entity landscape covers (seed identities only)
   "nokanda-ai": U("photo-1677442136019-21780ecad995", 1200, 400),
   "northline-media": U("photo-1504711434969-e33886168f5c", 1200, 400),
   "relay-desk": U("photo-1551434678-e076c223a692", 1200, 400),
@@ -155,134 +157,19 @@ export const SEED_AVATARS: Record<string, string> = {
   "open-maps-lagos": U("photo-1524661135-423995f22d0b", 400, 400),
 };
 
-/** Keyword in slug → thematic pool (never a random restaurant for a brain article) */
-const THEME_POOLS: { keys: string[]; images: string[] }[] = [
-  {
-    keys: ["brain", "neuro", "mind", "aging", "biology", "quantum", "space", "medical", "science"],
-    images: [
-      U("photo-1559757175-5700dde675bc"),
-      U("photo-1576091160399-112ba8d25d1d"),
-      U("photo-1635070041078-e363dbe005cb"),
-      U("photo-1446776811953-b23d57bd21aa"),
-      U("photo-1532187863486-abf9dbad1b69"),
-    ],
-  },
-  {
-    keys: ["putin", "russia", "ukraine", "war", "military", "drone", "sanction", "north-korea", "geopolitic", "negotiat", "diplomacy", "china", "taiwan"],
-    images: [
-      U("photo-1529107386315-e1a2ed48a620"),
-      U("photo-1541872703-74c5e44368f9"),
-      U("photo-1451187580459-43490279c0fa"),
-      U("photo-1473968512647-3e447244af8f"),
-      U("photo-1578662996442-48f60103fc96"),
-    ],
-  },
-  {
-    keys: ["ai", "model", "compute", "data-center", "data-centre", "chip", "semiconductor", "infrastructure", "internet", "cloud", "software"],
-    images: [
-      U("photo-1677442136019-21780ecad995"),
-      U("photo-1558494949-ef010cbdcc31"),
-      U("photo-1620712943543-bcc4688e7485"),
-      U("photo-1518770660439-4636190af475"),
-      U("photo-1555255707-c07966088b7b"),
-    ],
-  },
-  {
-    keys: ["invest", "market", "capital", "asset", "cash", "money", "finance", "moat", "price", "value"],
-    images: [
-      U("photo-1611974789855-9c2a0a7236a3"),
-      U("photo-1554224155-6726b3ff858f"),
-      U("photo-1579621970563-ebec7560ff3e"),
-      U("photo-1590283603385-17ffb3a7f29f"),
-      U("photo-1460925895917-afdab827c52f"),
-    ],
-  },
-  {
-    keys: ["startup", "founder", "entrepreneur", "business", "idea", "company", "solo"],
-    images: [
-      U("photo-1517245386807-bb43f82c33c4"),
-      U("photo-1498050108023-c4ad1e5eaf00"),
-      U("photo-1552664730-d307ca884978"),
-      U("photo-1454165804606-c3d57bc86b40"),
-      U("photo-1504384308090-c894fdcc538d"),
-    ],
-  },
-  {
-    keys: ["africa", "lagos", "nairobi", "map", "danfo"],
-    images: [
-      U("photo-1489392191049-fc10c379c0fb"),
-      U("photo-1524661135-423995f22d0b"),
-      U("photo-1449824913935-59a10b8d2000"),
-    ],
-  },
-  {
-    keys: ["music", "concert", "ep", "album", "song"],
-    images: [
-      U("photo-1514525253161-7a46d19cd819"),
-      U("photo-1511671782779-c97d3d27a1d4"),
-      U("photo-1470229722913-7c0e2dbbafd3"),
-    ],
-  },
-  {
-    keys: ["fashion", "cloth", "wear"],
-    images: [
-      U("photo-1558769132-cb1aea458c5e"),
-      U("photo-1483985988355-763728e1935b"),
-    ],
-  },
-  {
-    keys: ["energy", "charg", "electric", "power", "cooling"],
-    images: [
-      U("photo-1593941707882-a5bba14938c7"),
-      U("photo-1473341304170-971dccb5ac1e"),
-    ],
-  },
-];
-
-/** Neutral editorial fallbacks — no restaurants, no random sweaters */
-const FALLBACK_POOL = [
-  U("photo-1451187580459-43490279c0fa"),
-  U("photo-1486406146926-c627a92ad1ab"),
-  U("photo-1504711434969-e33886168f5c"),
-  U("photo-1551288049-bebda4e38f71"),
-  U("photo-1518770660439-4636190af475"),
-  U("photo-1529107386315-e1a2ed48a620"),
-  U("photo-1460925895917-afdab827c52f"),
-  U("photo-1677442136019-21780ecad995"),
-];
-
-function hashSlug(slug: string): number {
-  let h = 0;
-  for (let i = 0; i < slug.length; i++) {
-    h = (h * 31 + slug.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h);
+/**
+ * Cover for seed content only. Returns null for user-created slugs
+ * so we never invent Unsplash stock on real profiles or publications.
+ */
+export function coverFor(slug: string): string | null {
+  if (!slug) return null;
+  return SEED_COVERS[slug] || null;
 }
 
-function themeCover(slug: string): string | null {
-  const s = slug.toLowerCase();
-  for (const pool of THEME_POOLS) {
-    if (pool.keys.some((k) => s.includes(k))) {
-      return pool.images[hashSlug(slug) % pool.images.length];
-    }
-  }
-  return null;
-}
-
-/** Always returns an image URL aligned with the publication's topic */
-export function coverFor(slug: string): string {
-  if (SEED_COVERS[slug]) return SEED_COVERS[slug];
-  const themed = themeCover(slug);
-  if (themed) return themed;
-  return FALLBACK_POOL[hashSlug(slug) % FALLBACK_POOL.length];
-}
-
-export function avatarFor(slug: string): string {
-  if (SEED_AVATARS[slug]) return SEED_AVATARS[slug];
-  if (SEED_COVERS[slug]) return SEED_COVERS[slug];
-  const themed = themeCover(slug);
-  if (themed) return themed;
-  return FALLBACK_POOL[hashSlug(slug + "-av") % FALLBACK_POOL.length];
+/** Avatar for seed identities only. */
+export function avatarFor(slug: string): string | null {
+  if (!slug) return null;
+  return SEED_AVATARS[slug] || SEED_COVERS[slug] || null;
 }
 
 export const SEED_CTAS: Record<string, { label: string; href: string }> = {
