@@ -158,18 +158,18 @@ export const SEED_AVATARS: Record<string, string> = {
 };
 
 /**
- * Cover for seed content only. Returns null for user-created slugs
+ * Cover for seed content only. Returns undefined for user-created slugs
  * so we never invent Unsplash stock on real profiles or publications.
  */
-export function coverFor(slug: string): string | null {
-  if (!slug) return null;
-  return SEED_COVERS[slug] || null;
+export function coverFor(slug: string): string | undefined {
+  if (!slug) return undefined;
+  return SEED_COVERS[slug];
 }
 
 /** Avatar for seed identities only. */
-export function avatarFor(slug: string): string | null {
-  if (!slug) return null;
-  return SEED_AVATARS[slug] || SEED_COVERS[slug] || null;
+export function avatarFor(slug: string): string | undefined {
+  if (!slug) return undefined;
+  return SEED_AVATARS[slug] || SEED_COVERS[slug];
 }
 
 export const SEED_CTAS: Record<string, { label: string; href: string }> = {
