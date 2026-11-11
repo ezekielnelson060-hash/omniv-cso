@@ -2,6 +2,19 @@
 
 import { ArticleContent } from "@/components/discovery/article-content";
 
+function SummaryBox({ text }: { text: string }) {
+  const t = text.trim();
+  if (!t) return null;
+  return (
+    <div className="mt-10 rounded-2xl border border-omniv-gold/25 bg-omniv-gold/[0.06] p-5">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-omniv-gold">
+        Summary
+      </p>
+      <p className="mt-3 text-[17px] leading-relaxed text-zinc-200">{t}</p>
+    </div>
+  );
+}
+
 export function BodyBlocks({
   body,
   content,
@@ -21,15 +34,13 @@ export function BodyBlocks({
     typeof body === "string" &&
     /<(p|div|h[1-4]|blockquote|ul|ol|li|br|strong|em|b|i|span|a)\b/i.test(body);
 
+  // Prefer explicit summary; fall back to excerpt for the bottom box only
+  const summaryText = (summary || excerpt || "").trim();
+
   if (Array.isArray(content) && content.length) {
     return (
       <>
-        {(excerpt || summary) && (
-          <p className="text-[19px] font-medium leading-[1.75] text-zinc-200">
-            {excerpt || summary}
-          </p>
-        )}
-        <div className="mt-6">
+        <div>
           <ArticleContent content={content as never} body={body} />
         </div>
         {whatThisMeans ? (
@@ -50,6 +61,7 @@ export function BodyBlocks({
             </p>
           </div>
         ) : null}
+        <SummaryBox text={summaryText} />
       </>
     );
   }
@@ -57,12 +69,7 @@ export function BodyBlocks({
   if (bodyIsHtml) {
     return (
       <>
-        {(excerpt || summary) && (
-          <p className="text-[19px] font-medium leading-[1.75] text-zinc-200">
-            {excerpt || summary}
-          </p>
-        )}
-        <div className="mt-6">
+        <div>
           <ArticleContent body={body} />
         </div>
         {whatThisMeans ? (
@@ -83,6 +90,7 @@ export function BodyBlocks({
             </p>
           </div>
         ) : null}
+        <SummaryBox text={summaryText} />
       </>
     );
   }
@@ -97,16 +105,9 @@ export function BodyBlocks({
       else blocks.push({ type: "paragraph", text: t });
     }
   }
-  const lead = excerpt || summary || "";
-  const leadNorm = lead.replace(/\s+/g, " ").trim().slice(0, 120);
-  const firstNorm = blocks[0]?.text?.replace(/\s+/g, " ").trim().slice(0, 120) || "";
-  const showLead = Boolean(lead) && leadNorm !== firstNorm;
 
   return (
     <>
-      {showLead ? (
-        <p className="text-[19px] font-medium leading-[1.75] text-zinc-200">{lead}</p>
-      ) : null}
       {blocks.map((b, i) => {
         if (b.type === "heading") {
           return (
@@ -149,6 +150,7 @@ export function BodyBlocks({
           </p>
         </div>
       ) : null}
+      <SummaryBox text={summaryText} />
     </>
   );
 }
