@@ -88,16 +88,6 @@ export function TypeSpecificFields(p: Props) {
             setCoverUrl={p.setCoverUrl}
           />
         </div>
-        <label className="block">
-          <span className={labelCls}>Summary (short teaser)</span>
-          <textarea
-            value={p.summary}
-            onChange={(e) => p.setSummary(e.target.value)}
-            rows={2}
-            className={`${inputCls} h-auto py-2.5`}
-            placeholder="1–2 lines for feeds and previews — not the full article"
-          />
-        </label>
         <div>
           <p className={labelCls}>Article body</p>
           <p className="mb-1.5 text-[12px] text-zinc-500">
@@ -107,6 +97,19 @@ export function TypeSpecificFields(p: Props) {
             <BodyEditor value={p.body} onChange={p.setBody} />
           </div>
         </div>
+        <label className="block">
+          <span className={labelCls}>Summary</span>
+          <p className="mb-1.5 text-[12px] text-zinc-500">
+            Short teaser shown in a box at the bottom of the published article.
+          </p>
+          <textarea
+            value={p.summary}
+            onChange={(e) => p.setSummary(e.target.value)}
+            rows={2}
+            className={`${inputCls} h-auto py-2.5`}
+            placeholder="1–2 lines — appears after the full article"
+          />
+        </label>
       </>
     );
   }
@@ -403,7 +406,7 @@ export function TypeSpecificFields(p: Props) {
         </label>
         <label className="block">
           <span className={labelCls}>Apply / contact link</span>
-          <input value={p.applyLink} onChange={(e) => p.setApplyLink(e.target.value)} className={inputCls} placeholder="https://... or email" />
+          <input value={p.applyLink} onChange={(e) => p.setApplyLink(e.target.value)} className={inputCls} placeholder="https://..." />
         </label>
         <div>
           <p className={labelCls}>Full brief</p>
