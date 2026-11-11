@@ -83,7 +83,7 @@ export default function AccountsPage() {
   async function load() {
     try {
       const res = await fetch("/api/discovery/entities");
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       setAuth(Boolean(data.auth));
       setEntities(dedupeEntities(data.entities || []));
     } catch {
@@ -136,13 +136,21 @@ export default function AccountsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type, name, tagline, location, about }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.status === 401) {
         router.push("/signup?next=/accounts");
         return;
       }
       if (!res.ok) {
-        setError(data.error || "Could not create");
+        setError(
+          typeof data.error === "string" && data.error
+            ? data.error
+            : `Could not create (${res.status})`
+        );
+        return;
+      }
+      if (!data.entity?.id) {
+        setError("Create succeeded but no entity returned. Refresh and try again.");
         return;
       }
       setMode("list");
@@ -150,7 +158,7 @@ export default function AccountsPage() {
       setTagline("");
       setLocation("");
       setAbout("");
-      if (data.entity) {
+      try {
         writeActiveAccount({
           id: data.entity.id,
           type: data.entity.type,
@@ -163,11 +171,18 @@ export default function AccountsPage() {
           }),
         });
         setActiveId(data.entity.id);
+      } catch {
+        /* localStorage optional */
       }
       await load();
       if (data.path) router.push(data.path);
-    } catch {
-      setError("Network error");
+    } catch (err) {
+      console.error("create entity", err);
+      setError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Could not reach the server. Check your connection and try again."
+      );
     } finally {
       setLoading(false);
     }
