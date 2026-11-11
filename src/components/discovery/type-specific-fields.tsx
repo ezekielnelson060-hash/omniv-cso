@@ -57,7 +57,7 @@ function GalleryField({
         setUrls(next);
         setCoverUrl(next[0] || null);
       }}
-      label="Add photos (swipeable on the page)"
+      label="Add your photos (optional — first is cover)"
     />
   );
 }
@@ -70,9 +70,18 @@ export function TypeSpecificFields(p: Props) {
       <>
         <label className="block">
           <span className={labelCls}>Subtitle</span>
-          <input value={p.subtitle} onChange={(e) => p.setSubtitle(e.target.value)} className={inputCls} placeholder="Optional hook under the title" />
+          <input
+            value={p.subtitle}
+            onChange={(e) => p.setSubtitle(e.target.value)}
+            className={inputCls}
+            placeholder="Optional line under the title"
+          />
         </label>
         <div>
+          <p className={labelCls}>Cover photos</p>
+          <p className="mb-1.5 text-[12px] text-zinc-500">
+            Upload your own. No photo is added automatically.
+          </p>
           <GalleryField
             urls={p.galleryUrls}
             setUrls={p.setGalleryUrls}
@@ -80,12 +89,23 @@ export function TypeSpecificFields(p: Props) {
           />
         </div>
         <label className="block">
-          <span className={labelCls}>Summary</span>
-          <textarea value={p.summary} onChange={(e) => p.setSummary(e.target.value)} rows={2} className={`${inputCls} h-auto py-2.5`} placeholder="One or two lines that make people open it" />
+          <span className={labelCls}>Summary (short teaser)</span>
+          <textarea
+            value={p.summary}
+            onChange={(e) => p.setSummary(e.target.value)}
+            rows={2}
+            className={`${inputCls} h-auto py-2.5`}
+            placeholder="1–2 lines for feeds and previews — not the full article"
+          />
         </label>
         <div>
-          <p className={labelCls}>Body</p>
-          <div className="mt-1.5"><BodyEditor value={p.body} onChange={p.setBody} /></div>
+          <p className={labelCls}>Article body</p>
+          <p className="mb-1.5 text-[12px] text-zinc-500">
+            Write the piece here only. Title goes in the Title field above.
+          </p>
+          <div className="mt-1.5">
+            <BodyEditor value={p.body} onChange={p.setBody} />
+          </div>
         </div>
       </>
     );
@@ -139,7 +159,7 @@ export function TypeSpecificFields(p: Props) {
       <>
         <div>
           <p className={labelCls}>Thumbnail</p>
-          <div className="mt-1.5"><CoverUpload value={p.coverUrl} onChange={p.setCoverUrl} /></div>
+          <div className="mt-1.5"><CoverUpload value={p.coverUrl} onChange={p.setCoverUrl} video /></div>
         </div>
         <div>
           <p className={labelCls}>Video file</p>
@@ -171,11 +191,7 @@ export function TypeSpecificFields(p: Props) {
     return (
       <>
         <div>
-          <GalleryField
-            urls={p.galleryUrls}
-            setUrls={p.setGalleryUrls}
-            setCoverUrl={p.setCoverUrl}
-          />
+          <GalleryField urls={p.galleryUrls} setUrls={p.setGalleryUrls} setCoverUrl={p.setCoverUrl} />
         </div>
         <label className="block">
           <span className={labelCls}>Abstract</span>
@@ -213,11 +229,7 @@ export function TypeSpecificFields(p: Props) {
     return (
       <>
         <div>
-          <GalleryField
-            urls={p.galleryUrls}
-            setUrls={p.setGalleryUrls}
-            setCoverUrl={p.setCoverUrl}
-          />
+          <GalleryField urls={p.galleryUrls} setUrls={p.setGalleryUrls} setCoverUrl={p.setCoverUrl} />
         </div>
         <label className="block">
           <span className={labelCls}>Short pitch</span>
@@ -254,11 +266,7 @@ export function TypeSpecificFields(p: Props) {
     return (
       <>
         <div>
-          <GalleryField
-            urls={p.galleryUrls}
-            setUrls={p.setGalleryUrls}
-            setCoverUrl={p.setCoverUrl}
-          />
+          <GalleryField urls={p.galleryUrls} setUrls={p.setGalleryUrls} setCoverUrl={p.setCoverUrl} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
@@ -323,11 +331,7 @@ export function TypeSpecificFields(p: Props) {
     return (
       <>
         <div>
-          <GalleryField
-            urls={p.galleryUrls}
-            setUrls={p.setGalleryUrls}
-            setCoverUrl={p.setCoverUrl}
-          />
+          <GalleryField urls={p.galleryUrls} setUrls={p.setGalleryUrls} setCoverUrl={p.setCoverUrl} />
         </div>
         <label className="block">
           <span className={labelCls}>Caption</span>
@@ -358,11 +362,7 @@ export function TypeSpecificFields(p: Props) {
           <textarea value={p.summary} onChange={(e) => p.setSummary(e.target.value)} rows={4} className={`${inputCls} h-auto py-2.5`} placeholder="Keep it short — this travels with your identity" />
         </label>
         <div>
-          <GalleryField
-            urls={p.galleryUrls}
-            setUrls={p.setGalleryUrls}
-            setCoverUrl={p.setCoverUrl}
-          />
+          <GalleryField urls={p.galleryUrls} setUrls={p.setGalleryUrls} setCoverUrl={p.setCoverUrl} />
         </div>
         <div>
           <p className={labelCls}>More detail</p>
@@ -424,11 +424,7 @@ export function TypeSpecificFields(p: Props) {
         <div className="mt-1.5"><BodyEditor value={p.body} onChange={p.setBody} /></div>
       </div>
       <div>
-        <GalleryField
-          urls={p.galleryUrls}
-          setUrls={p.setGalleryUrls}
-          setCoverUrl={p.setCoverUrl}
-        />
+        <GalleryField urls={p.galleryUrls} setUrls={p.setGalleryUrls} setCoverUrl={p.setCoverUrl} />
       </div>
     </>
   );
