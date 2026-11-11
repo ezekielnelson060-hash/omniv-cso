@@ -208,7 +208,6 @@ export async function POST(req: Request) {
       coverUrl,
     }).path;
 
-    // Confirm to publisher when content goes live immediately
     if (status === "published" && user.email) {
       notifyPublishedAsync({
         to: user.email,
@@ -249,7 +248,7 @@ export async function GET(req: Request) {
     let query = supabase
       .from("discovery_publications")
       .select(
-        "id, type, slug, title, summary, body, subtitle, excerpt, publisher_id, publisher_name, status, updated_at, published_at, heat, tags, cover_url, media_url, entity_refs, related_publication_ids, seo_title, seo_description, category_id, reading_time, what_this_means, question_nobody_asks, sources, content, visibility"
+        "id, type, slug, title, summary, body, subtitle, excerpt, publisher_id, publisher_name, status, updated_at, published_at, heat, tags, cover_url, media_url, meta, entity_refs, related_publication_ids, seo_title, seo_description, category_id, reading_time, what_this_means, question_nobody_asks, sources, content, visibility"
       )
       .eq("owner_id", user.id)
       .order("updated_at", { ascending: false })
@@ -292,6 +291,7 @@ export async function GET(req: Request) {
         tags: publication.tags || [],
         coverUrl: publication.cover_url,
         mediaUrl: publication.media_url,
+        meta: publication.meta || null,
         entityRefs: publication.entity_refs || [],
         relatedPublicationIds: publication.related_publication_ids || [],
         content: publication.content || [],
