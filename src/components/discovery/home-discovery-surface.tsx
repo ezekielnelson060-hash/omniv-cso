@@ -210,6 +210,9 @@ export function HomeDiscoverySurface({ publications, firstName }: Props) {
   }, [pool, followSlugs]);
 
   const name = firstName?.trim() || null;
+  const featuredCover = featured
+    ? featured.coverUrl || coverFor(featured.slug) || ""
+    : "";
 
   return (
     <div className="space-y-10">
@@ -250,10 +253,10 @@ export function HomeDiscoverySurface({ publications, firstName }: Props) {
               className="group block overflow-hidden rounded-2xl bg-[#0c0c0c] ring-1 ring-white/[0.07] transition hover:ring-omniv-gold/30"
             >
               <div className="relative aspect-[16/10] overflow-hidden">
-                {featured.coverUrl || coverFor(featured.slug) ? (
+                {featuredCover ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={featured.coverUrl || coverFor(featured.slug)}
+                    src={featuredCover}
                     alt=""
                     className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
                   />
