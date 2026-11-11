@@ -25,7 +25,6 @@ function plainTextToHtml(text: string): string {
 function sanitizePasteHtml(html: string): string {
   try {
     const doc = new DOMParser().parseFromString(html, "text/html");
-    // Strip scripts/styles
     doc.querySelectorAll("script,style,meta,link").forEach((n) => n.remove());
     const allowed = new Set([
       "P",
@@ -53,12 +52,10 @@ function sanitizePasteHtml(html: string): string {
         if (child.nodeType === Node.ELEMENT_NODE) {
           const el = child as HTMLElement;
           if (!allowed.has(el.tagName)) {
-            // unwrap unknown tags
             while (el.firstChild) el.parentNode?.insertBefore(el.firstChild, el);
             el.remove();
             continue;
           }
-          // strip style/class noise from paste
           el.removeAttribute("style");
           el.removeAttribute("class");
           if (el.tagName === "A") {
@@ -74,7 +71,6 @@ function sanitizePasteHtml(html: string): string {
       }
     };
     walk(doc.body);
-    // Normalize divs to paragraphs when empty-ish
     let out = doc.body.innerHTML
       .replace(/<div><br\s*\/?><\/div>/gi, "<p><br></p>")
       .replace(/<div>/gi, "<p>")
@@ -98,12 +94,10 @@ function isEmptyHtml(html: string) {
 function ToolBtn({
   label,
   title,
-  active,
   onClick,
 }: {
   label: React.ReactNode;
   title: string;
-  active?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -111,15 +105,10 @@ function ToolBtn({
       type="button"
       title={title}
       onMouseDown={(e) => {
-        // keep selection in editor
         e.preventDefault();
         onClick();
       }}
-      className={`inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-1.5 text-[13px] font-medium transition ${
-        active
-          ? "bg-omniv-gold/20 text-omniv-gold"
-          : "text-zinc-400 hover:bg-white/10 hover:text-white"
-      }`}
+      className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-1.5 text-[13px] font-medium text-zinc-400 transition hover:bg-white/10 hover:text-white"
     >
       {label}
     </button>
@@ -138,13 +127,11 @@ export function BodyEditor({
   rows?: number;
 }) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const lastEmitted = useRef(value || "");
   const focused = useRef(false);
   const [empty, setEmpty] = useState(() => isEmptyHtml(value || ""));
   const minH = Math.max(280, rows * 24);
 
-  // Sync external value when not focused
   useEffect(() => {
     if (focused.current) return;
     const el = editorRef.current;
@@ -157,7 +144,6 @@ export function BodyEditor({
     }
   }, [value]);
 
-  // Initial mount
   useEffect(() => {
     const el = editorRef.current;
     if (!el) return;
@@ -182,7 +168,6 @@ export function BodyEditor({
   function exec(cmd: string, arg?: string) {
     editorRef.current?.focus();
     try {
-      // document.execCommand is still the practical path for light editors
       document.execCommand(cmd, false, arg);
     } catch {
       /* ignore */
@@ -193,7 +178,7 @@ export function BodyEditor({
   function onPaste(e: React.ClipboardEvent<HTMLDivElement>) {
     e.preventDefault();
     const html = e.clipboardData.getData("text/html");
-    const plain = e.clipboardData.getData.getData("text/plain");
+    const plain = e.clipboardData.getData("text/plain");
     let insert = "";
     if (html) insert = sanitizePasteHtml(html);
     if (!insert && plain) insert = plainTextToHtml(plain);
@@ -237,17 +222,36 @@ export function BodyEditor({
 
   return (
     <div className="overflow-hidden rounded-2xl bg-[#0a0a0a] ring-1 ring-white/[0.09]">
-      {/* Format bar — single clean row */}
       <div className="flex flex-wrap items-center gap-0.5 border-b border-white/[0.07] bg-[#0e0e0e] px-2 py-1.5">
-        <ToolBtn label={<span className="text-[12px] font-bold">H2</span>} title="Heading" onClick={() => exec("formatBlock", "h2")} />
-        <ToolBtn label={<span className="text-[12px] font-semibold">H3</span>} title="Subheading" onClick={() => exec("formatBlock", "h3")} />
-        <ToolBtn label={<span className="text-[12px]">¶</span>} title="Paragraph" onClick={() => exec("formatBlock", "p")} />
+        <ToolBtn
+          label={<span className="text-[12px] font-bold">H2</span>}
+          title="Heading"
+          onClick={() => exec("formatBlock", "h2")}
+        />
+        <ToolBtn
+          label={<span className="text-[12px] font-semibold">H3</span>}
+          title="Subheading"
+          onClick={() => exec("formatBlock", "h3")}
+        />
+        <ToolBtn
+          label={<span className="text-[12px]">¶</span>}
+          title="Paragraph"
+          onClick={() => exec("formatBlock", "p")}
+        />
         <span className="mx-1 h-4 w-px bg-white/10" />
         <ToolBtn label={<span className="font-bold">B</span>} title="Bold" onClick={() => exec("bold")} />
         <ToolBtn label={<span className="italic">I</span>} title="Italic" onClick={() => exec("italic")} />
-        <ToolBtn label={<span className="underline">U</span>} title="Underline" onClick={() => exec("underline")} />
+        <ToolBtn
+          label={<span className="underline">U</span>}
+          title="Underline"
+          onClick={() => exec("underline")}
+        />
         <span className="mx-1 h-4 w-px bg-white/10" />
-        <ToolBtn label="“”" title="Quote" onClick={() => exec("formatBlock", "blockquote")} />
+        <ToolBtn
+          label="“”"
+          title="Quote"
+          onClick={() => exec("formatBlock", "blockquote")}
+        />
         <ToolBtn label="•" title="Bullet list" onClick={() => exec("insertUnorderedList")} />
         <ToolBtn label="1." title="Numbered list" onClick={() => exec("insertOrderedList")} />
         <ToolBtn label="🔗" title="Link" onClick={addLink} />
@@ -255,7 +259,6 @@ export function BodyEditor({
         <label className="ml-auto cursor-pointer rounded-lg px-2 py-1.5 text-[11px] font-medium text-omniv-gold hover:bg-omniv-gold/10">
           Import
           <input
-            ref={fileRef}
             type="file"
             accept=".txt,.md,text/plain,text/markdown"
             className="hidden"
@@ -268,7 +271,6 @@ export function BodyEditor({
         </label>
       </div>
 
-      {/* Writing surface */}
       <div className="relative">
         {empty && (
           <p className="pointer-events-none absolute left-5 top-5 max-w-[90%] text-[17px] leading-[1.8] text-zinc-600">
