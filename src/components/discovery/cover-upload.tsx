@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 
 export function CoverUpload({
-  label = "Change cover image",
+  label,
   tall,
   video,
   value,
@@ -18,6 +18,11 @@ export function CoverUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const emptyLabel =
+    label ||
+    (video ? "Add thumbnail" : "Add cover photo (optional)");
+  const filledLabel = label || (video ? "Change thumbnail" : "Change cover");
 
   async function onFile(file: File | undefined) {
     if (!file) return;
@@ -59,8 +64,8 @@ export function CoverUpload({
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        className={`relative w-full overflow-hidden border border-white/10 bg-gradient-to-br from-zinc-800 to-zinc-950 text-left ${
-          tall ? "rounded-2xl" : "rounded-none"
+        className={`relative w-full overflow-hidden border border-dashed border-white/15 bg-gradient-to-br from-zinc-900 to-black text-left ${
+          tall ? "rounded-2xl" : "rounded-xl"
         } ${aspect}`}
       >
         {value ? (
@@ -82,10 +87,10 @@ export function CoverUpload({
             </span>
           )}
           {!video && !value && (
-            <span className="text-2xl opacity-40">◻</span>
+            <span className="text-2xl opacity-40">＋</span>
           )}
           <span className="rounded-full bg-black/55 px-3 py-1 text-[11px] text-zinc-200">
-            {busy ? "Uploading…" : label}
+            {busy ? "Uploading…" : value ? filledLabel : emptyLabel}
           </span>
         </div>
       </button>
@@ -97,15 +102,15 @@ export function CoverUpload({
         onChange={(e) => onFile(e.target.files?.[0])}
       />
       {err && (
-        <p className="mt-1.5 px-4 text-[12px] text-rose-400">{err}</p>
+        <p className="mt-1.5 px-1 text-[12px] text-rose-400">{err}</p>
       )}
       {value && (
         <button
           type="button"
           onClick={() => onChange(null)}
-          className="mt-1.5 px-4 text-[12px] text-zinc-500 hover:text-zinc-300"
+          className="mt-1.5 px-1 text-[12px] text-zinc-500 hover:text-zinc-300"
         >
-          Remove
+          Remove cover
         </button>
       )}
     </div>
