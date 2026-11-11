@@ -234,8 +234,11 @@ export default async function PublicationPage({ params }: Props) {
       Boolean(p.excerpt));
   const showMusicLyrics =
     isMusic && (Boolean(p.body) || Boolean(p.content?.length));
-  const showGallery =
-    !isMusic && !isVideo && !showMediaPlayer && galleryImages.length > 0;
+
+  // One cover → hero only. Two+ photos → swipe carousel under actions (not duplicated in hero).
+  const multiGallery =
+    !isMusic && !isVideo && !showMediaPlayer && galleryImages.length > 1;
+  const heroCover = multiGallery ? null : coverUrl;
 
   const jsonLd = publicationJsonLd(p);
   const showFollow = Boolean(
@@ -273,10 +276,6 @@ export default async function PublicationPage({ params }: Props) {
     eventAt,
     publicationPath: path,
   };
-
-  // Multi-photo: use first image in hero only when single; carousel below for multiple
-  const heroCover =
-    showGallery && galleryImages.length > 1 ? null : coverUrl;
 
   return (
     <DiscoveryShell>
@@ -428,7 +427,7 @@ export default async function PublicationPage({ params }: Props) {
             />
           </div>
 
-          {showGallery ? (
+          {multiGallery ? (
             <div className="mt-6 overflow-hidden rounded-2xl ring-1 ring-white/10">
               <MediaCarousel images={galleryImages} />
             </div>
