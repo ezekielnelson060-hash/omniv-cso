@@ -38,7 +38,17 @@ export function BottomNav() {
   }, []);
 
   useEffect(() => {
-    router.prefetch("/publish");
+    // Warm common destinations so taps feel instant
+    const routes = [
+      "/home",
+      "/explore",
+      "/saved",
+      "/profile",
+      "/accounts",
+      "/publish",
+      "/activity",
+    ];
+    for (const r of routes) router.prefetch(r);
     for (const type of [
       "article",
       "music",
@@ -68,7 +78,7 @@ export function BottomNav() {
                   type="button"
                   onClick={() => setSheetOpen(true)}
                   aria-label="Publish"
-                  className="-mt-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold text-black shadow-lg shadow-omniv-gold/20 transition active:scale-[0.96]"
+                  className="-mt-3 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-omniv-gold text-black shadow-lg shadow-omniv-gold/20 transition-transform duration-75 active:scale-95"
                 >
                   <PlusIcon />
                 </button>
@@ -91,7 +101,8 @@ export function BottomNav() {
               <Link
                 key={item.label}
                 href={href}
-                className={`flex w-[18%] min-w-0 flex-col items-center gap-0.5 py-1 transition ${
+                prefetch
+                className={`flex w-[18%] min-w-0 flex-col items-center gap-0.5 py-1 transition-opacity duration-75 active:opacity-70 ${
                   on ? "text-white" : "text-zinc-600"
                 }`}
               >
