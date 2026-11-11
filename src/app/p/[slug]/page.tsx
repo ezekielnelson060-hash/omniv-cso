@@ -12,6 +12,7 @@ import { DiscoveryShell } from "@/components/discovery/desktop-sidebar";
 import { OmnivAvatar } from "@/components/discovery/omniv-avatar";
 import { VerifiedBadge } from "@/components/discovery/verified-badge";
 import { PublicationMedia } from "@/components/discovery/publication-media";
+import { MediaCarousel } from "@/components/discovery/media-carousel";
 import { isAlwaysVerified } from "@/lib/discovery/verified";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -43,6 +44,27 @@ import {
 } from "@/lib/discovery/publication-page-helpers";
 
 type Props = { params: Promise<{ slug: string }> };
+
+function galleryFromMeta(
+  meta: string | null | undefined,
+  coverUrl: string | null
+): string[] {
+  const urls: string[] = [];
+  if (meta) {
+    try {
+      const o = JSON.parse(meta);
+      if (Array.isArray(o?.galleryUrls)) {
+        for (const u of o.galleryUrls) {
+          if (typeof u === "string" && u.trim()) urls.push(u.trim());
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  if (coverUrl && !urls.includes(coverUrl)) urls.unshift(coverUrl);
+  return [...new Set(urls)];
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -107,6 +129,10 @@ export default async function PublicationPage({ params }: Props) {
     (p as { coverUrl?: string | null }).coverUrl || coverFor(p.slug) || null;
   const mediaUrl = (p as { mediaUrl?: string | null }).mediaUrl || null;
   const metaFields = parseMeta(p.meta);
+  const galleryImages = galleryFromMeta(
+    typeof p.meta === "string" ? p.meta : null,
+    coverUrl
+  );
   const genre =
     p.category ||
     metaFields.genre ||
@@ -208,6 +234,8 @@ export default async function PublicationPage({ params }: Props) {
       Boolean(p.excerpt));
   const showMusicLyrics =
     isMusic && (Boolean(p.body) || Boolean(p.content?.length));
+  const showGallery =
+    !isMusic && !isVideo && !showMediaPlayer && galleryImages.length > 0;
 
   const jsonLd = publicationJsonLd(p);
   const showFollow = Boolean(
@@ -246,6 +274,10 @@ export default async function PublicationPage({ params }: Props) {
     publicationPath: path,
   };
 
+  // Multi-photo: use first image in hero only when single; carousel below for multiple
+  const heroCover =
+    showGallery && galleryImages.length > 1 ? null : coverUrl;
+
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
@@ -263,9 +295,9 @@ export default async function PublicationPage({ params }: Props) {
         <div
           className={`relative bg-gradient-to-b ${hero} ${isMusic ? "min-h-[180px] sm:min-h-[220px]" : "min-h-[280px] sm:min-h-[360px]"}`}
           style={
-            coverUrl && !isMusic
+            heroCover && !isMusic
               ? {
-                  backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.15) 0%, rgba(5,5,5,0.5) 40%, #050505 100%), url(${coverUrl})`,
+                  backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.15) 0%, rgba(5,5,5,0.5) 40%, #050505 100%), url(${heroCover})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center top",
                 }
@@ -391,6 +423,12 @@ export default async function PublicationPage({ params }: Props) {
               isOwner={canManage}
             />
           </div>
+
+          {showGallery ? (
+            <div className="mt-6 overflow-hidden rounded-2xl ring-1 ring-white/10">
+              <MediaCarousel images={galleryImages} />
+            </div>
+          ) : null}
 
           {showMediaPlayer ? (
             <div className="mt-6">
