@@ -40,7 +40,7 @@ export function BodyEditor({
   value,
   onChange,
   placeholder,
-  rows = 12,
+  rows = 14,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -48,7 +48,7 @@ export function BodyEditor({
   rows?: number;
 }) {
   const taRef = useRef<HTMLTextAreaElement>(null);
-  const minH = Math.max(180, rows * 22);
+  const minH = Math.max(220, rows * 22);
   const lastEmitted = useRef<string>(value || "");
   const focused = useRef(false);
   const [plainDraft, setPlainDraft] = useState(() => htmlToPlainText(value || ""));
@@ -104,16 +104,13 @@ export function BodyEditor({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl ring-1 ring-white/[0.1] bg-[#0a0a0a]">
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 border-b border-white/[0.08] bg-[#121212] px-2 py-1.5">
-        <span className="h-8 rounded-lg px-2 text-[11px] font-medium leading-8 bg-omniv-gold/20 text-omniv-gold">
-          Plain
-        </span>
-        <label
-          className="inline-flex h-8 cursor-pointer items-center rounded-lg px-2 text-[11px] font-medium text-zinc-400 hover:bg-white/10 hover:text-white"
-          title="Import a .txt or .md file"
-        >
-          Import
+    <div className="overflow-hidden rounded-2xl bg-white/[0.03] ring-1 ring-white/[0.08]">
+      <div className="flex items-center justify-between border-b border-white/[0.06] px-3 py-2">
+        <p className="text-[12px] text-zinc-500">
+          Write or paste your article body
+        </p>
+        <label className="cursor-pointer text-[12px] font-medium text-omniv-gold hover:text-omniv-gold/80">
+          Import file
           <input
             type="file"
             accept=".txt,.md,text/plain,text/markdown"
@@ -125,9 +122,6 @@ export function BodyEditor({
             }}
           />
         </label>
-        <span className="px-1 text-[11px] text-zinc-500">
-          Paste from Google Docs works here
-        </span>
       </div>
       <textarea
         ref={taRef}
@@ -144,10 +138,13 @@ export function BodyEditor({
           emitHtml(plainTextToHtml(plain));
         }}
         onPaste={onPlainPaste}
-        placeholder={placeholder || "Paste or write here…"}
+        placeholder={
+          placeholder ||
+          "Start writing the article here…\n\nDon’t paste the title — that goes in the Title field above.\n\nSeparate paragraphs with a blank line."
+        }
         rows={rows}
-        className="w-full resize-y bg-transparent px-4 py-3 text-[15px] leading-[1.7] text-zinc-100 outline-none placeholder:text-zinc-600"
-        style={{ minHeight: minH, color: "#f4f4f5" }}
+        className="w-full resize-y bg-transparent px-4 py-4 text-[16px] leading-[1.75] text-zinc-100 outline-none placeholder:text-zinc-600"
+        style={{ minHeight: minH }}
       />
     </div>
   );
