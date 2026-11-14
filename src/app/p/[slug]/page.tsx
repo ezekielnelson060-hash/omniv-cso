@@ -239,6 +239,7 @@ export default async function PublicationPage({ params }: Props) {
   const multiGallery =
     !isMusic && !isVideo && !showMediaPlayer && galleryImages.length > 1;
   const heroCover = multiGallery ? null : coverUrl;
+  const hasCoverHero = Boolean(heroCover && !isMusic);
 
   const jsonLd = publicationJsonLd(p);
   const showFollow = Boolean(
@@ -277,6 +278,44 @@ export default async function PublicationPage({ params }: Props) {
     publicationPath: path,
   };
 
+  const byline = (
+    <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-zinc-200 drop-shadow-sm">
+      {publisherHref ? (
+        <Link
+          href={publisherHref}
+          className="inline-flex items-center gap-1.5 font-medium leading-none hover:text-white"
+        >
+          <OmnivAvatar src={avatarSrc} name={publisherName} size={22} />
+          <span className="leading-none">{publisherName}</span>
+          {verified ? (
+            <VerifiedBadge
+              name={publisherName}
+              verifyType={publisher?.type || "company"}
+              size={16}
+            />
+          ) : null}
+        </Link>
+      ) : (
+        <span className="inline-flex items-center gap-1.5 font-medium leading-none">
+          <OmnivAvatar src={avatarSrc} name={publisherName} size={22} />
+          <span className="leading-none">{publisherName}</span>
+        </span>
+      )}
+      {!isVideo && (
+        <>
+          <span className="leading-none text-zinc-400">·</span>
+          <span className="leading-none">{mins} min read</span>
+        </>
+      )}
+      {publishedLabel ? (
+        <>
+          <span className="leading-none text-zinc-400">·</span>
+          <span className="leading-none">{publishedLabel}</span>
+        </>
+      ) : null}
+    </div>
+  );
+
   return (
     <DiscoveryShell>
       <div className="min-h-dvh bg-[#050505] text-zinc-100">
@@ -291,46 +330,76 @@ export default async function PublicationPage({ params }: Props) {
         />
         <StickyArticleHeader title={p.title} backHref="/home" />
 
-        <div
-          className={`relative bg-gradient-to-b ${hero} ${
-            isMusic
-              ? "min-h-[160px] sm:min-h-[200px]"
-              : "min-h-[220px] sm:min-h-[280px]"
-          }`}
-          style={
-            heroCover && !isMusic
-              ? {
-                  backgroundImage: `linear-gradient(to bottom, rgba(5,5,5,0.2) 0%, rgba(5,5,5,0.55) 45%, #050505 100%), url(${heroCover})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center top",
-                }
-              : undefined
-          }
-        >
-          <div className="relative mx-auto flex max-w-2xl flex-col px-4 pb-3 pt-3 sm:pb-4">
-            <div className="flex items-center justify-between">
-              <Link
-                href="/home"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md"
-                aria-label="Back"
-              >
-                ←
-              </Link>
-              <div className="flex items-center gap-1">
-                <ShareButton title={p.title} path={path} />
+        {/*
+          Hero cover: true 16:9 frame, object-cover (no stretch).
+          Mobile height naturally lands ~220–260px at phone widths.
+          Title is always page-rendered text — never part of the image.
+        */}
+        <header className="relative w-full overflow-hidden bg-[#050505]">
+          {hasCoverHero ? (
+            <div className="relative mx-auto w-full max-w-3xl">
+              <div className="relative aspect-[16/9] w-full max-h-[260px] sm:max-h-[360px] md:max-h-[420px]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={heroCover!}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover object-center"
+                  draggable={false}
+                />
+                {/* Readability gradient — darker at bottom where type sits */}
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background:
+                      "linear-gradient(to top, rgba(5,5,5,0.92) 0%, rgba(5,5,5,0.55) 38%, rgba(5,5,5,0.15) 70%, rgba(5,5,5,0.25) 100%)",
+                  }}
+                />
               </div>
             </div>
+          ) : (
+            <div
+              className={`relative w-full bg-gradient-to-b ${hero} ${
+                isMusic ? "min-h-[140px] sm:min-h-[180px]" : "min-h-[200px] sm:min-h-[240px]"
+              }`}
+            />
+          )}
 
-            <div className="mt-8 sm:mt-12">
-              <span className="inline-flex items-center rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/90 backdrop-blur-sm">
-                {typeLabel}
-              </span>
-              {!isMusic && (
-                <>
-                  <h1 className="mt-3 text-[28px] font-semibold leading-[1.15] tracking-tight text-white sm:text-[40px]">
-                    {p.title}
-                  </h1>
-                  <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-zinc-300">
+          {/* Chrome + type overlay */}
+          <div
+            className={`pointer-events-none absolute inset-0 ${
+              hasCoverHero ? "" : ""
+            }`}
+          >
+            <div className="pointer-events-auto mx-auto flex h-full max-w-2xl flex-col px-4 pt-3 pb-4 sm:pb-5">
+              <div className="flex items-center justify-between">
+                <Link
+                  href="/home"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md"
+                  aria-label="Back"
+                >
+                  ←
+                </Link>
+                <div className="flex items-center gap-1">
+                  <ShareButton title={p.title} path={path} />
+                </div>
+              </div>
+
+              <div className="mt-auto pt-10">
+                <span className="inline-flex items-center rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white/95 backdrop-blur-sm">
+                  {typeLabel}
+                </span>
+
+                {!isMusic && (
+                  <>
+                    <h1 className="mt-2.5 text-[26px] font-semibold leading-[1.15] tracking-tight text-white drop-shadow-md sm:text-[36px]">
+                      {p.title}
+                    </h1>
+                    {byline}
+                  </>
+                )}
+
+                {isMusic && (
+                  <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-zinc-200">
                     {publisherHref ? (
                       <Link
                         href={publisherHref}
@@ -341,7 +410,7 @@ export default async function PublicationPage({ params }: Props) {
                         {verified ? (
                           <VerifiedBadge
                             name={publisherName}
-                            verifyType={publisher?.type || "company"}
+                            verifyType={publisher?.type || "artist"}
                             size={16}
                           />
                         ) : null}
@@ -352,56 +421,18 @@ export default async function PublicationPage({ params }: Props) {
                         <span className="leading-none">{publisherName}</span>
                       </span>
                     )}
-                    {!isVideo && (
+                    {genre ? (
                       <>
-                        <span className="leading-none text-zinc-600">·</span>
-                        <span className="leading-none">{mins} min read</span>
-                      </>
-                    )}
-                    {publishedLabel ? (
-                      <>
-                        <span className="leading-none text-zinc-600">·</span>
-                        <span className="leading-none">{publishedLabel}</span>
+                        <span className="leading-none text-zinc-400">·</span>
+                        <span className="leading-none">{genre}</span>
                       </>
                     ) : null}
                   </div>
-                </>
-              )}
-
-              {isMusic && (
-                <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-zinc-300">
-                  {publisherHref ? (
-                    <Link
-                      href={publisherHref}
-                      className="inline-flex items-center gap-1.5 font-medium leading-none hover:text-white"
-                    >
-                      <OmnivAvatar src={avatarSrc} name={publisherName} size={22} />
-                      <span className="leading-none">{publisherName}</span>
-                      {verified ? (
-                        <VerifiedBadge
-                          name={publisherName}
-                          verifyType={publisher?.type || "artist"}
-                          size={16}
-                        />
-                      ) : null}
-                    </Link>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 font-medium leading-none">
-                      <OmnivAvatar src={avatarSrc} name={publisherName} size={22} />
-                      <span className="leading-none">{publisherName}</span>
-                    </span>
-                  )}
-                  {genre ? (
-                    <>
-                      <span className="leading-none text-zinc-600">·</span>
-                      <span className="leading-none">{genre}</span>
-                    </>
-                  ) : null}
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </header>
 
         <main className="mx-auto max-w-2xl px-4 pb-28 pt-2">
           {isMusic ? (
