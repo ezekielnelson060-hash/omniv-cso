@@ -2,7 +2,26 @@
 
 import { useState } from "react";
 
+type PackageId = "mini" | "full";
+
+const PACKAGES: Record<
+  PackageId,
+  { label: string; price: number; summary: string }
+> = {
+  mini: {
+    label: "Mini-Sprint",
+    price: 75,
+    summary: "5 publications · 5 descriptions · 2 social posts · ~48 hours",
+  },
+  full: {
+    label: "Full Sprint",
+    price: 300,
+    summary: "15 publications · 15 descriptions · 5 social posts · 14-day plan · report",
+  },
+};
+
 export function VisibilitySprintCheckoutForm() {
+  const [pkg, setPkg] = useState<PackageId>("mini");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
@@ -10,6 +29,8 @@ export function VisibilitySprintCheckoutForm() {
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const selected = PACKAGES[pkg];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -20,6 +41,7 @@ export function VisibilitySprintCheckoutForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          package: pkg,
           name: name.trim(),
           email: email.trim(),
           company: company.trim(),
@@ -50,15 +72,40 @@ export function VisibilitySprintCheckoutForm() {
       className="rounded-2xl bg-white/[0.03] p-6 ring-1 ring-white/[0.08] md:p-8"
     >
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-omniv-gold">
-        Secure your sprint
+        Checkout
       </p>
       <h2 className="mt-2 text-xl font-semibold text-white">
         Get Your Visibility Sprint
       </h2>
       <p className="mt-1.5 text-[13px] text-zinc-500">
-        One-time payment of $300. You'll complete payment securely with
-        Flutterwave.
+        Select a package. You'll pay securely with Flutterwave. Order is
+        confirmed only after payment verification.
       </p>
+
+      <div className="mt-5 grid gap-2 sm:grid-cols-2">
+        {(["mini", "full"] as PackageId[]).map((id) => {
+          const p = PACKAGES[id];
+          const on = pkg === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setPkg(id)}
+              className={`rounded-xl px-3.5 py-3 text-left transition ring-1 ${
+                on
+                  ? "bg-omniv-gold/15 ring-omniv-gold/50"
+                  : "bg-white/[0.03] ring-white/10 hover:ring-white/20"
+              }`}
+            >
+              <p className="text-[13px] font-semibold text-white">
+                {p.label}{" "}
+                <span className="text-omniv-gold">${p.price}</span>
+              </p>
+              <p className="mt-1 text-[11px] leading-snug text-zinc-500">{p.summary}</p>
+            </button>
+          );
+        })}
+      </div>
 
       <div className="mt-6 space-y-4">
         <div>
@@ -136,11 +183,13 @@ export function VisibilitySprintCheckoutForm() {
         disabled={loading}
         className="mt-6 flex h-12 w-full items-center justify-center rounded-full bg-omniv-gold text-[14px] font-semibold text-black transition hover:brightness-110 disabled:opacity-60"
       >
-        {loading ? "Redirecting to payment…" : "Get Your Visibility Sprint — $300"}
+        {loading
+          ? "Redirecting to payment…"
+          : `Pay $${selected.price} — ${selected.label}`}
       </button>
       <p className="mt-3 text-center text-[11px] text-zinc-600">
-        Secure card payment via Flutterwave. Order confirmed only after payment
-        verification.
+        Secure card payment via Flutterwave. Charged amount: ${selected.price}{" "}
+        USD one-time.
       </p>
     </form>
   );
