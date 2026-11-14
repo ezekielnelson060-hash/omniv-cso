@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
-const EXPECTED_AMOUNT = 300;
+const ALLOWED_AMOUNTS = [75, 300];
 
 async function verifyWithFlutterwave(opts: {
   transactionId?: string;
@@ -38,6 +38,7 @@ async function verifyWithFlutterwave(opts: {
 /**
  * Confirm Visibility Sprint payment only after Flutterwave verify succeeds.
  * Query: ?tx_ref=… and/or ?transaction_id=…
+ * Accepts Mini ($75) or Full ($300).
  */
 export async function GET(req: Request) {
   const secret = process.env.FLW_SECRET_KEY;
@@ -63,7 +64,6 @@ export async function GET(req: Request) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  // Already paid?
   if (tx_ref) {
     const { data: existing } = await admin
       .from("visibility_sprint_orders")
@@ -114,15 +114,32 @@ export async function GET(req: Request) {
   const currency = String(verified.currency || "USD").toUpperCase();
   const expectedCurrency = (process.env.FLW_CURRENCY || "USD").toUpperCase();
 
-  if (amount < EXPECTED_AMOUNT * 0.99) {
+  const matchesPackage = ALLOWED_AMOUNTS.some((a) => amount >= a * 0.99 && amount <= a * 1.01);
+  if (!matchesPackage) {
     return NextResponse.json(
-      { ok: false, paid: false, error: "Amount does not match package price." },
+      { ok: false, paid: false, error: "Amount does not match a package price." },
       { status: 400 }
     );
   }
   if (currency !== expectedCurrency) {
-    // Soft warn only if currencies differ but amount is correct — still require match
     console.warn("[visibility-sprint] currency", currency, expectedCurrency);
+  }
+
+  // Prefer matching the stored order amount when present
+  const { data: pendingOrder } = await admin
+    .from("visibility_sprint_orders")
+    .select("id, amount")
+    .eq("tx_ref", verifiedTxRef)
+    .maybeSingle();
+
+  if (pendingOrder?.amount != null) {
+    const expected = Number(pendingOrder.amount);
+    if (amount < expected * 0.99) {
+      return NextResponse.json(
+        { ok: false, paid: false, error: "Amount does not match order price." },
+        { status: 400 }
+      );
+    }
   }
 
   const flwId = String(verified.id ?? transaction_id ?? "");
@@ -150,14 +167,15 @@ export async function GET(req: Request) {
     );
   }
 
-  // Mirror into payments ledger when available
   try {
+    const plan =
+      Number(order.amount) <= 100 ? "visibility_sprint_mini" : "visibility_sprint_full";
     await admin.from("payments").upsert(
       {
         amount,
         currency,
         status: "successful",
-        plan: "visibility_sprint",
+        plan,
         tx_ref: verifiedTxRef,
         email: order.customer_email,
         provider_payment_id: flwId || verifiedTxRef,
