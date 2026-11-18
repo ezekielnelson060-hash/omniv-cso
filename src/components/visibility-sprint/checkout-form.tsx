@@ -11,12 +11,12 @@ const PACKAGES: Record<
   mini: {
     label: "Mini-Sprint",
     price: 150,
-    summary: "35 content pieces · 7 days · delivery report",
+    summary: "35 publications · 7 days · delivery report",
   },
   full: {
     label: "Full Sprint",
     price: 300,
-    summary: "70 content pieces · 7 days · full delivery report",
+    summary: "70 publications · 7 days · full delivery report",
   },
 };
 
@@ -75,11 +75,11 @@ export function VisibilitySprintCheckoutForm() {
         Checkout
       </p>
       <h2 className="mt-2 text-xl font-semibold text-white">
-        Get Your Visibility Sprint
+        Choose your publishing sprint
       </h2>
       <p className="mt-1.5 text-[13px] text-zinc-500">
-        Select a package. Pay securely with Flutterwave. Order confirmed only
-        after payment verification.
+        One-time payment. Defined deliverables. No recurring commitment. Pay
+        securely with Flutterwave — order confirmed only after verification.
       </p>
 
       <div className="mt-5 grid gap-2 sm:grid-cols-2">
@@ -159,7 +159,7 @@ export function VisibilitySprintCheckoutForm() {
         </div>
         <div>
           <label className="text-[12px] font-medium text-zinc-400">
-            Product / content description
+            Existing work to publish
           </label>
           <textarea
             required
@@ -167,7 +167,7 @@ export function VisibilitySprintCheckoutForm() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className={`${field} resize-y`}
-            placeholder="What should we publish? Describe your product, existing content, or the work you want organised on Omniv."
+            placeholder="Describe the body of work: product overviews, features, tutorials, research, announcements, docs, videos…"
           />
         </div>
       </div>
