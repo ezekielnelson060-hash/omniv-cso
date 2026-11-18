@@ -6,12 +6,12 @@ export const dynamic = "force-dynamic";
 const PACKAGES = {
   mini: {
     id: "mini",
-    label: "Product Visibility Mini-Sprint",
-    amount: 75,
+    label: "Product Visibility Mini-Sprint (35 pieces)",
+    amount: 150,
   },
   full: {
     id: "full",
-    label: "Product Visibility Full Sprint",
+    label: "Product Visibility Full Sprint (70 pieces)",
     amount: 300,
   },
 } as const;
@@ -19,7 +19,7 @@ const PACKAGES = {
 type PackageKey = keyof typeof PACKAGES;
 
 /**
- * Start Visibility Sprint checkout (mini $75 or full $300).
+ * Start Visibility Sprint checkout (mini $150 or full $300).
  * Creates a pending order, then returns Flutterwave payment link.
  * Order is only marked paid after server-side verify (or webhook).
  */
@@ -48,9 +48,9 @@ export async function POST(req: Request) {
       description?: string;
     };
 
-    const packageKey = (String(body.package || "mini").toLowerCase() === "full"
-      ? "full"
-      : "mini") as PackageKey;
+    const packageKey = (String(body.package || "full").toLowerCase() === "mini"
+      ? "mini"
+      : "full") as PackageKey;
     const pack = PACKAGES[packageKey];
 
     const name = String(body.name || "").trim();
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     }
     if (!description || description.length < 20) {
       return NextResponse.json(
-        { error: "Please describe your product in at least a short paragraph." },
+        { error: "Please describe your product or content in at least a short paragraph." },
         { status: 400 }
       );
     }
@@ -100,7 +100,6 @@ export async function POST(req: Request) {
       .single();
 
     if (orderError || !order?.id) {
-      // Retry without package column if schema is older
       const { data: order2, error: orderError2 } = await admin
         .from("visibility_sprint_orders")
         .insert({
