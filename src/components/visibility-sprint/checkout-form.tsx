@@ -10,18 +10,18 @@ const PACKAGES: Record<
 > = {
   mini: {
     label: "Mini-Sprint",
-    price: 75,
-    summary: "5 publications · 5 descriptions · 2 social posts · ~48 hours",
+    price: 150,
+    summary: "35 content pieces · 7 days · delivery report",
   },
   full: {
     label: "Full Sprint",
     price: 300,
-    summary: "15 publications · 15 descriptions · 5 social posts · 14-day plan · report",
+    summary: "70 content pieces · 7 days · full delivery report",
   },
 };
 
 export function VisibilitySprintCheckoutForm() {
-  const [pkg, setPkg] = useState<PackageId>("mini");
+  const [pkg, setPkg] = useState<PackageId>("full");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
@@ -78,8 +78,8 @@ export function VisibilitySprintCheckoutForm() {
         Get Your Visibility Sprint
       </h2>
       <p className="mt-1.5 text-[13px] text-zinc-500">
-        Select a package. You'll pay securely with Flutterwave. Order is
-        confirmed only after payment verification.
+        Select a package. Pay securely with Flutterwave. Order confirmed only
+        after payment verification.
       </p>
 
       <div className="mt-5 grid gap-2 sm:grid-cols-2">
@@ -159,7 +159,7 @@ export function VisibilitySprintCheckoutForm() {
         </div>
         <div>
           <label className="text-[12px] font-medium text-zinc-400">
-            Product description
+            Product / content description
           </label>
           <textarea
             required
@@ -167,7 +167,7 @@ export function VisibilitySprintCheckoutForm() {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className={`${field} resize-y`}
-            placeholder="What does your product do? Who is it for? Any recent launches or features we should highlight?"
+            placeholder="What should we publish? Describe your product, existing content, or the work you want organised on Omniv."
           />
         </div>
       </div>
