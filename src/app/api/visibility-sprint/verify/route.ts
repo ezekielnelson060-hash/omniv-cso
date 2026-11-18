@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
-const ALLOWED_AMOUNTS = [75, 300];
+const ALLOWED_AMOUNTS = [150, 300];
 
 async function verifyWithFlutterwave(opts: {
   transactionId?: string;
@@ -37,8 +37,7 @@ async function verifyWithFlutterwave(opts: {
 
 /**
  * Confirm Visibility Sprint payment only after Flutterwave verify succeeds.
- * Query: ?tx_ref=… and/or ?transaction_id=…
- * Accepts Mini ($75) or Full ($300).
+ * Accepts Mini ($150) or Full ($300).
  */
 export async function GET(req: Request) {
   const secret = process.env.FLW_SECRET_KEY;
@@ -114,7 +113,9 @@ export async function GET(req: Request) {
   const currency = String(verified.currency || "USD").toUpperCase();
   const expectedCurrency = (process.env.FLW_CURRENCY || "USD").toUpperCase();
 
-  const matchesPackage = ALLOWED_AMOUNTS.some((a) => amount >= a * 0.99 && amount <= a * 1.01);
+  const matchesPackage = ALLOWED_AMOUNTS.some(
+    (a) => amount >= a * 0.99 && amount <= a * 1.01
+  );
   if (!matchesPackage) {
     return NextResponse.json(
       { ok: false, paid: false, error: "Amount does not match a package price." },
@@ -125,7 +126,6 @@ export async function GET(req: Request) {
     console.warn("[visibility-sprint] currency", currency, expectedCurrency);
   }
 
-  // Prefer matching the stored order amount when present
   const { data: pendingOrder } = await admin
     .from("visibility_sprint_orders")
     .select("id, amount")
@@ -169,7 +169,9 @@ export async function GET(req: Request) {
 
   try {
     const plan =
-      Number(order.amount) <= 100 ? "visibility_sprint_mini" : "visibility_sprint_full";
+      Number(order.amount) <= 200
+        ? "visibility_sprint_mini"
+        : "visibility_sprint_full";
     await admin.from("payments").upsert(
       {
         amount,
