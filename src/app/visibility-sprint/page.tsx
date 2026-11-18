@@ -6,11 +6,11 @@ import { VisibilitySprintCheckoutForm } from "@/components/visibility-sprint/che
 export const metadata: Metadata = {
   title: "Product Visibility Sprint — from $150 | Omniv",
   description:
-    "Done-for-you publishing on Omniv. Mini-Sprint $150 (35 pieces over 7 days) or Full Sprint $300 (70 pieces over 7 days). You provide existing content; we publish.",
+    "Build a publishing presence around your product. Mini-Sprint $150 (35 publications) or Full Sprint $300 (70 publications) over 7 days. You provide existing work; we organise, format and publish on Omniv.",
   openGraph: {
     title: "Omniv Product Visibility Sprint",
     description:
-      "35 or 70 pieces of discoverable content in 7 days. Professional formatting, Omniv links, organised presence. From $150.",
+      "35 or 70 individual publications in 7 days. Organised presence, professional formatting, discoverable links. From $150 one-time.",
     url: "https://omniv.media/visibility-sprint",
     siteName: "Omniv",
     type: "website",
@@ -22,13 +22,14 @@ const MINI = {
   name: "Mini-Sprint",
   price: 150,
   duration: "7 days",
-  tagline: "35 pieces. Organised presence. Fast start.",
+  tagline: "35 publications. Organised presence. Clear start.",
   items: [
-    "Publication of up to 35 existing content pieces over 7 days",
+    "Up to 35 individual publications from your existing work",
+    "Product / entity profile setup on Omniv",
     "Professional formatting and premium presentation",
     "Individual Omniv publication links (keyword-discoverable)",
-    "Organised publishing under your Omniv presence",
-    "Quick delivery report with links",
+    "Organised under your Omniv presence",
+    "Delivery report with personalised links",
   ],
 };
 
@@ -37,54 +38,89 @@ const FULL = {
   name: "Full Sprint",
   price: 300,
   duration: "7 days",
-  tagline: "70 pieces. Full presence. Maximum coverage.",
+  tagline: "70 publications. Full presence. Maximum coverage.",
   items: [
-    "Publication of up to 70 existing content pieces over 7 days",
+    "Up to 70 individual publications from your existing work",
+    "Full product / entity profile optimisation on Omniv",
     "Professional formatting and premium presentation",
     "Individual Omniv publication links (keyword-discoverable)",
-    "Organised publishing under your Omniv presence",
-    "Delivery report with personalised links and analytics",
+    "Organised under your Omniv presence",
+    "Delivery report with personalised links and performance notes",
   ],
 };
 
+const PUBLICATION_TYPES = [
+  "Product overview",
+  "Feature explanations",
+  "Product updates",
+  "Tutorials and guides",
+  "Case studies",
+  "Research and insights",
+  "Industry commentary",
+  "Educational articles",
+  "Announcements",
+  "Videos and resources",
+  "Documentation extracts",
+  "Other verified product material",
+] as const;
+
 const WHAT_WE_HANDLE = [
-  "Publication of your existing content pieces over 7 days — indexed and live on Omniv",
-  "Professional formatting and presentation so the work has a premium feel",
-  "Individual Omniv publication links so content is easier to discover by keyword",
-  "Organised publishing under your Omniv presence — articles, products, announcements, videos, and more in one place",
-  "A delivery report of completed work with personalised links",
+  {
+    title: "Individual publications",
+    body: "Each asset from your existing body of work becomes its own publication on Omniv — structured, formatted and live.",
+  },
+  {
+    title: "Professional formatting",
+    body: "Presentation that feels premium and drives clarity — not a dump of unformatted files.",
+  },
+  {
+    title: "Discoverable links",
+    body: "Every publication gets its own Omniv URL so people can find and share specific work by keyword.",
+  },
+  {
+    title: "One organised presence",
+    body: "Articles, products, announcements, videos and resources sit together under your Omniv profile.",
+  },
+  {
+    title: "Delivery report",
+    body: "Personalised links to completed publications when the sprint finishes.",
+  },
 ] as const;
 
 const STEPS = [
-  "Choose Mini-Sprint ($150) or Full Sprint ($300) and secure payment.",
-  "Share the existing content you want published — you provide the material.",
-  "We format, organise and publish under your Omniv presence over 7 days.",
+  "Choose Mini-Sprint ($150) or Full Sprint ($300) and complete payment.",
+  "Share the existing work you want published — overviews, features, tutorials, research, announcements, and related assets.",
+  "We organise, format and publish under your Omniv presence over 7 days.",
   "You receive publication links and a delivery report.",
 ] as const;
 
 const AUDIENCE = [
-  "Founders and product teams with existing content to distribute",
-  "Researchers and creators with work worth discovering",
-  "Brands launching or expanding product presence",
-  "Anyone with valuable content who does not want to publish and hope",
+  "Product owners with an existing body of work to organise",
+  "SaaS and software teams with features, docs and updates to publish",
+  "Researchers and creators whose work should be discoverable",
+  "Brands that want more than a landing page and occasional posts",
 ] as const;
 
 const FAQS = [
   {
+    q: "What counts as a publication?",
+    a: "One individual work or content asset — for example a product overview, a feature explanation, a tutorial, a case study, an announcement, or a research note. Each becomes its own formatted publication on Omniv, not a social post or ad.",
+  },
+  {
     q: "Is this a subscription?",
-    a: "No. Both packages are one-time payments. There is no recurring charge.",
+    a: "No. Both packages are one-time payments with a defined publishing scope. There is no recurring charge.",
   },
   {
     q: "What is the difference between Mini and Full?",
-    a: "Mini-Sprint ($150) publishes up to 35 content pieces over 7 days. Full Sprint ($300) publishes up to 70 pieces over the same 7 days — roughly double the coverage — plus a fuller delivery report.",
+    a: "Mini-Sprint ($150) covers up to 35 publications over 7 days. Full Sprint ($300) covers up to 70 publications over the same 7 days — roughly double the publishing scope — plus fuller profile optimisation and reporting.",
   },
   {
-    q: "Do you create the content from scratch?",
-    a: "You provide the existing content. We handle formatting, organisation and publishing on Omniv. We do not invent filler to hit a number.",
+    q: "Do you write everything from scratch?",
+    a: "You provide the existing material. We organise, format and publish it. We do not invent filler to hit a number.",
   },
   {
     q: "How long does delivery take?",
-    a: "Both packages run over 7 days of publishing after kickoff, subject to how quickly materials arrive.",
+    a: "Both packages run over 7 days of publishing after kickoff, depending on how quickly materials and approvals arrive.",
   },
   {
     q: "Do you guarantee traffic or customers?",
@@ -101,7 +137,7 @@ function CtaLink({ className, label }: { className?: string; label?: string }) {
         "inline-flex h-11 items-center justify-center rounded-full bg-omniv-gold px-6 text-[14px] font-semibold text-black transition hover:brightness-110"
       }
     >
-      {label || "Get Your Visibility Sprint"}
+      {label || "Choose your publishing sprint"}
     </a>
   );
 }
@@ -188,42 +224,50 @@ export default function VisibilitySprintPage() {
       </header>
 
       <main>
+        {/* Hero */}
         <section className="mx-auto max-w-3xl px-4 pb-8 pt-8 md:px-6 md:pb-10 md:pt-10">
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-omniv-gold">
             Omniv Product Visibility Sprint
           </p>
           <h1 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-white md:text-4xl md:leading-[1.12]">
-            Don't just publish and hope. Build a presence around your work.
+            Build a publishing presence around your product.
           </h1>
           <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-zinc-400">
-            Omniv is a publishing and discovery network for products, research,
-            launches, music, files, video and content worth discovering. You
-            provide existing content — we format, organise and publish it under
-            your presence.
+            Your product has more to communicate than a landing page and
+            occasional social updates. Its features, research, tutorials,
+            announcements, resources and insights can become individual
+            publications within a connected public presence.
+          </p>
+          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-zinc-400">
+            Omniv helps you organise, format and publish your existing body of
+            work — giving each publication its own place to be discovered.
           </p>
           <p className="mt-3 max-w-xl text-[14px] font-medium text-zinc-300">
-            Mini-Sprint $150 · 35 pieces · 7 days. Full Sprint $300 · 70 pieces ·
-            7 days.
+            Mini-Sprint $150 · 35 publications · 7 days. Full Sprint $300 · 70
+            publications · 7 days.
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <CtaLink label="Choose your package" />
+            <CtaLink />
             <span className="text-[12px] text-zinc-500">
-              One-time · From $150 · Limited slots
+              One-time engagement · Defined publishing scope · No recurring
+              commitment
             </span>
           </div>
         </section>
 
+        {/* Packages */}
         <section className="border-y border-white/[0.06] bg-white/[0.02]">
           <div className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-9">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-omniv-gold">
               Packages
             </p>
             <h2 className="mt-2 text-xl font-semibold text-white md:text-2xl">
-              Paid publishing slots. You supply the content.
+              Defined scope. One-time payment.
             </h2>
             <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-zinc-400">
-              Both run over 7 days. Choose coverage: 35 pieces or 70 pieces of
-              discoverable content live on Omniv.
+              Both sprints run over 7 days. You supply existing work. We turn it
+              into individual, discoverable publications under your Omniv
+              presence.
             </p>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <PackageCard pkg={MINI} />
@@ -232,63 +276,92 @@ export default function VisibilitySprintPage() {
           </div>
         </section>
 
+        {/* What a publication is */}
         <section className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-9">
           <h2 className="text-lg font-semibold text-white md:text-xl">
-            What we handle
+            What counts as a publication
           </h2>
-          <ul className="mt-4 space-y-2.5">
-            {WHAT_WE_HANDLE.map((item) => (
+          <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-zinc-400">
+            Not social posts. Not ads. Each publication is one structured piece
+            of your existing work — presented so people can discover and explore
+            it on its own.
+          </p>
+          <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+            {PUBLICATION_TYPES.map((t) => (
               <li
-                key={item}
-                className="flex items-start gap-2.5 text-[14px] leading-relaxed text-zinc-300"
+                key={t}
+                className="rounded-xl bg-white/[0.03] px-3.5 py-2.5 text-[13px] text-zinc-300 ring-1 ring-white/[0.06]"
               >
-                <span className="mt-0.5 text-omniv-gold">✓</span>
-                {item}
+                {t}
               </li>
             ))}
           </ul>
-          <p className="mt-4 text-[13px] text-zinc-500">
-            Suitable if you have valuable content to distribute. If you've
-            created something valuable, make it easier for people to discover and
-            explore it.
-          </p>
         </section>
 
+        {/* What we handle */}
         <section className="border-y border-white/[0.06] bg-white/[0.02]">
           <div className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-9">
             <h2 className="text-lg font-semibold text-white md:text-xl">
-              How it works
+              What we handle
             </h2>
-            <ol className="mt-4 space-y-3">
-              {STEPS.map((step, i) => (
-                <li key={step} className="flex items-start gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-omniv-gold/15 text-[11px] font-semibold text-omniv-gold">
-                    {i + 1}
-                  </span>
-                  <p className="pt-0.5 text-[14px] text-zinc-300">{step}</p>
+            <ul className="mt-4 space-y-3">
+              {WHAT_WE_HANDLE.map((item) => (
+                <li
+                  key={item.title}
+                  className="rounded-xl bg-white/[0.03] p-3.5 ring-1 ring-white/[0.06]"
+                >
+                  <p className="text-[14px] font-semibold text-white">{item.title}</p>
+                  <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-400">
+                    {item.body}
+                  </p>
                 </li>
               ))}
-            </ol>
+            </ul>
           </div>
         </section>
 
+        {/* How it works */}
         <section className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-9">
           <h2 className="text-lg font-semibold text-white md:text-xl">
-            Who is this for?
+            How it works
           </h2>
-          <ul className="mt-4 space-y-1.5">
-            {AUDIENCE.map((item) => (
-              <li
-                key={item}
-                className="flex items-start gap-2 text-[14px] text-zinc-400"
-              >
-                <span className="mt-0.5 text-omniv-gold">✓</span>
-                {item}
+          <ol className="mt-4 space-y-3">
+            {STEPS.map((step, i) => (
+              <li key={step} className="flex items-start gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-omniv-gold/15 text-[11px] font-semibold text-omniv-gold">
+                  {i + 1}
+                </span>
+                <p className="pt-0.5 text-[14px] text-zinc-300">{step}</p>
               </li>
             ))}
-          </ul>
+          </ol>
         </section>
 
+        {/* Who */}
+        <section className="border-y border-white/[0.06] bg-white/[0.02]">
+          <div className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-9">
+            <h2 className="text-lg font-semibold text-white md:text-xl">
+              Who this is for
+            </h2>
+            <ul className="mt-4 space-y-1.5">
+              {AUDIENCE.map((item) => (
+                <li
+                  key={item}
+                  className="flex items-start gap-2 text-[14px] text-zinc-400"
+                >
+                  <span className="mt-0.5 text-omniv-gold">✓</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-[13px] text-zinc-500">
+              Don't just give your product a website. Build a publishing
+              presence around everything it has to offer.
+            </p>
+          </div>
+        </section>
+
+        {/* Checkout */}
         <section className="border-t border-white/[0.06] bg-gradient-to-b from-omniv-gold/[0.06] to-transparent">
           <div className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-9">
             <div className="mb-6 max-w-lg">
@@ -296,11 +369,11 @@ export default function VisibilitySprintPage() {
                 Secure your sprint
               </p>
               <h2 className="mt-2 text-xl font-semibold text-white md:text-2xl">
-                Pick a package and continue to payment
+                Choose your publishing sprint
               </h2>
               <p className="mt-2 text-[14px] leading-relaxed text-zinc-400">
-                $150 for 35 pieces or $300 for 70 pieces — both over 7 days.
-                Flutterwave charges the exact package amount. Order confirmed only
+                One-time payment. Defined deliverables. No recurring commitment.
+                Flutterwave charges $150 or $300 exactly. Order confirmed only
                 after payment verification.
               </p>
             </div>
@@ -308,6 +381,7 @@ export default function VisibilitySprintPage() {
           </div>
         </section>
 
+        {/* FAQ */}
         <section className="mx-auto max-w-3xl px-4 py-8 md:px-6 md:py-9">
           <h2 className="text-lg font-semibold text-white md:text-xl">FAQ</h2>
           <div className="mt-4 space-y-4">
@@ -322,14 +396,16 @@ export default function VisibilitySprintPage() {
           </div>
         </section>
 
+        {/* Final CTA */}
         <section className="border-t border-white/[0.06]">
           <div className="mx-auto max-w-3xl px-4 py-10 text-center md:px-6">
             <h2 className="text-xl font-semibold text-white md:text-2xl">
               Ready to build a presence around your work?
             </h2>
             <p className="mx-auto mt-2 max-w-md text-[14px] text-zinc-400">
-              Mini-Sprint $150 (35 pieces) or Full Sprint $300 (70 pieces). Both
-              over 7 days. You provide the content — we publish it.
+              Mini-Sprint $150 (35 publications) or Full Sprint $300 (70
+              publications). Both over 7 days. You provide the work — we publish
+              it.
             </p>
             <div className="mt-5">
               <CtaLink />
