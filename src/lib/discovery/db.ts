@@ -150,6 +150,10 @@ function rowToPublication(r: PubRow): LivePublication {
   };
 }
 
+/** Card/list select — no body/content JSON. */
+const PUB_SELECT_CARD =
+  "id, type, slug, title, summary, tags, meta, cover_url, media_url, heat, published_at, publisher_id, publisher_name, owner_id, visibility, status, excerpt";
+
 const PUB_SELECT =
   "id, type, slug, title, summary, body, tags, meta, cover_url, media_url, heat, published_at, publisher_id, publisher_name, owner_id, visibility";
 const PUB_SELECT_ARTICLE =
@@ -457,6 +461,93 @@ export async function listLivePublications(
     return [...live, ...extras];
   } catch {
     return SEED_PUBLICATIONS as LivePublication[];
+  }
+}
+
+/**
+ * Lightweight related set for a publication page.
+ * Prefer same publisher; fall back to recent public cards.
+ * Uses card columns only (no content/body JSON).
+ */
+export async function listRelatedPublications(
+  supabase: SupabaseClient | null,
+  opts: {
+    excludeSlug: string;
+    publisherId?: string | null;
+    publisherName?: string | null;
+    limit?: number;
+  }
+): Promise<LivePublication[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 12, 1), 24);
+  const now = Date.now();
+
+  if (!supabase) {
+    return (SEED_PUBLICATIONS as LivePublication[])
+      .filter((p) => p.slug !== opts.excludeSlug)
+      .slice(0, limit);
+  }
+
+  try {
+    let rows: PubRow[] = [];
+
+    if (opts.publisherId && opts.publisherId !== "live") {
+      const { data, error } = await supabase
+        .from("discovery_publications")
+        .select(PUB_SELECT_CARD)
+        .eq("publisher_id", opts.publisherId)
+        .neq("slug", opts.excludeSlug)
+        .order("published_at", { ascending: false })
+        .limit(limit);
+      if (!error && data?.length) rows = data as PubRow[];
+    }
+
+    if (rows.length < 4 && opts.publisherName) {
+      const { data, error } = await supabase
+        .from("discovery_publications")
+        .select(PUB_SELECT_CARD)
+        .ilike("publisher_name", opts.publisherName)
+        .neq("slug", opts.excludeSlug)
+        .order("published_at", { ascending: false })
+        .limit(limit);
+      if (!error && data?.length) {
+        const seen = new Set(rows.map((r) => r.slug));
+        for (const r of data as PubRow[]) {
+          if (!seen.has(r.slug)) rows.push(r);
+        }
+      }
+    }
+
+    if (rows.length < 4) {
+      const { data, error } = await supabase
+        .from("discovery_publications")
+        .select(PUB_SELECT_CARD)
+        .neq("slug", opts.excludeSlug)
+        .order("heat", { ascending: false })
+        .limit(limit);
+      if (!error && data?.length) {
+        const seen = new Set(rows.map((r) => r.slug));
+        for (const r of data as PubRow[]) {
+          if (!seen.has(r.slug)) rows.push(r);
+        }
+      }
+    }
+
+    const live = rows
+      .filter((r) => r && r.slug && isPublicLivePub(r, now))
+      .map((r) => {
+        try {
+          return rowToPublication(r);
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean) as LivePublication[];
+
+    return live.slice(0, limit);
+  } catch {
+    return (SEED_PUBLICATIONS as LivePublication[])
+      .filter((p) => p.slug !== opts.excludeSlug)
+      .slice(0, limit);
   }
 }
 
