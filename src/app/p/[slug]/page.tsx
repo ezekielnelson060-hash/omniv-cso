@@ -17,8 +17,7 @@ import { isAlwaysVerified } from "@/lib/discovery/verified";
 import { createClient } from "@/lib/supabase/server";
 import {
   getLivePublication,
-  listDiscoveryEntities,
-  listLivePublications,
+  listRelatedPublications,
 } from "@/lib/discovery/db";
 import {
   PUBLICATION_LABELS,
@@ -42,6 +41,9 @@ import {
   youtubeEmbed,
   resolvePublisher,
 } from "@/lib/discovery/publication-page-helpers";
+
+/** Short-lived ISR for public publication HTML — cuts repeated SSR CPU. */
+export const revalidate = 60;
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -203,15 +205,15 @@ export default async function PublicationPage({ params }: Props) {
     }
   }
 
-  const [liveAll, entities] = await Promise.all([
-    listLivePublications(supabase, 80),
-    listDiscoveryEntities(supabase),
-  ]);
-  const explorePublications = liveAll.filter((x) => x.slug !== p.slug);
-  const exploreEntities = entities;
+  // Small related set only — no 80-pub / 200-entity scan on every view.
+  const related = await listRelatedPublications(supabase, {
+    excludeSlug: p.slug,
+    publisherId: p.publisherId,
+    publisherName: publisherName !== "Publisher" ? publisherName : null,
+    limit: 12,
+  });
 
-  const relatedFromPublisher = liveAll.filter((x) => {
-    if (x.slug === p.slug) return false;
+  const relatedFromPublisher = related.filter((x) => {
     if (p.publisherId && x.publisherId && x.publisherId === p.publisherId)
       return true;
     if (
@@ -235,7 +237,6 @@ export default async function PublicationPage({ params }: Props) {
   const showMusicLyrics =
     isMusic && (Boolean(p.body) || Boolean(p.content?.length));
 
-  // One cover → hero only. Two+ photos → swipe carousel under actions (not duplicated in hero).
   const multiGallery =
     !isMusic && !isVideo && !showMediaPlayer && galleryImages.length > 1;
   const heroCover = multiGallery ? null : coverUrl;
@@ -252,7 +253,7 @@ export default async function PublicationPage({ params }: Props) {
     title: x.title,
     summary: x.summary,
     publisherName: x.publisherName || publisherName,
-    publisherSlug: x.publisherSlug || publisher?.slug,
+    publisherSlug: publisher?.slug,
     coverUrl: (x as { coverUrl?: string | null }).coverUrl,
     mediaUrl: (x as { mediaUrl?: string | null }).mediaUrl,
     publishedAt: x.publishedAt,
@@ -330,11 +331,6 @@ export default async function PublicationPage({ params }: Props) {
         />
         <StickyArticleHeader title={p.title} backHref="/home" />
 
-        {/*
-          Hero cover: true 16:9 frame, object-cover (no stretch).
-          Mobile height naturally lands ~220–260px at phone widths.
-          Title is always page-rendered text — never part of the image.
-        */}
         <header className="relative w-full overflow-hidden bg-[#050505]">
           {hasCoverHero ? (
             <div className="relative mx-auto w-full max-w-3xl">
@@ -346,7 +342,6 @@ export default async function PublicationPage({ params }: Props) {
                   className="absolute inset-0 h-full w-full object-cover object-center"
                   draggable={false}
                 />
-                {/* Readability gradient — darker at bottom where type sits */}
                 <div
                   className="pointer-events-none absolute inset-0"
                   style={{
@@ -364,12 +359,7 @@ export default async function PublicationPage({ params }: Props) {
             />
           )}
 
-          {/* Chrome + type overlay */}
-          <div
-            className={`pointer-events-none absolute inset-0 ${
-              hasCoverHero ? "" : ""
-            }`}
-          >
+          <div className="pointer-events-none absolute inset-0">
             <div className="pointer-events-auto mx-auto flex h-full max-w-2xl flex-col px-4 pt-3 pb-4 sm:pb-5">
               <div className="flex items-center justify-between">
                 <Link
@@ -509,8 +499,9 @@ export default async function PublicationPage({ params }: Props) {
           <div className="mt-10">
             <KeepExploring
               currentPublication={p}
-              entities={exploreEntities}
-              publications={explorePublications}
+              entities={[]}
+              publications={related}
+              tags={p.tags || []}
             />
           </div>
 
