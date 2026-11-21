@@ -7,38 +7,20 @@ type CookieToSet = {
   options?: Record<string, unknown>;
 };
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
-
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !key) {
-    return supabaseResponse;
+/** Supabase SSR auth cookies look like sb-<ref>-auth-token (chunked with .0, .1). */
+function hasSupabaseAuthCookie(request: NextRequest): boolean {
+  for (const { name } of request.cookies.getAll()) {
+    if (
+      name.startsWith("sb-") &&
+      (name.includes("-auth-token") || name.includes("auth-token"))
+    ) {
+      return true;
+    }
   }
+  return false;
+}
 
-  const supabase = createServerClient(url, key, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet: CookieToSet[]) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value)
-        );
-        supabaseResponse = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
-        );
-      },
-    },
-  });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const path = request.nextUrl.pathname;
+function isPublicPath(path: string): boolean {
   const isAuthRoute =
     path.startsWith("/login") ||
     path.startsWith("/signup") ||
@@ -47,7 +29,7 @@ export async function updateSession(request: NextRequest) {
   // Type-specific permanent URLs rewrite to /p/:slug in next.config,
   // but middleware runs BEFORE rewrites — these must be public or
   // crawlers and guests get redirected to login (broken OG previews).
-  const isPublic =
+  return (
     path === "/" ||
     isAuthRoute ||
     path === "/sitemap.xml" ||
@@ -83,13 +65,70 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/blog") ||
     path.startsWith("/partners") ||
     path.startsWith("/data-deletion") ||
+    path.startsWith("/visibility-sprint") ||
     path === "/policy" ||
     path.startsWith("/opengraph-image") ||
     path.startsWith("/twitter-image") ||
     path === "/icon" ||
-    path === "/apple-icon";
+    path === "/apple-icon"
+  );
+}
 
-  if (!user && !isPublic) {
+export async function updateSession(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request });
+
+  const path = request.nextUrl.pathname;
+  const publicPath = isPublicPath(path);
+  const hasAuthCookie = hasSupabaseAuthCookie(request);
+
+  // Fast path: public page or API, no session cookies → no Supabase network call.
+  // Protected routes without cookies still need the redirect branch below.
+  if (publicPath && !hasAuthCookie) {
+    return supabaseResponse;
+  }
+
+  // Protected route, no cookies → login redirect without hitting Supabase.
+  if (!publicPath && !hasAuthCookie) {
+    const redirect = request.nextUrl.clone();
+    redirect.pathname = "/login";
+    redirect.searchParams.set("next", path);
+    return NextResponse.redirect(redirect);
+  }
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    return supabaseResponse;
+  }
+
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet: CookieToSet[]) {
+        cookiesToSet.forEach(({ name, value }) =>
+          request.cookies.set(name, value)
+        );
+        supabaseResponse = NextResponse.next({ request });
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options)
+        );
+      },
+    },
+  });
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const isAuthRoute =
+    path.startsWith("/login") ||
+    path.startsWith("/signup") ||
+    path.startsWith("/forgot-password");
+
+  if (!user && !publicPath) {
     const redirect = request.nextUrl.clone();
     redirect.pathname = "/login";
     redirect.searchParams.set("next", path);
